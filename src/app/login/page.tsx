@@ -45,10 +45,13 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     const supabase = getSupabaseBrowserClient();
     setError(null);
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+      window.location.origin;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${appUrl}/dashboard`,
       },
     });
     if (oauthError) {

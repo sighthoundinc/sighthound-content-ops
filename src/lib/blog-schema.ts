@@ -20,11 +20,19 @@ export function isMissingBlogDateColumnsError(
   if (!error) {
     return false;
   }
+  const code = (error.code ?? "").toUpperCase();
 
   const text = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  const referencesDateColumn =
+    text.includes("scheduled_publish_date") || text.includes("published_at");
+  const isMissingColumnSignal =
+    code === "42703" ||
+    code === "PGRST204" ||
+    text.includes("schema cache") ||
+    text.includes("could not find");
   return (
-    error.code === "42703" &&
-    (text.includes("scheduled_publish_date") || text.includes("published_at"))
+    referencesDateColumn &&
+    isMissingColumnSignal
   );
 }
 

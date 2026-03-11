@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/tasks", label: "My Tasks" },
   { href: "/calendar", label: "Calendar" },
 ];

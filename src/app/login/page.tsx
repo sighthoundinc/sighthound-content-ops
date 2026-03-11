@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (session) {
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [router, session]);
 
@@ -39,7 +39,7 @@ export default function LoginPage() {
     }
 
     setIsSubmitting(false);
-    router.replace("/");
+    router.replace("/dashboard");
   };
 
   const handleGoogleSignIn = async () => {
@@ -48,7 +48,7 @@ export default function LoginPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: `${window.location.origin}/dashboard`,
       },
     });
     if (oauthError) {

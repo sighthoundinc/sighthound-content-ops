@@ -23,7 +23,7 @@ export function ProtectedPage({
     }
 
     if (!loading && allowedRoles?.length && profile && !allowedRoles.includes(profile.role)) {
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [allowedRoles, loading, profile, router, session]);
 

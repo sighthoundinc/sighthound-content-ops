@@ -11,6 +11,7 @@ import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import {
   BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
+  isMissingBlogCommentsTableError,
   isMissingBlogDateColumnsError,
   normalizeBlogRow,
 } from "@/lib/blog-schema";
@@ -64,14 +65,15 @@ function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
       id: String(row.id ?? ""),
       blog_id: String(row.blog_id ?? ""),
       comment: String(row.comment ?? ""),
-      created_by: String(row.created_by ?? ""),
+      created_by: String(row.user_id ?? row.created_by ?? ""),
       created_at: String(row.created_at ?? ""),
       author,
     } satisfies BlogCommentRecord;
   });
 }
 
-function isMissingBlogCommentsTableError(error: {
+
+function isMissingBlogCommentUserIdColumnError(error: {
   code?: string | null;
   message?: string | null;
   details?: string | null;
@@ -83,12 +85,7 @@ function isMissingBlogCommentsTableError(error: {
   const code = (error.code ?? "").toUpperCase();
   const text =
     `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
-  return (
-    (code === "42P01" || code === "PGRST204" || code === "PGRST205") &&
-    (text.includes("blog_comments") ||
-      text.includes("schema cache") ||
-      text.includes("could not find"))
-  );
+  return code === "42703" && text.includes("user_id");
 }
 
 function toDateTimeLocalInput(value: string | null | undefined) {
@@ -130,6 +127,7 @@ export default function BlogDetailPage() {
   const [history, setHistory] = useState<BlogHistoryRecord[]>([]);
   const [comments, setComments] = useState<BlogCommentRecord[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [commentsUnavailableMessage, setCommentsUnavailableMessage] = useState<string | null>(null);
   const [isCommentSaving, setIsCommentSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -145,6 +143,7 @@ export default function BlogDetailPage() {
       const supabase = getSupabaseBrowserClient();
       setIsLoading(true);
       setError(null);
+      setCommentsUnavailableMessage(null);
       const fetchBlog = async () => {
         let { data, error } = await supabase
           .from("blogs")
@@ -183,12 +182,27 @@ export default function BlogDetailPage() {
             .eq("blog_id", blogId)
             .order("changed_at", { ascending: false })
             .limit(50),
-          supabase
-            .schema("public")
-            .from("blog_comments")
-            .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
-            .eq("blog_id", blogId)
-            .order("created_at", { ascending: false }),
+          (async () => {
+            let { data, error } = await supabase
+              .schema("public")
+              .from("blog_comments")
+              .select("id,blog_id,comment,user_id,created_at,author:user_id(id,full_name,email)")
+              .eq("blog_id", blogId)
+              .order("created_at", { ascending: false });
+
+            if (isMissingBlogCommentUserIdColumnError(error)) {
+              const fallback = await supabase
+                .schema("public")
+                .from("blog_comments")
+                .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
+                .eq("blog_id", blogId)
+                .order("created_at", { ascending: false });
+              data = fallback.data as typeof data;
+              error = fallback.error;
+            }
+
+            return { data, error };
+          })(),
         ]);
 
       if (blogError) {
@@ -222,7 +236,7 @@ export default function BlogDetailPage() {
       if (commentsError) {
         if (isMissingBlogCommentsTableError(commentsError)) {
           setComments([]);
-          setError(
+          setCommentsUnavailableMessage(
             "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
           );
         } else {
@@ -386,20 +400,33 @@ export default function BlogDetailPage() {
 
     setIsCommentSaving(true);
     setError(null);
+    setCommentsUnavailableMessage(null);
 
     const supabase = getSupabaseBrowserClient();
-    const { error: insertError } = await supabase
+    let { error: insertError } = await supabase
       .schema("public")
       .from("blog_comments")
       .insert({
         blog_id: blog.id,
         comment: trimmedComment,
-        created_by: user.id,
+        user_id: user.id,
       });
+    if (isMissingBlogCommentUserIdColumnError(insertError)) {
+      const fallbackInsert = await supabase
+        .schema("public")
+        .from("blog_comments")
+        .insert({
+          blog_id: blog.id,
+          comment: trimmedComment,
+          created_by: user.id,
+        });
+      insertError = fallbackInsert.error;
+    }
+
 
     if (insertError) {
       if (isMissingBlogCommentsTableError(insertError)) {
-        setError(
+        setCommentsUnavailableMessage(
           "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
         );
       } else {
@@ -409,16 +436,27 @@ export default function BlogDetailPage() {
       return;
     }
 
-    const { data: commentsData, error: commentsError } = await supabase
+    let { data: commentsData, error: commentsError } = await supabase
       .schema("public")
       .from("blog_comments")
-      .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
+      .select("id,blog_id,comment,user_id,created_at,author:user_id(id,full_name,email)")
       .eq("blog_id", blog.id)
       .order("created_at", { ascending: false });
 
+    if (isMissingBlogCommentUserIdColumnError(commentsError)) {
+      const fallback = await supabase
+        .schema("public")
+        .from("blog_comments")
+        .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
+        .eq("blog_id", blog.id)
+        .order("created_at", { ascending: false });
+      commentsData = fallback.data as typeof commentsData;
+      commentsError = fallback.error;
+    }
+
     if (commentsError) {
       if (isMissingBlogCommentsTableError(commentsError)) {
-        setError(
+        setCommentsUnavailableMessage(
           "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
         );
       } else {
@@ -1056,20 +1094,26 @@ export default function BlogDetailPage() {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Comments
             </h3>
+            {commentsUnavailableMessage ? (
+              <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {commentsUnavailableMessage}
+              </p>
+            ) : null}
             <form className="mt-3 space-y-2" onSubmit={handleAddComment}>
               <textarea
+                disabled={Boolean(commentsUnavailableMessage)}
                 value={newComment}
                 onChange={(event) => {
                   setNewComment(event.target.value);
                 }}
-                className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 placeholder="Add remarks or feedback…"
                 maxLength={2000}
               />
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={isCommentSaving}
+                  disabled={isCommentSaving || Boolean(commentsUnavailableMessage)}
                   className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isCommentSaving ? "Adding..." : "Add Comment"}

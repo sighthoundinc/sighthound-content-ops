@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { isMissingUserRolesColumnError } from "@/lib/profile-schema";
 
 import { createAdminClient, createAnonServerClient } from "@/lib/supabase/server";
 import type { AppRole } from "@/lib/types";
@@ -28,12 +29,22 @@ async function requireAdmin(request: NextRequest) {
     return { error: "Invalid session", status: 401 } as const;
   }
   const adminClient = createAdminClient();
-  const { data: profile, error: profileError } = await adminClient
+  let { data: profile, error: profileError } = await adminClient
     .from("profiles")
     .select("id,role,user_roles")
     .eq("id", userData.user.id)
     .eq("is_active", true)
     .maybeSingle();
+  if (isMissingUserRolesColumnError(profileError)) {
+    const fallbackProfileQuery = await adminClient
+      .from("profiles")
+      .select("id,role")
+      .eq("id", userData.user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+    profile = fallbackProfileQuery.data as typeof profile;
+    profileError = fallbackProfileQuery.error;
+  }
   const roleSet = new Set<string>([
     profile?.role ?? "",
     ...((profile?.user_roles as string[] | null | undefined) ?? []),

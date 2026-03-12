@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
-import { isMissingBlogDateColumnsError } from "@/lib/blog-schema";
+import {
+  isMissingBlogCommentsTableError,
+  isMissingBlogDateColumnsError,
+} from "@/lib/blog-schema";
 import { notifySlack } from "@/lib/notifications";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -19,6 +22,21 @@ function slugify(value: string) {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
+}
+
+function isMissingBlogCommentUserIdColumnError(error: {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+} | null) {
+  if (!error) {
+    return false;
+  }
+  const code = (error.code ?? "").toUpperCase();
+  const text =
+    `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return code === "42703" && text.includes("user_id");
 }
 
 export default function NewBlogPage() {
@@ -128,18 +146,37 @@ export default function NewBlogPage() {
 
     const trimmedInitialComment = initialComment.trim();
     if (trimmedInitialComment) {
-      const { error: commentInsertError } = await supabase
+      let { error: commentInsertError } = await supabase
         .schema("public")
         .from("blog_comments")
         .insert({
           blog_id: data.id,
           comment: trimmedInitialComment,
-          created_by: user.id,
+          user_id: user.id,
         });
+
+      if (isMissingBlogCommentUserIdColumnError(commentInsertError)) {
+        const fallback = await supabase
+          .schema("public")
+          .from("blog_comments")
+          .insert({
+            blog_id: data.id,
+            comment: trimmedInitialComment,
+            created_by: user.id,
+          });
+        commentInsertError = fallback.error;
+      }
       if (commentInsertError) {
-        setError(commentInsertError.message);
-        setIsSubmitting(false);
-        return;
+        if (isMissingBlogCommentsTableError(commentInsertError)) {
+          console.warn(
+            "Initial comment skipped because public.blog_comments is unavailable in schema cache.",
+            commentInsertError
+          );
+        } else {
+          setError(commentInsertError.message);
+          setIsSubmitting(false);
+          return;
+        }
       }
     }
 

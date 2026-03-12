@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { isMissingUserRolesColumnError } from "@/lib/profile-schema";
 
 import { createAdminClient, createAnonServerClient } from "@/lib/supabase/server";
 
@@ -48,12 +49,22 @@ export async function PATCH(request: NextRequest) {
     }
 
     const adminClient = createAdminClient();
-    const { data: requesterProfile, error: requesterProfileError } = await adminClient
+    let { data: requesterProfile, error: requesterProfileError } = await adminClient
       .from("profiles")
       .select("id,role,user_roles,is_active")
       .eq("id", userData.user.id)
       .eq("is_active", true)
       .maybeSingle();
+    if (isMissingUserRolesColumnError(requesterProfileError)) {
+      const fallbackRequesterQuery = await adminClient
+        .from("profiles")
+        .select("id,role,is_active")
+        .eq("id", userData.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      requesterProfile = fallbackRequesterQuery.data as typeof requesterProfile;
+      requesterProfileError = fallbackRequesterQuery.error;
+    }
 
     if (requesterProfileError || !requesterProfile) {
       return NextResponse.json({ error: "Active profile not found" }, { status: 403 });

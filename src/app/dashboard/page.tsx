@@ -80,11 +80,26 @@ function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
       id: String(row.id ?? ""),
       blog_id: String(row.blog_id ?? ""),
       comment: String(row.comment ?? ""),
-      created_by: String(row.created_by ?? ""),
+      created_by: String(row.user_id ?? row.created_by ?? ""),
       created_at: String(row.created_at ?? ""),
       author,
     } satisfies BlogCommentRecord;
   });
+}
+
+function isMissingBlogCommentUserIdColumnError(error: {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+} | null) {
+  if (!error) {
+    return false;
+  }
+  const code = (error.code ?? "").toUpperCase();
+  const text =
+    `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return code === "42703" && text.includes("user_id");
 }
 
 function isMissingBlogCommentsTableError(error: {
@@ -216,6 +231,7 @@ type SavedDashboardView = {
   id: string;
   name: string;
   state: DashboardFilterState;
+  columnOrder: DashboardColumnKey[];
   createdAt: string;
   updatedAt: string;
 };
@@ -223,6 +239,8 @@ type SavedDashboardView = {
 const DASHBOARD_FILTER_STATE_STORAGE_KEY = "dashboard-filter-state:v1";
 const DASHBOARD_SAVED_VIEWS_STORAGE_KEY = "dashboard-saved-views:v1";
 const DASHBOARD_ACTIVE_SAVED_VIEW_STORAGE_KEY = "dashboard-active-saved-view:v1";
+const buildUserScopedStorageKey = (baseKey: string, userId: string | null | undefined) =>
+  `${baseKey}:${userId ?? "anonymous"}`;
 
 const DASHBOARD_SORT_FIELD_SET = new Set<DashboardSortField>(
   DASHBOARD_SORT_OPTIONS.map((option) => option.value)
@@ -339,6 +357,7 @@ const normalizeSavedViews = (value: unknown): SavedDashboardView[] => {
       id: candidate.id,
       name,
       state: normalizeDashboardFilterState(candidate.state),
+      columnOrder: normalizeDashboardColumnOrder(candidate.columnOrder),
       createdAt:
         typeof candidate.createdAt === "string"
           ? candidate.createdAt
@@ -384,7 +403,6 @@ export default function DashboardPage() {
   const [now] = useState(() => new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [isBulkSaving, setIsBulkSaving] = useState(false);
-  const [rowSavingState, setRowSavingState] = useState<Record<string, boolean>>({});
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
   const [bulkWriterId, setBulkWriterId] = useState("");
   const [bulkPublisherId, setBulkPublisherId] = useState("");
@@ -404,6 +422,22 @@ export default function DashboardPage() {
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const columnEditorRef = useRef<HTMLDivElement | null>(null);
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
+  const filterStateStorageKey = useMemo(
+    () => buildUserScopedStorageKey(DASHBOARD_FILTER_STATE_STORAGE_KEY, profile?.id),
+    [profile?.id]
+  );
+  const savedViewsStorageKey = useMemo(
+    () => buildUserScopedStorageKey(DASHBOARD_SAVED_VIEWS_STORAGE_KEY, profile?.id),
+    [profile?.id]
+  );
+  const activeSavedViewStorageKey = useMemo(
+    () => buildUserScopedStorageKey(DASHBOARD_ACTIVE_SAVED_VIEW_STORAGE_KEY, profile?.id),
+    [profile?.id]
+  );
+  const columnViewStorageKey = useMemo(
+    () => buildUserScopedStorageKey(DASHBOARD_COLUMN_VIEW_STORAGE_KEY, profile?.id),
+    [profile?.id]
+  );
 
   const applyFilterState = useCallback((nextState: DashboardFilterState) => {
     setSearch(nextState.search);
@@ -525,9 +559,7 @@ export default function DashboardPage() {
       return;
     }
 
-    const savedColumnView = window.localStorage.getItem(
-      DASHBOARD_COLUMN_VIEW_STORAGE_KEY
-    );
+    const savedColumnView = window.localStorage.getItem(columnViewStorageKey);
     if (!savedColumnView) {
       return;
     }
@@ -538,16 +570,14 @@ export default function DashboardPage() {
     } catch {
       setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
     }
-  }, []);
+  }, [columnViewStorageKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
-    const savedFilterState = window.localStorage.getItem(
-      DASHBOARD_FILTER_STATE_STORAGE_KEY
-    );
+    const savedFilterState = window.localStorage.getItem(filterStateStorageKey);
     if (savedFilterState) {
       try {
         const parsedFilterState = JSON.parse(savedFilterState) as unknown;
@@ -557,9 +587,7 @@ export default function DashboardPage() {
       }
     }
 
-    const savedViewsRaw = window.localStorage.getItem(
-      DASHBOARD_SAVED_VIEWS_STORAGE_KEY
-    );
+    const savedViewsRaw = window.localStorage.getItem(savedViewsStorageKey);
     if (savedViewsRaw) {
       try {
         const parsedSavedViews = JSON.parse(savedViewsRaw) as unknown;
@@ -569,14 +597,12 @@ export default function DashboardPage() {
       }
     }
 
-    const activeSavedViewIdRaw = window.localStorage.getItem(
-      DASHBOARD_ACTIVE_SAVED_VIEW_STORAGE_KEY
-    );
+    const activeSavedViewIdRaw = window.localStorage.getItem(activeSavedViewStorageKey);
     if (activeSavedViewIdRaw) {
       setActiveSavedViewId(activeSavedViewIdRaw);
     }
     setHasLoadedLocalState(true);
-  }, [applyFilterState]);
+  }, [activeSavedViewStorageKey, applyFilterState, filterStateStorageKey, savedViewsStorageKey]);
 
   useEffect(() => {
     if (!hasLoadedLocalState) {
@@ -586,10 +612,10 @@ export default function DashboardPage() {
       return;
     }
     window.localStorage.setItem(
-      DASHBOARD_FILTER_STATE_STORAGE_KEY,
+      filterStateStorageKey,
       JSON.stringify(buildCurrentFilterState())
     );
-  }, [buildCurrentFilterState, hasLoadedLocalState]);
+  }, [buildCurrentFilterState, filterStateStorageKey, hasLoadedLocalState]);
 
   useEffect(() => {
     if (!hasLoadedLocalState) {
@@ -599,10 +625,10 @@ export default function DashboardPage() {
       return;
     }
     window.localStorage.setItem(
-      DASHBOARD_SAVED_VIEWS_STORAGE_KEY,
+      savedViewsStorageKey,
       JSON.stringify(savedViews)
     );
-  }, [hasLoadedLocalState, savedViews]);
+  }, [hasLoadedLocalState, savedViews, savedViewsStorageKey]);
 
   useEffect(() => {
     if (!hasLoadedLocalState) {
@@ -612,14 +638,14 @@ export default function DashboardPage() {
       return;
     }
     if (!activeSavedViewId) {
-      window.localStorage.removeItem(DASHBOARD_ACTIVE_SAVED_VIEW_STORAGE_KEY);
+      window.localStorage.removeItem(activeSavedViewStorageKey);
       return;
     }
     window.localStorage.setItem(
-      DASHBOARD_ACTIVE_SAVED_VIEW_STORAGE_KEY,
+      activeSavedViewStorageKey,
       activeSavedViewId
     );
-  }, [activeSavedViewId, hasLoadedLocalState]);
+  }, [activeSavedViewStorageKey, activeSavedViewId, hasLoadedLocalState]);
 
   useEffect(() => {
     if (!activeSavedViewId) {
@@ -1021,7 +1047,7 @@ export default function DashboardPage() {
       return;
     }
     window.localStorage.setItem(
-      DASHBOARD_COLUMN_VIEW_STORAGE_KEY,
+      columnViewStorageKey,
       JSON.stringify(columnOrder)
     );
     setError(null);
@@ -1031,7 +1057,7 @@ export default function DashboardPage() {
   const resetColumnView = () => {
     setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(DASHBOARD_COLUMN_VIEW_STORAGE_KEY);
+      window.localStorage.removeItem(columnViewStorageKey);
     }
     setError(null);
     setSuccessMessage("Column view reset to default.");
@@ -1040,6 +1066,7 @@ export default function DashboardPage() {
   const applySavedView = useCallback(
     (view: SavedDashboardView) => {
       applyFilterState(view.state);
+      setColumnOrder(view.columnOrder);
       setActiveSavedViewId(view.id);
       setError(null);
       setSuccessMessage(`Applied saved view "${view.name}".`);
@@ -1066,6 +1093,7 @@ export default function DashboardPage() {
     }
 
     const snapshot = buildCurrentFilterState();
+    const snapshotColumnOrder = [...columnOrder];
     const nowIso = new Date().toISOString();
     let didUpdateExisting = false;
     let nextActiveId = "";
@@ -1082,6 +1110,7 @@ export default function DashboardPage() {
             ? {
                 ...view,
                 state: snapshot,
+                columnOrder: snapshotColumnOrder,
                 name: trimmedName,
                 updatedAt: nowIso,
               }
@@ -1100,6 +1129,7 @@ export default function DashboardPage() {
           id: nextId,
           name: trimmedName,
           state: snapshot,
+          columnOrder: snapshotColumnOrder,
           createdAt: nowIso,
           updatedAt: nowIso,
         },
@@ -1115,7 +1145,7 @@ export default function DashboardPage() {
         ? `Updated saved view "${trimmedName}".`
         : `Saved new view "${trimmedName}".`
     );
-  }, [buildCurrentFilterState]);
+  }, [buildCurrentFilterState, columnOrder]);
 
   const deleteSavedView = useCallback(
     (view: SavedDashboardView) => {
@@ -1369,16 +1399,6 @@ export default function DashboardPage() {
     });
   };
 
-  const setRowSaving = useCallback((blogId: string, isSaving: boolean) => {
-    setRowSavingState((previous) => {
-      if (isSaving) {
-        return { ...previous, [blogId]: true };
-      }
-      const nextState = { ...previous };
-      delete nextState[blogId];
-      return nextState;
-    });
-  }, []);
 
   const updateBlogInline = useCallback(
     async (
@@ -1429,7 +1449,6 @@ export default function DashboardPage() {
         return;
       }
 
-      setRowSaving(blog.id, true);
       setError(null);
       setSuccessMessage(null);
 
@@ -1464,7 +1483,6 @@ export default function DashboardPage() {
       if (updateError) {
         setError(updateError.message);
         setSuccessMessage(null);
-        setRowSaving(blog.id, false);
         return;
       }
 
@@ -1477,9 +1495,8 @@ export default function DashboardPage() {
         )
       );
       setSuccessMessage(message);
-      setRowSaving(blog.id, false);
     },
-    [setRowSaving]
+    []
   );
 
   const loadPanelData = useCallback(async (blogId: string) => {
@@ -1487,6 +1504,27 @@ export default function DashboardPage() {
     setPanelError(null);
 
     const supabase = getSupabaseBrowserClient();
+    const fetchComments = async () => {
+      let { data, error } = await supabase
+        .schema("public")
+        .from("blog_comments")
+        .select("id,blog_id,comment,user_id,created_at,author:user_id(id,full_name,email)")
+        .eq("blog_id", blogId)
+        .order("created_at", { ascending: false });
+
+      if (isMissingBlogCommentUserIdColumnError(error)) {
+        const fallback = await supabase
+          .schema("public")
+          .from("blog_comments")
+          .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
+          .eq("blog_id", blogId)
+          .order("created_at", { ascending: false });
+        data = fallback.data as typeof data;
+        error = fallback.error;
+      }
+
+      return { data, error };
+    };
     const [{ data: historyData, error: historyError }, { data: commentsData, error: commentsError }] =
       await Promise.all([
         supabase
@@ -1495,12 +1533,7 @@ export default function DashboardPage() {
           .eq("blog_id", blogId)
           .order("changed_at", { ascending: false })
           .limit(100),
-        supabase
-          .schema("public")
-          .from("blog_comments")
-          .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
-          .eq("blog_id", blogId)
-          .order("created_at", { ascending: false }),
+        fetchComments(),
       ]);
 
     if (historyError) {
@@ -1555,14 +1588,26 @@ export default function DashboardPage() {
     setPanelError(null);
 
     const supabase = getSupabaseBrowserClient();
-    const { error: insertError } = await supabase
+    let { error: insertError } = await supabase
       .schema("public")
       .from("blog_comments")
       .insert({
         blog_id: activeBlog.id,
         comment: trimmedComment,
-        created_by: user.id,
+        user_id: user.id,
       });
+
+    if (isMissingBlogCommentUserIdColumnError(insertError)) {
+      const fallback = await supabase
+        .schema("public")
+        .from("blog_comments")
+        .insert({
+          blog_id: activeBlog.id,
+          comment: trimmedComment,
+          created_by: user.id,
+        });
+      insertError = fallback.error;
+    }
 
     if (insertError) {
       if (isMissingBlogCommentsTableError(insertError)) {
@@ -2235,7 +2280,6 @@ export default function DashboardPage() {
                               now.getTime() - staleDraftDays * 24 * 60 * 60 * 1000
                             )
                           );
-                        const isRowSaving = Boolean(rowSavingState[blog.id]);
 
                         return (
                           <tr
@@ -2270,69 +2314,7 @@ export default function DashboardPage() {
                                     key={column}
                                     className="px-3 py-2 font-medium text-slate-900"
                                   >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="max-w-[28rem] break-words">
-                                        {blog.title}
-                                      </span>
-                                      <div
-                                        className="hidden shrink-0 items-center gap-1 group-hover:flex"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                        }}
-                                      >
-                                        <details className="relative">
-                                          <summary className="cursor-pointer list-none rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-100">
-                                            Actions ▼
-                                          </summary>
-                                          <div className="absolute right-0 z-20 mt-1 w-36 rounded border border-slate-200 bg-white p-1 shadow-md">
-                                            <button
-                                              type="button"
-                                              className="block w-full rounded px-2 py-1 text-left text-[11px] text-slate-700 hover:bg-slate-100"
-                                              onClick={() => {
-                                                openPanel(blog.id);
-                                              }}
-                                            >
-                                              Open details
-                                            </button>
-                                            {isAdmin ? (
-                                              <button
-                                                type="button"
-                                                disabled={isRowSaving}
-                                                className="block w-full rounded px-2 py-1 text-left text-[11px] text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-                                                onClick={() => {
-                                                  const nextComment =
-                                                    prompt("Quick comment for this blog:");
-                                                  if (!nextComment || !user?.id) {
-                                                    return;
-                                                  }
-                                                  void (async () => {
-                                                    const supabase = getSupabaseBrowserClient();
-                                                    await supabase
-                                                      .schema("public")
-                                                      .from("blog_comments")
-                                                      .insert({
-                                                        blog_id: blog.id,
-                                                        comment: nextComment.trim(),
-                                                        created_by: user.id,
-                                                      });
-                                                    if (activeBlogId === blog.id) {
-                                                      await loadPanelData(blog.id);
-                                                    }
-                                                  })();
-                                                }}
-                                              >
-                                                Add comment
-                                              </button>
-                                            ) : null}
-                                          </div>
-                                        </details>
-                                      </div>
-                                    </div>
-                                    {isRowSaving ? (
-                                      <p className="mt-1 text-xs font-medium text-blue-600">
-                                        Saving…
-                                      </p>
-                                    ) : null}
+                                    <span className="max-w-[28rem] break-words">{blog.title}</span>
                                   </td>
                                 );
                               }
@@ -2347,152 +2329,32 @@ export default function DashboardPage() {
 
                               if (column === "writer") {
                                 return (
-                                  <td
-                                    key={column}
-                                    className="px-3 py-2 text-slate-600"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                    }}
-                                  >
-                                    {isAdmin ? (
-                                      <select
-                                        disabled={isRowSaving}
-                                        value={blog.writer_id ?? ""}
-                                        className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm disabled:bg-slate-100"
-                                        onChange={(event) => {
-                                          const nextWriterId = event.target.value || null;
-                                          void updateBlogInline(
-                                            blog,
-                                            { writer_id: nextWriterId },
-                                            `Writer updated for "${blog.title}".`
-                                          );
-                                        }}
-                                      >
-                                        <option value="">Unassigned</option>
-                                        {assignmentOptions.map((userOption) => (
-                                          <option key={userOption.id} value={userOption.id}>
-                                            {userOption.full_name}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    ) : (
-                                      blog.writer?.full_name ?? "Unassigned"
-                                    )}
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    {blog.writer?.full_name ?? "Unassigned"}
                                   </td>
                                 );
                               }
 
                               if (column === "writer_status") {
                                 return (
-                                  <td
-                                    key={column}
-                                    className="px-3 py-2 text-slate-600"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                    }}
-                                  >
-                                    <div className="space-y-1">
-                                      <WriterStatusBadge status={blog.writer_status} />
-                                      {isAdmin ? (
-                                        <select
-                                          disabled={isRowSaving}
-                                          value={blog.writer_status}
-                                          className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs disabled:bg-slate-100"
-                                          onChange={(event) => {
-                                            void updateBlogInline(
-                                              blog,
-                                              {
-                                                writer_status: event.target
-                                                  .value as WriterStageStatus,
-                                              },
-                                              `Writer status updated for "${blog.title}".`
-                                            );
-                                          }}
-                                        >
-                                          {WRITER_STATUSES.map((status) => (
-                                            <option key={status} value={status}>
-                                              {WRITER_STATUS_LABELS[status]}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      ) : null}
-                                    </div>
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    <WriterStatusBadge status={blog.writer_status} />
                                   </td>
                                 );
                               }
 
                               if (column === "publisher") {
                                 return (
-                                  <td
-                                    key={column}
-                                    className="px-3 py-2 text-slate-600"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                    }}
-                                  >
-                                    {isAdmin ? (
-                                      <select
-                                        disabled={isRowSaving}
-                                        value={blog.publisher_id ?? ""}
-                                        className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm disabled:bg-slate-100"
-                                        onChange={(event) => {
-                                          const nextPublisherId = event.target.value || null;
-                                          void updateBlogInline(
-                                            blog,
-                                            { publisher_id: nextPublisherId },
-                                            `Publisher updated for "${blog.title}".`
-                                          );
-                                        }}
-                                      >
-                                        <option value="">Unassigned</option>
-                                        {assignmentOptions.map((userOption) => (
-                                          <option key={userOption.id} value={userOption.id}>
-                                            {userOption.full_name}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    ) : (
-                                      blog.publisher?.full_name ?? "Unassigned"
-                                    )}
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    {blog.publisher?.full_name ?? "Unassigned"}
                                   </td>
                                 );
                               }
 
                               if (column === "publisher_status") {
                                 return (
-                                  <td
-                                    key={column}
-                                    className="px-3 py-2 text-slate-600"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                    }}
-                                  >
-                                    <div className="space-y-1">
-                                      <PublisherStatusBadge status={blog.publisher_status} />
-                                      {isAdmin ? (
-                                        <select
-                                          disabled={isRowSaving}
-                                          value={blog.publisher_status}
-                                          className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs disabled:bg-slate-100"
-                                          onChange={(event) => {
-                                            void updateBlogInline(
-                                              blog,
-                                              {
-                                                publisher_status: event.target
-                                                  .value as PublisherStageStatus,
-                                              },
-                                              `Publisher status updated for "${blog.title}".`
-                                            );
-                                          }}
-                                        >
-                                          {PUBLISHER_STATUSES.map((status) => (
-                                            <option key={status} value={status}>
-                                              {PUBLISHER_STATUS_LABELS[status]}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      ) : null}
-                                    </div>
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    <PublisherStatusBadge status={blog.publisher_status} />
                                   </td>
                                 );
                               }
@@ -2528,56 +2390,8 @@ export default function DashboardPage() {
                               }
 
                               return (
-                                <td
-                                  key={column}
-                                  className="px-3 py-2 text-slate-600"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                  }}
-                                >
-                                  {isAdmin ? (
-                                    <div className="space-y-1">
-                                      <label className="block text-[11px] text-slate-500">
-                                        Scheduled
-                                      </label>
-                                      <input
-                                        type="date"
-                                        disabled={isRowSaving}
-                                        className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs disabled:bg-slate-100"
-                                        value={formatDateInput(getBlogScheduledDate(blog))}
-                                        onChange={(event) => {
-                                          const nextDate = event.target.value || null;
-                                          void updateBlogInline(
-                                            blog,
-                                            {
-                                              scheduled_publish_date: nextDate,
-                                              target_publish_date: nextDate,
-                                            },
-                                            `Scheduled date updated for "${blog.title}".`
-                                          );
-                                        }}
-                                      />
-                                      <label className="block text-[11px] text-slate-500">
-                                        Display
-                                      </label>
-                                      <input
-                                        type="date"
-                                        disabled={isRowSaving}
-                                        className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs disabled:bg-slate-100"
-                                        value={formatDateInput(blog.display_published_date)}
-                                        onChange={(event) => {
-                                          const nextDisplayDate = event.target.value || null;
-                                          void updateBlogInline(
-                                            blog,
-                                            { display_published_date: nextDisplayDate },
-                                            `Display date updated for "${blog.title}".`
-                                          );
-                                        }}
-                                      />
-                                    </div>
-                                  ) : (
-                                    formatDateInput(displayPublishDate) || "—"
-                                  )}
+                                <td key={column} className="px-3 py-2 text-slate-600">
+                                  {formatDateInput(displayPublishDate) || "—"}
                                 </td>
                               );
                             })}

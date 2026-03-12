@@ -39,6 +39,25 @@ export function isMissingBlogDateColumnsError(
   );
 }
 
+export function isMissingBlogCommentsTableError(
+  error: Pick<PostgrestError, "code" | "message" | "details" | "hint"> | null | undefined
+) {
+  if (!error) {
+    return false;
+  }
+  const code = (error.code ?? "").toUpperCase();
+  const text = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  const referencesCommentsTable =
+    text.includes("blog_comments") || text.includes("public.blog_comments");
+  const isMissingTableSignal =
+    code === "42P01" ||
+    code === "PGRST205" ||
+    text.includes("schema cache") ||
+    text.includes("could not find") ||
+    text.includes("does not exist");
+  return referencesCommentsTable && isMissingTableSignal;
+}
+
 type LooseBlogRow = Partial<BlogRecord> & Record<string, unknown>;
 
 export function normalizeBlogRow<T extends LooseBlogRow>(row: T): BlogRecord & T {

@@ -7,38 +7,42 @@ import type {
 export const SITES = ["sighthound.com", "redactor.com"] as const;
 
 export const WRITER_STATUSES: WriterStageStatus[] = [
-  "not_started",
-  "in_progress",
-  "needs_revision",
+  "assigned",
+  "writing",
+  "pending_review",
   "completed",
 ];
 
 export const PUBLISHER_STATUSES: PublisherStageStatus[] = [
   "not_started",
-  "in_progress",
+  "publishing",
+  "pending_review",
   "completed",
 ];
 
 export const OVERALL_STATUSES: OverallBlogStatus[] = [
-  "planned",
   "writing",
-  "needs_revision",
+  "writing_review",
   "ready_to_publish",
+  "publishing",
+  "publishing_review",
   "published",
 ];
 
 export const STATUS_LABELS: Record<OverallBlogStatus, string> = {
-  planned: "Planned",
   writing: "Writing",
-  needs_revision: "Needs Revision",
+  writing_review: "Writing Review",
   ready_to_publish: "Ready to Publish",
+  publishing: "Publishing",
+  publishing_review: "Publishing Review",
   published: "Published",
 };
 
 export const STATUS_COLORS: Record<OverallBlogStatus, string> = {
-  planned: "bg-slate-100 text-slate-700",
   writing: "bg-sky-100 text-sky-700",
-  needs_revision: "bg-amber-100 text-amber-700",
+  writing_review: "bg-amber-100 text-amber-700",
   ready_to_publish: "bg-violet-100 text-violet-700",
+  publishing: "bg-indigo-100 text-indigo-700",
+  publishing_review: "bg-fuchsia-100 text-fuchsia-700",
   published: "bg-emerald-100 text-emerald-700",
 };

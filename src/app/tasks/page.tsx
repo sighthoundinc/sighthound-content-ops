@@ -74,7 +74,7 @@ export default function MyTasksPage() {
         (blog) =>
           blog.writer_id === user?.id &&
           blog.writer_status !== "completed" &&
-          blog.writer_status !== "needs_revision"
+          blog.writer_status !== "pending_review"
       ),
     [blogs, user?.id]
   );
@@ -82,7 +82,7 @@ export default function MyTasksPage() {
   const revisionTasks = useMemo(
     () =>
       blogs.filter(
-        (blog) => blog.writer_id === user?.id && blog.writer_status === "needs_revision"
+        (blog) => blog.writer_id === user?.id && blog.writer_status === "pending_review"
       ),
     [blogs, user?.id]
   );

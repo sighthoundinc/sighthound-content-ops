@@ -3,6 +3,17 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  DndContext,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
   addDays,
   addMonths,
   addWeeks,
@@ -29,6 +40,7 @@ import {
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
+import { hasRole } from "@/lib/roles";
 import { getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
@@ -39,8 +51,17 @@ import {
 } from "@/lib/table";
 import type { BlogRecord } from "@/lib/types";
 import { toTitleCase } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
 
 type CalendarMode = "month" | "week";
+
+function formatCalendarDateLabel(dateKey: string) {
+  const parsed = new Date(`${dateKey}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return dateKey;
+  }
+  return format(parsed, "MMM d");
+}
 
 function getNoPublishReason(blog: BlogRecord) {
   const workflowStage = getWorkflowStage({
@@ -50,7 +71,90 @@ function getNoPublishReason(blog: BlogRecord) {
   return `Stage: ${toTitleCase(workflowStage)} (no scheduled date)`;
 }
 
+function DroppableDayCell({
+  dateKey,
+  className,
+  children,
+}: {
+  dateKey: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `day-${dateKey}`,
+  });
+
+  return (
+    <article
+      ref={setNodeRef}
+      className={`${className} ${isOver ? "ring-2 ring-indigo-300 ring-offset-1" : ""}`}
+    >
+      {children}
+    </article>
+  );
+}
+
+function DraggableCalendarBlogCard({
+  blog,
+  canDrag,
+  isOverdue,
+  onOpen,
+}: {
+  blog: BlogRecord;
+  canDrag: boolean;
+  isOverdue: boolean;
+  onOpen: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: blog.id,
+    disabled: !canDrag,
+  });
+
+  const dragStyle = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={dragStyle}
+      type="button"
+      onClick={onOpen}
+      className={`block w-full rounded border border-slate-200 bg-slate-50 p-1 text-left text-xs transition-colors duration-150 hover:bg-neutral-100 ${
+        isDragging ? "opacity-60" : ""
+      }`}
+      title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nStage · ${toTitleCase(
+        getWorkflowStage({
+          writerStatus: blog.writer_status,
+          publisherStatus: blog.publisher_status,
+        })
+      )}\nScheduled · ${getBlogScheduledDate(blog) ?? "Unscheduled"}`}
+      {...(canDrag ? attributes : {})}
+      {...(canDrag ? listeners : {})}
+    >
+      <p className="line-clamp-2 font-medium text-slate-700">{blog.title}</p>
+      <div className="mt-1 flex items-center gap-1">
+        <WorkflowStageBadge
+          stage={getWorkflowStage({
+            writerStatus: blog.writer_status,
+            publisherStatus: blog.publisher_status,
+          })}
+        />
+        {isOverdue ? (
+          <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700">
+            ⚠ Overdue
+          </span>
+        ) : null}
+        <span className="text-[10px] text-slate-500">
+          {blog.writer?.full_name ?? "Unassigned"}
+        </span>
+      </div>
+    </button>
+  );
+}
+
 export default function CalendarPage() {
+  const { profile } = useAuth();
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [mode, setMode] = useState<CalendarMode>("month");
   const [cursorDate, setCursorDate] = useState(new Date());
@@ -59,11 +163,19 @@ export default function CalendarPage() {
   const [noDateRowLimit, setNoDateRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [noDateCurrentPage, setNoDateCurrentPage] = useState(1);
   const [draggingBlogId, setDraggingBlogId] = useState<string | null>(null);
+  const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
   const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  );
+  const canDragCalendarBlogs = hasRole(profile, "admin") || hasRole(profile, "publisher");
 
   useEffect(() => {
     const loadData = async () => {
@@ -161,6 +273,11 @@ export default function CalendarPage() {
     return Array.from({ length: 7 }, (_, index) => format(addDays(baseStart, index), "EEE"));
   }, [weekStart]);
 
+  const todayWeekdayColumnIndex = useMemo(
+    () => (new Date().getDay() - weekStart + 7) % 7,
+    [weekStart]
+  );
+
   const blogsByDate = useMemo(() => {
     return blogs.reduce<Record<string, BlogRecord[]>>((acc, blog) => {
       const scheduledDate = getBlogScheduledDate(blog);
@@ -203,6 +320,30 @@ export default function CalendarPage() {
     () => blogs.find((blog) => blog.id === activeBlogId) ?? null,
     [activeBlogId, blogs]
   );
+
+  const draggingBlog = useMemo(
+    () => blogs.find((blog) => blog.id === draggingBlogId) ?? null,
+    [blogs, draggingBlogId]
+  );
+
+  const dragPreviewMessage = useMemo(() => {
+    if (!draggingBlog || !dragOverDateKey) {
+      return null;
+    }
+    return `Moving to ${formatCalendarDateLabel(dragOverDateKey)}`;
+  }, [dragOverDateKey, draggingBlog]);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 2200);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [toastMessage]);
 
   const updateScheduledDate = async (blogId: string, scheduledDate: string) => {
     const supabase = getSupabaseBrowserClient();
@@ -257,6 +398,56 @@ export default function CalendarPage() {
     );
     setSuccessMessage("Scheduled date updated.");
     setError(null);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const blogId = String(event.active.id);
+    const nextBlog = blogs.find((blog) => blog.id === blogId) ?? null;
+    if (!nextBlog) {
+      return;
+    }
+    if (!canDragCalendarBlogs || nextBlog.publisher_status === "completed") {
+      return;
+    }
+    setDraggingBlogId(blogId);
+    setDragOverDateKey(getBlogScheduledDate(nextBlog));
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    if (!draggingBlogId) {
+      return;
+    }
+    const overId = event.over ? String(event.over.id) : null;
+    if (!overId || !overId.startsWith("day-")) {
+      setDragOverDateKey(null);
+      return;
+    }
+    setDragOverDateKey(overId.slice(4));
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const draggedBlogId = String(event.active.id);
+    const draggedBlog = blogs.find((blog) => blog.id === draggedBlogId) ?? null;
+    const overId = event.over ? String(event.over.id) : null;
+
+    setDraggingBlogId(null);
+    setDragOverDateKey(null);
+
+    if (!draggedBlog || !overId || !overId.startsWith("day-")) {
+      return;
+    }
+    if (!canDragCalendarBlogs || draggedBlog.publisher_status === "completed") {
+      return;
+    }
+
+    const nextDateKey = overId.slice(4);
+    const currentDateKey = getBlogScheduledDate(draggedBlog);
+    if (currentDateKey === nextDateKey) {
+      return;
+    }
+
+    await updateScheduledDate(draggedBlogId, nextDateKey);
+    setToastMessage(`Moved to ${formatCalendarDateLabel(nextDateKey)}`);
   };
 
   return (
@@ -357,109 +548,103 @@ export default function CalendarPage() {
                 </p>
               ) : null}
               <section className="space-y-3">
+                {dragPreviewMessage ? (
+                  <p className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
+                    {dragPreviewMessage}
+                  </p>
+                ) : null}
                 <div className="grid grid-cols-7 gap-2">
-                  {weekdayLabels.map((label) => (
-                    <p
+                  {weekdayLabels.map((label, index) => (
+                    <div
                       key={label}
-                      className="text-center text-xs font-semibold uppercase tracking-wide text-slate-500"
+                      className="flex flex-col items-center justify-center gap-1"
                     >
-                      {label}
-                    </p>
+                      {index === todayWeekdayColumnIndex ? (
+                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                      ) : (
+                        <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+                      )}
+                      <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {label}
+                      </p>
+                    </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {days.map((day) => {
-                    const key = format(day, "yyyy-MM-dd");
-                    const items = blogsByDate[key] ?? [];
-                    const isCurrentMonth = mode === "week" || day.getMonth() === cursorDate.getMonth();
-                    const isToday = isSameDay(day, new Date());
-                    const isCurrentWeek = isWithinInterval(day, currentWeekRange);
-                    return (
-                      <article
-                        key={key}
-                        className={`min-h-28 rounded-md border p-2 ${
-                          isCurrentMonth
-                            ? "border-slate-200 bg-white"
-                            : "border-slate-100 bg-slate-50 text-slate-400"
-                        } ${isCurrentWeek ? "bg-blue-50/40" : ""} ${
-                          isToday ? "border-blue-500 shadow-sm" : ""
-                        }`}
-                        onDragOver={(event) => {
-                          event.preventDefault();
-                        }}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          const droppedBlogId =
-                            event.dataTransfer.getData("text/plain") || draggingBlogId;
-                          if (!droppedBlogId) {
-                            return;
-                          }
-                          setDraggingBlogId(null);
-                          void updateScheduledDate(droppedBlogId, key);
-                        }}
-                      >
-                        <p className="mb-2 text-sm font-semibold text-slate-700">{format(day, "d")}</p>
-                        <div className="space-y-1">
-                          {items.length === 0 ? (
-                            <p className="text-xs text-slate-400">No blogs</p>
-                          ) : (
-                            items.map((blog) => (
-                              (() => {
+                <DndContext
+                  sensors={sensors}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnd={(event) => {
+                    void handleDragEnd(event);
+                  }}
+                  onDragCancel={() => {
+                    setDraggingBlogId(null);
+                    setDragOverDateKey(null);
+                  }}
+                >
+                  <div className="grid grid-cols-7 gap-2">
+                    {days.map((day) => {
+                      const key = format(day, "yyyy-MM-dd");
+                      const items = blogsByDate[key] ?? [];
+                      const isCurrentMonth =
+                        mode === "week" || day.getMonth() === cursorDate.getMonth();
+                      const isToday = isSameDay(day, new Date());
+                      const isCurrentWeek = isWithinInterval(day, currentWeekRange);
+                      return (
+                        <DroppableDayCell
+                          key={key}
+                          dateKey={key}
+                          className={`min-h-28 rounded-md border p-2 ${
+                            isCurrentMonth
+                              ? "border-neutral-100 bg-white"
+                              : "border-neutral-100 bg-neutral-50 text-neutral-400"
+                          } ${!isToday && isCurrentWeek ? "bg-neutral-50" : ""} ${
+                            isToday ? "bg-indigo-50 border-indigo-400 shadow-sm" : ""
+                          }`}
+                        >
+                          <p
+                            className={`mb-2 text-sm ${
+                              isToday
+                                ? "font-medium text-indigo-700"
+                                : isCurrentMonth
+                                  ? "font-normal text-neutral-900"
+                                  : "font-normal text-neutral-400"
+                            }`}
+                          >
+                            {format(day, "d")}
+                          </p>
+                          <div className="space-y-1">
+                            {items.length === 0 ? (
+                              <p className="text-xs text-slate-400">No blogs</p>
+                            ) : (
+                              items.map((blog) => {
                                 const scheduledDate = getBlogScheduledDate(blog);
                                 const isOverdue =
                                   scheduledDate !== null &&
                                   scheduledDate < todayDateKey &&
                                   blog.publisher_status !== "completed";
+                                const canDragThisBlog =
+                                  canDragCalendarBlogs && blog.publisher_status !== "completed";
+
                                 return (
-                              <button
-                                key={blog.id}
-                                type="button"
-                                draggable
-                                onDragStart={(event) => {
-                                  setDraggingBlogId(blog.id);
-                                  event.dataTransfer.setData("text/plain", blog.id);
-                                }}
-                                onDragEnd={() => {
-                                  setDraggingBlogId(null);
-                                }}
-                                onClick={() => {
-                                  setActiveBlogId(blog.id);
-                                }}
-                                className="block w-full rounded border border-slate-200 bg-slate-50 p-1 text-left text-xs hover:bg-slate-100"
-                                title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nStage · ${toTitleCase(
-                                  getWorkflowStage({
-                                    writerStatus: blog.writer_status,
-                                    publisherStatus: blog.publisher_status,
-                                  })
-                                )}\nScheduled · ${getBlogScheduledDate(blog) ?? "Unscheduled"}`}
-                              >
-                                <p className="line-clamp-2 font-medium text-slate-700">{blog.title}</p>
-                                <div className="mt-1 flex items-center gap-1">
-                                  <WorkflowStageBadge
-                                    stage={getWorkflowStage({
-                                      writerStatus: blog.writer_status,
-                                      publisherStatus: blog.publisher_status,
-                                    })}
+                                  <DraggableCalendarBlogCard
+                                    key={blog.id}
+                                    blog={blog}
+                                    canDrag={canDragThisBlog}
+                                    isOverdue={isOverdue}
+                                    onOpen={() => {
+                                      setActiveBlogId(blog.id);
+                                    }}
                                   />
-                                  {isOverdue ? (
-                                    <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700">
-                                      ⚠ Overdue
-                                    </span>
-                                  ) : null}
-                                  <span className="text-[10px] text-slate-500">
-                                    {blog.writer?.full_name ?? "Unassigned"}
-                                  </span>
-                                </div>
-                              </button>
                                 );
-                              })()
-                            ))
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
+                              })
+                            )}
+                          </div>
+                        </DroppableDayCell>
+                      );
+                    })}
+                  </div>
+                </DndContext>
               </section>
 
               <section className="space-y-2">
@@ -473,9 +658,9 @@ export default function CalendarPage() {
                 ) : (
                   <>
                     <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                      These blogs do not have a scheduled publish date yet. Possible reasons include ongoing drafting,
-                      no editorial date assignment, or imported legacy records. Assign a scheduled publish date to
-                      move them into the calendar.
+                      These blogs do not have a scheduled publish date yet. Possible reasons include
+                      ongoing drafting, no editorial date assignment, or imported legacy records.
+                      Assign a scheduled publish date to move them into the calendar.
                     </p>
                     <ul className="space-y-3">
                       {pagedNoPublishDateBlogs.map((blog) => (
@@ -552,7 +737,9 @@ export default function CalendarPage() {
                   </p>
                   <p>
                     Publisher ·{" "}
-                    <span className="font-medium">{activeBlog.publisher?.full_name ?? "Unassigned"}</span>
+                    <span className="font-medium">
+                      {activeBlog.publisher?.full_name ?? "Unassigned"}
+                    </span>
                   </p>
                   <div className="flex items-center gap-2">
                     <WorkflowStageBadge
@@ -588,6 +775,11 @@ export default function CalendarPage() {
             </>
           ) : null}
         </div>
+        {toastMessage ? (
+          <div className="pointer-events-none fixed bottom-5 right-5 z-50 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm">
+            {toastMessage}
+          </div>
+        ) : null}
       </AppShell>
     </ProtectedPage>
   );

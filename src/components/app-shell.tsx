@@ -84,9 +84,13 @@ export function AppShell({
       const isTypingField =
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
         target?.isContentEditable;
 
       if (event.key === "/") {
+        if (isTypingField) {
+          return;
+        }
         event.preventDefault();
         const searchInput = document.querySelector<HTMLInputElement>('input[type="search"]');
         searchInput?.focus();

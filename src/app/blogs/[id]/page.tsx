@@ -528,6 +528,7 @@ export default function BlogDetailPage() {
     await updateBlog(
       {
         writer_status: "completed",
+        google_doc_url: form.google_doc_url.trim() || null,
       },
       "Writing marked complete.",
       async () => {
@@ -563,6 +564,7 @@ export default function BlogDetailPage() {
     await updateBlog(
       {
         publisher_status: "completed",
+        live_url: form.live_url.trim() || null,
       },
       "Publishing marked complete.",
       async () => {

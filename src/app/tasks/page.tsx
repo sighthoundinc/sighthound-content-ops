@@ -1,12 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
-import { StatusBadge } from "@/components/status-badge";
+import {
+  TablePaginationControls,
+  TableResultsSummary,
+} from "@/components/table-controls";
 import {
   BLOG_SELECT_LEGACY,
   BLOG_SELECT_WITH_DATES,
@@ -15,9 +17,50 @@ import {
   normalizeBlogRows,
 } from "@/lib/blog-schema";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getTablePageCount, getTablePageRows } from "@/lib/table";
 import type { BlogRecord } from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+
+type TaskKind = "writer" | "publisher";
+
+type TaskItem = {
+  id: string;
+  blogId: string;
+  title: string;
+  kind: TaskKind;
+  statusLabel: string;
+  scheduledDate: string | null;
+  isOverdue: boolean;
+  isDueSoon: boolean;
+  urgencyScore: number;
+};
+
+const FULL_LIST_PAGE_SIZE = 10;
+
+function getStatusUrgency(kind: TaskKind, status: string) {
+  if (kind === "writer") {
+    if (status === "needs_revision") {
+      return 3;
+    }
+    if (status === "in_progress") {
+      return 2;
+    }
+    return 1;
+  }
+
+  if (status === "in_progress") {
+    return 3;
+  }
+  return 1;
+}
+
+function getDateDifferenceInDays(dateKey: string, todayDateKey: string) {
+  return Math.round(
+    (parseISO(dateKey).getTime() - parseISO(todayDateKey).getTime()) /
+      (24 * 60 * 60 * 1000)
+  );
+}
 
 export default function MyTasksPage() {
   const { user } = useAuth();
@@ -25,6 +68,9 @@ export default function MyTasksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.id) {
@@ -70,105 +116,140 @@ export default function MyTasksPage() {
     void loadTasks();
   }, [user?.id]);
 
-  const writingTasks = useMemo(
-    () =>
-      blogs.filter(
-        (blog) =>
-          blog.writer_id === user?.id &&
-          blog.writer_status !== "completed" &&
-          blog.writer_status !== "needs_revision"
-      ),
-    [blogs, user?.id]
-  );
-
-  const revisionTasks = useMemo(
-    () =>
-      blogs.filter(
-        (blog) => blog.writer_id === user?.id && blog.writer_status === "needs_revision"
-      ),
-    [blogs, user?.id]
-  );
-
-  const publishingTasks = useMemo(
-    () =>
-      blogs.filter(
-        (blog) =>
-          blog.publisher_id === user?.id && blog.publisher_status !== "completed"
-      ),
-    [blogs, user?.id]
-  );
-
-  const recentlyCompleted = useMemo(
-    () =>
-      blogs
-        .filter(
-          (blog) =>
-            (blog.writer_id === user?.id && blog.writer_status === "completed") ||
-            (blog.publisher_id === user?.id &&
-              blog.publisher_status === "completed")
-        )
-        .slice(0, 12),
-    [blogs, user?.id]
-  );
-
-  const renderList = (items: BlogRecord[]) => {
-    if (items.length === 0) {
-      return (
-        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
-          No tasks in this section.
-        </p>
-      );
+  const taskItems = useMemo(() => {
+    if (!user?.id) {
+      return [] as TaskItem[];
     }
 
-    return (
-      <ul className="space-y-2">
-        {items.map((blog) => {
-          const scheduledDate = getBlogPublishDate(blog);
-          const isOverdue =
-            scheduledDate !== null &&
-            scheduledDate < todayDateKey &&
-            blog.publisher_status !== "completed";
-          return (
-          <li key={blog.id} className="rounded-md border border-slate-200 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Link
-                className="font-medium text-slate-900 hover:underline"
-                href={`/blogs/${blog.id}`}
-              >
-                {blog.title}
-              </Link>
-              <div className="flex items-center gap-2">
-                <StatusBadge status={blog.overall_status} />
-                {isOverdue ? (
-                  <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700">
-                    ⚠ Overdue
-                  </span>
-                ) : null}
-              </div>
-            </div>
-            <p className="mt-1 text-sm text-slate-600">
-              {blog.site} • Publish date:{" "}
-              {formatDateInput(getBlogPublishDate(blog)) || "Not set"}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Writer · {toTitleCase(blog.writer_status)} • Publisher ·{" "}
-              {toTitleCase(blog.publisher_status)}
-            </p>
-          </li>
-          );
-        })}
-      </ul>
-    );
-  };
+    const items: TaskItem[] = [];
+    for (const blog of blogs) {
+      const scheduledDate = getBlogPublishDate(blog);
+      const diffDays =
+        scheduledDate !== null
+          ? getDateDifferenceInDays(scheduledDate, todayDateKey)
+          : null;
+      const isOverdue = diffDays !== null && diffDays < 0;
+      const isDueSoon = diffDays !== null && diffDays >= 0 && diffDays <= 3;
+
+      if (blog.writer_id === user.id && blog.writer_status !== "completed") {
+        items.push({
+          id: `${blog.id}:writer`,
+          blogId: blog.id,
+          title: blog.title,
+          kind: "writer",
+          statusLabel: toTitleCase(blog.writer_status),
+          scheduledDate,
+          isOverdue,
+          isDueSoon,
+          urgencyScore: getStatusUrgency("writer", blog.writer_status),
+        });
+      }
+
+      if (blog.publisher_id === user.id && blog.publisher_status !== "completed") {
+        items.push({
+          id: `${blog.id}:publisher`,
+          blogId: blog.id,
+          title: blog.title,
+          kind: "publisher",
+          statusLabel:
+            blog.writer_status === "completed" && blog.publisher_status === "not_started"
+              ? "Ready to publish"
+              : toTitleCase(blog.publisher_status),
+          scheduledDate,
+          isOverdue,
+          isDueSoon,
+          urgencyScore: getStatusUrgency("publisher", blog.publisher_status),
+        });
+      }
+    }
+
+    return items.sort((left, right) => {
+      if (left.isOverdue !== right.isOverdue) {
+        return left.isOverdue ? -1 : 1;
+      }
+
+      if (left.scheduledDate && right.scheduledDate) {
+        const dateCompare = left.scheduledDate.localeCompare(right.scheduledDate);
+        if (dateCompare !== 0) {
+          return dateCompare;
+        }
+      } else if (left.scheduledDate && !right.scheduledDate) {
+        return -1;
+      } else if (!left.scheduledDate && right.scheduledDate) {
+        return 1;
+      }
+
+      if (left.urgencyScore !== right.urgencyScore) {
+        return right.urgencyScore - left.urgencyScore;
+      }
+
+      return left.title.localeCompare(right.title);
+    });
+  }, [blogs, todayDateKey, user?.id]);
+
+  const topTasks = useMemo(() => taskItems.slice(0, 3), [taskItems]);
+  const pageCount = useMemo(
+    () => getTablePageCount(taskItems.length, FULL_LIST_PAGE_SIZE),
+    [taskItems.length]
+  );
+  const pagedTasks = useMemo(
+    () => getTablePageRows(taskItems, currentPage, FULL_LIST_PAGE_SIZE),
+    [currentPage, taskItems]
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [showAllTasks, taskItems.length]);
+
+  useEffect(() => {
+    setCurrentPage((previous) => Math.min(previous, pageCount));
+  }, [pageCount]);
+
+  const activeTask = useMemo(
+    () => taskItems.find((task) => task.id === activeTaskId) ?? null,
+    [activeTaskId, taskItems]
+  );
+
+  const renderTaskRow = (task: TaskItem) => (
+    <button
+      key={task.id}
+      type="button"
+      onClick={() => {
+        setActiveTaskId(task.id);
+      }}
+      className="w-full rounded-md border border-slate-200 p-3 text-left transition hover:border-slate-300 hover:bg-slate-50"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="font-medium text-slate-900">{task.title}</p>
+        {task.isOverdue ? (
+          <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700">
+            ⚠ Overdue
+          </span>
+        ) : task.isDueSoon ? (
+          <span className="inline-flex items-center justify-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
+            Soon
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-1 text-sm text-slate-600">
+        {task.kind === "writer" ? "Writer task" : "Publisher task"} · {task.statusLabel}
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        Scheduled: {formatDateInput(task.scheduledDate) || "Not scheduled"}
+      </p>
+    </button>
+  );
 
   return (
     <ProtectedPage>
       <AppShell>
-        <div className="space-y-5">
+        <div className="space-y-6">
           <header>
-            <h2 className="text-xl font-semibold text-slate-900">My Tasks</h2>
-            <p className="text-sm text-slate-600">
-              Tasks assigned to you as writer and publisher.
+            <h2 className="text-xl font-semibold text-slate-900">
+              Tasks assigned to you as writer or publisher
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Your pending writing and publishing assignments.
             </p>
           </header>
 
@@ -181,37 +262,118 @@ export default function MyTasksPage() {
               {error}
             </p>
           ) : (
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="space-y-4">
               <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Writing Tasks
-                </h3>
-                {renderList(writingTasks)}
+                {topTasks.length === 0 ? (
+                  <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
+                    No pending tasks.
+                  </p>
+                ) : (
+                  <div className="space-y-2">{topTasks.map(renderTaskRow)}</div>
+                )}
               </section>
 
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Needs Revision
-                </h3>
-                {renderList(revisionTasks)}
-              </section>
+              {taskItems.length > 3 ? (
+                <div>
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    onClick={() => {
+                      setShowAllTasks((previous) => !previous);
+                    }}
+                  >
+                    {showAllTasks ? "Hide full task list" : "View all tasks"}
+                  </button>
+                </div>
+              ) : null}
 
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Publishing Tasks
-                </h3>
-                {renderList(publishingTasks)}
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Recently Completed
-                </h3>
-                {renderList(recentlyCompleted)}
-              </section>
+              {showAllTasks ? (
+                <section className="space-y-3 rounded-lg border border-slate-200 p-4">
+                  {pagedTasks.length === 0 ? (
+                    <p className="text-sm text-slate-500">No tasks to display.</p>
+                  ) : (
+                    <div className="space-y-2">{pagedTasks.map(renderTaskRow)}</div>
+                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <span className="font-medium text-slate-700">Rows per page:</span>
+                      <span className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700">
+                        10
+                      </span>
+                    </div>
+                    <TableResultsSummary
+                      totalRows={taskItems.length}
+                      currentPage={currentPage}
+                      rowLimit={10}
+                      noun="tasks"
+                    />
+                    <TablePaginationControls
+                      currentPage={currentPage}
+                      pageCount={pageCount}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
+                </section>
+              ) : null}
             </div>
           )}
         </div>
+
+        {activeTask ? (
+          <div className="fixed inset-0 z-40 flex">
+            <button
+              type="button"
+              className="h-full w-full bg-slate-900/30"
+              aria-label="Close task detail panel"
+              onClick={() => {
+                setActiveTaskId(null);
+              }}
+            />
+            <aside className="h-full w-full max-w-md border-l border-slate-200 bg-white p-5 shadow-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">{activeTask.title}</h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {activeTask.kind === "writer" ? "Writer task" : "Publisher task"} ·{" "}
+                    {activeTask.statusLabel}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setActiveTaskId(null);
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              <div className="mt-4 space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                <p>
+                  <span className="font-medium text-slate-900">Status:</span>{" "}
+                  {activeTask.statusLabel}
+                </p>
+                <p>
+                  <span className="font-medium text-slate-900">Scheduled:</span>{" "}
+                  {formatDateInput(activeTask.scheduledDate) || "Not scheduled"}
+                </p>
+                {activeTask.isOverdue ? (
+                  <p className="font-medium text-rose-700">⚠ Overdue</p>
+                ) : activeTask.isDueSoon ? (
+                  <p className="font-medium text-amber-700">Soon</p>
+                ) : null}
+              </div>
+              <div className="mt-4">
+                <a
+                  href={`/blogs/${activeTask.blogId}`}
+                  className="inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                >
+                  Open full blog details
+                </a>
+              </div>
+            </aside>
+          </div>
+        ) : null}
       </AppShell>
     </ProtectedPage>
   );

@@ -114,6 +114,7 @@ const DASHBOARD_COLUMN_VIEW_STORAGE_KEY = "dashboard-column-view:v1";
 
 const isDashboardColumnKey = (value: string): value is DashboardColumnKey =>
   value in DASHBOARD_COLUMN_LABELS;
+const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
 
 const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => {
   if (!Array.isArray(value)) {
@@ -622,6 +623,91 @@ export default function DashboardPage() {
     setSuccessMessage("Column view reset to default.");
   };
 
+  const getExportCellValue = useCallback(
+    (blog: BlogRecord, column: DashboardColumnKey) => {
+      if (column === "title") {
+        return blog.title;
+      }
+
+      if (column === "site") {
+        return blog.site;
+      }
+
+      if (column === "writer") {
+        return blog.writer?.full_name ?? "Unassigned";
+      }
+
+      if (column === "writer_status") {
+        return toTitleCase(blog.writer_status);
+      }
+
+      if (column === "publisher") {
+        return blog.publisher?.full_name ?? "Unassigned";
+      }
+
+      if (column === "publisher_status") {
+        return toTitleCase(blog.publisher_status);
+      }
+
+      if (column === "overall_status") {
+        return STATUS_LABELS[blog.overall_status];
+      }
+
+      const publishDate = getBlogPublishDate(blog);
+      return formatDateInput(publishDate) || "—";
+    },
+    []
+  );
+
+  const buildCsvContent = useCallback(
+    (rows: BlogRecord[]) => {
+      const headers = columnOrder.map((column) =>
+        escapeCsvValue(DASHBOARD_COLUMN_LABELS[column])
+      );
+      const csvRows = rows.map((blog) =>
+        columnOrder
+          .map((column) => escapeCsvValue(getExportCellValue(blog, column)))
+          .join(",")
+      );
+      return [headers.join(","), ...csvRows].join("\n");
+    },
+    [columnOrder, getExportCellValue]
+  );
+
+  const triggerCsvDownload = useCallback((csvContent: string, filename: string) => {
+    const blob = new Blob([`\uFEFF${csvContent}`], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(downloadUrl);
+  }, []);
+
+  const handleExportCsv = (scope: "selected" | "view") => {
+    const rowsToExport = scope === "selected" ? selectedBlogs : sortedBlogs;
+    if (rowsToExport.length === 0) {
+      setError(
+        scope === "selected"
+          ? "Select at least one blog before exporting CSV."
+          : "No blogs available in the current view to export."
+      );
+      setSuccessMessage(null);
+      return;
+    }
+
+    const csvContent = buildCsvContent(rowsToExport);
+    const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
+    const filename = `dashboard-${scope}-${timestamp}.csv`;
+    triggerCsvDownload(csvContent, filename);
+    setError(null);
+    setSuccessMessage(`Exported ${rowsToExport.length} blog(s) as CSV.`);
+  };
+
   const ensureBulkSelection = () => {
     if (selectedBlogIds.length === 0) {
       setError("Select at least one blog for bulk actions.");
@@ -1029,6 +1115,28 @@ export default function DashboardPage() {
                   noun="blogs"
                 />
                 <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={sortedBlogs.length === 0}
+                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      handleExportCsv("view");
+                    }}
+                  >
+                    Export View CSV
+                  </button>
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      disabled={selectedBlogIds.length === 0}
+                      className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        handleExportCsv("selected");
+                      }}
+                    >
+                      Export Selected CSV
+                    </button>
+                  ) : null}
                   <TableRowLimitSelect
                     value={rowLimit}
                     onChange={(value) => {
@@ -1042,7 +1150,6 @@ export default function DashboardPage() {
                   />
                 </div>
               </div>
-
               <section className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">

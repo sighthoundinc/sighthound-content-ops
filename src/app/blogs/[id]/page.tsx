@@ -43,6 +43,33 @@ type BlogFormState = {
   is_archived: boolean;
 };
 
+type BlogCommentRecord = {
+  id: string;
+  blog_id: string;
+  comment: string;
+  created_by: string;
+  created_at: string;
+  author?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+};
+
+function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
+  return rows.map((row) => {
+    const authorValue = row.author;
+    const author = Array.isArray(authorValue)
+      ? ((authorValue[0] ?? null) as BlogCommentRecord["author"])
+      : ((authorValue ?? null) as BlogCommentRecord["author"]);
+
+    return {
+      id: String(row.id ?? ""),
+      blog_id: String(row.blog_id ?? ""),
+      comment: String(row.comment ?? ""),
+      created_by: String(row.created_by ?? ""),
+      created_at: String(row.created_at ?? ""),
+      author,
+    } satisfies BlogCommentRecord;
+  });
+}
+
 function toDateTimeLocalInput(value: string | null | undefined) {
   if (!value) {
     return "";
@@ -80,6 +107,9 @@ export default function BlogDetailPage() {
   const [form, setForm] = useState<BlogFormState | null>(null);
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [history, setHistory] = useState<BlogHistoryRecord[]>([]);
+  const [comments, setComments] = useState<BlogCommentRecord[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [isCommentSaving, setIsCommentSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +143,12 @@ export default function BlogDetailPage() {
         return { data, error };
       };
 
-      const [{ data: blogData, error: blogError }, { data: usersData }, { data: historyData }] =
+      const [
+        { data: blogData, error: blogError },
+        { data: usersData },
+        { data: historyData },
+        { data: commentsData, error: commentsError },
+      ] =
         await Promise.all([
           fetchBlog(),
           supabase
@@ -127,6 +162,11 @@ export default function BlogDetailPage() {
             .eq("blog_id", blogId)
             .order("changed_at", { ascending: false })
             .limit(50),
+          supabase
+            .from("blog_comments")
+            .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
+            .eq("blog_id", blogId)
+            .order("created_at", { ascending: false }),
         ]);
 
       if (blogError) {
@@ -157,6 +197,11 @@ export default function BlogDetailPage() {
       });
       setUsers((usersData ?? []) as ProfileRecord[]);
       setHistory((historyData ?? []) as BlogHistoryRecord[]);
+      if (commentsError) {
+        setError(commentsError.message);
+      } else {
+        setComments(normalizeCommentRows((commentsData ?? []) as Array<Record<string, unknown>>));
+      }
       setIsLoading(false);
     };
 
@@ -296,6 +341,51 @@ export default function BlogDetailPage() {
           }
         : undefined
     );
+  };
+
+  const handleAddComment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!blog || !user?.id) {
+      return;
+    }
+
+    const trimmedComment = newComment.trim();
+    if (!trimmedComment) {
+      setError("Comment cannot be empty.");
+      return;
+    }
+
+    setIsCommentSaving(true);
+    setError(null);
+
+    const supabase = getSupabaseBrowserClient();
+    const { error: insertError } = await supabase.from("blog_comments").insert({
+      blog_id: blog.id,
+      comment: trimmedComment,
+      created_by: user.id,
+    });
+
+    if (insertError) {
+      setError(insertError.message);
+      setIsCommentSaving(false);
+      return;
+    }
+
+    const { data: commentsData, error: commentsError } = await supabase
+      .from("blog_comments")
+      .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
+      .eq("blog_id", blog.id)
+      .order("created_at", { ascending: false });
+
+    if (commentsError) {
+      setError(commentsError.message);
+    } else {
+      setComments(normalizeCommentRows((commentsData ?? []) as Array<Record<string, unknown>>));
+      setNewComment("");
+      setSuccessMessage("Comment added.");
+    }
+
+    setIsCommentSaving(false);
   };
 
   const handleWriterSave = async () => {
@@ -826,6 +916,51 @@ export default function BlogDetailPage() {
                     </p>
                     <p className="text-xs text-slate-400">
                       {format(new Date(entry.changed_at), "PPp")}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-lg border border-slate-200 p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Comments
+            </h3>
+            <form className="mt-3 space-y-2" onSubmit={handleAddComment}>
+              <textarea
+                value={newComment}
+                onChange={(event) => {
+                  setNewComment(event.target.value);
+                }}
+                className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Add remarks or feedback…"
+                maxLength={2000}
+              />
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isCommentSaving}
+                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isCommentSaving ? "Adding..." : "Add Comment"}
+                </button>
+              </div>
+            </form>
+
+            {comments.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-500">No comments yet.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {comments.map((comment) => (
+                  <li
+                    key={comment.id}
+                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                  >
+                    <p className="text-sm text-slate-800">{comment.comment}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {comment.author?.full_name ?? "Unknown"} •{" "}
+                      {format(new Date(comment.created_at), "PPp")}
                     </p>
                   </li>
                 ))}

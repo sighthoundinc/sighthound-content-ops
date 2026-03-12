@@ -2,6 +2,8 @@ alter table public.blogs
   alter column writer_status drop default,
   alter column publisher_status drop default,
   alter column overall_status drop default;
+alter table public.blogs
+  drop constraint if exists blogs_publisher_complete_requires_writer_complete;
 
 drop function if exists public.derive_overall_status(public.writer_stage_status, public.publisher_stage_status);
 
@@ -53,11 +55,13 @@ alter table public.blogs
   alter column writer_status set default 'assigned'::public.writer_stage_status,
   alter column publisher_status set default 'not_started'::public.publisher_stage_status,
   alter column overall_status set default 'writing'::public.overall_blog_status;
+alter table public.blogs disable trigger blogs_enforce_role_update;
 
 update public.blogs
 set publisher_status = 'not_started'::public.publisher_stage_status
 where writer_status <> 'completed'::public.writer_stage_status
   and publisher_status <> 'not_started'::public.publisher_stage_status;
+alter table public.blogs enable trigger blogs_enforce_role_update;
 
 create or replace function public.derive_overall_status(
   p_writer_status public.writer_stage_status,
@@ -247,8 +251,6 @@ begin
 end
 $$;
 
-alter table public.blogs
-  drop constraint if exists blogs_publisher_complete_requires_writer_complete;
 
 alter table public.blogs
   add constraint blogs_publisher_progress_requires_writer_complete check (

@@ -1,6 +1,7 @@
 alter table public.blogs
   add column if not exists scheduled_publish_date date,
   add column if not exists published_at timestamptz;
+alter table public.blogs disable trigger user;
 
 update public.blogs
 set scheduled_publish_date = coalesce(scheduled_publish_date, target_publish_date)
@@ -20,6 +21,7 @@ set published_at = coalesce(
 )
 where published_at is null;
 
+alter table public.blogs enable trigger user;
 create index if not exists blogs_scheduled_publish_date_idx on public.blogs (scheduled_publish_date);
 create index if not exists blogs_published_at_idx on public.blogs (published_at);
 

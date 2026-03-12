@@ -25,7 +25,7 @@ function BaseStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+        "inline-flex items-center justify-center rounded-full px-2.5 py-1 text-center text-xs font-medium leading-4 whitespace-nowrap",
         className
       )}
     >

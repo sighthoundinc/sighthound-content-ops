@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
@@ -23,6 +24,7 @@ export default function MyTasksPage() {
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
 
   useEffect(() => {
     if (!user?.id) {
@@ -120,7 +122,13 @@ export default function MyTasksPage() {
 
     return (
       <ul className="space-y-2">
-        {items.map((blog) => (
+        {items.map((blog) => {
+          const scheduledDate = getBlogPublishDate(blog);
+          const isOverdue =
+            scheduledDate !== null &&
+            scheduledDate < todayDateKey &&
+            blog.publisher_status !== "completed";
+          return (
           <li key={blog.id} className="rounded-md border border-slate-200 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Link
@@ -129,18 +137,26 @@ export default function MyTasksPage() {
               >
                 {blog.title}
               </Link>
-              <StatusBadge status={blog.overall_status} />
+              <div className="flex items-center gap-2">
+                <StatusBadge status={blog.overall_status} />
+                {isOverdue ? (
+                  <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700">
+                    ⚠ Overdue
+                  </span>
+                ) : null}
+              </div>
             </div>
             <p className="mt-1 text-sm text-slate-600">
               {blog.site} • Publish date:{" "}
               {formatDateInput(getBlogPublishDate(blog)) || "Not set"}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Writer: {toTitleCase(blog.writer_status)} • Publisher:{" "}
+              Writer · {toTitleCase(blog.writer_status)} • Publisher ·{" "}
               {toTitleCase(blog.publisher_status)}
             </p>
           </li>
-        ))}
+          );
+        })}
       </ul>
     );
   };

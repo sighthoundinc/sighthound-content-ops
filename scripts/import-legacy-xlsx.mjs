@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
@@ -72,6 +73,11 @@ function normalizeText(value) {
 
 function normalizeLookup(value) {
   return normalizeText(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeDateKey(value) {
+  const normalized = normalizeDate(value);
+  return normalized ?? "unscheduled";
 }
 
 function normalizeUrl(value) {
@@ -468,8 +474,17 @@ function extractAssigneeHints(cells, userIndex) {
   return { writerRaw, publisherRaw };
 }
 
+function buildLegacyImportHash(record) {
+  const seed = `${normalizeLookup(record.site)}|${normalizeLookup(record.title)}|${normalizeDateKey(
+    record.scheduledPublishDate ?? record.displayPublishedDate
+  )}`;
+  return createHash("md5").update(seed).digest("hex");
+}
+
 function getRecordKey(record) {
-  return `${record.site}::${normalizeLookup(record.title)}`;
+  return `${record.site}::${normalizeLookup(record.title)}::${normalizeDateKey(
+    record.scheduledPublishDate ?? record.displayPublishedDate
+  )}`;
 }
 
 function mergeRecords(baseRecord, nextRecord) {
@@ -806,6 +821,7 @@ function buildPayload(
   const payload = {
     title: record.title,
     site: record.site,
+    legacy_import_hash: existingRow?.legacy_import_hash ?? buildLegacyImportHash(record),
     writer_id: writerId,
     publisher_id: publisherId,
     writer_status: statuses.writerStatus,
@@ -844,13 +860,13 @@ async function main() {
 
   let includeAdvancedDateColumns = true;
   let { data: existingBlogs, error: existingError } = await supabase.from("blogs").select(
-    "id,title,slug,site,writer_id,publisher_id,writer_status,publisher_status,google_doc_url,live_url,target_publish_date,scheduled_publish_date,display_published_date,actual_published_at,published_at,is_archived"
+    "id,title,slug,site,legacy_import_hash,writer_id,publisher_id,writer_status,publisher_status,google_doc_url,live_url,target_publish_date,scheduled_publish_date,display_published_date,actual_published_at,published_at,is_archived"
   );
 
   if (isMissingBlogDateColumnsError(existingError)) {
     includeAdvancedDateColumns = false;
     const fallback = await supabase.from("blogs").select(
-      "id,title,slug,site,writer_id,publisher_id,writer_status,publisher_status,google_doc_url,live_url,target_publish_date,is_archived"
+      "id,title,slug,site,legacy_import_hash,writer_id,publisher_id,writer_status,publisher_status,google_doc_url,live_url,target_publish_date,is_archived"
     );
     existingBlogs = fallback.data;
     existingError = fallback.error;
@@ -863,11 +879,20 @@ async function main() {
   }
 
   const existingByKey = new Map();
+  const existingByImportHash = new Map();
   const existingByLiveUrl = new Map();
   const existingByGoogleDoc = new Map();
   const existingSlugs = new Set();
   for (const row of existingBlogs ?? []) {
-    existingByKey.set(`${row.site}::${normalizeLookup(row.title)}`, row);
+    existingByKey.set(
+      `${row.site}::${normalizeLookup(row.title)}::${normalizeDateKey(
+        row.scheduled_publish_date ?? row.target_publish_date
+      )}`,
+      row
+    );
+    if (row.legacy_import_hash) {
+      existingByImportHash.set(row.legacy_import_hash, row);
+    }
     const liveUrlKey = normalizeUrlKey(row.live_url);
     if (liveUrlKey) {
       existingByLiveUrl.set(liveUrlKey, row);
@@ -899,9 +924,11 @@ async function main() {
 
   for (const record of importRecords) {
     const key = getRecordKey(record);
+    const importHash = buildLegacyImportHash(record);
     const liveKey = normalizeUrlKey(record.liveUrl);
     const docKey = normalizeUrlKey(record.googleDocUrl);
     const existingRow =
+      existingByImportHash.get(importHash) ??
       (liveKey ? existingByLiveUrl.get(liveKey) : null) ??
       existingByKey.get(key) ??
       (docKey ? existingByGoogleDoc.get(docKey) : null) ??

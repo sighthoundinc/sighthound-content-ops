@@ -50,24 +50,24 @@ export const PUBLISHER_STATUS_LABELS: Record<PublisherStageStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<OverallBlogStatus, string> = {
-  planned: "bg-slate-100 text-slate-700",
-  writing: "bg-sky-100 text-sky-700",
-  needs_revision: "bg-amber-100 text-amber-700",
-  ready_to_publish: "bg-violet-100 text-violet-700",
-  published: "bg-emerald-100 text-emerald-700",
+  planned: "bg-slate-50 text-slate-700",
+  writing: "bg-blue-50 text-blue-700",
+  needs_revision: "bg-amber-50 text-amber-700",
+  ready_to_publish: "bg-purple-50 text-purple-700",
+  published: "bg-emerald-50 text-emerald-700",
 };
 
 export const WRITER_STATUS_COLORS: Record<WriterStageStatus, string> = {
-  not_started: "bg-slate-100 text-slate-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  needs_revision: "bg-orange-100 text-orange-700",
-  completed: "bg-emerald-100 text-emerald-700",
+  not_started: "bg-slate-50 text-slate-700",
+  in_progress: "bg-blue-50 text-blue-700",
+  needs_revision: "bg-amber-50 text-amber-700",
+  completed: "bg-emerald-50 text-emerald-700",
 };
 
 export const PUBLISHER_STATUS_COLORS: Record<PublisherStageStatus, string> = {
-  not_started: "bg-slate-100 text-slate-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  completed: "bg-emerald-100 text-emerald-700",
+  not_started: "bg-slate-50 text-slate-700",
+  in_progress: "bg-blue-50 text-blue-700",
+  completed: "bg-emerald-50 text-emerald-700",
 };
 
 export const WORKFLOW_STAGES: WorkflowStage[] = [
@@ -85,10 +85,10 @@ export const WORKFLOW_STAGE_LABELS: Record<WorkflowStage, string> = {
 };
 
 export const WORKFLOW_STAGE_COLORS: Record<WorkflowStage, string> = {
-  writing: "bg-sky-100 text-sky-700",
-  ready: "bg-violet-100 text-violet-700",
-  publishing: "bg-blue-100 text-blue-700",
-  published: "bg-emerald-100 text-emerald-700",
+  writing: "bg-blue-50 text-blue-700",
+  ready: "bg-purple-50 text-purple-700",
+  publishing: "bg-blue-50 text-blue-700",
+  published: "bg-emerald-50 text-emerald-700",
 };
 
 export function getWorkflowStage({

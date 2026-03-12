@@ -63,6 +63,7 @@ export default function CalendarPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
 
   useEffect(() => {
     const loadData = async () => {
@@ -403,6 +404,13 @@ export default function CalendarPage() {
                             <p className="text-xs text-slate-400">No blogs</p>
                           ) : (
                             items.map((blog) => (
+                              (() => {
+                                const scheduledDate = getBlogScheduledDate(blog);
+                                const isOverdue =
+                                  scheduledDate !== null &&
+                                  scheduledDate < todayDateKey &&
+                                  blog.publisher_status !== "completed";
+                                return (
                               <button
                                 key={blog.id}
                                 type="button"
@@ -418,12 +426,12 @@ export default function CalendarPage() {
                                   setActiveBlogId(blog.id);
                                 }}
                                 className="block w-full rounded border border-slate-200 bg-slate-50 p-1 text-left text-xs hover:bg-slate-100"
-                                title={`${blog.title}\nWriter: ${blog.writer?.full_name ?? "Unassigned"}\nStage: ${toTitleCase(
+                                title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nStage · ${toTitleCase(
                                   getWorkflowStage({
                                     writerStatus: blog.writer_status,
                                     publisherStatus: blog.publisher_status,
                                   })
-                                )}\nScheduled: ${getBlogScheduledDate(blog) ?? "Unscheduled"}`}
+                                )}\nScheduled · ${getBlogScheduledDate(blog) ?? "Unscheduled"}`}
                               >
                                 <p className="line-clamp-2 font-medium text-slate-700">{blog.title}</p>
                                 <div className="mt-1 flex items-center gap-1">
@@ -433,11 +441,18 @@ export default function CalendarPage() {
                                       publisherStatus: blog.publisher_status,
                                     })}
                                   />
+                                  {isOverdue ? (
+                                    <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700">
+                                      ⚠ Overdue
+                                    </span>
+                                  ) : null}
                                   <span className="text-[10px] text-slate-500">
                                     {blog.writer?.full_name ?? "Unassigned"}
                                   </span>
                                 </div>
                               </button>
+                                );
+                              })()
                             ))
                           )}
                         </div>
@@ -532,18 +547,32 @@ export default function CalendarPage() {
                 </div>
                 <div className="mt-4 space-y-3 text-sm text-slate-700">
                   <p>
-                    Writer: <span className="font-medium">{activeBlog.writer?.full_name ?? "Unassigned"}</span>
+                    Writer ·{" "}
+                    <span className="font-medium">{activeBlog.writer?.full_name ?? "Unassigned"}</span>
                   </p>
                   <p>
-                    Publisher: <span className="font-medium">{activeBlog.publisher?.full_name ?? "Unassigned"}</span>
+                    Publisher ·{" "}
+                    <span className="font-medium">{activeBlog.publisher?.full_name ?? "Unassigned"}</span>
                   </p>
-                  <div>
+                  <div className="flex items-center gap-2">
                     <WorkflowStageBadge
                       stage={getWorkflowStage({
                         writerStatus: activeBlog.writer_status,
                         publisherStatus: activeBlog.publisher_status,
                       })}
                     />
+                    {(() => {
+                      const scheduledDate = getBlogScheduledDate(activeBlog);
+                      const isOverdue =
+                        scheduledDate !== null &&
+                        scheduledDate < todayDateKey &&
+                        activeBlog.publisher_status !== "completed";
+                      return isOverdue ? (
+                        <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700">
+                          ⚠ Overdue
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                   <p>Scheduled: {getBlogScheduledDate(activeBlog) ?? "Unscheduled"}</p>
                 </div>

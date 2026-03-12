@@ -9,6 +9,7 @@ import {
   TableResultsSummary,
   TableRowLimitSelect,
 } from "@/components/table-controls";
+import { getUserRoles, hasRole } from "@/lib/roles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -30,20 +31,53 @@ const WEEK_DAYS = [
   { label: "Saturday", value: 6 },
 ];
 
-type UserSortField = "full_name" | "email" | "role" | "is_active" | "created_at";
+const TIMEZONE_OPTIONS = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Berlin",
+  "Asia/Dubai",
+  "Asia/Karachi",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
+
+const ALL_ROLES: AppRole[] = ["admin", "writer", "publisher", "editor"];
+
+type UserSortField = "full_name" | "email" | "roles" | "is_active" | "created_at";
+type EditableUserState = {
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  userRoles: AppRole[];
+};
 
 const USER_SORT_OPTIONS: Array<{ value: UserSortField; label: string }> = [
   { value: "created_at", label: "Created Date" },
   { value: "full_name", label: "Name" },
   { value: "email", label: "Email" },
-  { value: "role", label: "Role" },
+  { value: "roles", label: "Roles" },
   { value: "is_active", label: "Active Status" },
 ];
 
+function splitName(fullName: string) {
+  const [firstName, ...rest] = fullName.trim().split(/\s+/);
+  return {
+    firstName: firstName || "",
+    lastName: rest.join(" "),
+  };
+}
+
 export default function SettingsPage() {
-  const { session } = useAuth();
+  const { session, profile, refreshProfile } = useAuth();
+  const isAdmin = hasRole(profile, "admin");
   const [settings, setSettings] = useState<AppSettingsRecord | null>(null);
   const [users, setUsers] = useState<ProfileRecord[]>([]);
+  const [editableUsers, setEditableUsers] = useState<Record<string, EditableUserState>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -61,27 +95,57 @@ export default function SettingsPage() {
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const loadUsers = async () => {
+    const supabase = getSupabaseBrowserClient();
+    const { data: usersData, error: usersError } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (usersError) {
+      throw new Error(usersError.message);
+    }
+    const nextUsers = (usersData ?? []) as ProfileRecord[];
+    setUsers(nextUsers);
+    setEditableUsers(
+      Object.fromEntries(
+        nextUsers.map((nextUser) => {
+          const nameParts = splitName(nextUser.full_name);
+          return [
+            nextUser.id,
+            {
+              firstName: nextUser.first_name ?? nameParts.firstName,
+              lastName: nextUser.last_name ?? nameParts.lastName,
+              displayName: nextUser.display_name ?? nextUser.full_name,
+              userRoles: getUserRoles(nextUser),
+            },
+          ];
+        })
+      )
+    );
+  };
+
   useEffect(() => {
     const loadData = async () => {
       const supabase = getSupabaseBrowserClient();
       setIsLoading(true);
       setError(null);
 
-      const [{ data: settingsData, error: settingsError }, { data: usersData, error: usersError }] =
-        await Promise.all([
-          supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
-          supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-        ]);
-
-      if (settingsError || usersError) {
-        setError(settingsError?.message ?? usersError?.message ?? "Failed to load settings");
+      try {
+        const { data: settingsData, error: settingsError } = await supabase
+          .from("app_settings")
+          .select("*")
+          .eq("id", 1)
+          .maybeSingle();
+        if (settingsError) {
+          throw new Error(settingsError.message);
+        }
+        setSettings((settingsData as AppSettingsRecord) ?? null);
+        await loadUsers();
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load settings.");
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      setSettings((settingsData as AppSettingsRecord) ?? null);
-      setUsers((usersData ?? []) as ProfileRecord[]);
-      setIsLoading(false);
     };
 
     void loadData();
@@ -89,7 +153,7 @@ export default function SettingsPage() {
 
   const saveSettings = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!settings) {
+    if (!settings || !isAdmin) {
       return;
     }
 
@@ -113,10 +177,49 @@ export default function SettingsPage() {
     setSuccess("Settings saved.");
   };
 
-  const createUser = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const saveProfileEdits = async (targetUserId: string) => {
     if (!session?.access_token) {
       setError("Missing active session token.");
+      return;
+    }
+    const edits = editableUsers[targetUserId];
+    if (!edits) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    const response = await fetch("/api/users/profile", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        targetUserId,
+        firstName: edits.firstName,
+        lastName: edits.lastName,
+        displayName: edits.displayName,
+        userRoles: isAdmin ? edits.userRoles : undefined,
+      }),
+    });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to save profile updates.");
+      return;
+    }
+
+    await loadUsers();
+    if (targetUserId === profile?.id) {
+      await refreshProfile();
+    }
+    setSuccess("Profile updated.");
+  };
+
+  const createUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!session?.access_token || !isAdmin) {
+      setError("Admin session is required.");
       return;
     }
 
@@ -134,6 +237,7 @@ export default function SettingsPage() {
         password: newPassword,
         fullName: newFullName,
         role: newRole,
+        userRoles: [newRole],
       }),
     });
 
@@ -148,18 +252,14 @@ export default function SettingsPage() {
     setNewPassword("");
     setNewFullName("");
     setNewRole("writer");
-
-    const supabase = getSupabaseBrowserClient();
-    const { data: usersData } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setUsers((usersData ?? []) as ProfileRecord[]);
+    await loadUsers();
   };
 
   const filteredUsers = useMemo(() => {
     return users.filter((nextUser) => {
-      const matchesRole = userRoleFilter === "all" || nextUser.role === userRoleFilter;
+      const nextUserRoles = getUserRoles(nextUser);
+      const matchesRole =
+        userRoleFilter === "all" || nextUserRoles.includes(userRoleFilter);
       const matchesActive =
         userActiveFilter === "all" ||
         (userActiveFilter === "active" ? nextUser.is_active : !nextUser.is_active);
@@ -173,19 +273,20 @@ export default function SettingsPage() {
 
     return [...filteredUsers].sort((left, right) => {
       let compareResult = 0;
-
       if (userSortField === "full_name") {
         compareResult = collator.compare(left.full_name, right.full_name);
       } else if (userSortField === "email") {
         compareResult = collator.compare(left.email, right.email);
-      } else if (userSortField === "role") {
-        compareResult = collator.compare(left.role, right.role);
+      } else if (userSortField === "roles") {
+        compareResult = collator.compare(
+          getUserRoles(left).join(", "),
+          getUserRoles(right).join(", ")
+        );
       } else if (userSortField === "is_active") {
         compareResult = Number(right.is_active) - Number(left.is_active);
       } else if (userSortField === "created_at") {
         compareResult = left.created_at.localeCompare(right.created_at);
       }
-
       return compareResult * directionMultiplier;
     });
   }, [filteredUsers, userSortDirection, userSortField]);
@@ -209,13 +310,13 @@ export default function SettingsPage() {
   );
 
   return (
-    <ProtectedPage allowedRoles={["admin"]}>
+    <ProtectedPage>
       <AppShell>
-        <div className="space-y-6">
+        <div className="space-y-7">
           <header>
             <h2 className="text-xl font-semibold text-slate-900">Settings</h2>
             <p className="text-sm text-slate-600">
-              Configure timezone/week start and manage internal accounts.
+              Manage profile names, timezone preferences, and team roles.
             </p>
           </header>
 
@@ -236,26 +337,122 @@ export default function SettingsPage() {
             </p>
           ) : (
             <>
+              {profile ? (
+                <section className="rounded-lg border border-slate-200 p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    My Profile
+                  </h3>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                        First Name
+                      </span>
+                      <input
+                        value={editableUsers[profile.id]?.firstName ?? ""}
+                        onChange={(event) => {
+                          setEditableUsers((previous) => ({
+                            ...previous,
+                            [profile.id]: {
+                              ...(previous[profile.id] ?? {
+                                firstName: "",
+                                lastName: "",
+                                displayName: "",
+                                userRoles: getUserRoles(profile),
+                              }),
+                              firstName: event.target.value,
+                            },
+                          }));
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                        Last Name
+                      </span>
+                      <input
+                        value={editableUsers[profile.id]?.lastName ?? ""}
+                        onChange={(event) => {
+                          setEditableUsers((previous) => ({
+                            ...previous,
+                            [profile.id]: {
+                              ...(previous[profile.id] ?? {
+                                firstName: "",
+                                lastName: "",
+                                displayName: "",
+                                userRoles: getUserRoles(profile),
+                              }),
+                              lastName: event.target.value,
+                            },
+                          }));
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                        Display Name
+                      </span>
+                      <input
+                        value={editableUsers[profile.id]?.displayName ?? ""}
+                        onChange={(event) => {
+                          setEditableUsers((previous) => ({
+                            ...previous,
+                            [profile.id]: {
+                              ...(previous[profile.id] ?? {
+                                firstName: "",
+                                lastName: "",
+                                displayName: "",
+                                userRoles: getUserRoles(profile),
+                              }),
+                              displayName: event.target.value,
+                            },
+                          }));
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                      onClick={() => {
+                        void saveProfileEdits(profile.id);
+                      }}
+                    >
+                      Save My Name
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+
               <section className="rounded-lg border border-slate-200 p-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                   Calendar & Dashboard Defaults
                 </h3>
-                <form className="mt-3 grid gap-3 md:grid-cols-3" onSubmit={saveSettings}>
+                <form className="mt-4 grid gap-3 md:grid-cols-3" onSubmit={saveSettings}>
                   <label className="block">
                     <span className="mb-1 block text-sm font-medium text-slate-700">
                       Timezone
                     </span>
-                    <input
+                    <select
                       value={settings.timezone}
                       onChange={(event) => {
-                        setSettings((prev) =>
-                          prev ? { ...prev, timezone: event.target.value } : prev
+                        setSettings((previous) =>
+                          previous ? { ...previous, timezone: event.target.value } : previous
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
+                      disabled={!isAdmin}
+                    >
+                      {TIMEZONE_OPTIONS.map((timezone) => (
+                        <option key={timezone} value={timezone}>
+                          {timezone}
+                        </option>
+                      ))}
+                    </select>
                   </label>
-
                   <label className="block">
                     <span className="mb-1 block text-sm font-medium text-slate-700">
                       Week Start
@@ -263,13 +460,12 @@ export default function SettingsPage() {
                     <select
                       value={settings.week_start}
                       onChange={(event) => {
-                        setSettings((prev) =>
-                          prev
-                            ? { ...prev, week_start: Number(event.target.value) }
-                            : prev
+                        setSettings((previous) =>
+                          previous ? { ...previous, week_start: Number(event.target.value) } : previous
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      disabled={!isAdmin}
                     >
                       {WEEK_DAYS.map((day) => (
                         <option key={day.value} value={day.value}>
@@ -278,7 +474,6 @@ export default function SettingsPage() {
                       ))}
                     </select>
                   </label>
-
                   <label className="block">
                     <span className="mb-1 block text-sm font-medium text-slate-700">
                       Stale Draft Days
@@ -289,218 +484,315 @@ export default function SettingsPage() {
                       type="number"
                       value={settings.stale_draft_days}
                       onChange={(event) => {
-                        setSettings((prev) =>
-                          prev
+                        setSettings((previous) =>
+                          previous
                             ? {
-                                ...prev,
+                                ...previous,
                                 stale_draft_days: Number(event.target.value) || 1,
                               }
-                            : prev
+                            : previous
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      disabled={!isAdmin}
                     />
                   </label>
-
-                  <div className="md:col-span-3">
-                    <button
-                      type="submit"
-                      className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-                    >
-                      Save Settings
-                    </button>
-                  </div>
+                  {isAdmin ? (
+                    <div className="md:col-span-3">
+                      <button
+                        type="submit"
+                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                      >
+                        Save Settings
+                      </button>
+                    </div>
+                  ) : null}
                 </form>
               </section>
 
-              <section className="rounded-lg border border-slate-200 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Create Internal User
-                </h3>
-                <form className="mt-3 grid gap-3 md:grid-cols-4" onSubmit={createUser}>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Full Name
-                    </span>
-                    <input
-                      required
-                      value={newFullName}
-                      onChange={(event) => {
-                        setNewFullName(event.target.value);
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
-                  </label>
+              {isAdmin ? (
+                <>
+                  <section className="rounded-lg border border-slate-200 p-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      Create Internal User
+                    </h3>
+                    <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={createUser}>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Full Name
+                        </span>
+                        <input
+                          required
+                          value={newFullName}
+                          onChange={(event) => {
+                            setNewFullName(event.target.value);
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">Email</span>
+                        <input
+                          required
+                          type="email"
+                          value={newEmail}
+                          onChange={(event) => {
+                            setNewEmail(event.target.value);
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Password
+                        </span>
+                        <input
+                          required
+                          type="password"
+                          minLength={8}
+                          value={newPassword}
+                          onChange={(event) => {
+                            setNewPassword(event.target.value);
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Primary Role
+                        </span>
+                        <select
+                          value={newRole}
+                          onChange={(event) => {
+                            setNewRole(event.target.value as AppRole);
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          {ALL_ROLES.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="md:col-span-4">
+                        <button
+                          type="submit"
+                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                        >
+                          Create User
+                        </button>
+                      </div>
+                    </form>
+                  </section>
 
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Email
-                    </span>
-                    <input
-                      required
-                      type="email"
-                      value={newEmail}
-                      onChange={(event) => {
-                        setNewEmail(event.target.value);
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Password
-                    </span>
-                    <input
-                      required
-                      type="password"
-                      minLength={8}
-                      value={newPassword}
-                      onChange={(event) => {
-                        setNewPassword(event.target.value);
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Role
-                    </span>
-                    <select
-                      value={newRole}
-                      onChange={(event) => {
-                        setNewRole(event.target.value as AppRole);
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="writer">Writer</option>
-                      <option value="publisher">Publisher</option>
-                    </select>
-                  </label>
-
-                  <div className="md:col-span-4">
-                    <button
-                      type="submit"
-                      className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-                    >
-                      Create User
-                    </button>
-                  </div>
-                </form>
-              </section>
-
-              <section className="rounded-lg border border-slate-200 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Active Users
-                </h3>
-                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-                  <select
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    value={userRoleFilter}
-                    onChange={(event) => {
-                      setUserRoleFilter(event.target.value as AppRole | "all");
-                    }}
-                  >
-                    <option value="all">All Roles</option>
-                    <option value="admin">Admin</option>
-                    <option value="writer">Writer</option>
-                    <option value="publisher">Publisher</option>
-                  </select>
-
-                  <select
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    value={userActiveFilter}
-                    onChange={(event) => {
-                      setUserActiveFilter(
-                        event.target.value as "all" | "active" | "inactive"
-                      );
-                    }}
-                  >
-                    <option value="all">All Activity</option>
-                    <option value="active">Active Only</option>
-                    <option value="inactive">Inactive Only</option>
-                  </select>
-
-                  <select
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    value={userSortField}
-                    onChange={(event) => {
-                      setUserSortField(event.target.value as UserSortField);
-                    }}
-                  >
-                    {USER_SORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        Sort: {option.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    value={userSortDirection}
-                    onChange={(event) => {
-                      setUserSortDirection(event.target.value as SortDirection);
-                    }}
-                  >
-                    <option value="asc">Sort Direction: Ascending</option>
-                    <option value="desc">Sort Direction: Descending</option>
-                  </select>
-
-                  <TableRowLimitSelect
-                    value={rowLimit}
-                    onChange={(value) => {
-                      setRowLimit(value);
-                    }}
-                  />
-                </div>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                  <TableResultsSummary
-                    totalRows={sortedUsers.length}
-                    currentPage={currentPage}
-                    rowLimit={rowLimit}
-                    noun="users"
-                  />
-                  <TablePaginationControls
-                    currentPage={currentPage}
-                    pageCount={pageCount}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-                <div className="mt-3 overflow-x-auto rounded-md border border-slate-200">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                      <tr>
-                        <th className="px-3 py-2">Name</th>
-                        <th className="px-3 py-2">Email</th>
-                        <th className="px-3 py-2">Role</th>
-                        <th className="px-3 py-2">Active</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {sortedUsers.length === 0 ? (
-                        <tr>
-                          <td className="px-3 py-4 text-center text-slate-500" colSpan={4}>
-                            No users found with current filters.
-                          </td>
-                        </tr>
-                      ) : (
-                        pagedUsers.map((nextUser) => (
-                          <tr key={nextUser.id}>
-                            <td className="px-3 py-2">{nextUser.full_name}</td>
-                            <td className="px-3 py-2 text-slate-600">{nextUser.email}</td>
-                            <td className="px-3 py-2">{nextUser.role}</td>
-                            <td className="px-3 py-2">
-                              {nextUser.is_active ? "Yes" : "No"}
-                            </td>
+                  <section className="rounded-lg border border-slate-200 p-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      Users
+                    </h3>
+                    <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+                      <select
+                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        value={userRoleFilter}
+                        onChange={(event) => {
+                          setUserRoleFilter(event.target.value as AppRole | "all");
+                        }}
+                      >
+                        <option value="all">All Roles</option>
+                        {ALL_ROLES.map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        value={userActiveFilter}
+                        onChange={(event) => {
+                          setUserActiveFilter(
+                            event.target.value as "all" | "active" | "inactive"
+                          );
+                        }}
+                      >
+                        <option value="all">All Activity</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                      </select>
+                      <select
+                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        value={userSortField}
+                        onChange={(event) => {
+                          setUserSortField(event.target.value as UserSortField);
+                        }}
+                      >
+                        {USER_SORT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            Sort: {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        value={userSortDirection}
+                        onChange={(event) => {
+                          setUserSortDirection(event.target.value as SortDirection);
+                        }}
+                      >
+                        <option value="asc">Sort Direction: Ascending</option>
+                        <option value="desc">Sort Direction: Descending</option>
+                      </select>
+                      <TableRowLimitSelect
+                        value={rowLimit}
+                        onChange={(value) => {
+                          setRowLimit(value);
+                        }}
+                      />
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <TableResultsSummary
+                        totalRows={sortedUsers.length}
+                        currentPage={currentPage}
+                        rowLimit={rowLimit}
+                        noun="users"
+                      />
+                      <TablePaginationControls
+                        currentPage={currentPage}
+                        pageCount={pageCount}
+                        onPageChange={setCurrentPage}
+                      />
+                    </div>
+                    <div className="mt-3 overflow-x-auto rounded-md border border-slate-200">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+                          <tr>
+                            <th className="px-3 py-2">Email</th>
+                            <th className="px-3 py-2">First Name</th>
+                            <th className="px-3 py-2">Last Name</th>
+                            <th className="px-3 py-2">Display Name</th>
+                            <th className="px-3 py-2">Roles</th>
+                            <th className="px-3 py-2">Actions</th>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {sortedUsers.length === 0 ? (
+                            <tr>
+                              <td className="px-3 py-4 text-center text-slate-500" colSpan={6}>
+                                No users found with current filters.
+                              </td>
+                            </tr>
+                          ) : (
+                            pagedUsers.map((nextUser) => {
+                              const editable = editableUsers[nextUser.id];
+                              if (!editable) {
+                                return null;
+                              }
+                              return (
+                                <tr key={nextUser.id}>
+                                  <td className="px-3 py-2 text-slate-600">{nextUser.email}</td>
+                                  <td className="px-3 py-2">
+                                    <input
+                                      value={editable.firstName}
+                                      onChange={(event) => {
+                                        setEditableUsers((previous) => ({
+                                          ...previous,
+                                          [nextUser.id]: {
+                                            ...editable,
+                                            firstName: event.target.value,
+                                          },
+                                        }));
+                                      }}
+                                      className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <input
+                                      value={editable.lastName}
+                                      onChange={(event) => {
+                                        setEditableUsers((previous) => ({
+                                          ...previous,
+                                          [nextUser.id]: {
+                                            ...editable,
+                                            lastName: event.target.value,
+                                          },
+                                        }));
+                                      }}
+                                      className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <input
+                                      value={editable.displayName}
+                                      onChange={(event) => {
+                                        setEditableUsers((previous) => ({
+                                          ...previous,
+                                          [nextUser.id]: {
+                                            ...editable,
+                                            displayName: event.target.value,
+                                          },
+                                        }));
+                                      }}
+                                      className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <div className="flex flex-wrap gap-2">
+                                      {ALL_ROLES.map((role) => {
+                                        const isChecked = editable.userRoles.includes(role);
+                                        return (
+                                          <label
+                                            key={role}
+                                            className="inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-700"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={isChecked}
+                                              onChange={() => {
+                                                setEditableUsers((previous) => {
+                                                  const current = previous[nextUser.id];
+                                                  if (!current) {
+                                                    return previous;
+                                                  }
+                                                  const nextRoles = isChecked
+                                                    ? current.userRoles.filter((value) => value !== role)
+                                                    : [...current.userRoles, role];
+                                                  return {
+                                                    ...previous,
+                                                    [nextUser.id]: {
+                                                      ...current,
+                                                      userRoles:
+                                                        nextRoles.length > 0 ? nextRoles : current.userRoles,
+                                                    },
+                                                  };
+                                                });
+                                              }}
+                                            />
+                                            <span>{role}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <button
+                                      type="button"
+                                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                      onClick={() => {
+                                        void saveProfileEdits(nextUser.id);
+                                      }}
+                                    >
+                                      Save User
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </>
+              ) : null}
             </>
           )}
         </div>

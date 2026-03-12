@@ -8,7 +8,8 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   fullName: z.string().min(2),
-  role: z.enum(["admin", "writer", "publisher"]),
+  role: z.enum(["admin", "writer", "publisher", "editor"]),
+  userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor"])).optional(),
 });
 
 async function requireAdmin(request: NextRequest) {
@@ -29,12 +30,15 @@ async function requireAdmin(request: NextRequest) {
   const adminClient = createAdminClient();
   const { data: profile, error: profileError } = await adminClient
     .from("profiles")
-    .select("id,role")
+    .select("id,role,user_roles")
     .eq("id", userData.user.id)
     .eq("is_active", true)
     .maybeSingle();
-
-  if (profileError || !profile || profile.role !== "admin") {
+  const roleSet = new Set<string>([
+    profile?.role ?? "",
+    ...((profile?.user_roles as string[] | null | undefined) ?? []),
+  ]);
+  if (profileError || !profile || !roleSet.has("admin")) {
     return { error: "Admin access required", status: 403 } as const;
   }
 
@@ -60,7 +64,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, password, fullName, role } = parsed.data;
+    const { email, password, fullName, role, userRoles } = parsed.data;
+    const normalizedUserRoles = Array.from(new Set(userRoles?.length ? userRoles : [role]));
+    const [firstName, ...restName] = fullName.trim().split(/\s+/);
+    const lastName = restName.length ? restName.join(" ") : null;
     const adminClient = createAdminClient();
     const { data: createdUserData, error: createUserError } =
       await adminClient.auth.admin.createUser({
@@ -70,6 +77,7 @@ export async function POST(request: NextRequest) {
         user_metadata: {
           full_name: fullName,
           role,
+          user_roles: normalizedUserRoles,
         },
       });
 
@@ -85,6 +93,10 @@ export async function POST(request: NextRequest) {
       email,
       full_name: fullName,
       role: role as AppRole,
+      first_name: firstName || null,
+      last_name: lastName,
+      display_name: fullName,
+      user_roles: normalizedUserRoles,
       is_active: true,
     };
 

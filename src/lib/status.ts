@@ -35,10 +35,36 @@ export const STATUS_LABELS: Record<OverallBlogStatus, string> = {
   published: "Published",
 };
 
+export const WRITER_STATUS_LABELS: Record<WriterStageStatus, string> = {
+  not_started: "Not Started",
+  in_progress: "In Progress",
+  needs_revision: "Needs Review",
+  completed: "Completed",
+};
+
+export const PUBLISHER_STATUS_LABELS: Record<PublisherStageStatus, string> = {
+  not_started: "Not Started",
+  in_progress: "In Progress",
+  completed: "Completed",
+};
+
 export const STATUS_COLORS: Record<OverallBlogStatus, string> = {
   planned: "bg-slate-100 text-slate-700",
   writing: "bg-sky-100 text-sky-700",
   needs_revision: "bg-amber-100 text-amber-700",
   ready_to_publish: "bg-violet-100 text-violet-700",
   published: "bg-emerald-100 text-emerald-700",
+};
+
+export const WRITER_STATUS_COLORS: Record<WriterStageStatus, string> = {
+  not_started: "bg-slate-100 text-slate-700",
+  in_progress: "bg-blue-100 text-blue-700",
+  needs_revision: "bg-orange-100 text-orange-700",
+  completed: "bg-emerald-100 text-emerald-700",
+};
+
+export const PUBLISHER_STATUS_COLORS: Record<PublisherStageStatus, string> = {
+  not_started: "bg-slate-100 text-slate-700",
+  in_progress: "bg-blue-100 text-blue-700",
+  completed: "bg-emerald-100 text-emerald-700",
 };

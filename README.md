@@ -1,64 +1,104 @@
 # sighthound-content-ops
-Internal content operations dashboard for the Sighthound marketing team.
+Internal content operations dashboard for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
 
-## Stack
-- Next.js + TypeScript + Tailwind
-- Supabase (Postgres + Auth + RLS + Edge Functions)
+## What the product does
+- Tracks the full internal blog pipeline from planning to publication.
+- Supports assignment and handoff between writing and publishing stages.
+- Provides dashboard, tasks, calendar, blog detail, add-blog, and settings experiences.
+- Enforces permissions through Supabase RLS and DB triggers.
+- Sends Slack notifications for key workflow milestones.
+
+## Tech stack
+- Next.js (App Router) + TypeScript + Tailwind CSS
+- Supabase (Postgres, Auth, RLS, Edge Functions)
 - Vercel deployment target
 
-## Features implemented
-- Role-aware dashboard (`admin`, `writer`, `publisher`)
-- Add Blog, Blog Detail workflow actions, My Tasks, Calendar, Settings
-- Google SSO + email/password login
-- Admin internal user provisioning API
-- Supabase SQL migration with:
-  - blog workflow schema
-  - constraints + status derivation trigger
-  - assignment history + notification queue
-  - RLS policies
-- Supabase Edge Function for Slack channel + DM notifications
-- One-time XLSX import script from `critical-data/`
+## Current feature set
+### Dashboard
+- Search, filtering, sorting, and customizable visible columns
+- “Edit Columns” popover (collapsed by default)
+- Bottom-of-table pagination controls:
+  - rows per page: `10`, `20`, `50`, `All`
+  - `Prev` / `Next`
+  - `Move to top`
+- Main metrics plus secondary delay metrics behind “More Metrics”
+- Bulk update support for selected rows
+
+### Blogs
+- Add blog flow (`/blogs/new`) with optional initial comment
+- Blog detail (`/blogs/[id]`) with:
+  - role-aware edit controls
+  - comments section
+  - assignment + activity history
+  - comments displayed before activity history
+
+### Calendar
+- Single weekday header row at top
+- Month jump picker
+- Highlighting for today and current week
+- “No Publish Date” section with reason context and pagination
+
+### Settings and users
+- IANA-style timezone selection
+- Profile name editing (`first_name`, `last_name`, `display_name`)
+- Multi-role users (`user_roles`) with admin role management
+- Supported role values: `admin`, `writer`, `publisher`, `editor`
+
+### Integrations and data
+- Slack notifications via Supabase Edge Function (`slack-notify`)
+- Legacy XLSX import script for initial historical data load
 
 ## Local setup
 1. Install dependencies:
    - `npm install`
-2. Copy env template:
+2. Create local env file:
    - `cp .env.example .env.local`
-3. Fill required env vars in `.env.local`:
+3. Populate `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` (server/API/import only)
-   - `NEXT_PUBLIC_APP_URL` (for Slack deep links)
+   - `NEXT_PUBLIC_APP_URL` (default local: `http://localhost:3000`)
+   - `SUPABASE_SERVICE_ROLE_KEY` (required for server/API/import operations)
+   - `IMPORT_CREATED_BY_USER_ID` (required for legacy import)
+   - optional: `LEGACY_XLSX_PATH`
 4. Start dev server:
    - `npm run dev`
 
 ## Supabase setup
-1. Apply migration:
-   - run SQL in `supabase/migrations/20260311191500_init.sql` through Supabase SQL editor or CLI workflow.
-2. Enable Google provider in Supabase Auth.
-3. Deploy Edge Function:
-   - function path: `supabase/functions/slack-notify/index.ts`
-4. Configure function secrets:
-   - `SLACK_BOT_TOKEN` (recommended)
-   - `SLACK_MARKETING_CHANNEL` (defaults to `#marketing`)
-   - Optional fallback: `SLACK_WEBHOOK_URL`
+Apply SQL migrations from `supabase/migrations/` in chronological order.
 
-## Legacy data import
-Use the one-time importer:
-- Dry run:
-  - `npm run import:legacy -- --dry-run`
-- Real import:
-  - `npm run import:legacy`
+Current migration set:
+- `20260311191500_init.sql`
+- `20260311203000_calendar_model_alignment.sql`
+- `20260312000100_fix_blog_history_trigger_rls.sql`
+- `20260312114000_separate_publish_dates.sql`
+- `20260312124500_pipeline_status_model.sql`
+- `20260312125500_completion_link_requirements.sql`
+- `20260312131500_publish_timestamp_and_comments.sql`
+- `20260312203000_profile_names_multirole_and_comments_cache.sql`
+
+## Slack Edge Function
+Function path:
+- `supabase/functions/slack-notify/index.ts`
+
+Configure secrets:
+- `SLACK_BOT_TOKEN` (preferred)
+- `SLACK_MARKETING_CHANNEL` (optional, defaults to `#marketing`)
+- `SLACK_WEBHOOK_URL` (fallback mode if no bot token)
+
+## Legacy import
+Dry run:
+- `npm run import:legacy -- --dry-run`
+
+Run import:
+- `npm run import:legacy`
+
+Default source workbook:
+- `critical-data/Blog Content Tracking - Sighthound and Redactor (cleaned).xlsx`
 
 Importer behavior:
-- `Calendar View` is treated as the canonical historical source.
-- Other legacy sheets are used only to enrich missing fields.
-- Existing `blogs` rows are updated in place when matched (instead of creating duplicates).
-- Rows with a live URL default to published completion statuses unless explicit status hints are present.
-- Calendar dates are written to `scheduled_publish_date` (and mirrored to legacy `target_publish_date`).
-
-Required env for import:
-- `IMPORT_CREATED_BY_USER_ID` (must match an existing `profiles.id`)
+- Uses `Calendar View` as the canonical timeline source.
+- Enriches missing fields from other legacy sheets.
+- Updates matching existing rows where possible to avoid duplicates.
 
 ## Quality checks
 - `npm run lint`

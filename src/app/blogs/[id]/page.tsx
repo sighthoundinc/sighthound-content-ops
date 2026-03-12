@@ -26,6 +26,7 @@ import type {
   WriterStageStatus,
 } from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
+import { hasRole } from "@/lib/roles";
 import { useAuth } from "@/providers/auth-provider";
 
 type BlogFormState = {
@@ -68,6 +69,26 @@ function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
       author,
     } satisfies BlogCommentRecord;
   });
+}
+
+function isMissingBlogCommentsTableError(error: {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+} | null) {
+  if (!error) {
+    return false;
+  }
+  const code = (error.code ?? "").toUpperCase();
+  const text =
+    `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return (
+    (code === "42P01" || code === "PGRST204" || code === "PGRST205") &&
+    (text.includes("blog_comments") ||
+      text.includes("schema cache") ||
+      text.includes("could not find"))
+  );
 }
 
 function toDateTimeLocalInput(value: string | null | undefined) {
@@ -163,6 +184,7 @@ export default function BlogDetailPage() {
             .order("changed_at", { ascending: false })
             .limit(50),
           supabase
+            .schema("public")
             .from("blog_comments")
             .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
             .eq("blog_id", blogId)
@@ -198,7 +220,14 @@ export default function BlogDetailPage() {
       setUsers((usersData ?? []) as ProfileRecord[]);
       setHistory((historyData ?? []) as BlogHistoryRecord[]);
       if (commentsError) {
-        setError(commentsError.message);
+        if (isMissingBlogCommentsTableError(commentsError)) {
+          setComments([]);
+          setError(
+            "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
+          );
+        } else {
+          setError(commentsError.message);
+        }
       } else {
         setComments(normalizeCommentRows((commentsData ?? []) as Array<Record<string, unknown>>));
       }
@@ -208,7 +237,7 @@ export default function BlogDetailPage() {
     void loadData();
   }, [blogId]);
 
-  const canAdminEdit = profile?.role === "admin";
+  const canAdminEdit = hasRole(profile, "admin");
   const isWriterAssignee = blog?.writer_id === user?.id;
   const isPublisherAssignee = blog?.publisher_id === user?.id;
   const canWriterEdit = canAdminEdit || isWriterAssignee;
@@ -359,26 +388,42 @@ export default function BlogDetailPage() {
     setError(null);
 
     const supabase = getSupabaseBrowserClient();
-    const { error: insertError } = await supabase.from("blog_comments").insert({
-      blog_id: blog.id,
-      comment: trimmedComment,
-      created_by: user.id,
-    });
+    const { error: insertError } = await supabase
+      .schema("public")
+      .from("blog_comments")
+      .insert({
+        blog_id: blog.id,
+        comment: trimmedComment,
+        created_by: user.id,
+      });
 
     if (insertError) {
-      setError(insertError.message);
+      if (isMissingBlogCommentsTableError(insertError)) {
+        setError(
+          "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
+        );
+      } else {
+        setError(insertError.message);
+      }
       setIsCommentSaving(false);
       return;
     }
 
     const { data: commentsData, error: commentsError } = await supabase
+      .schema("public")
       .from("blog_comments")
       .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
       .eq("blog_id", blog.id)
       .order("created_at", { ascending: false });
 
     if (commentsError) {
-      setError(commentsError.message);
+      if (isMissingBlogCommentsTableError(commentsError)) {
+        setError(
+          "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
+        );
+      } else {
+        setError(commentsError.message);
+      }
     } else {
       setComments(normalizeCommentRows((commentsData ?? []) as Array<Record<string, unknown>>));
       setNewComment("");
@@ -522,7 +567,7 @@ export default function BlogDetailPage() {
   return (
     <ProtectedPage>
       <AppShell>
-        <div className="space-y-5">
+        <div className="space-y-6">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">{blog.title}</h2>
@@ -549,7 +594,7 @@ export default function BlogDetailPage() {
               Blog Details
             </h3>
 
-            <form className="mt-3 space-y-4" onSubmit={handleAdminSave}>
+            <form className="mt-4 space-y-4" onSubmit={handleAdminSave}>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-slate-700">
@@ -893,6 +938,7 @@ export default function BlogDetailPage() {
               </div>
             </div>
           </section>
+
 
           <section className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">

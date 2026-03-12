@@ -13,7 +13,7 @@ export function TableRowLimitSelect({
 }) {
   return (
     <label className="flex items-center gap-2 text-sm text-slate-600">
-      <span className="font-medium text-slate-700">Rows</span>
+      <span className="font-medium text-slate-700">Rows per page</span>
       <select
         className="rounded-md border border-slate-300 px-2 py-1 text-sm"
         value={String(value)}
@@ -79,7 +79,7 @@ export function TablePaginationControls({
         }}
         disabled={currentPage <= 1}
       >
-        Previous
+        Prev
       </button>
       <p className="text-sm text-slate-600">
         Page <span className="font-medium text-slate-900">{currentPage}</span> of{" "}

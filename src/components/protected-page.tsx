@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { hasRole } from "@/lib/roles";
 
 import { useAuth } from "@/providers/auth-provider";
 import type { AppRole } from "@/lib/types";
@@ -22,7 +23,12 @@ export function ProtectedPage({
       return;
     }
 
-    if (!loading && allowedRoles?.length && profile && !allowedRoles.includes(profile.role)) {
+    if (
+      !loading &&
+      allowedRoles?.length &&
+      profile &&
+      !allowedRoles.some((role) => hasRole(profile, role))
+    ) {
       router.replace("/dashboard");
     }
   }, [allowedRoles, loading, profile, router, session]);
@@ -35,7 +41,11 @@ export function ProtectedPage({
     );
   }
 
-  if (allowedRoles?.length && profile && !allowedRoles.includes(profile.role)) {
+  if (
+    allowedRoles?.length &&
+    profile &&
+    !allowedRoles.some((role) => hasRole(profile, role))
+  ) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
         You do not have permission to view this page.

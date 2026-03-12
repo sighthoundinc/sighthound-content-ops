@@ -1,4 +1,4 @@
-export type AppRole = "admin" | "writer" | "publisher";
+export type AppRole = "admin" | "writer" | "publisher" | "editor";
 
 export type BlogSite = "sighthound.com" | "redactor.com";
 
@@ -24,7 +24,11 @@ export interface ProfileRecord {
   id: string;
   email: string;
   full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
   role: AppRole;
+  user_roles: AppRole[] | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

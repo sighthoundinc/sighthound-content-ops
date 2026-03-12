@@ -32,6 +32,7 @@ export default function NewBlogPage() {
   const [googleDocUrl, setGoogleDocUrl] = useState("");
   const [scheduledPublishDate, setScheduledPublishDate] = useState("");
   const [displayPublishDate, setDisplayPublishDate] = useState("");
+  const [initialComment, setInitialComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,6 +122,23 @@ export default function NewBlogPage() {
       return;
     }
 
+    const trimmedInitialComment = initialComment.trim();
+    if (trimmedInitialComment) {
+      const { error: commentInsertError } = await supabase
+        .schema("public")
+        .from("blog_comments")
+        .insert({
+          blog_id: data.id,
+          comment: trimmedInitialComment,
+          created_by: user.id,
+        });
+      if (commentInsertError) {
+        setError(commentInsertError.message);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     if (writerId && selectedWriter) {
       await notifySlack({
         eventType: "writer_assigned",
@@ -139,7 +157,7 @@ export default function NewBlogPage() {
   return (
     <ProtectedPage allowedRoles={["admin"]}>
       <AppShell>
-        <div className="max-w-3xl space-y-5">
+        <div className="max-w-3xl space-y-6">
           <header>
             <h2 className="text-xl font-semibold text-slate-900">Add Blog</h2>
             <p className="text-sm text-slate-600">
@@ -147,7 +165,7 @@ export default function NewBlogPage() {
             </p>
           </header>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">
                 Title
@@ -267,6 +285,24 @@ export default function NewBlogPage() {
                 placeholder="https://docs.google.com/..."
               />
             </label>
+
+            <section className="rounded-md border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Comments
+              </h3>
+              <p className="mt-1 text-xs text-slate-600">
+                Optional comment to start discussion before writing or publishing.
+              </p>
+              <textarea
+                value={initialComment}
+                onChange={(event) => {
+                  setInitialComment(event.target.value);
+                }}
+                className="mt-3 min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                placeholder="Add an initial comment..."
+                maxLength={2000}
+              />
+            </section>
 
             {error ? (
               <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">

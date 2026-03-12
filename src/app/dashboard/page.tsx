@@ -17,6 +17,7 @@ import {
   BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogPublishDate,
+  getBlogScheduledDate,
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
@@ -47,15 +48,16 @@ import { formatDateInput, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 
 const WRITER_STATUS_FILTER_LABELS: Record<WriterStageStatus, string> = {
-  not_started: "Not Started",
-  in_progress: "In Progress",
-  needs_revision: "Pending Review",
+  assigned: "Assigned",
+  writing: "Writing",
+  pending_review: "Pending Review",
   completed: "Completed",
 };
 
 const PUBLISHER_STATUS_FILTER_LABELS: Record<PublisherStageStatus, string> = {
   not_started: "Not Started",
-  in_progress: "In Progress",
+  publishing: "Publishing",
+  pending_review: "Pending Review",
   completed: "Completed",
 };
 
@@ -296,7 +298,7 @@ export default function DashboardPage() {
         publisherStatusFilters.length === 0 ||
         publisherStatusFilters.includes(blog.publisher_status);
       const matchesPendingWriterReview =
-        !pendingWriterReviewOnly || blog.writer_status === "needs_revision";
+        !pendingWriterReviewOnly || blog.writer_status === "pending_review";
       return (
         matchesSearch &&
         matchesSite &&
@@ -432,6 +434,32 @@ export default function DashboardPage() {
     [assignableUsers, publisherOptions, writerOptions]
   );
 
+  const publishDelaySummary = useMemo(() => {
+    const delays = blogs
+      .map((blog) => {
+        const scheduledDate = getBlogScheduledDate(blog);
+        const actualPublishedAt = blog.actual_published_at ?? blog.published_at;
+        if (!scheduledDate || !actualPublishedAt) {
+          return null;
+        }
+        return Math.floor(
+          (new Date(actualPublishedAt).getTime() -
+            new Date(`${scheduledDate}T00:00:00Z`).getTime()) /
+            (24 * 60 * 60 * 1000)
+        );
+      })
+      .filter((value): value is number => value !== null);
+
+    const averageDelayDays =
+      delays.length === 0
+        ? null
+        : Number((delays.reduce((sum, value) => sum + value, 0) / delays.length).toFixed(1));
+    return {
+      trackedCount: delays.length,
+      averageDelayDays,
+    };
+  }, [blogs]);
+
   const visibleBlogIds = useMemo(() => pagedBlogs.map((blog) => blog.id), [pagedBlogs]);
   const selectedIdSet = useMemo(() => new Set(selectedBlogIds), [selectedBlogIds]);
   const selectedBlogs = useMemo(
@@ -514,7 +542,7 @@ export default function DashboardPage() {
     const isSettingWriter = Boolean(bulkWriterId);
     const isSettingPublisher = Boolean(bulkPublisherId);
 
-    if (bulkWriterStatus && bulkWriterStatus !== "not_started") {
+    if (bulkWriterStatus && bulkWriterStatus !== "assigned") {
       const missingWriter = selectedBlogs.filter(
         (blog) => !blog.writer_id && !isSettingWriter
       );
@@ -745,6 +773,24 @@ export default function DashboardPage() {
               Writer Pending Review Only
             </label>
           </section>
+          <section className="grid gap-3 sm:grid-cols-2">
+            <article className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Published With Delay Data
+              </p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">
+                {publishDelaySummary.trackedCount}
+              </p>
+            </article>
+            <article className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Average Publish Delay (Days)
+              </p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">
+                {publishDelaySummary.averageDelayDays ?? "—"}
+              </p>
+            </article>
+          </section>
           {error ? (
             <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               {error}
@@ -927,8 +973,7 @@ export default function DashboardPage() {
                     ) : (
                       pagedBlogs.map((blog) => {
                         const displayPublishDate = getBlogPublishDate(blog);
-                        const scheduledPublishDate =
-                          blog.scheduled_publish_date ?? blog.target_publish_date ?? null;
+                        const scheduledPublishDate = getBlogScheduledDate(blog);
                         const publishDate = scheduledPublishDate
                           ? parseISO(scheduledPublishDate)
                           : null;

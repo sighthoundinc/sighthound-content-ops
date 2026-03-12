@@ -30,7 +30,8 @@ export default function NewBlogPage() {
   const [writerId, setWriterId] = useState("");
   const [publisherId, setPublisherId] = useState("");
   const [googleDocUrl, setGoogleDocUrl] = useState("");
-  const [targetPublishDate, setTargetPublishDate] = useState("");
+  const [scheduledPublishDate, setScheduledPublishDate] = useState("");
+  const [displayPublishDate, setDisplayPublishDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,11 +79,12 @@ export default function NewBlogPage() {
       site,
       writer_id: writerId || null,
       publisher_id: publisherId || null,
-      writer_status: writerId ? "in_progress" : "not_started",
-      publisher_status: publisherId ? "not_started" : "not_started",
+      writer_status: "assigned",
+      publisher_status: "not_started",
       google_doc_url: googleDocUrl.trim() || null,
-      scheduled_publish_date: targetPublishDate || null,
-      target_publish_date: targetPublishDate || null,
+      scheduled_publish_date: scheduledPublishDate || null,
+      display_published_date: displayPublishDate || scheduledPublishDate || null,
+      target_publish_date: scheduledPublishDate || null,
       created_by: user.id,
     };
 
@@ -97,6 +99,7 @@ export default function NewBlogPage() {
         ...payload,
       };
       delete (legacyPayload as { scheduled_publish_date?: string | null }).scheduled_publish_date;
+      delete (legacyPayload as { display_published_date?: string | null }).display_published_date;
 
       const fallbackInsert = await supabase
         .from("blogs")
@@ -181,18 +184,32 @@ export default function NewBlogPage() {
 
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">
-                  Target Publish Date
+                  Scheduled Publish Date
                 </span>
                 <input
                   type="date"
-                  value={targetPublishDate}
+                  value={scheduledPublishDate}
                   onChange={(event) => {
-                    setTargetPublishDate(event.target.value);
+                    setScheduledPublishDate(event.target.value);
                   }}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 />
               </label>
             </div>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Display Publish Date
+              </span>
+              <input
+                type="date"
+                value={displayPublishDate}
+                onChange={(event) => {
+                  setDisplayPublishDate(event.target.value);
+                }}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">

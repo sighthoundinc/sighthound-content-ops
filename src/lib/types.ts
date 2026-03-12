@@ -3,21 +3,23 @@ export type AppRole = "admin" | "writer" | "publisher";
 export type BlogSite = "sighthound.com" | "redactor.com";
 
 export type WriterStageStatus =
-  | "not_started"
-  | "in_progress"
-  | "needs_revision"
+  | "assigned"
+  | "writing"
+  | "pending_review"
   | "completed";
 
 export type PublisherStageStatus =
   | "not_started"
-  | "in_progress"
+  | "publishing"
+  | "pending_review"
   | "completed";
 
 export type OverallBlogStatus =
-  | "planned"
   | "writing"
-  | "needs_revision"
+  | "writing_review"
   | "ready_to_publish"
+  | "publishing"
+  | "publishing_review"
   | "published";
 
 export interface ProfileRecord {
@@ -43,6 +45,8 @@ export interface BlogRecord {
   google_doc_url: string | null;
   live_url: string | null;
   scheduled_publish_date: string | null;
+  display_published_date: string | null;
+  actual_published_at: string | null;
   published_at: string | null;
   target_publish_date: string | null;
   status_updated_at: string;

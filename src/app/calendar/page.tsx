@@ -21,7 +21,7 @@ import { StatusBadge } from "@/components/status-badge";
 import {
   BLOG_SELECT_LEGACY,
   BLOG_SELECT_WITH_DATES,
-  getBlogPublishDate,
+  getBlogScheduledDate,
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
@@ -120,11 +120,11 @@ export default function CalendarPage() {
 
   const blogsByDate = useMemo(() => {
     return blogs.reduce<Record<string, BlogRecord[]>>((acc, blog) => {
-      const publishDate = getBlogPublishDate(blog);
-      if (!publishDate) {
+      const scheduledDate = getBlogScheduledDate(blog);
+      if (!scheduledDate) {
         return acc;
       }
-      const key = publishDate;
+      const key = scheduledDate;
       if (!acc[key]) {
         acc[key] = [];
       }
@@ -136,10 +136,7 @@ export default function CalendarPage() {
   const noPublishDateBlogs = useMemo(
     () =>
       blogs.filter(
-        (blog) =>
-          !blog.scheduled_publish_date &&
-          !blog.target_publish_date &&
-          !blog.published_at
+        (blog) => !getBlogScheduledDate(blog)
       ),
     [blogs]
   );

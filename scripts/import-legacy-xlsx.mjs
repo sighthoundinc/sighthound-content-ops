@@ -126,7 +126,12 @@ function isMissingBlogDateColumnsError(error) {
   const text = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
   return (
     error.code === "42703" &&
-    (text.includes("scheduled_publish_date") || text.includes("published_at"))
+    (
+      text.includes("scheduled_publish_date") ||
+      text.includes("display_published_date") ||
+      text.includes("actual_published_at") ||
+      text.includes("published_at")
+    )
   );
 }
 
@@ -319,7 +324,7 @@ function parseStatusHints(values) {
   let publisherStatus = null;
 
   if (joined.includes("needs revision")) {
-    writerStatus = "needs_revision";
+    writerStatus = "pending_review";
   }
   if (joined.includes("ready to publish")) {
     writerStatus = writerStatus ?? "completed";
@@ -330,10 +335,10 @@ function parseStatusHints(values) {
     publisherStatus = "completed";
   }
   if (joined.includes("under review") || joined.includes("in progress") || joined.includes("draft")) {
-    writerStatus = writerStatus ?? "in_progress";
+    writerStatus = writerStatus ?? "writing";
   }
   if (joined.includes("planned") || joined.includes("backlog")) {
-    writerStatus = writerStatus ?? "not_started";
+    writerStatus = writerStatus ?? "assigned";
     publisherStatus = publisherStatus ?? "not_started";
   }
 
@@ -472,6 +477,7 @@ function mergeRecords(baseRecord, nextRecord) {
     title: baseRecord.title || nextRecord.title,
     site: baseRecord.site || nextRecord.site,
     scheduledPublishDate: baseRecord.scheduledPublishDate ?? nextRecord.scheduledPublishDate ?? null,
+    displayPublishedDate: baseRecord.displayPublishedDate ?? nextRecord.displayPublishedDate ?? null,
     liveUrl: baseRecord.liveUrl ?? nextRecord.liveUrl ?? null,
     googleDocUrl: baseRecord.googleDocUrl ?? nextRecord.googleDocUrl ?? null,
     writerRaw: baseRecord.writerRaw ?? nextRecord.writerRaw ?? null,
@@ -598,6 +604,7 @@ function extractCalendarRecords(workbook, userIndex) {
       title,
       site,
       scheduledPublishDate: weekDateByColumn.get(titleCell.col) ?? null,
+      displayPublishedDate: weekDateByColumn.get(titleCell.col) ?? null,
       liveUrl,
       googleDocUrl,
       writerRaw: assigneeHints.writerRaw,
@@ -680,7 +687,10 @@ function extractSupplementalRecords(workbook) {
         title,
         site,
         scheduledPublishDate: normalizeDate(
-          findValue(row, ["Publish Date", "Date", "Target Date", "Scheduled"])
+          findValue(row, ["Scheduled", "Target Date", "Planned Date", "Calendar Date", "Date"])
+        ),
+        displayPublishedDate: normalizeDate(
+          findValue(row, ["CMS Date", "Display Date", "Public Date", "Published Date", "Publish Date"])
         ),
         liveUrl,
         googleDocUrl,
@@ -722,16 +732,28 @@ function inferStatuses(record) {
   let writerStatus = record.writerStatus;
   let publisherStatus = record.publisherStatus;
 
+  if (writerStatus === "not_started") {
+    writerStatus = "assigned";
+  } else if (writerStatus === "in_progress") {
+    writerStatus = "writing";
+  } else if (writerStatus === "needs_revision") {
+    writerStatus = "pending_review";
+  }
+
+  if (publisherStatus === "in_progress") {
+    publisherStatus = "publishing";
+  }
+
   if (!writerStatus && !publisherStatus && record.liveUrl) {
     writerStatus = "completed";
     publisherStatus = "completed";
   }
   if (!writerStatus && !publisherStatus && record.scheduledPublishDate) {
-    writerStatus = record.googleDocUrl || record.writerRaw ? "in_progress" : "not_started";
+    writerStatus = record.googleDocUrl || record.writerRaw ? "writing" : "assigned";
     publisherStatus = "not_started";
   }
 
-  writerStatus = writerStatus ?? (record.googleDocUrl ? "in_progress" : "not_started");
+  writerStatus = writerStatus ?? (record.googleDocUrl ? "writing" : "assigned");
   publisherStatus = publisherStatus ?? (record.liveUrl ? "completed" : "not_started");
 
   if (publisherStatus === "completed") {
@@ -741,25 +763,18 @@ function inferStatuses(record) {
   return { writerStatus, publisherStatus };
 }
 
-function isoTimestampFromDate(dateValue) {
-  const date = normalizeDate(dateValue);
-  if (!date) {
-    return null;
-  }
-  return `${date}T12:00:00.000Z`;
-}
 
 function buildPayload(
   record,
   userIndex,
   existingRow = null,
-  options = { includeAdvancedDateColumns: true }
+  options = { includeAdvancedDateColumns: true, importTimestamp: new Date().toISOString() }
 ) {
   const statuses = inferStatuses(record);
   let writerId = resolveUserId(record.writerRaw, userIndex) ?? existingRow?.writer_id ?? null;
   let publisherId = resolveUserId(record.publisherRaw, userIndex) ?? existingRow?.publisher_id ?? null;
 
-  if (statuses.writerStatus !== "not_started" && !writerId) {
+  if (statuses.writerStatus !== "assigned" && !writerId) {
     writerId = USER_1_FALLBACK_ID;
   }
   if (statuses.publisherStatus !== "not_started" && !publisherId) {
@@ -774,13 +789,20 @@ function buildPayload(
     existingRow?.scheduled_publish_date ??
     existingRow?.target_publish_date ??
     null;
+  const displayPublishedDate =
+    record.displayPublishedDate ??
+    existingRow?.display_published_date ??
+    scheduledPublishDate ??
+    null;
   const liveUrl = record.liveUrl ?? existingRow?.live_url ?? null;
   const googleDocUrl = record.googleDocUrl ?? existingRow?.google_doc_url ?? null;
-  const publishedAt =
+  const actualPublishedAt =
+    existingRow?.actual_published_at ??
     existingRow?.published_at ??
     (liveUrl && statuses.publisherStatus === "completed"
-      ? isoTimestampFromDate(scheduledPublishDate)
+      ? options.importTimestamp ?? new Date().toISOString()
       : null);
+  const publishedAt = actualPublishedAt ?? null;
   const payload = {
     title: record.title,
     site: record.site,
@@ -795,6 +817,8 @@ function buildPayload(
 
   if (options.includeAdvancedDateColumns) {
     payload.scheduled_publish_date = scheduledPublishDate;
+    payload.display_published_date = displayPublishedDate;
+    payload.actual_published_at = actualPublishedAt;
     payload.published_at = publishedAt;
   }
 
@@ -814,12 +838,13 @@ function diffPayload(existingRow, payload) {
 async function main() {
   console.log(`Reading workbook: ${XLSX_PATH}`);
   const workbook = XLSX.readFile(XLSX_PATH, { cellDates: true });
+  const importTimestamp = new Date().toISOString();
   const userIndex = await loadUsers();
   const importRecords = buildImportRecords(workbook, userIndex);
 
   let includeAdvancedDateColumns = true;
   let { data: existingBlogs, error: existingError } = await supabase.from("blogs").select(
-    "id,title,slug,site,writer_id,publisher_id,writer_status,publisher_status,google_doc_url,live_url,target_publish_date,scheduled_publish_date,published_at,is_archived"
+    "id,title,slug,site,writer_id,publisher_id,writer_status,publisher_status,google_doc_url,live_url,target_publish_date,scheduled_publish_date,display_published_date,actual_published_at,published_at,is_archived"
   );
 
   if (isMissingBlogDateColumnsError(existingError)) {
@@ -830,7 +855,7 @@ async function main() {
     existingBlogs = fallback.data;
     existingError = fallback.error;
     console.warn(
-      "Detected legacy blogs schema (missing scheduled_publish_date/published_at). Import will use target_publish_date compatibility mode."
+      "Detected legacy blogs schema (missing scheduled/display/actual publish date columns). Import will use target_publish_date compatibility mode."
     );
   }
   if (existingError) {
@@ -884,6 +909,7 @@ async function main() {
 
     const payload = buildPayload(record, userIndex, existingRow, {
       includeAdvancedDateColumns,
+      importTimestamp,
     });
 
     if (existingRow) {

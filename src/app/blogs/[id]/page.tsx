@@ -11,7 +11,6 @@ import { StatusBadge } from "@/components/status-badge";
 import {
   BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
-  getBlogPublishDate,
   isMissingBlogDateColumnsError,
   normalizeBlogRow,
 } from "@/lib/blog-schema";
@@ -39,6 +38,7 @@ type BlogFormState = {
   google_doc_url: string;
   live_url: string;
   scheduled_publish_date: string;
+  display_published_date: string;
   is_archived: boolean;
 };
 
@@ -120,7 +120,8 @@ export default function BlogDetailPage() {
         publisher_status: nextBlog.publisher_status,
         google_doc_url: nextBlog.google_doc_url ?? "",
         live_url: nextBlog.live_url ?? "",
-        scheduled_publish_date: formatDateInput(getBlogPublishDate(nextBlog)),
+        scheduled_publish_date: formatDateInput(nextBlog.scheduled_publish_date),
+        display_published_date: formatDateInput(nextBlog.display_published_date),
         is_archived: nextBlog.is_archived,
       });
       setUsers((usersData ?? []) as ProfileRecord[]);
@@ -172,6 +173,8 @@ export default function BlogDetailPage() {
         ...updates,
       };
       delete (legacyUpdates as { scheduled_publish_date?: string | null }).scheduled_publish_date;
+      delete (legacyUpdates as { display_published_date?: string | null }).display_published_date;
+      delete (legacyUpdates as { actual_published_at?: string | null }).actual_published_at;
       delete (legacyUpdates as { published_at?: string | null }).published_at;
 
       const fallbackUpdate = await supabase
@@ -203,7 +206,8 @@ export default function BlogDetailPage() {
       publisher_status: nextBlog.publisher_status,
       google_doc_url: nextBlog.google_doc_url ?? "",
       live_url: nextBlog.live_url ?? "",
-      scheduled_publish_date: formatDateInput(getBlogPublishDate(nextBlog)),
+      scheduled_publish_date: formatDateInput(nextBlog.scheduled_publish_date),
+      display_published_date: formatDateInput(nextBlog.display_published_date),
       is_archived: nextBlog.is_archived,
     });
     setSuccessMessage(message);
@@ -238,6 +242,8 @@ export default function BlogDetailPage() {
         writer_id: form.writer_id || null,
         publisher_id: form.publisher_id || null,
         scheduled_publish_date: form.scheduled_publish_date || null,
+        display_published_date:
+          form.display_published_date || form.scheduled_publish_date || null,
         target_publish_date: form.scheduled_publish_date || null,
         is_archived: form.is_archived,
       },
@@ -485,19 +491,50 @@ export default function BlogDetailPage() {
                 </label>
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                    Scheduled Publish Date
+                  </span>
+                  <input
+                    disabled={!canAdminEdit}
+                    type="date"
+                    value={form.scheduled_publish_date}
+                    onChange={(event) => {
+                      setForm((prev) =>
+                        prev ? { ...prev, scheduled_publish_date: event.target.value } : prev
+                      );
+                    }}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                    Display Publish Date
+                  </span>
+                  <input
+                    disabled={!canAdminEdit}
+                    type="date"
+                    value={form.display_published_date}
+                    onChange={(event) => {
+                      setForm((prev) =>
+                        prev ? { ...prev, display_published_date: event.target.value } : prev
+                      );
+                    }}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                  />
+                </label>
+              </div>
+
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">
-                  Target Publish Date
+                  Actual Published Timestamp
                 </span>
                 <input
-                  disabled={!canAdminEdit}
-                  type="date"
-                  value={form.scheduled_publish_date}
-                  onChange={(event) => {
-                    setForm((prev) =>
-                      prev ? { ...prev, scheduled_publish_date: event.target.value } : prev
-                    );
-                  }}
+                  disabled
+                  type="text"
+                  value={blog.actual_published_at ?? blog.published_at ?? "—"}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                 />
               </label>

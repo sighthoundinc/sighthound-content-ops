@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { isBefore, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -22,6 +23,7 @@ import {
 import {
   OVERALL_STATUSES,
   PUBLISHER_STATUSES,
+  SITES,
   STATUS_LABELS,
   WRITER_STATUSES,
 } from "@/lib/status";
@@ -34,6 +36,7 @@ import {
   type TableRowLimit,
 } from "@/lib/table";
 import type {
+  BlogSite,
   BlogRecord,
   OverallBlogStatus,
   ProfileRecord,
@@ -94,18 +97,14 @@ export default function DashboardPage() {
     Array<Pick<ProfileRecord, "id" | "full_name" | "email">>
   >([]);
   const [search, setSearch] = useState("");
-  const [siteFilter, setSiteFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<OverallBlogStatus | "all">(
-    "all"
-  );
-  const [writerFilter, setWriterFilter] = useState("all");
-  const [publisherFilter, setPublisherFilter] = useState("all");
-  const [writerStatusFilter, setWriterStatusFilter] = useState<WriterStageStatus | "all">(
-    "all"
-  );
-  const [publisherStatusFilter, setPublisherStatusFilter] = useState<
-    PublisherStageStatus | "all"
-  >("all");
+  const [siteFilters, setSiteFilters] = useState<BlogSite[]>([]);
+  const [statusFilters, setStatusFilters] = useState<OverallBlogStatus[]>([]);
+  const [writerFilters, setWriterFilters] = useState<string[]>([]);
+  const [publisherFilters, setPublisherFilters] = useState<string[]>([]);
+  const [writerStatusFilters, setWriterStatusFilters] = useState<WriterStageStatus[]>([]);
+  const [publisherStatusFilters, setPublisherStatusFilters] = useState<
+    PublisherStageStatus[]
+  >([]);
   const [pendingWriterReviewOnly, setPendingWriterReviewOnly] = useState(false);
   const [sortField, setSortField] = useState<DashboardSortField>("publish_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -226,23 +225,76 @@ export default function DashboardPage() {
     [blogs]
   );
 
+  const siteFilterOptions = useMemo(
+    () => SITES.map((site) => ({ value: site, label: site })),
+    []
+  );
+
+  const overallStatusFilterOptions = useMemo(
+    () =>
+      OVERALL_STATUSES.map((status) => ({
+        value: status,
+        label: STATUS_LABELS[status],
+      })),
+    []
+  );
+
+  const writerFilterOptions = useMemo(
+    () =>
+      writerOptions.map((writer) => ({
+        value: writer.id,
+        label: writer.full_name,
+      })),
+    [writerOptions]
+  );
+
+  const publisherFilterOptions = useMemo(
+    () =>
+      publisherOptions.map((publisher) => ({
+        value: publisher.id,
+        label: publisher.full_name,
+      })),
+    [publisherOptions]
+  );
+
+  const writerStatusFilterOptions = useMemo(
+    () =>
+      WRITER_STATUSES.map((status) => ({
+        value: status,
+        label: WRITER_STATUS_FILTER_LABELS[status],
+      })),
+    []
+  );
+
+  const publisherStatusFilterOptions = useMemo(
+    () =>
+      PUBLISHER_STATUSES.map((status) => ({
+        value: status,
+        label: PUBLISHER_STATUS_FILTER_LABELS[status],
+      })),
+    []
+  );
   const filteredBlogs = useMemo(() => {
     return blogs.filter((blog) => {
       const matchesSearch = blog.title
         .toLowerCase()
         .includes(search.toLowerCase().trim());
-      const matchesSite = siteFilter === "all" || blog.site === siteFilter;
+      const matchesSite =
+        siteFilters.length === 0 || siteFilters.includes(blog.site);
       const matchesStatus =
-        statusFilter === "all" || blog.overall_status === statusFilter;
+        statusFilters.length === 0 || statusFilters.includes(blog.overall_status);
       const matchesWriter =
-        writerFilter === "all" || blog.writer_id === writerFilter;
+        writerFilters.length === 0 ||
+        (blog.writer_id !== null && writerFilters.includes(blog.writer_id));
       const matchesPublisher =
-        publisherFilter === "all" || blog.publisher_id === publisherFilter;
+        publisherFilters.length === 0 ||
+        (blog.publisher_id !== null && publisherFilters.includes(blog.publisher_id));
       const matchesWriterStatus =
-        writerStatusFilter === "all" || blog.writer_status === writerStatusFilter;
+        writerStatusFilters.length === 0 ||
+        writerStatusFilters.includes(blog.writer_status);
       const matchesPublisherStatus =
-        publisherStatusFilter === "all" ||
-        blog.publisher_status === publisherStatusFilter;
+        publisherStatusFilters.length === 0 ||
+        publisherStatusFilters.includes(blog.publisher_status);
       const matchesPendingWriterReview =
         !pendingWriterReviewOnly || blog.writer_status === "needs_revision";
       return (
@@ -259,13 +311,13 @@ export default function DashboardPage() {
   }, [
     blogs,
     pendingWriterReviewOnly,
-    publisherFilter,
-    publisherStatusFilter,
+    publisherFilters,
+    publisherStatusFilters,
     search,
-    siteFilter,
-    statusFilter,
-    writerFilter,
-    writerStatusFilter,
+    siteFilters,
+    statusFilters,
+    writerFilters,
+    writerStatusFilters,
   ]);
 
   const sortedBlogs = useMemo(() => {
@@ -344,16 +396,16 @@ export default function DashboardPage() {
     setCurrentPage(1);
   }, [
     pendingWriterReviewOnly,
-    publisherFilter,
-    publisherStatusFilter,
+    publisherFilters,
+    publisherStatusFilters,
     rowLimit,
     search,
-    siteFilter,
+    siteFilters,
     sortDirection,
     sortField,
-    statusFilter,
-    writerFilter,
-    writerStatusFilter,
+    statusFilters,
+    writerFilters,
+    writerStatusFilters,
   ]);
 
   const pagedBlogs = useMemo(
@@ -607,94 +659,55 @@ export default function DashboardPage() {
               }}
             />
 
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={siteFilter}
-              onChange={(event) => {
-                setSiteFilter(event.target.value);
+            <CheckboxMultiSelect
+              label="Sites"
+              options={siteFilterOptions}
+              selectedValues={siteFilters}
+              onChange={(nextValues) => {
+                setSiteFilters(nextValues as BlogSite[]);
               }}
-            >
-              <option value="all">All Sites</option>
-              <option value="sighthound.com">sighthound.com</option>
-              <option value="redactor.com">redactor.com</option>
-            </select>
+            />
 
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value as OverallBlogStatus | "all");
+            <CheckboxMultiSelect
+              label="Overall Status"
+              options={overallStatusFilterOptions}
+              selectedValues={statusFilters}
+              onChange={(nextValues) => {
+                setStatusFilters(nextValues as OverallBlogStatus[]);
               }}
-            >
-              <option value="all">All Statuses</option>
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            />
 
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={writerFilter}
-              onChange={(event) => {
-                setWriterFilter(event.target.value);
-              }}
-            >
-              <option value="all">All Writers</option>
-              {writerOptions.map((writer) => (
-                <option key={writer.id} value={writer.id}>
-                  {writer.full_name}
-                </option>
-              ))}
-            </select>
+            <CheckboxMultiSelect
+              label="Writers"
+              options={writerFilterOptions}
+              selectedValues={writerFilters}
+              onChange={setWriterFilters}
+            />
 
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={publisherFilter}
-              onChange={(event) => {
-                setPublisherFilter(event.target.value);
-              }}
-            >
-              <option value="all">All Publishers</option>
-              {publisherOptions.map((publisher) => (
-                <option key={publisher.id} value={publisher.id}>
-                  {publisher.full_name}
-                </option>
-              ))}
-            </select>
+            <CheckboxMultiSelect
+              label="Publishers"
+              options={publisherFilterOptions}
+              selectedValues={publisherFilters}
+              onChange={setPublisherFilters}
+            />
 
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={writerStatusFilter}
-              onChange={(event) => {
-                setWriterStatusFilter(event.target.value as WriterStageStatus | "all");
+            <CheckboxMultiSelect
+              label="Writer Status"
+              options={writerStatusFilterOptions}
+              selectedValues={writerStatusFilters}
+              onChange={(nextValues) => {
+                setWriterStatusFilters(nextValues as WriterStageStatus[]);
               }}
-            >
-              <option value="all">All Writer Statuses</option>
-              {WRITER_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {WRITER_STATUS_FILTER_LABELS[status]}
-                </option>
-              ))}
-            </select>
+            />
 
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={publisherStatusFilter}
-              onChange={(event) => {
-                setPublisherStatusFilter(
-                  event.target.value as PublisherStageStatus | "all"
-                );
+            <CheckboxMultiSelect
+              label="Publisher Status"
+              options={publisherStatusFilterOptions}
+              selectedValues={publisherStatusFilters}
+              onChange={(nextValues) => {
+                setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
               }}
-            >
-              <option value="all">All Publisher Statuses</option>
-              {PUBLISHER_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {PUBLISHER_STATUS_FILTER_LABELS[status]}
-                </option>
-              ))}
-            </select>
+            />
 
             <select
               className="rounded-md border border-slate-300 px-3 py-2 text-sm"

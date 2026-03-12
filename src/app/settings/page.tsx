@@ -1,10 +1,22 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
+import {
+  TablePaginationControls,
+  TableResultsSummary,
+  TableRowLimitSelect,
+} from "@/components/table-controls";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  DEFAULT_TABLE_ROW_LIMIT,
+  getTablePageCount,
+  getTablePageRows,
+  type SortDirection,
+  type TableRowLimit,
+} from "@/lib/table";
 import type { AppRole, AppSettingsRecord, ProfileRecord } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -16,6 +28,16 @@ const WEEK_DAYS = [
   { label: "Thursday", value: 4 },
   { label: "Friday", value: 5 },
   { label: "Saturday", value: 6 },
+];
+
+type UserSortField = "full_name" | "email" | "role" | "is_active" | "created_at";
+
+const USER_SORT_OPTIONS: Array<{ value: UserSortField; label: string }> = [
+  { value: "created_at", label: "Created Date" },
+  { value: "full_name", label: "Name" },
+  { value: "email", label: "Email" },
+  { value: "role", label: "Role" },
+  { value: "is_active", label: "Active Status" },
 ];
 
 export default function SettingsPage() {
@@ -30,6 +52,14 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newFullName, setNewFullName] = useState("");
   const [newRole, setNewRole] = useState<AppRole>("writer");
+  const [userRoleFilter, setUserRoleFilter] = useState<AppRole | "all">("all");
+  const [userActiveFilter, setUserActiveFilter] = useState<"all" | "active" | "inactive">(
+    "all"
+  );
+  const [userSortField, setUserSortField] = useState<UserSortField>("created_at");
+  const [userSortDirection, setUserSortDirection] = useState<SortDirection>("desc");
+  const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const loadData = async () => {
@@ -126,6 +156,57 @@ export default function SettingsPage() {
       .order("created_at", { ascending: false });
     setUsers((usersData ?? []) as ProfileRecord[]);
   };
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((nextUser) => {
+      const matchesRole = userRoleFilter === "all" || nextUser.role === userRoleFilter;
+      const matchesActive =
+        userActiveFilter === "all" ||
+        (userActiveFilter === "active" ? nextUser.is_active : !nextUser.is_active);
+      return matchesRole && matchesActive;
+    });
+  }, [userActiveFilter, userRoleFilter, users]);
+
+  const sortedUsers = useMemo(() => {
+    const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+    const directionMultiplier = userSortDirection === "asc" ? 1 : -1;
+
+    return [...filteredUsers].sort((left, right) => {
+      let compareResult = 0;
+
+      if (userSortField === "full_name") {
+        compareResult = collator.compare(left.full_name, right.full_name);
+      } else if (userSortField === "email") {
+        compareResult = collator.compare(left.email, right.email);
+      } else if (userSortField === "role") {
+        compareResult = collator.compare(left.role, right.role);
+      } else if (userSortField === "is_active") {
+        compareResult = Number(right.is_active) - Number(left.is_active);
+      } else if (userSortField === "created_at") {
+        compareResult = left.created_at.localeCompare(right.created_at);
+      }
+
+      return compareResult * directionMultiplier;
+    });
+  }, [filteredUsers, userSortDirection, userSortField]);
+
+  const pageCount = useMemo(
+    () => getTablePageCount(sortedUsers.length, rowLimit),
+    [rowLimit, sortedUsers.length]
+  );
+
+  useEffect(() => {
+    setCurrentPage((previous) => Math.min(previous, pageCount));
+  }, [pageCount]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rowLimit, userActiveFilter, userRoleFilter, userSortDirection, userSortField]);
+
+  const pagedUsers = useMemo(
+    () => getTablePageRows(sortedUsers, currentPage, rowLimit),
+    [currentPage, rowLimit, sortedUsers]
+  );
 
   return (
     <ProtectedPage allowedRoles={["admin"]}>
@@ -314,6 +395,79 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                   Active Users
                 </h3>
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+                  <select
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    value={userRoleFilter}
+                    onChange={(event) => {
+                      setUserRoleFilter(event.target.value as AppRole | "all");
+                    }}
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="writer">Writer</option>
+                    <option value="publisher">Publisher</option>
+                  </select>
+
+                  <select
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    value={userActiveFilter}
+                    onChange={(event) => {
+                      setUserActiveFilter(
+                        event.target.value as "all" | "active" | "inactive"
+                      );
+                    }}
+                  >
+                    <option value="all">All Activity</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                  </select>
+
+                  <select
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    value={userSortField}
+                    onChange={(event) => {
+                      setUserSortField(event.target.value as UserSortField);
+                    }}
+                  >
+                    {USER_SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        Sort: {option.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    value={userSortDirection}
+                    onChange={(event) => {
+                      setUserSortDirection(event.target.value as SortDirection);
+                    }}
+                  >
+                    <option value="asc">Sort Direction: Ascending</option>
+                    <option value="desc">Sort Direction: Descending</option>
+                  </select>
+
+                  <TableRowLimitSelect
+                    value={rowLimit}
+                    onChange={(value) => {
+                      setRowLimit(value);
+                    }}
+                  />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <TableResultsSummary
+                    totalRows={sortedUsers.length}
+                    currentPage={currentPage}
+                    rowLimit={rowLimit}
+                    noun="users"
+                  />
+                  <TablePaginationControls
+                    currentPage={currentPage}
+                    pageCount={pageCount}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
                 <div className="mt-3 overflow-x-auto rounded-md border border-slate-200">
                   <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
@@ -325,16 +479,24 @@ export default function SettingsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {users.map((nextUser) => (
-                        <tr key={nextUser.id}>
-                          <td className="px-3 py-2">{nextUser.full_name}</td>
-                          <td className="px-3 py-2 text-slate-600">{nextUser.email}</td>
-                          <td className="px-3 py-2">{nextUser.role}</td>
-                          <td className="px-3 py-2">
-                            {nextUser.is_active ? "Yes" : "No"}
+                      {sortedUsers.length === 0 ? (
+                        <tr>
+                          <td className="px-3 py-4 text-center text-slate-500" colSpan={4}>
+                            No users found with current filters.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        pagedUsers.map((nextUser) => (
+                          <tr key={nextUser.id}>
+                            <td className="px-3 py-2">{nextUser.full_name}</td>
+                            <td className="px-3 py-2 text-slate-600">{nextUser.email}</td>
+                            <td className="px-3 py-2">{nextUser.role}</td>
+                            <td className="px-3 py-2">
+                              {nextUser.is_active ? "Yes" : "No"}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

@@ -3,23 +3,21 @@ export type AppRole = "admin" | "writer" | "publisher";
 export type BlogSite = "sighthound.com" | "redactor.com";
 
 export type WriterStageStatus =
-  | "assigned"
-  | "writing"
-  | "pending_review"
+  | "not_started"
+  | "in_progress"
+  | "needs_revision"
   | "completed";
 
 export type PublisherStageStatus =
   | "not_started"
-  | "publishing"
-  | "pending_review"
+  | "in_progress"
   | "completed";
 
 export type OverallBlogStatus =
+  | "planned"
   | "writing"
-  | "writing_review"
+  | "needs_revision"
   | "ready_to_publish"
-  | "publishing"
-  | "publishing_review"
   | "published";
 
 export interface ProfileRecord {

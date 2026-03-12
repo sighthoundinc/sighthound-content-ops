@@ -48,16 +48,15 @@ import { formatDateInput, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 
 const WRITER_STATUS_FILTER_LABELS: Record<WriterStageStatus, string> = {
-  assigned: "Assigned",
-  writing: "Writing",
-  pending_review: "Pending Review",
+  not_started: "Not Started",
+  in_progress: "In Progress",
+  needs_revision: "Pending Review",
   completed: "Completed",
 };
 
 const PUBLISHER_STATUS_FILTER_LABELS: Record<PublisherStageStatus, string> = {
   not_started: "Not Started",
-  publishing: "Publishing",
-  pending_review: "Pending Review",
+  in_progress: "In Progress",
   completed: "Completed",
 };
 
@@ -79,6 +78,67 @@ type DashboardSortField =
   | "overall_status"
   | "writer_status"
   | "publisher_status";
+type DashboardColumnKey =
+  | "title"
+  | "site"
+  | "writer"
+  | "writer_status"
+  | "publisher"
+  | "publisher_status"
+  | "overall_status"
+  | "publish_date";
+
+const DASHBOARD_COLUMN_LABELS: Record<DashboardColumnKey, string> = {
+  title: "Title",
+  site: "Site",
+  writer: "Writer",
+  writer_status: "Writer Status",
+  publisher: "Publisher",
+  publisher_status: "Publisher Status",
+  overall_status: "Overall Status",
+  publish_date: "Publish Date",
+};
+
+const DEFAULT_DASHBOARD_COLUMN_ORDER: DashboardColumnKey[] = [
+  "title",
+  "site",
+  "writer",
+  "writer_status",
+  "publisher",
+  "publisher_status",
+  "overall_status",
+  "publish_date",
+];
+
+const DASHBOARD_COLUMN_VIEW_STORAGE_KEY = "dashboard-column-view:v1";
+
+const isDashboardColumnKey = (value: string): value is DashboardColumnKey =>
+  value in DASHBOARD_COLUMN_LABELS;
+
+const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => {
+  if (!Array.isArray(value)) {
+    return DEFAULT_DASHBOARD_COLUMN_ORDER;
+  }
+
+  const seen = new Set<DashboardColumnKey>();
+  const normalized: DashboardColumnKey[] = [];
+
+  for (const item of value) {
+    if (typeof item !== "string" || !isDashboardColumnKey(item) || seen.has(item)) {
+      continue;
+    }
+    seen.add(item);
+    normalized.push(item);
+  }
+
+  for (const column of DEFAULT_DASHBOARD_COLUMN_ORDER) {
+    if (!seen.has(column)) {
+      normalized.push(column);
+    }
+  }
+
+  return normalized;
+};
 
 const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }> = [
   { value: "publish_date", label: "Publish Date" },
@@ -107,9 +167,11 @@ export default function DashboardPage() {
   const [publisherStatusFilters, setPublisherStatusFilters] = useState<
     PublisherStageStatus[]
   >([]);
-  const [pendingWriterReviewOnly, setPendingWriterReviewOnly] = useState(false);
   const [sortField, setSortField] = useState<DashboardSortField>("publish_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [columnOrder, setColumnOrder] = useState<DashboardColumnKey[]>(
+    DEFAULT_DASHBOARD_COLUMN_ORDER
+  );
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [staleDraftDays, setStaleDraftDays] = useState(10);
@@ -197,6 +259,26 @@ export default function DashboardPage() {
 
     void loadUsers();
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const savedColumnView = window.localStorage.getItem(
+      DASHBOARD_COLUMN_VIEW_STORAGE_KEY
+    );
+    if (!savedColumnView) {
+      return;
+    }
+
+    try {
+      const parsedColumnOrder = JSON.parse(savedColumnView) as unknown;
+      setColumnOrder(normalizeDashboardColumnOrder(parsedColumnOrder));
+    } catch {
+      setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
+    }
+  }, []);
 
   useEffect(() => {
     const existingIds = new Set(blogs.map((blog) => blog.id));
@@ -297,8 +379,6 @@ export default function DashboardPage() {
       const matchesPublisherStatus =
         publisherStatusFilters.length === 0 ||
         publisherStatusFilters.includes(blog.publisher_status);
-      const matchesPendingWriterReview =
-        !pendingWriterReviewOnly || blog.writer_status === "pending_review";
       return (
         matchesSearch &&
         matchesSite &&
@@ -306,13 +386,11 @@ export default function DashboardPage() {
         matchesWriter &&
         matchesPublisher &&
         matchesWriterStatus &&
-        matchesPublisherStatus &&
-        matchesPendingWriterReview
+        matchesPublisherStatus
       );
     });
   }, [
     blogs,
-    pendingWriterReviewOnly,
     publisherFilters,
     publisherStatusFilters,
     search,
@@ -397,7 +475,6 @@ export default function DashboardPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [
-    pendingWriterReviewOnly,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
@@ -503,6 +580,47 @@ export default function DashboardPage() {
     setBulkWriterStatus("");
     setBulkPublisherStatus("");
   };
+  const moveColumn = (column: DashboardColumnKey, direction: -1 | 1) => {
+    setColumnOrder((previous) => {
+      const currentIndex = previous.indexOf(column);
+      if (currentIndex < 0) {
+        return previous;
+      }
+
+      const nextIndex = currentIndex + direction;
+      if (nextIndex < 0 || nextIndex >= previous.length) {
+        return previous;
+      }
+
+      const nextOrder = [...previous];
+      [nextOrder[currentIndex], nextOrder[nextIndex]] = [
+        nextOrder[nextIndex],
+        nextOrder[currentIndex],
+      ];
+      return nextOrder;
+    });
+  };
+
+  const saveColumnView = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      DASHBOARD_COLUMN_VIEW_STORAGE_KEY,
+      JSON.stringify(columnOrder)
+    );
+    setError(null);
+    setSuccessMessage("Column view saved.");
+  };
+
+  const resetColumnView = () => {
+    setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(DASHBOARD_COLUMN_VIEW_STORAGE_KEY);
+    }
+    setError(null);
+    setSuccessMessage("Column view reset to default.");
+  };
 
   const ensureBulkSelection = () => {
     if (selectedBlogIds.length === 0) {
@@ -542,7 +660,7 @@ export default function DashboardPage() {
     const isSettingWriter = Boolean(bulkWriterId);
     const isSettingPublisher = Boolean(bulkPublisherId);
 
-    if (bulkWriterStatus && bulkWriterStatus !== "assigned") {
+    if (bulkWriterStatus && bulkWriterStatus !== "not_started") {
       const missingWriter = selectedBlogs.filter(
         (blog) => !blog.writer_id && !isSettingWriter
       );
@@ -762,16 +880,6 @@ export default function DashboardPage() {
               <option value="desc">Sort Direction: Descending</option>
             </select>
 
-            <label className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={pendingWriterReviewOnly}
-                onChange={(event) => {
-                  setPendingWriterReviewOnly(event.target.checked);
-                }}
-              />
-              Writer Pending Review Only
-            </label>
           </section>
           <section className="grid gap-3 sm:grid-cols-2">
             <article className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
@@ -935,6 +1043,65 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              <section className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Column View
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      onClick={saveColumnView}
+                    >
+                      Save View
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      onClick={resetColumnView}
+                    >
+                      Reset Default
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {columnOrder.map((column, index) => (
+                    <div
+                      key={column}
+                      className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
+                    >
+                      <span className="font-medium">{DASHBOARD_COLUMN_LABELS[column]}</span>
+                      <button
+                        type="button"
+                        aria-label={`Move ${DASHBOARD_COLUMN_LABELS[column]} left`}
+                        disabled={index === 0}
+                        className="rounded border border-slate-200 px-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => {
+                          moveColumn(column, -1);
+                        }}
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${DASHBOARD_COLUMN_LABELS[column]} right`}
+                        disabled={index === columnOrder.length - 1}
+                        className="rounded border border-slate-200 px-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => {
+                          moveColumn(column, 1);
+                        }}
+                      >
+                        →
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Move columns and save to keep this layout.
+                </p>
+              </section>
+
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                   <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
@@ -950,14 +1117,11 @@ export default function DashboardPage() {
                           />
                         </th>
                       ) : null}
-                      <th className="px-3 py-2">Title</th>
-                      <th className="px-3 py-2">Site</th>
-                      <th className="px-3 py-2">Writer</th>
-                      <th className="px-3 py-2">Writer Status</th>
-                      <th className="px-3 py-2">Publisher</th>
-                      <th className="px-3 py-2">Publisher Status</th>
-                      <th className="px-3 py-2">Overall Status</th>
-                      <th className="px-3 py-2">Publish Date</th>
+                      {columnOrder.map((column) => (
+                        <th key={column} className="px-3 py-2">
+                          {DASHBOARD_COLUMN_LABELS[column]}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -965,7 +1129,7 @@ export default function DashboardPage() {
                       <tr>
                         <td
                           className="px-3 py-5 text-center text-slate-500"
-                          colSpan={isAdmin ? 9 : 8}
+                          colSpan={columnOrder.length + (isAdmin ? 1 : 0)}
                         >
                           No blogs found with current filters.
                         </td>
@@ -1014,40 +1178,84 @@ export default function DashboardPage() {
                                 />
                               </td>
                             ) : null}
-                            <td className="px-3 py-2 font-medium text-slate-900">
-                              {blog.title}
-                            </td>
-                            <td className="px-3 py-2 text-slate-600">{blog.site}</td>
-                            <td className="px-3 py-2 text-slate-600">
-                              {blog.writer?.full_name ?? "Unassigned"}
-                            </td>
-                            <td className="px-3 py-2 text-slate-600">
-                              {toTitleCase(blog.writer_status)}
-                            </td>
-                            <td className="px-3 py-2 text-slate-600">
-                              {blog.publisher?.full_name ?? "Unassigned"}
-                            </td>
-                            <td className="px-3 py-2 text-slate-600">
-                              {toTitleCase(blog.publisher_status)}
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <StatusBadge status={blog.overall_status} />
-                                {isOverdue ? (
-                                  <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
-                                    Overdue
-                                  </span>
-                                ) : null}
-                                {isStaleDraft ? (
-                                  <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                    Stale draft
-                                  </span>
-                                ) : null}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2 text-slate-600">
-                              {formatDateInput(displayPublishDate) || "—"}
-                            </td>
+                            {columnOrder.map((column) => {
+                              if (column === "title") {
+                                return (
+                                  <td
+                                    key={column}
+                                    className="px-3 py-2 font-medium text-slate-900"
+                                  >
+                                    {blog.title}
+                                  </td>
+                                );
+                              }
+
+                              if (column === "site") {
+                                return (
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    {blog.site}
+                                  </td>
+                                );
+                              }
+
+                              if (column === "writer") {
+                                return (
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    {blog.writer?.full_name ?? "Unassigned"}
+                                  </td>
+                                );
+                              }
+
+                              if (column === "writer_status") {
+                                return (
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    {toTitleCase(blog.writer_status)}
+                                  </td>
+                                );
+                              }
+
+                              if (column === "publisher") {
+                                return (
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    {blog.publisher?.full_name ?? "Unassigned"}
+                                  </td>
+                                );
+                              }
+
+                              if (column === "publisher_status") {
+                                return (
+                                  <td key={column} className="px-3 py-2 text-slate-600">
+                                    {toTitleCase(blog.publisher_status)}
+                                  </td>
+                                );
+                              }
+
+                              if (column === "overall_status") {
+                                return (
+                                  <td key={column} className="px-3 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <StatusBadge status={blog.overall_status} />
+                                      {isOverdue ? (
+                                        <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
+                                          Overdue
+                                        </span>
+                                      ) : null}
+                                      {isStaleDraft ? (
+                                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                          Stale draft
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </td>
+                                );
+                              }
+
+                              return (
+                                <td key={column} className="px-3 py-2 text-slate-600">
+                                  {formatDateInput(displayPublishDate) || "—"}
+                                </td>
+                              );
+                            })}
                           </tr>
                         );
                       })

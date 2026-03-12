@@ -39,8 +39,36 @@ type BlogFormState = {
   live_url: string;
   scheduled_publish_date: string;
   display_published_date: string;
+  actual_published_at: string;
   is_archived: boolean;
 };
+
+function toDateTimeLocalInput(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toIsoFromDateTimeLocalInput(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed.toISOString();
+}
 
 export default function BlogDetailPage() {
   const params = useParams<{ id: string }>();
@@ -122,6 +150,9 @@ export default function BlogDetailPage() {
         live_url: nextBlog.live_url ?? "",
         scheduled_publish_date: formatDateInput(nextBlog.scheduled_publish_date),
         display_published_date: formatDateInput(nextBlog.display_published_date),
+        actual_published_at: toDateTimeLocalInput(
+          nextBlog.actual_published_at ?? nextBlog.published_at
+        ),
         is_archived: nextBlog.is_archived,
       });
       setUsers((usersData ?? []) as ProfileRecord[]);
@@ -208,6 +239,9 @@ export default function BlogDetailPage() {
       live_url: nextBlog.live_url ?? "",
       scheduled_publish_date: formatDateInput(nextBlog.scheduled_publish_date),
       display_published_date: formatDateInput(nextBlog.display_published_date),
+      actual_published_at: toDateTimeLocalInput(
+        nextBlog.actual_published_at ?? nextBlog.published_at
+      ),
       is_archived: nextBlog.is_archived,
     });
     setSuccessMessage(message);
@@ -244,6 +278,7 @@ export default function BlogDetailPage() {
         scheduled_publish_date: form.scheduled_publish_date || null,
         display_published_date:
           form.display_published_date || form.scheduled_publish_date || null,
+        actual_published_at: toIsoFromDateTimeLocalInput(form.actual_published_at),
         target_publish_date: form.scheduled_publish_date || null,
         is_archived: form.is_archived,
       },
@@ -267,6 +302,13 @@ export default function BlogDetailPage() {
     if (!form || !blog || !canWriterEdit) {
       return;
     }
+    if (
+      form.writer_status === "completed" &&
+      !form.google_doc_url.trim()
+    ) {
+      setError("Google Doc URL is required before setting writer status to completed.");
+      return;
+    }
 
     await updateBlog(
       {
@@ -281,6 +323,13 @@ export default function BlogDetailPage() {
     if (!form || !blog || !canPublisherEdit) {
       return;
     }
+    if (
+      form.publisher_status === "completed" &&
+      !form.live_url.trim()
+    ) {
+      setError("Live URL is required before setting publisher status to completed.");
+      return;
+    }
 
     await updateBlog(
       {
@@ -293,6 +342,10 @@ export default function BlogDetailPage() {
 
   const handleMarkWritingComplete = async () => {
     if (!form || !blog || !canWriterEdit) {
+      return;
+    }
+    if (!form.google_doc_url.trim()) {
+      setError("Google Doc URL is required before marking writing as complete.");
       return;
     }
 
@@ -326,7 +379,11 @@ export default function BlogDetailPage() {
   };
 
   const handleMarkPublishingComplete = async () => {
-    if (!blog || !canPublisherEdit) {
+    if (!form || !blog || !canPublisherEdit) {
+      return;
+    }
+    if (!form.live_url.trim()) {
+      setError("Live URL is required before marking publishing as complete.");
       return;
     }
 
@@ -532,9 +589,14 @@ export default function BlogDetailPage() {
                   Actual Published Timestamp
                 </span>
                 <input
-                  disabled
-                  type="text"
-                  value={blog.actual_published_at ?? blog.published_at ?? "—"}
+                  disabled={!canAdminEdit}
+                  type="datetime-local"
+                  value={form.actual_published_at}
+                  onChange={(event) => {
+                    setForm((prev) =>
+                      prev ? { ...prev, actual_published_at: event.target.value } : prev
+                    );
+                  }}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                 />
               </label>
@@ -640,18 +702,20 @@ export default function BlogDetailPage() {
                   >
                     Save Writer Updates
                   </button>
-                  <button
-                    type="button"
-                    disabled={!canWriterEdit || isSaving}
-                    className="rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => {
-                      if (confirm("Mark writing as complete?")) {
-                        void handleMarkWritingComplete();
-                      }
-                    }}
-                  >
-                    Mark Writing Complete
-                  </button>
+                  {form.writer_status !== "completed" ? (
+                    <button
+                      type="button"
+                      disabled={!canWriterEdit || isSaving}
+                      className="rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        if (confirm("Mark writing as complete?")) {
+                          void handleMarkWritingComplete();
+                        }
+                      }}
+                    >
+                      Mark Writing Complete
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -721,18 +785,20 @@ export default function BlogDetailPage() {
                   >
                     Save Publisher Updates
                   </button>
-                  <button
-                    type="button"
-                    disabled={!canPublisherEdit || isSaving}
-                    className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => {
-                      if (confirm("Mark publishing as complete?")) {
-                        void handleMarkPublishingComplete();
-                      }
-                    }}
-                  >
-                    Mark Publishing Complete
-                  </button>
+                  {form.publisher_status !== "completed" ? (
+                    <button
+                      type="button"
+                      disabled={!canPublisherEdit || isSaving}
+                      className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        if (confirm("Mark publishing as complete?")) {
+                          void handleMarkPublishingComplete();
+                        }
+                      }}
+                    >
+                      Mark Publishing Complete
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>

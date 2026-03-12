@@ -79,7 +79,7 @@ export default function NewBlogPage() {
       site,
       writer_id: writerId || null,
       publisher_id: publisherId || null,
-      writer_status: "assigned",
+      writer_status: writerId ? "in_progress" : "not_started",
       publisher_status: "not_started",
       google_doc_url: googleDocUrl.trim() || null,
       scheduled_publish_date: scheduledPublishDate || null,

@@ -26,14 +26,15 @@ async function requireAdmin(request: NextRequest) {
   if (userError || !userData.user) {
     return { error: "Invalid session", status: 401 } as const;
   }
-
-  const { data: profile, error: profileError } = await anonClient
+  const adminClient = createAdminClient();
+  const { data: profile, error: profileError } = await adminClient
     .from("profiles")
     .select("id,role")
     .eq("id", userData.user.id)
-    .single();
+    .eq("is_active", true)
+    .maybeSingle();
 
-  if (profileError || profile?.role !== "admin") {
+  if (profileError || !profile || profile.role !== "admin") {
     return { error: "Admin access required", status: 403 } as const;
   }
 

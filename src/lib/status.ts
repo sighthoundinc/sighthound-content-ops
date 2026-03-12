@@ -1,6 +1,7 @@
 import type {
   OverallBlogStatus,
   PublisherStageStatus,
+  WorkflowStage,
   WriterStageStatus,
 } from "@/lib/types";
 
@@ -68,3 +69,43 @@ export const PUBLISHER_STATUS_COLORS: Record<PublisherStageStatus, string> = {
   in_progress: "bg-blue-100 text-blue-700",
   completed: "bg-emerald-100 text-emerald-700",
 };
+
+export const WORKFLOW_STAGES: WorkflowStage[] = [
+  "writing",
+  "ready",
+  "publishing",
+  "published",
+];
+
+export const WORKFLOW_STAGE_LABELS: Record<WorkflowStage, string> = {
+  writing: "Writing",
+  ready: "Ready",
+  publishing: "Publishing",
+  published: "Published",
+};
+
+export const WORKFLOW_STAGE_COLORS: Record<WorkflowStage, string> = {
+  writing: "bg-sky-100 text-sky-700",
+  ready: "bg-violet-100 text-violet-700",
+  publishing: "bg-blue-100 text-blue-700",
+  published: "bg-emerald-100 text-emerald-700",
+};
+
+export function getWorkflowStage({
+  writerStatus,
+  publisherStatus,
+}: {
+  writerStatus: WriterStageStatus;
+  publisherStatus: PublisherStageStatus;
+}): WorkflowStage {
+  if (publisherStatus === "completed") {
+    return "published";
+  }
+  if (publisherStatus === "in_progress") {
+    return "publishing";
+  }
+  if (writerStatus !== "completed") {
+    return "writing";
+  }
+  return "ready";
+}

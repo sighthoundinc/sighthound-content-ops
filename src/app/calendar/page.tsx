@@ -20,7 +20,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
-import { StatusBadge } from "@/components/status-badge";
+import { WorkflowStageBadge } from "@/components/status-badge";
 import { TablePaginationControls, TableRowLimitSelect } from "@/components/table-controls";
 import {
   BLOG_SELECT_LEGACY,
@@ -29,6 +29,7 @@ import {
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
+import { getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -42,8 +43,11 @@ import { toTitleCase } from "@/lib/utils";
 type CalendarMode = "month" | "week";
 
 function getNoPublishReason(blog: BlogRecord) {
-  const statusLabel = toTitleCase(blog.overall_status);
-  return `Status: ${statusLabel} (no scheduled date)`;
+  const workflowStage = getWorkflowStage({
+    writerStatus: blog.writer_status,
+    publisherStatus: blog.publisher_status,
+  });
+  return `Stage: ${toTitleCase(workflowStage)} (no scheduled date)`;
 }
 
 export default function CalendarPage() {
@@ -54,8 +58,11 @@ export default function CalendarPage() {
   const [timezone, setTimezone] = useState("America/Chicago");
   const [noDateRowLimit, setNoDateRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [noDateCurrentPage, setNoDateCurrentPage] = useState(1);
+  const [draggingBlogId, setDraggingBlogId] = useState<string | null>(null);
+  const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -191,6 +198,66 @@ export default function CalendarPage() {
     [noDateCurrentPage, noDateRowLimit, noPublishDateBlogs]
   );
 
+  const activeBlog = useMemo(
+    () => blogs.find((blog) => blog.id === activeBlogId) ?? null,
+    [activeBlogId, blogs]
+  );
+
+  const updateScheduledDate = async (blogId: string, scheduledDate: string) => {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error: updateError } = await supabase
+      .from("blogs")
+      .update({
+        scheduled_publish_date: scheduledDate,
+        target_publish_date: scheduledDate,
+      })
+      .eq("id", blogId)
+      .select(BLOG_SELECT_WITH_DATES)
+      .single();
+
+    if (isMissingBlogDateColumnsError(updateError)) {
+      const fallback = await supabase
+        .from("blogs")
+        .update({
+          target_publish_date: scheduledDate,
+        })
+        .eq("id", blogId)
+        .select(BLOG_SELECT_LEGACY)
+        .single();
+
+      if (fallback.error) {
+        setError(fallback.error.message);
+        return;
+      }
+
+      setBlogs((previous) =>
+        normalizeBlogRows(
+          previous.map((blog) =>
+            blog.id === blogId ? ({ ...blog, ...fallback.data } as Record<string, unknown>) : blog
+          ) as Array<Record<string, unknown>>
+        ) as BlogRecord[]
+      );
+      setSuccessMessage("Scheduled date updated.");
+      setError(null);
+      return;
+    }
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setBlogs((previous) =>
+      normalizeBlogRows(
+        previous.map((blog) =>
+          blog.id === blogId ? ({ ...blog, ...data } as Record<string, unknown>) : blog
+        ) as Array<Record<string, unknown>>
+      ) as BlogRecord[]
+    );
+    setSuccessMessage("Scheduled date updated.");
+    setError(null);
+  };
+
   return (
     <ProtectedPage>
       <AppShell>
@@ -283,6 +350,11 @@ export default function CalendarPage() {
             </p>
           ) : (
             <>
+              {successMessage ? (
+                <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {successMessage}
+                </p>
+              ) : null}
               <section className="space-y-3">
                 <div className="grid grid-cols-7 gap-2">
                   {weekdayLabels.map((label) => (
@@ -311,6 +383,19 @@ export default function CalendarPage() {
                         } ${isCurrentWeek ? "bg-blue-50/40" : ""} ${
                           isToday ? "border-blue-500 shadow-sm" : ""
                         }`}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          const droppedBlogId =
+                            event.dataTransfer.getData("text/plain") || draggingBlogId;
+                          if (!droppedBlogId) {
+                            return;
+                          }
+                          setDraggingBlogId(null);
+                          void updateScheduledDate(droppedBlogId, key);
+                        }}
                       >
                         <p className="mb-2 text-sm font-semibold text-slate-700">{format(day, "d")}</p>
                         <div className="space-y-1">
@@ -318,16 +403,41 @@ export default function CalendarPage() {
                             <p className="text-xs text-slate-400">No blogs</p>
                           ) : (
                             items.map((blog) => (
-                              <Link
+                              <button
                                 key={blog.id}
-                                href={`/blogs/${blog.id}`}
-                                className="block rounded border border-slate-200 bg-slate-50 p-1 text-xs hover:bg-slate-100"
+                                type="button"
+                                draggable
+                                onDragStart={(event) => {
+                                  setDraggingBlogId(blog.id);
+                                  event.dataTransfer.setData("text/plain", blog.id);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggingBlogId(null);
+                                }}
+                                onClick={() => {
+                                  setActiveBlogId(blog.id);
+                                }}
+                                className="block w-full rounded border border-slate-200 bg-slate-50 p-1 text-left text-xs hover:bg-slate-100"
+                                title={`${blog.title}\nWriter: ${blog.writer?.full_name ?? "Unassigned"}\nStage: ${toTitleCase(
+                                  getWorkflowStage({
+                                    writerStatus: blog.writer_status,
+                                    publisherStatus: blog.publisher_status,
+                                  })
+                                )}\nScheduled: ${getBlogScheduledDate(blog) ?? "Unscheduled"}`}
                               >
                                 <p className="line-clamp-2 font-medium text-slate-700">{blog.title}</p>
-                                <div className="mt-1">
-                                  <StatusBadge status={blog.overall_status} />
+                                <div className="mt-1 flex items-center gap-1">
+                                  <WorkflowStageBadge
+                                    stage={getWorkflowStage({
+                                      writerStatus: blog.writer_status,
+                                      publisherStatus: blog.publisher_status,
+                                    })}
+                                  />
+                                  <span className="text-[10px] text-slate-500">
+                                    {blog.writer?.full_name ?? "Unassigned"}
+                                  </span>
                                 </div>
-                              </Link>
+                              </button>
                             ))
                           )}
                         </div>
@@ -343,10 +453,15 @@ export default function CalendarPage() {
                 </h3>
                 {noPublishDateBlogs.length === 0 ? (
                   <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
-                    All blogs have a target publish date.
+                    All blogs are scheduled. Great job keeping the calendar planned.
                   </p>
                 ) : (
                   <>
+                    <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                      These blogs do not have a scheduled publish date yet. Possible reasons include ongoing drafting,
+                      no editorial date assignment, or imported legacy records. Assign a scheduled publish date to
+                      move them into the calendar.
+                    </p>
                     <ul className="space-y-3">
                       {pagedNoPublishDateBlogs.map((blog) => (
                         <li
@@ -361,7 +476,12 @@ export default function CalendarPage() {
                           </Link>
                           <p className="mt-1 text-xs text-slate-600">{getNoPublishReason(blog)}</p>
                           <div className="mt-1">
-                            <StatusBadge status={blog.overall_status} />
+                            <WorkflowStageBadge
+                              stage={getWorkflowStage({
+                                writerStatus: blog.writer_status,
+                                publisherStatus: blog.publisher_status,
+                              })}
+                            />
                           </div>
                         </li>
                       ))}
@@ -384,6 +504,60 @@ export default function CalendarPage() {
               </section>
             </>
           )}
+          {activeBlog ? (
+            <>
+              <button
+                type="button"
+                aria-label="Close calendar blog panel"
+                className="fixed inset-0 z-30 bg-slate-900/25"
+                onClick={() => {
+                  setActiveBlogId(null);
+                }}
+              />
+              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">{activeBlog.title}</h3>
+                    <p className="text-sm text-slate-600">{activeBlog.site}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={() => {
+                      setActiveBlogId(null);
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="mt-4 space-y-3 text-sm text-slate-700">
+                  <p>
+                    Writer: <span className="font-medium">{activeBlog.writer?.full_name ?? "Unassigned"}</span>
+                  </p>
+                  <p>
+                    Publisher: <span className="font-medium">{activeBlog.publisher?.full_name ?? "Unassigned"}</span>
+                  </p>
+                  <div>
+                    <WorkflowStageBadge
+                      stage={getWorkflowStage({
+                        writerStatus: activeBlog.writer_status,
+                        publisherStatus: activeBlog.publisher_status,
+                      })}
+                    />
+                  </div>
+                  <p>Scheduled: {getBlogScheduledDate(activeBlog) ?? "Unscheduled"}</p>
+                </div>
+                <div className="mt-4">
+                  <Link
+                    href={`/blogs/${activeBlog.id}`}
+                    className="inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Open full blog page
+                  </Link>
+                </div>
+              </aside>
+            </>
+          ) : null}
         </div>
       </AppShell>
     </ProtectedPage>

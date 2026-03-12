@@ -3,12 +3,15 @@ import {
   PUBLISHER_STATUS_LABELS,
   STATUS_COLORS,
   STATUS_LABELS,
+  WORKFLOW_STAGE_COLORS,
+  WORKFLOW_STAGE_LABELS,
   WRITER_STATUS_COLORS,
   WRITER_STATUS_LABELS,
 } from "@/lib/status";
 import type {
   OverallBlogStatus,
   PublisherStageStatus,
+  WorkflowStage,
   WriterStageStatus,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -35,6 +38,14 @@ export function StatusBadge({ status }: { status: OverallBlogStatus }) {
   return (
     <BaseStatusBadge className={STATUS_COLORS[status]}>
       {STATUS_LABELS[status]}
+    </BaseStatusBadge>
+  );
+}
+
+export function WorkflowStageBadge({ stage }: { stage: WorkflowStage }) {
+  return (
+    <BaseStatusBadge className={WORKFLOW_STAGE_COLORS[stage]}>
+      {WORKFLOW_STAGE_LABELS[stage]}
     </BaseStatusBadge>
   );
 }

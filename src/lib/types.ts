@@ -20,6 +20,8 @@ export type OverallBlogStatus =
   | "ready_to_publish"
   | "published";
 
+export type WorkflowStage = "writing" | "ready" | "publishing" | "published";
+
 export interface ProfileRecord {
   id: string;
   email: string;

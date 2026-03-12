@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
-import { StatusBadge } from "@/components/status-badge";
+import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import {
   BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
@@ -15,7 +15,7 @@ import {
   normalizeBlogRow,
 } from "@/lib/blog-schema";
 import { notifySlack } from "@/lib/notifications";
-import { PUBLISHER_STATUSES, SITES, WRITER_STATUSES } from "@/lib/status";
+import { PUBLISHER_STATUSES, SITES, WRITER_STATUSES, getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
   BlogHistoryRecord,
@@ -544,9 +544,12 @@ export default function BlogDetailPage() {
     return (
       <ProtectedPage>
         <AppShell>
-          <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-            Loading blog details…
-          </p>
+          <div className="space-y-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-5">
+            <div className="h-7 w-1/2 animate-pulse rounded bg-slate-200" />
+            <div className="h-4 w-1/3 animate-pulse rounded bg-slate-200" />
+            <div className="h-24 w-full animate-pulse rounded bg-slate-200" />
+            <div className="h-24 w-full animate-pulse rounded bg-slate-200" />
+          </div>
         </AppShell>
       </ProtectedPage>
     );
@@ -570,12 +573,20 @@ export default function BlogDetailPage() {
         <div className="space-y-6">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">{blog.title}</h2>
-              <p className="text-sm text-slate-600">
+              <h2 className="text-2xl font-bold text-slate-900">{blog.title}</h2>
+              <p className="text-xs uppercase tracking-wide text-slate-500">
                 {blog.site} • Created {format(new Date(blog.created_at), "PPp")}
               </p>
             </div>
-            <StatusBadge status={blog.overall_status} />
+            <div className="flex items-center gap-2">
+              <WorkflowStageBadge
+                stage={getWorkflowStage({
+                  writerStatus: blog.writer_status,
+                  publisherStatus: blog.publisher_status,
+                })}
+              />
+              <StatusBadge status={blog.overall_status} />
+            </div>
           </header>
 
           {error ? (
@@ -608,6 +619,13 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, title: event.target.value } : prev
                       );
                     }}
+                    onBlur={() => {
+                      const nextTitle = form.title.trim();
+                      if (!canAdminEdit || nextTitle === blog.title) {
+                        return;
+                      }
+                      void updateBlog({ title: nextTitle }, "Saved");
+                    }}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                   />
                 </label>
@@ -623,6 +641,12 @@ export default function BlogDetailPage() {
                       setForm((prev) =>
                         prev ? { ...prev, site: event.target.value as BlogSite } : prev
                       );
+                    }}
+                    onBlur={() => {
+                      if (!canAdminEdit || form.site === blog.site) {
+                        return;
+                      }
+                      void updateBlog({ site: form.site }, "Saved");
                     }}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                   >
@@ -648,6 +672,12 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, writer_id: event.target.value } : prev
                       );
                     }}
+                    onBlur={() => {
+                      if (!canAdminEdit || (blog.writer_id ?? "") === form.writer_id) {
+                        return;
+                      }
+                      void updateBlog({ writer_id: form.writer_id || null }, "Saved");
+                    }}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                   >
                     <option value="">Unassigned</option>
@@ -670,6 +700,12 @@ export default function BlogDetailPage() {
                       setForm((prev) =>
                         prev ? { ...prev, publisher_id: event.target.value } : prev
                       );
+                    }}
+                    onBlur={() => {
+                      if (!canAdminEdit || (blog.publisher_id ?? "") === form.publisher_id) {
+                        return;
+                      }
+                      void updateBlog({ publisher_id: form.publisher_id || null }, "Saved");
                     }}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                   >
@@ -697,6 +733,22 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, scheduled_publish_date: event.target.value } : prev
                       );
                     }}
+                    onBlur={() => {
+                      if (!canAdminEdit) {
+                        return;
+                      }
+                      const nextDate = form.scheduled_publish_date || null;
+                      if ((blog.scheduled_publish_date ?? "") === (nextDate ?? "")) {
+                        return;
+                      }
+                      void updateBlog(
+                        {
+                          scheduled_publish_date: nextDate,
+                          target_publish_date: nextDate,
+                        },
+                        "Saved"
+                      );
+                    }}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                   />
                 </label>
@@ -712,6 +764,21 @@ export default function BlogDetailPage() {
                     onChange={(event) => {
                       setForm((prev) =>
                         prev ? { ...prev, display_published_date: event.target.value } : prev
+                      );
+                    }}
+                    onBlur={() => {
+                      if (!canAdminEdit) {
+                        return;
+                      }
+                      const nextDisplayDate = form.display_published_date || null;
+                      if ((blog.display_published_date ?? "") === (nextDisplayDate ?? "")) {
+                        return;
+                      }
+                      void updateBlog(
+                        {
+                          display_published_date: nextDisplayDate,
+                        },
+                        "Saved"
                       );
                     }}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
@@ -732,6 +799,17 @@ export default function BlogDetailPage() {
                       prev ? { ...prev, actual_published_at: event.target.value } : prev
                     );
                   }}
+                  onBlur={() => {
+                    if (!canAdminEdit) {
+                      return;
+                    }
+                    const nextIso = toIsoFromDateTimeLocalInput(form.actual_published_at);
+                    const existingIso = blog.actual_published_at ?? blog.published_at;
+                    if ((existingIso ?? "") === (nextIso ?? "")) {
+                      return;
+                    }
+                    void updateBlog({ actual_published_at: nextIso }, "Saved");
+                  }}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                 />
               </label>
@@ -742,9 +820,14 @@ export default function BlogDetailPage() {
                   type="checkbox"
                   checked={form.is_archived}
                   onChange={(event) => {
+                    const nextValue = event.target.checked;
                     setForm((prev) =>
-                      prev ? { ...prev, is_archived: event.target.checked } : prev
+                      prev ? { ...prev, is_archived: nextValue } : prev
                     );
+                    if (!canAdminEdit || nextValue === blog.is_archived) {
+                      return;
+                    }
+                    void updateBlog({ is_archived: nextValue }, "Saved");
                   }}
                 />
                 Archived
@@ -999,15 +1082,19 @@ export default function BlogDetailPage() {
             ) : (
               <ul className="mt-3 space-y-2">
                 {comments.map((comment) => (
-                  <li
-                    key={comment.id}
-                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                  >
-                    <p className="text-sm text-slate-800">{comment.comment}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {comment.author?.full_name ?? "Unknown"} •{" "}
-                      {format(new Date(comment.created_at), "PPp")}
-                    </p>
+                  <li key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700">
+                        {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-600">
+                          {comment.author?.full_name ?? "Unknown"} —{" "}
+                          {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-800">{comment.comment}</p>
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>

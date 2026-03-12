@@ -65,6 +65,10 @@ export default function NewBlogPage() {
       setError("Title is required.");
       return;
     }
+    if (!writerId) {
+      setError("Writer is required.");
+      return;
+    }
     if (!user?.id) {
       setError("You must be logged in.");
       return;
@@ -235,13 +239,14 @@ export default function NewBlogPage() {
                   Writer
                 </span>
                 <select
+                  required
                   value={writerId}
                   onChange={(event) => {
                     setWriterId(event.target.value);
                   }}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">Select writer</option>
                   {users.map((nextUser) => (
                     <option key={nextUser.id} value={nextUser.id}>
                       {nextUser.full_name} ({nextUser.role})

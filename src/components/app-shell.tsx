@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { getUserRoles, hasRole } from "@/lib/roles";
 
 import {
@@ -73,6 +73,54 @@ export function AppShell({
     [builtInCommandPaletteCommands, commandPaletteCommands]
   );
   const rolesLabel = getUserRoles(profile).join(", ");
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const isTypingField =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+
+      if (event.key === "/") {
+        event.preventDefault();
+        const searchInput = document.querySelector<HTMLInputElement>('input[type="search"]');
+        searchInput?.focus();
+        searchInput?.select();
+        return;
+      }
+
+      if (isTypingField) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "d" && pathname !== "/dashboard") {
+        event.preventDefault();
+        router.push("/dashboard");
+        return;
+      }
+
+      if (event.key.toLowerCase() === "c" && pathname !== "/calendar") {
+        event.preventDefault();
+        router.push("/calendar");
+        return;
+      }
+
+      if (event.key.toLowerCase() === "n" && hasRole(profile, "admin")) {
+        event.preventDefault();
+        router.push("/blogs/new");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => {
+      window.removeEventListener("keydown", handleKeydown);
+    };
+  }, [pathname, profile, router]);
 
   return (
     <div className="min-h-screen bg-slate-50">

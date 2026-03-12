@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { format, isBefore, parseISO } from "date-fns";
+import { format, formatDistanceToNow, isBefore, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
@@ -11,6 +11,7 @@ import { ProtectedPage } from "@/components/protected-page";
 import {
   PublisherStatusBadge,
   StatusBadge,
+  WorkflowStageBadge,
   WriterStatusBadge,
 } from "@/components/status-badge";
 import {
@@ -33,6 +34,7 @@ import {
   PUBLISHER_STATUSES,
   SITES,
   STATUS_LABELS,
+  getWorkflowStage,
   WRITER_STATUS_LABELS,
   WRITER_STATUSES,
 } from "@/lib/status";
@@ -141,7 +143,7 @@ const DASHBOARD_COLUMN_LABELS: Record<DashboardColumnKey, string> = {
   writer_status: "Writer Status",
   publisher: "Publisher",
   publisher_status: "Publisher Status",
-  overall_status: "Overall Status",
+  overall_status: "Stage",
   publish_date: "Publish Date",
 };
 
@@ -192,7 +194,7 @@ const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }
   { value: "title", label: "Title" },
   { value: "writer", label: "Writer" },
   { value: "publisher", label: "Publisher" },
-  { value: "overall_status", label: "Overall Status" },
+  { value: "overall_status", label: "Stage" },
   { value: "writer_status", label: "Writer Status" },
   { value: "publisher_status", label: "Publisher Status" },
 ];
@@ -633,6 +635,31 @@ export default function DashboardPage() {
     setSelectedBlogIds((previous) => previous.filter((id) => existingIds.has(id)));
   }, [blogs]);
 
+  const attentionSummary = useMemo(() => {
+    const missingPublishDate = blogs.filter((blog) => !getBlogScheduledDate(blog)).length;
+    const readyToPublish = blogs.filter(
+      (blog) =>
+        getWorkflowStage({
+          writerStatus: blog.writer_status,
+          publisherStatus: blog.publisher_status,
+        }) === "ready"
+    ).length;
+    const delayed = blogs.filter((blog) => {
+      const scheduledDate = getBlogScheduledDate(blog);
+      const actualPublishedAt = blog.actual_published_at ?? blog.published_at;
+      if (!scheduledDate || !actualPublishedAt) {
+        return false;
+      }
+      return new Date(actualPublishedAt).getTime() > new Date(`${scheduledDate}T00:00:00Z`).getTime();
+    }).length;
+
+    return {
+      missingPublishDate,
+      readyToPublish,
+      delayed,
+    };
+  }, [blogs]);
+
   useEffect(() => {
     if (!activeBlogId) {
       return;
@@ -739,9 +766,18 @@ export default function DashboardPage() {
   );
   const filteredBlogs = useMemo(() => {
     return blogs.filter((blog) => {
-      const matchesSearch = blog.title
-        .toLowerCase()
-        .includes(search.toLowerCase().trim());
+      const normalizedSearch = search.toLowerCase().trim();
+      const searchHaystack = [
+        blog.title,
+        blog.writer?.full_name ?? "",
+        blog.publisher?.full_name ?? "",
+        blog.site,
+        blog.live_url ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      const matchesSearch =
+        normalizedSearch.length === 0 || searchHaystack.includes(normalizedSearch);
       const matchesSite =
         siteFilters.length === 0 || siteFilters.includes(blog.site);
       const matchesStatus =
@@ -1124,7 +1160,11 @@ export default function DashboardPage() {
       }
 
       if (column === "overall_status") {
-        return STATUS_LABELS[blog.overall_status];
+        const workflowStage = getWorkflowStage({
+          writerStatus: blog.writer_status,
+          publisherStatus: blog.publisher_status,
+        });
+        return toTitleCase(workflowStage);
       }
 
       const publishDate = getBlogPublishDate(blog);
@@ -1670,7 +1710,7 @@ export default function DashboardPage() {
         commandPaletteCommands={dashboardCommandPaletteCommands}
         sidebarContent={savedViewsSidebarContent}
       >
-        <div className="space-y-5">
+        <div className="space-y-5 transition-opacity duration-200">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Dashboard</h2>
@@ -1680,20 +1720,36 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                onClick={saveCurrentFiltersAsView}
-              >
-                Save View
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                onClick={resetDashboardFilters}
-              >
-                Reset Filters
-              </button>
+              <details className="relative">
+                <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                  Actions ▼
+                </summary>
+                <div className="absolute right-0 z-30 mt-1 w-52 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                  <button
+                    type="button"
+                    className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                    onClick={saveCurrentFiltersAsView}
+                  >
+                    Save view
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                    onClick={resetDashboardFilters}
+                  >
+                    Reset filters
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                    onClick={() => {
+                      setIsEditColumnsOpen((previous) => !previous);
+                    }}
+                  >
+                    Edit columns
+                  </button>
+                </div>
+              </details>
               {isAdmin ? (
                 <button
                   type="button"
@@ -1711,7 +1767,7 @@ export default function DashboardPage() {
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
             <input
               type="search"
-              placeholder="Search title..."
+              placeholder="Search title, writer, publisher, site, URL..."
               className="rounded-md border border-slate-300 px-3 py-2 text-sm"
               value={search}
               onChange={(event) => {
@@ -1794,6 +1850,71 @@ export default function DashboardPage() {
               <option value="desc">Sort Direction: Descending</option>
             </select>
 
+          </section>
+          <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Needs Attention
+            </h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilters([]);
+                  setWriterStatusFilters([]);
+                  setPublisherStatusFilters([]);
+                  setSortField("publish_date");
+                  setSortDirection("asc");
+                  setCurrentPage(1);
+                }}
+              >
+                Show all
+              </button>
+              <button
+                type="button"
+                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  setSearch("");
+                  setSortField("publish_date");
+                  setSortDirection("asc");
+                  setCurrentPage(1);
+                  setPublisherStatusFilters(["not_started"]);
+                  setWriterStatusFilters([]);
+                  setStatusFilters([]);
+                }}
+              >
+                {attentionSummary.missingPublishDate} missing publish date
+              </button>
+              <button
+                type="button"
+                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  setSearch("");
+                  setCurrentPage(1);
+                  setWriterStatusFilters(["completed"]);
+                  setPublisherStatusFilters(["not_started"]);
+                  setStatusFilters([]);
+                  setSortField("publish_date");
+                  setSortDirection("asc");
+                }}
+              >
+                {attentionSummary.readyToPublish} ready to publish
+              </button>
+              <button
+                type="button"
+                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  setSearch("");
+                  setCurrentPage(1);
+                  setStatusFilters(["published"]);
+                  setSortField("publish_date");
+                  setSortDirection("desc");
+                }}
+              >
+                {attentionSummary.delayed} delayed
+              </button>
+            </div>
           </section>
           <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
             <button
@@ -1939,9 +2060,12 @@ export default function DashboardPage() {
           ) : null}
 
           {isLoading ? (
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-              Loading blogs…
-            </p>
+            <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-5">
+              <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+              <div className="h-10 w-full animate-pulse rounded bg-slate-200" />
+              <div className="h-10 w-full animate-pulse rounded bg-slate-200" />
+              <div className="h-10 w-3/4 animate-pulse rounded bg-slate-200" />
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
@@ -2156,45 +2280,52 @@ export default function DashboardPage() {
                                           event.stopPropagation();
                                         }}
                                       >
-                                        <button
-                                          type="button"
-                                          className="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-100"
-                                          onClick={() => {
-                                            openPanel(blog.id);
-                                          }}
-                                        >
-                                          Details
-                                        </button>
-                                        {isAdmin ? (
-                                          <button
-                                            type="button"
-                                            disabled={isRowSaving}
-                                            className="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
-                                            onClick={() => {
-                                              const nextComment =
-                                                prompt("Quick comment for this blog:");
-                                              if (!nextComment || !user?.id) {
-                                                return;
-                                              }
-                                              void (async () => {
-                                                const supabase = getSupabaseBrowserClient();
-                                                await supabase
-                                                  .schema("public")
-                                                  .from("blog_comments")
-                                                  .insert({
-                                                    blog_id: blog.id,
-                                                    comment: nextComment.trim(),
-                                                    created_by: user.id,
-                                                  });
-                                                if (activeBlogId === blog.id) {
-                                                  await loadPanelData(blog.id);
-                                                }
-                                              })();
-                                            }}
-                                          >
-                                            Add Comment
-                                          </button>
-                                        ) : null}
+                                        <details className="relative">
+                                          <summary className="cursor-pointer list-none rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-100">
+                                            Actions ▼
+                                          </summary>
+                                          <div className="absolute right-0 z-20 mt-1 w-36 rounded border border-slate-200 bg-white p-1 shadow-md">
+                                            <button
+                                              type="button"
+                                              className="block w-full rounded px-2 py-1 text-left text-[11px] text-slate-700 hover:bg-slate-100"
+                                              onClick={() => {
+                                                openPanel(blog.id);
+                                              }}
+                                            >
+                                              Open details
+                                            </button>
+                                            {isAdmin ? (
+                                              <button
+                                                type="button"
+                                                disabled={isRowSaving}
+                                                className="block w-full rounded px-2 py-1 text-left text-[11px] text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                                                onClick={() => {
+                                                  const nextComment =
+                                                    prompt("Quick comment for this blog:");
+                                                  if (!nextComment || !user?.id) {
+                                                    return;
+                                                  }
+                                                  void (async () => {
+                                                    const supabase = getSupabaseBrowserClient();
+                                                    await supabase
+                                                      .schema("public")
+                                                      .from("blog_comments")
+                                                      .insert({
+                                                        blog_id: blog.id,
+                                                        comment: nextComment.trim(),
+                                                        created_by: user.id,
+                                                      });
+                                                    if (activeBlogId === blog.id) {
+                                                      await loadPanelData(blog.id);
+                                                    }
+                                                  })();
+                                                }}
+                                              >
+                                                Add comment
+                                              </button>
+                                            ) : null}
+                                          </div>
+                                        </details>
                                       </div>
                                     </div>
                                     {isRowSaving ? (
@@ -2367,10 +2498,14 @@ export default function DashboardPage() {
                               }
 
                               if (column === "overall_status") {
+                                const workflowStage = getWorkflowStage({
+                                  writerStatus: blog.writer_status,
+                                  publisherStatus: blog.publisher_status,
+                                });
                                 return (
                                   <td key={column} className="px-3 py-2">
                                     <div className="flex items-center gap-2">
-                                      <StatusBadge status={blog.overall_status} />
+                                      <WorkflowStageBadge stage={workflowStage} />
                                       {isOverdue ? (
                                         <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
                                           Overdue
@@ -2381,10 +2516,10 @@ export default function DashboardPage() {
                                           Stale draft
                                         </span>
                                       ) : null}
-                                      {blog.overall_status === "published" &&
+                                      {workflowStage === "published" &&
                                       (publishedDelayDays ?? 0) > 0 ? (
-                                        <span className="rounded bg-lime-100 px-2 py-0.5 text-xs font-medium text-lime-700">
-                                          Published +{publishedDelayDays}d
+                                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                          ⚠ Delayed {publishedDelayDays} days
                                         </span>
                                       ) : null}
                                     </div>
@@ -2507,6 +2642,12 @@ export default function DashboardPage() {
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">{activeBlog.site}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <WorkflowStageBadge
+                          stage={getWorkflowStage({
+                            writerStatus: activeBlog.writer_status,
+                            publisherStatus: activeBlog.publisher_status,
+                          })}
+                        />
                         <StatusBadge status={activeBlog.overall_status} />
                         <WriterStatusBadge status={activeBlog.writer_status} />
                         <PublisherStatusBadge status={activeBlog.publisher_status} />
@@ -2525,21 +2666,28 @@ export default function DashboardPage() {
                     </button>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/blogs/${activeBlog.id}`}
-                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                    >
-                      Open blog page
-                    </Link>
-                    <button
-                      type="button"
-                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                      onClick={() => {
-                        void loadPanelData(activeBlog.id);
-                      }}
-                    >
-                      Refresh
-                    </button>
+                    <details className="relative">
+                      <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                        Actions ▼
+                      </summary>
+                      <div className="absolute left-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                        <Link
+                          href={`/blogs/${activeBlog.id}`}
+                          className="block rounded px-3 py-2 text-xs text-slate-700 hover:bg-slate-100"
+                        >
+                          Open blog page
+                        </Link>
+                        <button
+                          type="button"
+                          className="block w-full rounded px-3 py-2 text-left text-xs text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            void loadPanelData(activeBlog.id);
+                          }}
+                        >
+                          Refresh
+                        </button>
+                      </div>
+                    </details>
                   </div>
                 </div>
 
@@ -2765,15 +2913,21 @@ export default function DashboardPage() {
                       ) : (
                         <ul className="space-y-2">
                           {panelComments.map((comment) => (
-                            <li
-                              key={comment.id}
-                              className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                            >
-                              <p className="text-sm text-slate-800">{comment.comment}</p>
-                              <p className="mt-1 text-xs text-slate-500">
-                                {comment.author?.full_name ?? "Unknown"} •{" "}
-                                {format(new Date(comment.created_at), "PPp")}
-                              </p>
+                            <li key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                              <div className="flex items-start gap-2">
+                                <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700">
+                                  {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold text-slate-600">
+                                    {comment.author?.full_name ?? "Unknown"} —{" "}
+                                    {formatDistanceToNow(new Date(comment.created_at), {
+                                      addSuffix: true,
+                                    })}
+                                  </p>
+                                  <p className="mt-1 text-sm text-slate-800">{comment.comment}</p>
+                                </div>
+                              </div>
                             </li>
                           ))}
                         </ul>

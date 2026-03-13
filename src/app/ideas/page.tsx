@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
-import { hasRole } from "@/lib/roles";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogIdeaRecord, BlogSite } from "@/lib/types";
@@ -23,7 +22,7 @@ function formatDateTime(value: string) {
 
 export default function IdeasPage() {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [ideas, setIdeas] = useState<BlogIdeaRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +33,7 @@ export default function IdeasPage() {
   const [site, setSite] = useState<BlogSite>("sighthound.com");
   const [description, setDescription] = useState("");
 
-  const isAdmin = hasRole(profile, "admin");
+  const canCreateBlog = hasPermission("create_blog");
 
   const loadIdeas = async () => {
     setIsLoading(true);
@@ -222,7 +221,7 @@ export default function IdeasPage() {
                       Added {formatDateTime(idea.created_at)}
                     </p>
                     <div className="mt-3">
-                      {isAdmin ? (
+                      {canCreateBlog ? (
                         <button
                           type="button"
                           className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -234,7 +233,7 @@ export default function IdeasPage() {
                         </button>
                       ) : (
                         <p className="text-xs text-slate-500">
-                          Admins can convert ideas into blog assignments.
+                          You do not have permission to convert ideas into blogs.
                         </p>
                       )}
                     </div>

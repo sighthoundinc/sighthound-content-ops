@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
@@ -9,7 +10,8 @@ import {
   TableResultsSummary,
   TableRowLimitSelect,
 } from "@/components/table-controls";
-import { getUserRoles, hasRole } from "@/lib/roles";
+import { hasWorkflowOverridePermission } from "@/lib/permissions";
+import { getUserRoles } from "@/lib/roles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -54,6 +56,7 @@ type EditableUserState = {
   lastName: string;
   displayName: string;
   userRoles: AppRole[];
+  isActive: boolean;
 };
 
 const USER_SORT_OPTIONS: Array<{ value: UserSortField; label: string }> = [
@@ -73,8 +76,26 @@ function splitName(fullName: string) {
 }
 
 export default function SettingsPage() {
-  const { session, profile, refreshProfile } = useAuth();
-  const isAdmin = hasRole(profile, "admin");
+  const { hasPermission, session, profile, refreshProfile } = useAuth();
+  const canWorkflowOverride = hasWorkflowOverridePermission(hasPermission);
+  const canEditAppSettings =
+    hasPermission("manage_environment_settings") || canWorkflowOverride;
+  const canManageUsers = hasPermission("manage_users");
+  const canManageRoles = hasPermission("assign_roles");
+  const canManagePermissions = hasPermission("manage_permissions");
+  const canReassignWriterAssignments =
+    hasPermission("change_writer_assignment") ||
+    hasPermission("transfer_user_assignments") ||
+    hasPermission("bulk_reassign_blogs") ||
+    canWorkflowOverride;
+  const canReassignPublisherAssignments =
+    hasPermission("change_publisher_assignment") ||
+    hasPermission("transfer_user_assignments") ||
+    hasPermission("bulk_reassign_blogs") ||
+    canWorkflowOverride;
+  const canManageUserDirectory = canManageUsers || canManageRoles;
+  const canReassignAssignments =
+    canReassignWriterAssignments || canReassignPublisherAssignments;
   const [settings, setSettings] = useState<AppSettingsRecord | null>(null);
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [editableUsers, setEditableUsers] = useState<Record<string, EditableUserState>>({});
@@ -94,6 +115,22 @@ export default function SettingsPage() {
   const [userSortDirection, setUserSortDirection] = useState<SortDirection>("desc");
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
+  const [reassignFromUserId, setReassignFromUserId] = useState("");
+  const [reassignToUserId, setReassignToUserId] = useState("");
+  const [includeWriterAssignments, setIncludeWriterAssignments] = useState(true);
+  const [includePublisherAssignments, setIncludePublisherAssignments] = useState(true);
+
+  useEffect(() => {
+    if (!canReassignWriterAssignments) {
+      setIncludeWriterAssignments(false);
+    }
+  }, [canReassignWriterAssignments]);
+
+  useEffect(() => {
+    if (!canReassignPublisherAssignments) {
+      setIncludePublisherAssignments(false);
+    }
+  }, [canReassignPublisherAssignments]);
 
   const loadUsers = async () => {
     const supabase = getSupabaseBrowserClient();
@@ -117,6 +154,7 @@ export default function SettingsPage() {
               lastName: nextUser.last_name ?? nameParts.lastName,
               displayName: nextUser.display_name ?? nextUser.full_name,
               userRoles: getUserRoles(nextUser),
+              isActive: nextUser.is_active,
             },
           ];
         })
@@ -153,7 +191,7 @@ export default function SettingsPage() {
 
   const saveSettings = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!settings || !isAdmin) {
+    if (!settings || !canEditAppSettings) {
       return;
     }
 
@@ -200,7 +238,8 @@ export default function SettingsPage() {
         firstName: edits.firstName,
         lastName: edits.lastName,
         displayName: edits.displayName,
-        userRoles: isAdmin ? edits.userRoles : undefined,
+        userRoles: canManageRoles ? edits.userRoles : undefined,
+        isActive: canManageUsers ? edits.isActive : undefined,
       }),
     });
     const payload = (await response.json()) as { error?: string };
@@ -218,8 +257,8 @@ export default function SettingsPage() {
 
   const createUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!session?.access_token || !isAdmin) {
-      setError("Admin session is required.");
+    if (!session?.access_token || !canManageUsers || !canManageRoles) {
+      setError("User management permission is required.");
       return;
     }
 
@@ -253,6 +292,67 @@ export default function SettingsPage() {
     setNewFullName("");
     setNewRole("writer");
     await loadUsers();
+  };
+
+  const reassignEverythingFromUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!session?.access_token || !canReassignAssignments) {
+      setError("Assignment permission is required.");
+      return;
+    }
+    if (!reassignFromUserId || !reassignToUserId) {
+      setError("Select both source and destination users.");
+      return;
+    }
+    if (reassignFromUserId === reassignToUserId) {
+      setError("Source and destination users must be different.");
+      return;
+    }
+    if (!includeWriterAssignments && !includePublisherAssignments) {
+      setError("Select at least one assignment type to transfer.");
+      return;
+    }
+    if (includeWriterAssignments && !canReassignWriterAssignments) {
+      setError("You do not have permission to transfer writer assignments.");
+      return;
+    }
+    if (includePublisherAssignments && !canReassignPublisherAssignments) {
+      setError("You do not have permission to transfer publisher assignments.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+
+    const response = await fetch("/api/admin/reassign-assignments", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        fromUserId: reassignFromUserId,
+        toUserId: reassignToUserId,
+        includeWriterAssignments,
+        includePublisherAssignments,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      transferredWriterAssignments?: number;
+      transferredPublisherAssignments?: number;
+      totalTransferred?: number;
+    };
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to reassign assignments.");
+      return;
+    }
+
+    setSuccess(
+      `Transferred ${payload.totalTransferred ?? 0} assignments (writer: ${
+        payload.transferredWriterAssignments ?? 0
+      }, publisher: ${payload.transferredPublisherAssignments ?? 0}).`
+    );
   };
 
   const filteredUsers = useMemo(() => {
@@ -318,6 +418,14 @@ export default function SettingsPage() {
             <p className="text-sm text-slate-600">
               Manage profile names, timezone preferences, and team roles.
             </p>
+            {canManagePermissions ? (
+              <Link
+                href="/settings/permissions"
+                className="mt-2 inline-flex text-sm font-medium text-blue-600 underline"
+              >
+                Open Permissions Panel
+              </Link>
+            ) : null}
           </header>
 
           {error ? (
@@ -358,6 +466,7 @@ export default function SettingsPage() {
                                 lastName: "",
                                 displayName: "",
                                 userRoles: getUserRoles(profile),
+                                isActive: profile.is_active,
                               }),
                               firstName: event.target.value,
                             },
@@ -381,6 +490,7 @@ export default function SettingsPage() {
                                 lastName: "",
                                 displayName: "",
                                 userRoles: getUserRoles(profile),
+                                isActive: profile.is_active,
                               }),
                               lastName: event.target.value,
                             },
@@ -404,6 +514,7 @@ export default function SettingsPage() {
                                 lastName: "",
                                 displayName: "",
                                 userRoles: getUserRoles(profile),
+                                isActive: profile.is_active,
                               }),
                               displayName: event.target.value,
                             },
@@ -444,7 +555,7 @@ export default function SettingsPage() {
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      disabled={!isAdmin}
+                      disabled={!canEditAppSettings}
                     >
                       {TIMEZONE_OPTIONS.map((timezone) => (
                         <option key={timezone} value={timezone}>
@@ -465,7 +576,7 @@ export default function SettingsPage() {
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      disabled={!isAdmin}
+                      disabled={!canEditAppSettings}
                     >
                       {WEEK_DAYS.map((day) => (
                         <option key={day.value} value={day.value}>
@@ -494,10 +605,10 @@ export default function SettingsPage() {
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      disabled={!isAdmin}
+                      disabled={!canEditAppSettings}
                     />
                   </label>
-                  {isAdmin ? (
+                  {canEditAppSettings ? (
                     <div className="md:col-span-3">
                       <button
                         type="submit"
@@ -510,13 +621,14 @@ export default function SettingsPage() {
                 </form>
               </section>
 
-              {isAdmin ? (
+              {canManageUserDirectory || canReassignAssignments ? (
                 <>
-                  <section className="rounded-lg border border-slate-200 p-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      Create Internal User
-                    </h3>
-                    <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={createUser}>
+                  {canManageUsers && canManageRoles ? (
+                    <section className="rounded-lg border border-slate-200 p-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                        Create Internal User
+                      </h3>
+                      <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={createUser}>
                       <label className="block">
                         <span className="mb-1 block text-sm font-medium text-slate-700">
                           Full Name
@@ -583,13 +695,102 @@ export default function SettingsPage() {
                           Create User
                         </button>
                       </div>
-                    </form>
-                  </section>
+                      </form>
+                    </section>
+                  ) : null}
 
-                  <section className="rounded-lg border border-slate-200 p-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      Users
-                    </h3>
+                  {canReassignAssignments ? (
+                    <section className="rounded-lg border border-slate-200 p-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                        Reassign Everything From User
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Transfer all writer/publisher assignments from one user to another.
+                      </p>
+                      <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={reassignEverythingFromUser}>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          From User
+                        </span>
+                        <select
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          value={reassignFromUserId}
+                          onChange={(event) => {
+                            setReassignFromUserId(event.target.value);
+                          }}
+                          required
+                        >
+                          <option value="">Select source user</option>
+                          {users.map((nextUser) => (
+                            <option key={nextUser.id} value={nextUser.id}>
+                              {nextUser.full_name} ({nextUser.email})
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          To User
+                        </span>
+                        <select
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          value={reassignToUserId}
+                          onChange={(event) => {
+                            setReassignToUserId(event.target.value);
+                          }}
+                          required
+                        >
+                          <option value="">Select destination user</option>
+                          {users
+                            .filter((nextUser) => nextUser.is_active)
+                            .map((nextUser) => (
+                              <option key={nextUser.id} value={nextUser.id}>
+                                {nextUser.full_name} ({nextUser.email})
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <div className="md:col-span-2 flex flex-wrap items-center gap-4">
+                        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            disabled={!canReassignWriterAssignments}
+                            checked={includeWriterAssignments}
+                            onChange={(event) => {
+                              setIncludeWriterAssignments(event.target.checked);
+                            }}
+                          />
+                          Transfer writer assignments
+                        </label>
+                        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            disabled={!canReassignPublisherAssignments}
+                            checked={includePublisherAssignments}
+                            onChange={(event) => {
+                              setIncludePublisherAssignments(event.target.checked);
+                            }}
+                          />
+                          Transfer publisher assignments
+                        </label>
+                      </div>
+                      <div className="md:col-span-2">
+                        <button
+                          type="submit"
+                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                        >
+                          Reassign Assignments
+                        </button>
+                      </div>
+                      </form>
+                    </section>
+                  ) : null}
+
+                  {canManageUserDirectory ? (
+                    <section className="rounded-lg border border-slate-200 p-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                        Users
+                      </h3>
                     <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
                       <select
                         className="rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -666,6 +867,7 @@ export default function SettingsPage() {
                         <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
                           <tr>
                             <th className="px-3 py-2">Email</th>
+                            <th className="px-3 py-2">Active</th>
                             <th className="px-3 py-2">First Name</th>
                             <th className="px-3 py-2">Last Name</th>
                             <th className="px-3 py-2">Display Name</th>
@@ -676,7 +878,7 @@ export default function SettingsPage() {
                         <tbody className="divide-y divide-slate-100">
                           {sortedUsers.length === 0 ? (
                             <tr>
-                              <td className="px-3 py-4 text-center text-slate-500" colSpan={6}>
+                              <td className="px-3 py-4 text-center text-slate-500" colSpan={7}>
                                 No users found with current filters.
                               </td>
                             </tr>
@@ -689,6 +891,25 @@ export default function SettingsPage() {
                               return (
                                 <tr key={nextUser.id}>
                                   <td className="px-3 py-2 text-slate-600">{nextUser.email}</td>
+                                  <td className="px-3 py-2">
+                                    <label className="inline-flex items-center gap-2 text-xs text-slate-700">
+                                      <input
+                                        type="checkbox"
+                                        disabled={!canManageUsers}
+                                        checked={editable.isActive}
+                                        onChange={(event) => {
+                                          setEditableUsers((previous) => ({
+                                            ...previous,
+                                            [nextUser.id]: {
+                                              ...editable,
+                                              isActive: event.target.checked,
+                                            },
+                                          }));
+                                        }}
+                                      />
+                                      <span>{editable.isActive ? "Active" : "Inactive"}</span>
+                                    </label>
+                                  </td>
                                   <td className="px-3 py-2">
                                     <input
                                       value={editable.firstName}
@@ -745,6 +966,7 @@ export default function SettingsPage() {
                                           >
                                             <input
                                               type="checkbox"
+                                              disabled={!canManageRoles}
                                               checked={isChecked}
                                               onChange={() => {
                                                 setEditableUsers((previous) => {
@@ -790,7 +1012,8 @@ export default function SettingsPage() {
                         </tbody>
                       </table>
                     </div>
-                  </section>
+                    </section>
+                  ) : null}
                 </>
               ) : null}
             </>

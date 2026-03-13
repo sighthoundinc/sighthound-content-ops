@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { isMissingUserRolesColumnError } from "@/lib/profile-schema";
-
-import { createAdminClient, createAnonServerClient } from "@/lib/supabase/server";
+import { authenticateRequest, hasPermission } from "@/lib/server-permissions";
 
 const updateProfileSchema = z.object({
   targetUserId: z.string().uuid().optional(),
   firstName: z.string().trim().max(100).optional().nullable(),
   lastName: z.string().trim().max(100).optional().nullable(),
   displayName: z.string().trim().max(200).optional().nullable(),
+  isActive: z.boolean().optional(),
   userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor"])).optional(),
 });
 
@@ -25,19 +24,11 @@ function toNullableTrimmed(value: string | null | undefined) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const authorization = request.headers.get("authorization") ?? "";
-    const token = authorization.startsWith("Bearer ")
-      ? authorization.slice("Bearer ".length)
-      : null;
-    if (!token) {
-      return NextResponse.json({ error: "Missing access token" }, { status: 401 });
+    const auth = await authenticateRequest(request);
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
-
-    const anonClient = createAnonServerClient();
-    const { data: userData, error: userError } = await anonClient.auth.getUser(token);
-    if (userError || !userData.user) {
-      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
-    }
+    const { context } = auth;
 
     const body = await request.json();
     const parsed = updateProfileSchema.safeParse(body);
@@ -48,46 +39,27 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const adminClient = createAdminClient();
-    let { data: requesterProfile, error: requesterProfileError } = await adminClient
-      .from("profiles")
-      .select("id,role,user_roles,is_active")
-      .eq("id", userData.user.id)
-      .eq("is_active", true)
-      .maybeSingle();
-    if (isMissingUserRolesColumnError(requesterProfileError)) {
-      const fallbackRequesterQuery = await adminClient
-        .from("profiles")
-        .select("id,role,is_active")
-        .eq("id", userData.user.id)
-        .eq("is_active", true)
-        .maybeSingle();
-      requesterProfile = fallbackRequesterQuery.data as typeof requesterProfile;
-      requesterProfileError = fallbackRequesterQuery.error;
-    }
+    const adminClient = context.adminClient;
+    const targetUserId = parsed.data.targetUserId ?? context.userId;
+    const isSelfUpdate = targetUserId === context.userId;
+    const canManageUsers = hasPermission(context, "manage_users");
+    const canManageRoles = hasPermission(context, "assign_roles");
 
-    if (requesterProfileError || !requesterProfile) {
-      return NextResponse.json({ error: "Active profile not found" }, { status: 403 });
-    }
-
-    const requesterRoles = new Set<string>([
-      requesterProfile.role,
-      ...((requesterProfile.user_roles as string[] | null | undefined) ?? []),
-    ]);
-    const isRequesterAdmin = requesterRoles.has("admin");
-    const targetUserId = parsed.data.targetUserId ?? userData.user.id;
-    const isSelfUpdate = targetUserId === userData.user.id;
-
-    if (!isSelfUpdate && !isRequesterAdmin) {
+    if (!isSelfUpdate && !canManageUsers) {
       return NextResponse.json(
         { error: "You can only edit your own profile." },
         { status: 403 }
       );
     }
-
-    if (parsed.data.userRoles && !isRequesterAdmin) {
+    if (parsed.data.userRoles && !canManageRoles) {
       return NextResponse.json(
         { error: "Only admins can edit user roles." },
+        { status: 403 }
+      );
+    }
+    if (parsed.data.isActive !== undefined && !canManageUsers) {
+      return NextResponse.json(
+        { error: "Only admins can edit user activation state." },
         { status: 403 }
       );
     }
@@ -107,12 +79,15 @@ export async function PATCH(request: NextRequest) {
       profileUpdates.display_name = displayName;
     }
 
-    if (parsed.data.userRoles && isRequesterAdmin) {
+    if (parsed.data.userRoles && canManageRoles) {
       const nextUserRoles = Array.from(new Set(parsed.data.userRoles));
       profileUpdates.user_roles = nextUserRoles;
       if (nextUserRoles.length > 0) {
         profileUpdates.role = nextUserRoles[0];
       }
+    }
+    if (parsed.data.isActive !== undefined && canManageUsers) {
+      profileUpdates.is_active = parsed.data.isActive;
     }
 
     const hasNameUpdates =

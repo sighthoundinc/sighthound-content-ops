@@ -3,22 +3,28 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
-import { getUserRoles, hasRole } from "@/lib/roles";
+import { getUserRoles } from "@/lib/roles";
 
 import {
   CommandPalette,
   type CommandPaletteCommand,
 } from "@/components/command-palette";
+import { hasWorkflowOverridePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 
-const NAV_ITEMS = [
+const WORK_NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/tasks", label: "My Tasks" },
   { href: "/calendar", label: "Calendar" },
+];
+
+const CONTENT_NAV_ITEMS = [
+  { href: "/dashboard", label: "Blogs" },
   { href: "/social-posts", label: "Social Posts" },
   { href: "/ideas", label: "Ideas" },
 ];
+const NAV_ITEMS = [...WORK_NAV_ITEMS, ...CONTENT_NAV_ITEMS];
 
 export function AppShell({
   children,
@@ -31,7 +37,11 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { profile, signOut } = useAuth();
+  const { hasPermission, profile, signOut } = useAuth();
+  const canCreateBlogs = hasPermission("create_blog");
+  const canManagePermissions = hasPermission("manage_permissions");
+  const canManageSocialPosts =
+    hasPermission("view_dashboard") || hasWorkflowOverridePermission(hasPermission);
 
   const builtInCommandPaletteCommands = useMemo(() => {
     const navigationCommands: CommandPaletteCommand[] = NAV_ITEMS.map((item) => ({
@@ -44,40 +54,54 @@ export function AppShell({
       },
     }));
 
-    if (profile?.role === "admin") {
-      navigationCommands.push(
-        {
-          id: "nav-add-blog",
-          label: "Create new blog",
-          group: "Create",
-          keywords: ["blog", "new", "create", "add"],
-          action: () => {
-            router.push("/blogs/new");
-          },
+    navigationCommands.push({
+      id: "nav-settings",
+      label: "Go to settings",
+      group: "Navigation",
+      keywords: ["settings", "preferences", "configuration"],
+      action: () => {
+        router.push("/settings");
+      },
+    });
+
+    if (canManagePermissions) {
+      navigationCommands.push({
+        id: "nav-permissions",
+        label: "Go to permissions",
+        group: "Navigation",
+        keywords: ["permissions", "roles", "access"],
+        action: () => {
+          router.push("/settings/permissions");
         },
-        {
-          id: "nav-settings",
-          label: "Go to settings",
-          group: "Navigation",
-          keywords: ["settings", "preferences", "configuration"],
-          action: () => {
-            router.push("/settings");
-          },
+      });
+    }
+
+    if (canManageSocialPosts) {
+      navigationCommands.push({
+        id: "nav-add-social-post",
+        label: "Create new social post",
+        group: "Create",
+        keywords: ["social", "post", "new", "create", "add"],
+        action: () => {
+          router.push("/social-posts");
         },
-        {
-          id: "nav-add-social-post",
-          label: "Create new social post",
-          group: "Create",
-          keywords: ["social", "post", "new", "create", "add"],
-          action: () => {
-            router.push("/social-posts");
-          },
-        }
-      );
+      });
+    }
+
+    if (canCreateBlogs) {
+      navigationCommands.push({
+        id: "nav-add-blog",
+        label: "Create new blog",
+        group: "Create",
+        keywords: ["blog", "new", "create", "add"],
+        action: () => {
+          router.push("/blogs/new");
+        },
+      });
     }
 
     return navigationCommands;
-  }, [profile?.role, router]);
+  }, [canCreateBlogs, canManagePermissions, canManageSocialPosts, router]);
 
   const allCommandPaletteCommands = useMemo(
     () => [...builtInCommandPaletteCommands, ...commandPaletteCommands],
@@ -125,7 +149,7 @@ export function AppShell({
         return;
       }
 
-      if (event.key.toLowerCase() === "n" && hasRole(profile, "admin")) {
+      if (event.key.toLowerCase() === "n" && canCreateBlogs) {
         event.preventDefault();
         router.push("/blogs/new");
       }
@@ -135,7 +159,7 @@ export function AppShell({
     return () => {
       window.removeEventListener("keydown", handleKeydown);
     };
-  }, [pathname, profile, router]);
+  }, [canCreateBlogs, pathname, router]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -177,45 +201,83 @@ export function AppShell({
 
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-6 py-6">
         <aside className="w-full max-w-56 shrink-0 rounded-lg border border-slate-200 bg-white p-3">
-          <nav className="space-y-1">
-            {NAV_ITEMS.map((item) => (
+          <nav className="space-y-3">
+            <section className="space-y-1">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Work</p>
+              {WORK_NAV_ITEMS.map((item) => (
+                <Link
+                  key={`${item.href}-${item.label}`}
+                  href={item.href}
+                  className={cn(
+                    "block rounded-md px-3 py-2 text-sm font-medium",
+                    pathname === item.href
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-700 hover:bg-slate-100"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </section>
+
+            <section className="space-y-1">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Content</p>
+              {CONTENT_NAV_ITEMS.map((item) => (
+                <Link
+                  key={`${item.href}-${item.label}`}
+                  href={item.href}
+                  className={cn(
+                    "block rounded-md px-3 py-2 text-sm font-medium",
+                    pathname === item.href && !(item.href === "/dashboard" && item.label === "Blogs")
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-700 hover:bg-slate-100"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </section>
+
+            <section className="space-y-1">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">System</p>
+              {canCreateBlogs ? (
+                <Link
+                  href="/blogs/new"
+                  className={cn(
+                    "block rounded-md px-3 py-2 text-sm font-medium",
+                    pathname === "/blogs/new"
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-700 hover:bg-slate-100"
+                  )}
+                >
+                  Add Blog
+                </Link>
+              ) : null}
               <Link
-                key={item.href}
-                href={item.href}
+                href="/settings"
                 className={cn(
                   "block rounded-md px-3 py-2 text-sm font-medium",
-                  pathname === item.href
+                  pathname === "/settings"
                     ? "bg-slate-900 text-white"
                     : "text-slate-700 hover:bg-slate-100"
                 )}
               >
-                {item.label}
+                Settings
               </Link>
-            ))}
-            {hasRole(profile, "admin") ? (
-              <Link
-                href="/blogs/new"
-                className={cn(
-                  "block rounded-md px-3 py-2 text-sm font-medium",
-                  pathname === "/blogs/new"
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-700 hover:bg-slate-100"
-                )}
-              >
-                Add Blog
-              </Link>
-            ) : null}
-            <Link
-              href="/settings"
-              className={cn(
-                "block rounded-md px-3 py-2 text-sm font-medium",
-                pathname === "/settings"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
-              )}
-            >
-              Settings
-            </Link>
+              {canManagePermissions ? (
+                <Link
+                  href="/settings/permissions"
+                  className={cn(
+                    "block rounded-md px-3 py-2 text-sm font-medium",
+                    pathname === "/settings/permissions"
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-700 hover:bg-slate-100"
+                  )}
+                >
+                  Permissions
+                </Link>
+              ) : null}
+            </section>
           </nav>
           {sidebarContent ? (
             <div className="mt-4 border-t border-slate-200 pt-3">{sidebarContent}</div>
@@ -229,3 +291,4 @@ export function AppShell({
     </div>
   );
 }
+

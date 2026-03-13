@@ -16,6 +16,11 @@ import {
   normalizeBlogRow,
 } from "@/lib/blog-schema";
 import { notifySlack } from "@/lib/notifications";
+import {
+  canTransitionPublisherStatus,
+  canTransitionWriterStatus,
+  hasWorkflowOverridePermission,
+} from "@/lib/permissions";
 import { PUBLISHER_STATUSES, SITES, WRITER_STATUSES, getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
@@ -27,7 +32,6 @@ import type {
   WriterStageStatus,
 } from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
-import { hasRole } from "@/lib/roles";
 import { useAuth } from "@/providers/auth-provider";
 
 type BlogFormState = {
@@ -118,7 +122,7 @@ function toIsoFromDateTimeLocalInput(value: string | null | undefined) {
 export default function BlogDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { hasPermission, user, profile } = useAuth();
   const blogId = params.id;
 
   const [blog, setBlog] = useState<BlogRecord | null>(null);
@@ -251,11 +255,49 @@ export default function BlogDetailPage() {
     void loadData();
   }, [blogId]);
 
-  const canAdminEdit = hasRole(profile, "admin");
-  const isWriterAssignee = blog?.writer_id === user?.id;
-  const isPublisherAssignee = blog?.publisher_id === user?.id;
-  const canWriterEdit = canAdminEdit || isWriterAssignee;
-  const canPublisherEdit = canAdminEdit || isPublisherAssignee;
+  const canOverrideWorkflow = hasWorkflowOverridePermission(hasPermission);
+  const canMetadataEdit =
+    hasPermission("edit_blog_metadata") ||
+    hasPermission("edit_blog_title") ||
+    canOverrideWorkflow;
+  const canChangeWriterAssignment =
+    hasPermission("change_writer_assignment") || canOverrideWorkflow;
+  const canChangePublisherAssignment =
+    hasPermission("change_publisher_assignment") || canOverrideWorkflow;
+  const canEditScheduledDate =
+    hasPermission("edit_scheduled_publish_date") || canOverrideWorkflow;
+  const canEditDisplayDate =
+    hasPermission("edit_display_publish_date") || canOverrideWorkflow;
+  const canArchiveBlog = hasPermission("archive_blog") || canOverrideWorkflow;
+  const canCreateComments = hasPermission("create_comment");
+  const canWriterEdit =
+    hasPermission("edit_writer_status") ||
+    hasPermission("edit_google_doc_link") ||
+    hasPermission("start_writing") ||
+    hasPermission("submit_draft") ||
+    hasPermission("request_revision") ||
+    canOverrideWorkflow;
+  const canPublisherEdit =
+    hasPermission("edit_publisher_status") ||
+    hasPermission("edit_live_url") ||
+    hasPermission("start_publishing") ||
+    hasPermission("complete_publishing") ||
+    canOverrideWorkflow;
+  const canSaveDetails =
+    canMetadataEdit ||
+    canChangeWriterAssignment ||
+    canChangePublisherAssignment ||
+    canEditScheduledDate ||
+    canEditDisplayDate ||
+    canArchiveBlog ||
+    canOverrideWorkflow;
+  const canMarkWritingComplete = Boolean(
+    blog && canTransitionWriterStatus(blog.writer_status, "completed", hasPermission)
+  );
+  const canMarkPublishingComplete = Boolean(
+    blog &&
+      canTransitionPublisherStatus(blog.publisher_status, "completed", hasPermission)
+  );
 
   const selectedWriter = useMemo(
     () => users.find((nextUser) => nextUser.id === form?.writer_id) ?? null,
@@ -348,28 +390,45 @@ export default function BlogDetailPage() {
     setIsSaving(false);
   };
 
-  const handleAdminSave = async (event: FormEvent<HTMLFormElement>) => {
+  const handleDetailsSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!form || !blog) {
+    if (!form || !blog || !canSaveDetails) {
+      return;
+    }
+    const previousWriterId = blog.writer_id ?? "";
+    const writerChanged =
+      canChangeWriterAssignment && previousWriterId !== form.writer_id;
+    const updates: Record<string, unknown> = {};
+    if (canMetadataEdit) {
+      updates.title = form.title.trim();
+      updates.site = form.site;
+    }
+    if (canEditScheduledDate) {
+      updates.scheduled_publish_date = form.scheduled_publish_date || null;
+      updates.target_publish_date = form.scheduled_publish_date || null;
+    }
+    if (canEditDisplayDate) {
+      updates.display_published_date =
+        form.display_published_date || form.scheduled_publish_date || null;
+    }
+    if (canChangeWriterAssignment) {
+      updates.writer_id = form.writer_id || null;
+    }
+    if (canChangePublisherAssignment) {
+      updates.publisher_id = form.publisher_id || null;
+    }
+    if (canOverrideWorkflow) {
+      updates.actual_published_at = toIsoFromDateTimeLocalInput(form.actual_published_at);
+    }
+    if (canArchiveBlog) {
+      updates.is_archived = form.is_archived;
+    }
+    if (Object.keys(updates).length === 0) {
       return;
     }
 
-    const previousWriterId = blog.writer_id ?? "";
-    const writerChanged = previousWriterId !== form.writer_id;
-
     await updateBlog(
-      {
-        title: form.title.trim(),
-        site: form.site,
-        writer_id: form.writer_id || null,
-        publisher_id: form.publisher_id || null,
-        scheduled_publish_date: form.scheduled_publish_date || null,
-        display_published_date:
-          form.display_published_date || form.scheduled_publish_date || null,
-        actual_published_at: toIsoFromDateTimeLocalInput(form.actual_published_at),
-        target_publish_date: form.scheduled_publish_date || null,
-        is_archived: form.is_archived,
-      },
+      updates,
       "Blog details updated.",
       writerChanged && form.writer_id && selectedWriter
         ? async () => {
@@ -389,6 +448,10 @@ export default function BlogDetailPage() {
   const handleAddComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!blog || !user?.id) {
+      return;
+    }
+    if (!canCreateComments) {
+      setError("You do not have permission to add comments.");
       return;
     }
 
@@ -475,6 +538,10 @@ export default function BlogDetailPage() {
     if (!form || !blog || !canWriterEdit) {
       return;
     }
+    if (!canTransitionWriterStatus(blog.writer_status, form.writer_status, hasPermission)) {
+      setError("You do not have permission for the selected writing stage.");
+      return;
+    }
     if (
       form.writer_status === "completed" &&
       !form.google_doc_url.trim()
@@ -497,6 +564,16 @@ export default function BlogDetailPage() {
       return;
     }
     if (
+      !canTransitionPublisherStatus(
+        blog.publisher_status,
+        form.publisher_status,
+        hasPermission
+      )
+    ) {
+      setError("You do not have permission for the selected publishing stage.");
+      return;
+    }
+    if (
       form.publisher_status === "completed" &&
       !form.live_url.trim()
     ) {
@@ -515,6 +592,10 @@ export default function BlogDetailPage() {
 
   const handleMarkWritingComplete = async () => {
     if (!form || !blog || !canWriterEdit) {
+      return;
+    }
+    if (!canTransitionWriterStatus(blog.writer_status, "completed", hasPermission)) {
+      setError("You do not have permission to submit writing.");
       return;
     }
     if (!form.google_doc_url.trim()) {
@@ -554,6 +635,10 @@ export default function BlogDetailPage() {
 
   const handleMarkPublishingComplete = async () => {
     if (!form || !blog || !canPublisherEdit) {
+      return;
+    }
+    if (!canTransitionPublisherStatus(blog.publisher_status, "completed", hasPermission)) {
+      setError("You do not have permission to complete publishing.");
       return;
     }
     if (!form.live_url.trim()) {
@@ -645,14 +730,14 @@ export default function BlogDetailPage() {
               Blog Details
             </h3>
 
-            <form className="mt-4 space-y-4" onSubmit={handleAdminSave}>
+            <form className="mt-4 space-y-4" onSubmit={handleDetailsSave}>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-slate-700">
                     Title
                   </span>
                   <input
-                    disabled={!canAdminEdit}
+                    disabled={!canMetadataEdit}
                     value={form.title}
                     onChange={(event) => {
                       setForm((prev) =>
@@ -661,7 +746,7 @@ export default function BlogDetailPage() {
                     }}
                     onBlur={() => {
                       const nextTitle = form.title.trim();
-                      if (!canAdminEdit || nextTitle === blog.title) {
+                      if (!canMetadataEdit || nextTitle === blog.title) {
                         return;
                       }
                       void updateBlog({ title: nextTitle }, "Saved");
@@ -675,7 +760,7 @@ export default function BlogDetailPage() {
                     Site
                   </span>
                   <select
-                    disabled={!canAdminEdit}
+                    disabled={!canMetadataEdit}
                     value={form.site}
                     onChange={(event) => {
                       setForm((prev) =>
@@ -683,7 +768,7 @@ export default function BlogDetailPage() {
                       );
                     }}
                     onBlur={() => {
-                      if (!canAdminEdit || form.site === blog.site) {
+                      if (!canMetadataEdit || form.site === blog.site) {
                         return;
                       }
                       void updateBlog({ site: form.site }, "Saved");
@@ -705,7 +790,7 @@ export default function BlogDetailPage() {
                     Writer
                   </span>
                   <select
-                    disabled={!canAdminEdit}
+                    disabled={!canChangeWriterAssignment}
                     value={form.writer_id}
                     onChange={(event) => {
                       setForm((prev) =>
@@ -713,7 +798,10 @@ export default function BlogDetailPage() {
                       );
                     }}
                     onBlur={() => {
-                      if (!canAdminEdit || (blog.writer_id ?? "") === form.writer_id) {
+                      if (
+                        !canChangeWriterAssignment ||
+                        (blog.writer_id ?? "") === form.writer_id
+                      ) {
                         return;
                       }
                       void updateBlog({ writer_id: form.writer_id || null }, "Saved");
@@ -734,7 +822,7 @@ export default function BlogDetailPage() {
                     Publisher
                   </span>
                   <select
-                    disabled={!canAdminEdit}
+                    disabled={!canChangePublisherAssignment}
                     value={form.publisher_id}
                     onChange={(event) => {
                       setForm((prev) =>
@@ -742,7 +830,10 @@ export default function BlogDetailPage() {
                       );
                     }}
                     onBlur={() => {
-                      if (!canAdminEdit || (blog.publisher_id ?? "") === form.publisher_id) {
+                      if (
+                        !canChangePublisherAssignment ||
+                        (blog.publisher_id ?? "") === form.publisher_id
+                      ) {
                         return;
                       }
                       void updateBlog({ publisher_id: form.publisher_id || null }, "Saved");
@@ -765,7 +856,7 @@ export default function BlogDetailPage() {
                     Scheduled Publish Date
                   </span>
                   <input
-                    disabled={!canAdminEdit}
+                    disabled={!canEditDisplayDate}
                     type="date"
                     value={form.scheduled_publish_date}
                     onChange={(event) => {
@@ -774,7 +865,7 @@ export default function BlogDetailPage() {
                       );
                     }}
                     onBlur={() => {
-                      if (!canAdminEdit) {
+                      if (!canEditDisplayDate) {
                         return;
                       }
                       const nextDate = form.scheduled_publish_date || null;
@@ -798,7 +889,7 @@ export default function BlogDetailPage() {
                     Display Publish Date
                   </span>
                   <input
-                    disabled={!canAdminEdit}
+                    disabled={!canEditScheduledDate}
                     type="date"
                     value={form.display_published_date}
                     onChange={(event) => {
@@ -807,7 +898,7 @@ export default function BlogDetailPage() {
                       );
                     }}
                     onBlur={() => {
-                      if (!canAdminEdit) {
+                      if (!canEditScheduledDate) {
                         return;
                       }
                       const nextDisplayDate = form.display_published_date || null;
@@ -831,7 +922,7 @@ export default function BlogDetailPage() {
                   Actual Published Timestamp
                 </span>
                 <input
-                  disabled={!canAdminEdit}
+                  disabled={!canOverrideWorkflow}
                   type="datetime-local"
                   value={form.actual_published_at}
                   onChange={(event) => {
@@ -840,7 +931,7 @@ export default function BlogDetailPage() {
                     );
                   }}
                   onBlur={() => {
-                    if (!canAdminEdit) {
+                    if (!canOverrideWorkflow) {
                       return;
                     }
                     const nextIso = toIsoFromDateTimeLocalInput(form.actual_published_at);
@@ -856,7 +947,7 @@ export default function BlogDetailPage() {
 
               <label className="inline-flex items-center gap-2 text-sm text-slate-700">
                 <input
-                  disabled={!canAdminEdit}
+                  disabled={!canArchiveBlog}
                   type="checkbox"
                   checked={form.is_archived}
                   onChange={(event) => {
@@ -864,7 +955,7 @@ export default function BlogDetailPage() {
                     setForm((prev) =>
                       prev ? { ...prev, is_archived: nextValue } : prev
                     );
-                    if (!canAdminEdit || nextValue === blog.is_archived) {
+                    if (!canArchiveBlog || nextValue === blog.is_archived) {
                       return;
                     }
                     void updateBlog({ is_archived: nextValue }, "Saved");
@@ -876,10 +967,10 @@ export default function BlogDetailPage() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  disabled={!canAdminEdit || isSaving}
+                  disabled={!canSaveDetails || isSaving}
                   className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save Details
+                  Save Metadata
                 </button>
                 <button
                   type="button"
@@ -906,7 +997,7 @@ export default function BlogDetailPage() {
               <div className="mt-3 space-y-3">
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Writer Status
+                    Writing Stage
                   </span>
                   <select
                     disabled={!canWriterEdit}
@@ -924,7 +1015,19 @@ export default function BlogDetailPage() {
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                   >
                     {WRITER_STATUSES.map((status) => (
-                      <option key={status} value={status}>
+                      <option
+                        key={status}
+                        value={status}
+                        disabled={
+                          blog
+                            ? !canTransitionWriterStatus(
+                                blog.writer_status,
+                                status,
+                                hasPermission
+                              )
+                            : false
+                        }
+                      >
                         {toTitleCase(status)}
                       </option>
                     ))}
@@ -963,7 +1066,7 @@ export default function BlogDetailPage() {
                   {form.writer_status !== "completed" ? (
                     <button
                       type="button"
-                      disabled={!canWriterEdit || isSaving}
+                      disabled={!canWriterEdit || !canMarkWritingComplete || isSaving}
                       className="rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         if (confirm("Mark writing as complete?")) {
@@ -989,7 +1092,7 @@ export default function BlogDetailPage() {
               <div className="mt-3 space-y-3">
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Publisher Status
+                    Publishing Stage
                   </span>
                   <select
                     disabled={!canPublisherEdit}
@@ -1007,7 +1110,19 @@ export default function BlogDetailPage() {
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                   >
                     {PUBLISHER_STATUSES.map((status) => (
-                      <option key={status} value={status}>
+                      <option
+                        key={status}
+                        value={status}
+                        disabled={
+                          blog
+                            ? !canTransitionPublisherStatus(
+                                blog.publisher_status,
+                                status,
+                                hasPermission
+                              )
+                            : false
+                        }
+                      >
                         {toTitleCase(status)}
                       </option>
                     ))}
@@ -1046,7 +1161,7 @@ export default function BlogDetailPage() {
                   {form.publisher_status !== "completed" ? (
                     <button
                       type="button"
-                      disabled={!canPublisherEdit || isSaving}
+                      disabled={!canPublisherEdit || !canMarkPublishingComplete || isSaving}
                       className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         if (confirm("Mark publishing as complete?")) {
@@ -1103,7 +1218,7 @@ export default function BlogDetailPage() {
             ) : null}
             <form className="mt-3 space-y-2" onSubmit={handleAddComment}>
               <textarea
-                disabled={Boolean(commentsUnavailableMessage)}
+                disabled={Boolean(commentsUnavailableMessage) || !canCreateComments}
                 value={newComment}
                 onChange={(event) => {
                   setNewComment(event.target.value);
@@ -1115,13 +1230,22 @@ export default function BlogDetailPage() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={isCommentSaving || Boolean(commentsUnavailableMessage)}
+                  disabled={
+                    isCommentSaving ||
+                    Boolean(commentsUnavailableMessage) ||
+                    !canCreateComments
+                  }
                   className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isCommentSaving ? "Adding..." : "Add Comment"}
                 </button>
               </div>
             </form>
+            {!canCreateComments ? (
+              <p className="mt-2 text-xs text-slate-500">
+                You do not have permission to add comments.
+              </p>
+            ) : null}
 
             {comments.length === 0 ? (
               <p className="mt-3 text-sm text-slate-500">No comments yet.</p>

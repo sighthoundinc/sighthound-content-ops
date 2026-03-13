@@ -5,17 +5,22 @@ import { useRouter } from "next/navigation";
 import { hasRole } from "@/lib/roles";
 
 import { useAuth } from "@/providers/auth-provider";
-import type { AppRole } from "@/lib/types";
+import type { AppPermissionKey, AppRole } from "@/lib/types";
 
 export function ProtectedPage({
   children,
   allowedRoles,
+  requiredPermissions,
 }: {
   children: React.ReactNode;
   allowedRoles?: AppRole[];
+  requiredPermissions?: AppPermissionKey[];
 }) {
   const router = useRouter();
-  const { loading, session, profile } = useAuth();
+  const { hasPermission, loading, session, profile } = useAuth();
+  const hasRequiredPermissions =
+    !requiredPermissions?.length ||
+    requiredPermissions.every((permissionKey) => hasPermission(permissionKey));
 
   useEffect(() => {
     if (!loading && !session) {
@@ -30,8 +35,13 @@ export function ProtectedPage({
       !allowedRoles.some((role) => hasRole(profile, role))
     ) {
       router.replace("/dashboard");
+      return;
     }
-  }, [allowedRoles, loading, profile, router, session]);
+
+    if (!loading && session && !hasRequiredPermissions) {
+      router.replace("/dashboard");
+    }
+  }, [allowedRoles, hasRequiredPermissions, loading, profile, router, session]);
 
   if (loading || !session) {
     return (
@@ -42,9 +52,10 @@ export function ProtectedPage({
   }
 
   if (
-    allowedRoles?.length &&
-    profile &&
-    !allowedRoles.some((role) => hasRole(profile, role))
+    (allowedRoles?.length &&
+      profile &&
+      !allowedRoles.some((role) => hasRole(profile, role))) ||
+    !hasRequiredPermissions
   ) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
@@ -55,3 +66,4 @@ export function ProtectedPage({
 
   return <>{children}</>;
 }
+

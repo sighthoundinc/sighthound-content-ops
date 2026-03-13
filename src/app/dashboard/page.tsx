@@ -29,6 +29,11 @@ import {
   normalizeBlogRows,
 } from "@/lib/blog-schema";
 import {
+  canTransitionPublisherStatus,
+  canTransitionWriterStatus,
+  hasWorkflowOverridePermission,
+} from "@/lib/permissions";
+import {
   OVERALL_STATUSES,
   PUBLISHER_STATUS_LABELS,
   PUBLISHER_STATUSES,
@@ -57,7 +62,6 @@ import type {
   WriterStageStatus,
 } from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
-import { hasRole } from "@/lib/roles";
 import { useAuth } from "@/providers/auth-provider";
 
 type BlogCommentRecord = {
@@ -249,6 +253,7 @@ type QuickQueueKey =
   | "writer_in_progress"
   | "writer_needs_revision"
   | "writer_completed_waiting_publish"
+  | "backlog_unscheduled"
   | "publisher_not_started"
   | "publisher_in_progress"
   | "publisher_final_review"
@@ -393,10 +398,45 @@ const normalizeSavedViews = (value: unknown): SavedDashboardView[] => {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { profile, user } = useAuth();
-  const isAdmin = hasRole(profile, "admin");
-  const isWriter = hasRole(profile, "writer");
-  const isPublisher = hasRole(profile, "publisher");
+  const { hasPermission, profile, user } = useAuth();
+  const canOverrideWorkflow = hasWorkflowOverridePermission(hasPermission);
+  const canCreateBlog = hasPermission("create_blog");
+  const canExportCsv = hasPermission("export_csv");
+  const canExportSelectedCsv = hasPermission("export_selected_csv") || canExportCsv;
+  const canChangeWriterAssignment =
+    hasPermission("change_writer_assignment") || canOverrideWorkflow;
+  const canChangePublisherAssignment =
+    hasPermission("change_publisher_assignment") || canOverrideWorkflow;
+  const canEditScheduledDate =
+    hasPermission("edit_scheduled_publish_date") || canOverrideWorkflow;
+  const canEditDisplayDate =
+    hasPermission("edit_display_publish_date") || canOverrideWorkflow;
+  const canEditWritingStage =
+    hasPermission("edit_writer_status") ||
+    hasPermission("start_writing") ||
+    hasPermission("submit_draft") ||
+    hasPermission("request_revision") ||
+    canOverrideWorkflow;
+  const canEditPublishingStage =
+    hasPermission("edit_publisher_status") ||
+    hasPermission("start_publishing") ||
+    hasPermission("complete_publishing") ||
+    canOverrideWorkflow;
+  const canDeleteBlog = hasPermission("delete_blog") || canOverrideWorkflow;
+  const canCreateComments = hasPermission("create_comment");
+  const canShowWriterQueue =
+    hasPermission("view_writing_queue") ||
+    canOverrideWorkflow;
+  const canShowPublisherQueue =
+    hasPermission("view_publishing_queue") ||
+    canOverrideWorkflow;
+  const canRunBulkActions =
+    canChangeWriterAssignment ||
+    canChangePublisherAssignment ||
+    canEditWritingStage ||
+    canEditPublishingStage ||
+    canDeleteBlog;
+  const canSelectRows = canRunBulkActions || canExportSelectedCsv;
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [assignableUsers, setAssignableUsers] = useState<
     Array<Pick<ProfileRecord, "id" | "full_name" | "email">>
@@ -601,7 +641,7 @@ export default function DashboardPage() {
   }, [loadData]);
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!canChangeWriterAssignment && !canChangePublisherAssignment) {
       setAssignableUsers([]);
       return;
     }
@@ -622,7 +662,7 @@ export default function DashboardPage() {
     };
 
     void loadUsers();
-  }, [isAdmin]);
+  }, [canChangePublisherAssignment, canChangeWriterAssignment]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -763,6 +803,11 @@ export default function DashboardPage() {
               blog.publisher_status === "not_started"
           )
         : 0,
+      backlogUnscheduledIdeas: countBy(
+        (blog) =>
+          blog.writer_status === "not_started" &&
+          getBlogScheduledDate(blog) === null
+      ),
       publisherNotStarted: currentUserId
         ? countBy(
             (blog) =>
@@ -921,6 +966,12 @@ export default function DashboardPage() {
           blog.writer_id === currentUserId &&
           blog.writer_status === "completed" &&
           blog.publisher_status === "not_started"
+        );
+      }
+      if (activeQuickQueue === "backlog_unscheduled") {
+        return (
+          blog.writer_status === "not_started" &&
+          getBlogScheduledDate(blog) === null
         );
       }
       if (activeQuickQueue === "publisher_not_started") {
@@ -1262,6 +1313,58 @@ export default function DashboardPage() {
     };
   }, [blogs, completionTimingsByBlog, now]);
 
+  const focusStripMetrics = useMemo(() => {
+    const todayDate = new Date();
+    const weekStart = new Date(todayDate);
+    weekStart.setDate(todayDate.getDate() - todayDate.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    const todayKey = format(todayDate, "yyyy-MM-dd");
+
+    const scheduledThisWeek = blogs.filter((blog) => {
+      const scheduledDate = getBlogScheduledDate(blog);
+      if (!scheduledDate) {
+        return false;
+      }
+      const scheduledTime = new Date(`${scheduledDate}T00:00:00`).getTime();
+      return scheduledTime >= weekStart.getTime() && scheduledTime <= weekEnd.getTime();
+    }).length;
+
+    const readyToPublish = blogs.filter(
+      (blog) => blog.overall_status === "ready_to_publish"
+    ).length;
+
+    const delayed = blogs.filter((blog) => {
+      const scheduledDate = getBlogScheduledDate(blog);
+      return (
+        scheduledDate !== null &&
+        scheduledDate < todayKey &&
+        blog.overall_status !== "published"
+      );
+    }).length;
+
+    return {
+      scheduledThisWeek,
+      readyToPublish,
+      delayed,
+    };
+  }, [blogs]);
+
+  const recentPublishedBlogs = useMemo(
+    () =>
+      [...blogs]
+        .filter((blog) => blog.overall_status === "published")
+        .sort((left, right) => {
+          const leftDate = left.actual_published_at ?? left.published_at ?? "";
+          const rightDate = right.actual_published_at ?? right.published_at ?? "";
+          return rightDate.localeCompare(leftDate);
+        })
+        .slice(0, 3),
+    [blogs]
+  );
+
   const visibleBlogIds = useMemo(() => pagedBlogs.map((blog) => blog.id), [pagedBlogs]);
   const activeBlogIndex = useMemo(
     () => sortedBlogs.findIndex((blog) => blog.id === activeBlogId),
@@ -1284,6 +1387,9 @@ export default function DashboardPage() {
     Boolean(bulkPublisherStatus);
 
   const handleToggleAllVisible = (checked: boolean) => {
+    if (!canSelectRows) {
+      return;
+    }
     if (!checked) {
       setSelectedBlogIds((previous) =>
         previous.filter((id) => !visibleBlogIds.includes(id))
@@ -1297,6 +1403,9 @@ export default function DashboardPage() {
   };
 
   const handleToggleSingle = (blogId: string, checked: boolean) => {
+    if (!canSelectRows) {
+      return;
+    }
     if (checked) {
       setSelectedBlogIds((previous) => Array.from(new Set([...previous, blogId])));
       return;
@@ -1539,6 +1648,16 @@ export default function DashboardPage() {
   }, []);
 
   const handleExportCsv = (scope: "selected" | "view") => {
+    if (scope === "selected" && !canExportSelectedCsv) {
+      setError("You do not have permission to export selected CSV.");
+      setSuccessMessage(null);
+      return;
+    }
+    if (!canExportCsv) {
+      setError("You do not have permission to export CSV.");
+      setSuccessMessage(null);
+      return;
+    }
     const rowsToExport = scope === "selected" ? selectedBlogs : sortedBlogs;
     if (rowsToExport.length === 0) {
       setError(
@@ -1595,6 +1714,37 @@ export default function DashboardPage() {
 
     const isSettingWriter = Boolean(bulkWriterId);
     const isSettingPublisher = Boolean(bulkPublisherId);
+
+    if (isSettingWriter && !canChangeWriterAssignment) {
+      setError("You do not have permission to change writer assignments.");
+      return;
+    }
+    if (isSettingPublisher && !canChangePublisherAssignment) {
+      setError("You do not have permission to change publisher assignments.");
+      return;
+    }
+    if (
+      bulkWriterStatus &&
+      selectedBlogs.some((blog) =>
+        !canTransitionWriterStatus(blog.writer_status, bulkWriterStatus, hasPermission)
+      )
+    ) {
+      setError("You do not have permission to apply that writer status change.");
+      return;
+    }
+    if (
+      bulkPublisherStatus &&
+      selectedBlogs.some((blog) =>
+        !canTransitionPublisherStatus(
+          blog.publisher_status,
+          bulkPublisherStatus,
+          hasPermission
+        )
+      )
+    ) {
+      setError("You do not have permission to apply that publisher status change.");
+      return;
+    }
 
     if (bulkWriterStatus && bulkWriterStatus !== "not_started") {
       const missingWriter = selectedBlogs.filter(
@@ -1685,6 +1835,10 @@ export default function DashboardPage() {
   };
 
   const handleBulkDelete = async () => {
+    if (!canDeleteBlog) {
+      setError("You do not have permission to delete blogs.");
+      return;
+    }
     if (!ensureBulkSelection()) {
       return;
     }
@@ -1733,6 +1887,56 @@ export default function DashboardPage() {
         updates.publisher_status !== undefined
           ? updates.publisher_status
           : blog.publisher_status;
+      const requestedWriterAssignmentChange =
+        updates.writer_id !== undefined && updates.writer_id !== blog.writer_id;
+      const requestedPublisherAssignmentChange =
+        updates.publisher_id !== undefined && updates.publisher_id !== blog.publisher_id;
+      const requestedScheduledDateChange =
+        updates.scheduled_publish_date !== undefined ||
+        updates.target_publish_date !== undefined;
+      const requestedDisplayDateChange =
+        updates.display_published_date !== undefined;
+
+      if (requestedWriterAssignmentChange && !canChangeWriterAssignment) {
+        setError("You do not have permission to change writer assignments.");
+        setSuccessMessage(null);
+        return;
+      }
+      if (requestedPublisherAssignmentChange && !canChangePublisherAssignment) {
+        setError("You do not have permission to change publisher assignments.");
+        setSuccessMessage(null);
+        return;
+      }
+      if (
+        updates.writer_status !== undefined &&
+        !canTransitionWriterStatus(blog.writer_status, updates.writer_status, hasPermission)
+      ) {
+        setError("You do not have permission to apply that writer status change.");
+        setSuccessMessage(null);
+        return;
+      }
+      if (
+        updates.publisher_status !== undefined &&
+        !canTransitionPublisherStatus(
+          blog.publisher_status,
+          updates.publisher_status,
+          hasPermission
+        )
+      ) {
+        setError("You do not have permission to apply that publisher status change.");
+        setSuccessMessage(null);
+        return;
+      }
+      if (requestedScheduledDateChange && !canEditScheduledDate) {
+        setError("You do not have permission to edit the scheduled publish date.");
+        setSuccessMessage(null);
+        return;
+      }
+      if (requestedDisplayDateChange && !canEditDisplayDate) {
+        setError("You do not have permission to edit the display publish date.");
+        setSuccessMessage(null);
+        return;
+      }
 
       if (nextWriterStatus !== "not_started" && !nextWriterId) {
         setError("Assign a writer before changing writer status.");
@@ -1802,7 +2006,13 @@ export default function DashboardPage() {
       );
       setSuccessMessage(message);
     },
-    []
+    [
+      canChangePublisherAssignment,
+      canChangeWriterAssignment,
+      canEditDisplayDate,
+      canEditScheduledDate,
+      hasPermission,
+    ]
   );
 
   const loadPanelData = useCallback(async (blogId: string) => {
@@ -1923,6 +2133,10 @@ export default function DashboardPage() {
 
   const handlePanelAddComment = async () => {
     if (!activeBlog || !user?.id) {
+      return;
+    }
+    if (!canCreateComments) {
+      setPanelError("You do not have permission to add comments.");
       return;
     }
 
@@ -2095,21 +2309,51 @@ export default function DashboardPage() {
           </ul>
         )}
       </section>
-      {isWriter ? (
+      {canShowWriterQueue ? (
         <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Your Writing Work
           </h3>
           <div className="rounded border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600">
             <p className="font-semibold uppercase tracking-wide text-slate-500">Writing Pipeline</p>
-            <p className="mt-1">
-              Not Started → In Progress → Needs Revision → Completed
-            </p>
-            <p className="mt-1 font-medium text-slate-700">
-              {quickQueueCounts.writerNotStarted} → {quickQueueCounts.writerInProgress} →{" "}
-              {quickQueueCounts.writerNeedsRevision} →{" "}
-              {quickQueueCounts.writerCompletedWaitingPublishing}
-            </p>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-left text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  applyQuickQueuePreset("writer_not_started");
+                }}
+              >
+                Not Started ({quickQueueCounts.writerNotStarted})
+              </button>
+              <button
+                type="button"
+                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-left text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  applyQuickQueuePreset("writer_in_progress");
+                }}
+              >
+                In Progress ({quickQueueCounts.writerInProgress})
+              </button>
+              <button
+                type="button"
+                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-left text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  applyQuickQueuePreset("writer_needs_revision");
+                }}
+              >
+                Needs Revision ({quickQueueCounts.writerNeedsRevision})
+              </button>
+              <button
+                type="button"
+                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-left text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  applyQuickQueuePreset("writer_completed_waiting_publish");
+                }}
+              >
+                Completed ({quickQueueCounts.writerCompletedWaitingPublishing})
+              </button>
+            </div>
           </div>
           <div className="space-y-1.5">
             <button
@@ -2167,7 +2411,27 @@ export default function DashboardPage() {
           </div>
         </section>
       ) : null}
-      {isPublisher ? (
+      {canShowWriterQueue ? (
+        <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Backlog
+          </h3>
+          <button
+            type="button"
+            className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
+              activeQuickQueue === "backlog_unscheduled"
+                ? "border-slate-900 bg-slate-900 text-white"
+                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+            }`}
+            onClick={() => {
+              applyQuickQueuePreset("backlog_unscheduled");
+            }}
+          >
+            Unscheduled Ideas ({quickQueueCounts.backlogUnscheduledIdeas})
+          </button>
+        </section>
+      ) : null}
+      {canShowPublisherQueue ? (
         <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Your Publishing Work
@@ -2240,7 +2504,7 @@ export default function DashboardPage() {
           </div>
         </section>
       ) : null}
-      {isWriter || isPublisher ? (
+      {canShowWriterQueue || canShowPublisherQueue ? (
         <button
           type="button"
           className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
@@ -2335,12 +2599,37 @@ export default function DashboardPage() {
           </div>
         ) : null}
       </section>
+      <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Recently Published
+        </h3>
+        {recentPublishedBlogs.length === 0 ? (
+          <p className="text-xs text-slate-500">No recently published blogs yet.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {recentPublishedBlogs.map((blog) => {
+              const publishedAt = blog.actual_published_at ?? blog.published_at;
+              const shortSite = blog.site === "sighthound.com" ? "SH" : "RED";
+              return (
+                <li key={blog.id} className="rounded border border-slate-200 bg-white px-2 py-1">
+                  <p className="text-[11px] text-slate-500">
+                    {publishedAt ? format(new Date(publishedAt), "MMM d") : "—"} · {shortSite}
+                  </p>
+                  <p className="overflow-hidden text-xs font-medium text-slate-700 text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                    {blog.title}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 
 
   return (
-    <ProtectedPage>
+    <ProtectedPage requiredPermissions={["view_dashboard"]}>
       <AppShell
         commandPaletteCommands={dashboardCommandPaletteCommands}
         sidebarContent={savedViewsSidebarContent}
@@ -2385,21 +2674,44 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </details>
-              {isAdmin ? (
-                <button
-                  type="button"
-                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-                  onClick={() => {
-                    router.push("/blogs/new");
-                  }}
-                >
-                  Add Blog
-                </button>
+              {canCreateBlog ? (
+                <details className="relative">
+                  <summary className="cursor-pointer list-none rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+                    + Add
+                  </summary>
+                  <div className="absolute right-0 z-30 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                    <button
+                      type="button"
+                      className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                      onClick={() => {
+                        router.push("/blogs/new");
+                      }}
+                    >
+                      + Add Blog
+                    </button>
+                    <button
+                      type="button"
+                      className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                      onClick={() => {
+                        router.push("/ideas");
+                      }}
+                    >
+                      + Add Idea
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      className="block w-full cursor-not-allowed rounded px-3 py-2 text-left text-sm text-slate-400"
+                    >
+                      + Import Blog (soon)
+                    </button>
+                  </div>
+                </details>
               ) : null}
             </div>
           </div>
 
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
+          <section className="space-y-3">
             <input
               type="search"
               placeholder="Search title, writer, publisher, site, URL..."
@@ -2409,82 +2721,97 @@ export default function DashboardPage() {
                 setSearch(event.target.value);
               }}
             />
+            <div className="grid gap-3 md:grid-cols-3">
+              <CheckboxMultiSelect
+                label="Sites"
+                options={siteFilterOptions}
+                selectedValues={siteFilters}
+                onChange={(nextValues) => {
+                  setSiteFilters(nextValues as BlogSite[]);
+                }}
+              />
+              <CheckboxMultiSelect
+                label="Writers"
+                options={writerFilterOptions}
+                selectedValues={writerFilters}
+                onChange={setWriterFilters}
+              />
+              <CheckboxMultiSelect
+                label="Publishers"
+                options={publisherFilterOptions}
+                selectedValues={publisherFilters}
+                onChange={setPublisherFilters}
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <CheckboxMultiSelect
+                label="Writer Status"
+                options={writerStatusFilterOptions}
+                selectedValues={writerStatusFilters}
+                onChange={(nextValues) => {
+                  setWriterStatusFilters(nextValues as WriterStageStatus[]);
+                }}
+              />
+              <CheckboxMultiSelect
+                label="Publisher Status"
+                options={publisherStatusFilterOptions}
+                selectedValues={publisherStatusFilters}
+                onChange={(nextValues) => {
+                  setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
+                }}
+              />
+              <CheckboxMultiSelect
+                label="Overall Status"
+                options={overallStatusFilterOptions}
+                selectedValues={statusFilters}
+                onChange={(nextValues) => {
+                  setStatusFilters(nextValues as OverallBlogStatus[]);
+                }}
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <select
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                value={sortField}
+                onChange={(event) => {
+                  setSortField(event.target.value as DashboardSortField);
+                }}
+              >
+                {DASHBOARD_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    Sort: {option.label}
+                  </option>
+                ))}
+              </select>
 
-            <CheckboxMultiSelect
-              label="Sites"
-              options={siteFilterOptions}
-              selectedValues={siteFilters}
-              onChange={(nextValues) => {
-                setSiteFilters(nextValues as BlogSite[]);
-              }}
-            />
+              <select
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                value={sortDirection}
+                onChange={(event) => {
+                  setSortDirection(event.target.value as SortDirection);
+                }}
+              >
+                <option value="asc">Sort Direction: Ascending</option>
+                <option value="desc">Sort Direction: Descending</option>
+              </select>
+            </div>
 
-            <CheckboxMultiSelect
-              label="Overall Status"
-              options={overallStatusFilterOptions}
-              selectedValues={statusFilters}
-              onChange={(nextValues) => {
-                setStatusFilters(nextValues as OverallBlogStatus[]);
-              }}
-            />
-
-            <CheckboxMultiSelect
-              label="Writers"
-              options={writerFilterOptions}
-              selectedValues={writerFilters}
-              onChange={setWriterFilters}
-            />
-
-            <CheckboxMultiSelect
-              label="Publishers"
-              options={publisherFilterOptions}
-              selectedValues={publisherFilters}
-              onChange={setPublisherFilters}
-            />
-
-            <CheckboxMultiSelect
-              label="Writer Status"
-              options={writerStatusFilterOptions}
-              selectedValues={writerStatusFilters}
-              onChange={(nextValues) => {
-                setWriterStatusFilters(nextValues as WriterStageStatus[]);
-              }}
-            />
-
-            <CheckboxMultiSelect
-              label="Publisher Status"
-              options={publisherStatusFilterOptions}
-              selectedValues={publisherStatusFilters}
-              onChange={(nextValues) => {
-                setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-              }}
-            />
-
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={sortField}
-              onChange={(event) => {
-                setSortField(event.target.value as DashboardSortField);
-              }}
-            >
-              {DASHBOARD_SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  Sort: {option.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={sortDirection}
-              onChange={(event) => {
-                setSortDirection(event.target.value as SortDirection);
-              }}
-            >
-              <option value="asc">Sort Direction: Ascending</option>
-              <option value="desc">Sort Direction: Descending</option>
-            </select>
-
+          </section>
+          <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Today</p>
+            <div className="mt-2 grid gap-2 text-sm md:grid-cols-3">
+              <p className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700">
+                Scheduled This Week:{" "}
+                <span className="font-semibold text-slate-900">{focusStripMetrics.scheduledThisWeek}</span>
+              </p>
+              <p className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700">
+                Ready to Publish:{" "}
+                <span className="font-semibold text-slate-900">{focusStripMetrics.readyToPublish}</span>
+              </p>
+              <p className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700">
+                Delayed: <span className="font-semibold text-slate-900">{focusStripMetrics.delayed}</span>
+              </p>
+            </div>
           </section>
           {error ? (
             <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -2497,7 +2824,7 @@ export default function DashboardPage() {
             </p>
           ) : null}
 
-          {isAdmin && selectedBlogIds.length > 0 ? (
+          {canRunBulkActions && selectedBlogIds.length > 0 ? (
             <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-medium text-slate-700">
@@ -2521,7 +2848,8 @@ export default function DashboardPage() {
                   onChange={(event) => {
                     setBulkWriterId(event.target.value);
                   }}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  disabled={!canChangeWriterAssignment || isBulkSaving}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">No writer change</option>
                   {assignmentOptions.map((user) => (
@@ -2536,7 +2864,8 @@ export default function DashboardPage() {
                   onChange={(event) => {
                     setBulkPublisherId(event.target.value);
                   }}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  disabled={!canChangePublisherAssignment || isBulkSaving}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">No publisher change</option>
                   {assignmentOptions.map((user) => (
@@ -2551,7 +2880,8 @@ export default function DashboardPage() {
                   onChange={(event) => {
                     setBulkWriterStatus(event.target.value as WriterStageStatus | "");
                   }}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  disabled={!canEditWritingStage || isBulkSaving}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">No writer status change</option>
                   {WRITER_STATUSES.map((status) => (
@@ -2566,7 +2896,8 @@ export default function DashboardPage() {
                   onChange={(event) => {
                     setBulkPublisherStatus(event.target.value as PublisherStageStatus | "");
                   }}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  disabled={!canEditPublishingStage || isBulkSaving}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">No publisher status change</option>
                   {PUBLISHER_STATUSES.map((status) => (
@@ -2588,16 +2919,18 @@ export default function DashboardPage() {
                 >
                   Apply Changes
                 </button>
-                <button
-                  type="button"
-                  disabled={isBulkSaving}
-                  className="rounded-md border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() => {
-                    void handleBulkDelete();
-                  }}
-                >
-                  Delete Selected
-                </button>
+                {canDeleteBlog ? (
+                  <button
+                    type="button"
+                    disabled={isBulkSaving}
+                    className="rounded-md border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      void handleBulkDelete();
+                    }}
+                  >
+                    Delete Selected
+                  </button>
+                ) : null}
               </div>
             </section>
           ) : null}
@@ -2620,17 +2953,19 @@ export default function DashboardPage() {
                       rowLimit={rowLimit}
                       noun="blogs"
                     />
-                    <button
-                      type="button"
-                      disabled={sortedBlogs.length === 0}
-                      className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      onClick={() => {
-                        handleExportCsv("view");
-                      }}
-                    >
-                      Export View CSV
-                    </button>
-                    {isAdmin ? (
+                    {canExportCsv ? (
+                      <button
+                        type="button"
+                        disabled={sortedBlogs.length === 0}
+                        className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                          handleExportCsv("view");
+                        }}
+                      >
+                        Export View CSV
+                      </button>
+                    ) : null}
+                    {canExportSelectedCsv && canSelectRows ? (
                       <button
                         type="button"
                         disabled={selectedBlogIds.length === 0}
@@ -2724,7 +3059,7 @@ export default function DashboardPage() {
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                   <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
                     <tr>
-                      {isAdmin ? (
+                    {canSelectRows ? (
                         <th
                           className={`${headerCellClass} sticky top-0 z-10 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]`}
                         >
@@ -2756,7 +3091,7 @@ export default function DashboardPage() {
                       <tr>
                         <td
                           className={`${bodyCellClass} text-center text-slate-500`}
-                          colSpan={columnOrder.length + (isAdmin ? 1 : 0)}
+                          colSpan={columnOrder.length + (canSelectRows ? 1 : 0)}
                         >
                           No blogs found with current filters.
                         </td>
@@ -2789,18 +3124,31 @@ export default function DashboardPage() {
                               now.getTime() - staleDraftDays * 24 * 60 * 60 * 1000
                             )
                           );
+                        const rowWorkflowStage = getWorkflowStage({
+                          writerStatus: blog.writer_status,
+                          publisherStatus: blog.publisher_status,
+                        });
+                        const rowToneClass = isOverdue
+                          ? "bg-rose-50"
+                          : rowWorkflowStage === "ready"
+                            ? "bg-amber-50"
+                            : rowWorkflowStage === "publishing"
+                              ? "bg-blue-50"
+                              : rowWorkflowStage === "writing"
+                                ? "bg-white"
+                                : "bg-emerald-50/40";
 
                         return (
                           <tr
                             key={blog.id}
                             className={`group cursor-pointer ${
-                              activeBlogId === blog.id ? "bg-slate-100" : "hover:bg-slate-50"
+                              activeBlogId === blog.id ? "bg-slate-100" : `${rowToneClass} hover:bg-slate-100`
                             }`}
                             onClick={() => {
                               openPanel(blog.id);
                             }}
                           >
-                            {isAdmin ? (
+                            {canSelectRows ? (
                               <td
                                 className={bodyCellClass}
                                 onClick={(event) => {
@@ -2823,15 +3171,26 @@ export default function DashboardPage() {
                                     key={column}
                                     className={`${bodyCellClass} font-medium text-slate-900`}
                                   >
-                                    <span className="max-w-[28rem] break-words">{blog.title}</span>
+                                    <span className="block max-w-[28rem] overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                      {blog.title}
+                                    </span>
                                   </td>
                                 );
                               }
 
                               if (column === "site") {
+                                const isSighthound = blog.site === "sighthound.com";
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-slate-600`}>
-                                    {blog.site}
+                                    <span
+                                      className={`inline-flex min-w-10 items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${
+                                        isSighthound
+                                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                                          : "border-orange-200 bg-orange-50 text-orange-700"
+                                      }`}
+                                    >
+                                      {isSighthound ? "SH" : "RED"}
+                                    </span>
                                   </td>
                                 );
                               }
@@ -2847,7 +3206,12 @@ export default function DashboardPage() {
                               if (column === "writer_status") {
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-center text-slate-600`}>
-                                    <WriterStatusBadge status={blog.writer_status} />
+                                    <div className="flex flex-col items-center gap-1">
+                                      <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                                        Writer
+                                      </span>
+                                      <WriterStatusBadge status={blog.writer_status} />
+                                    </div>
                                   </td>
                                 );
                               }
@@ -2863,20 +3227,21 @@ export default function DashboardPage() {
                               if (column === "publisher_status") {
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-center text-slate-600`}>
-                                    <PublisherStatusBadge status={blog.publisher_status} />
+                                    <div className="flex flex-col items-center gap-1">
+                                      <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                                        Publisher
+                                      </span>
+                                      <PublisherStatusBadge status={blog.publisher_status} />
+                                    </div>
                                   </td>
                                 );
                               }
 
                               if (column === "overall_status") {
-                                const workflowStage = getWorkflowStage({
-                                  writerStatus: blog.writer_status,
-                                  publisherStatus: blog.publisher_status,
-                                });
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-center`}>
                                     <div className="flex items-center justify-center gap-2">
-                                      <WorkflowStageBadge stage={workflowStage} />
+                                      <WorkflowStageBadge stage={rowWorkflowStage} />
                                       {isOverdue ? (
                                         <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
                                           Overdue
@@ -2887,7 +3252,7 @@ export default function DashboardPage() {
                                           Stale draft
                                         </span>
                                       ) : null}
-                                      {workflowStage === "published" &&
+                                      {rowWorkflowStage === "published" &&
                                       (publishedDelayDays ?? 0) > 0 ? (
                                         <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                                           ⚠ Delayed {publishedDelayDays} days
@@ -3028,7 +3393,7 @@ export default function DashboardPage() {
                     <div className="mt-2 grid gap-3 sm:grid-cols-2">
                       <label className="block text-xs text-slate-600">
                         Writer
-                        {isAdmin ? (
+                        {canChangeWriterAssignment ? (
                           <select
                             className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
                             value={activeBlog.writer_id ?? ""}
@@ -3057,7 +3422,7 @@ export default function DashboardPage() {
 
                       <label className="block text-xs text-slate-600">
                         Publisher
-                        {isAdmin ? (
+                        {canChangePublisherAssignment ? (
                           <select
                             className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
                             value={activeBlog.publisher_id ?? ""}
@@ -3087,7 +3452,7 @@ export default function DashboardPage() {
                       <label className="block text-xs text-slate-600">
                         Writer status
                         <select
-                          disabled={!isAdmin}
+                          disabled={!canEditWritingStage}
                           className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
                           value={activeBlog.writer_status}
                           onChange={(event) => {
@@ -3098,18 +3463,29 @@ export default function DashboardPage() {
                             );
                           }}
                         >
-                          {WRITER_STATUSES.map((status) => (
-                            <option key={status} value={status}>
-                              {WRITER_STATUS_LABELS[status]}
-                            </option>
-                          ))}
+                          {WRITER_STATUSES.map((status) => {
+                            const isTransitionAllowed = canTransitionWriterStatus(
+                              activeBlog.writer_status,
+                              status,
+                              hasPermission
+                            );
+                            return (
+                              <option
+                                key={status}
+                                value={status}
+                                disabled={!isTransitionAllowed}
+                              >
+                                {WRITER_STATUS_LABELS[status]}
+                              </option>
+                            );
+                          })}
                         </select>
                       </label>
 
                       <label className="block text-xs text-slate-600">
                         Publisher status
                         <select
-                          disabled={!isAdmin}
+                          disabled={!canEditPublishingStage}
                           className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
                           value={activeBlog.publisher_status}
                           onChange={(event) => {
@@ -3120,18 +3496,29 @@ export default function DashboardPage() {
                             );
                           }}
                         >
-                          {PUBLISHER_STATUSES.map((status) => (
-                            <option key={status} value={status}>
-                              {PUBLISHER_STATUS_LABELS[status]}
-                            </option>
-                          ))}
+                          {PUBLISHER_STATUSES.map((status) => {
+                            const isTransitionAllowed = canTransitionPublisherStatus(
+                              activeBlog.publisher_status,
+                              status,
+                              hasPermission
+                            );
+                            return (
+                              <option
+                                key={status}
+                                value={status}
+                                disabled={!isTransitionAllowed}
+                              >
+                                {PUBLISHER_STATUS_LABELS[status]}
+                              </option>
+                            );
+                          })}
                         </select>
                       </label>
 
                       <label className="block text-xs text-slate-600">
                         Scheduled date
                         <input
-                          disabled={!isAdmin}
+                          disabled={!canEditScheduledDate}
                           type="date"
                           className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
                           value={formatDateInput(getBlogScheduledDate(activeBlog))}
@@ -3152,7 +3539,7 @@ export default function DashboardPage() {
                       <label className="block text-xs text-slate-600">
                         Display date
                         <input
-                          disabled={!isAdmin}
+                          disabled={!canEditDisplayDate}
                           type="date"
                           className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
                           value={formatDateInput(activeBlog.display_published_date)}
@@ -3210,27 +3597,35 @@ export default function DashboardPage() {
                       Comments
                     </h4>
                     <div className="mt-2 space-y-2">
-                      <textarea
-                        value={panelCommentDraft}
-                        onChange={(event) => {
-                          setPanelCommentDraft(event.target.value);
-                        }}
-                        className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        placeholder="Add a comment..."
-                        maxLength={2000}
-                      />
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          disabled={isPanelCommentSaving}
-                          className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                          onClick={() => {
-                            void handlePanelAddComment();
-                          }}
-                        >
-                          {isPanelCommentSaving ? "Adding..." : "Add Comment"}
-                        </button>
-                      </div>
+                      {canCreateComments ? (
+                        <>
+                          <textarea
+                            value={panelCommentDraft}
+                            onChange={(event) => {
+                              setPanelCommentDraft(event.target.value);
+                            }}
+                            className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            placeholder="Add a comment..."
+                            maxLength={2000}
+                          />
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              disabled={isPanelCommentSaving}
+                              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                              onClick={() => {
+                                void handlePanelAddComment();
+                              }}
+                            >
+                              {isPanelCommentSaving ? "Adding..." : "Add Comment"}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-500">
+                          You do not have permission to add comments.
+                        </p>
+                      )}
                       {panelComments.length === 0 ? (
                         <p className="text-sm text-slate-500">No comments yet.</p>
                       ) : (

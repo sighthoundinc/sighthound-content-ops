@@ -1,4 +1,86 @@
 export type AppRole = "admin" | "writer" | "publisher" | "editor";
+export type CanonicalAppPermissionKey =
+  | "create_blog"
+  | "edit_blog_metadata"
+  | "edit_blog_title"
+  | "archive_blog"
+  | "restore_archived_blog"
+  | "delete_blog"
+  | "duplicate_blog"
+  | "view_archived_blogs"
+  | "start_writing"
+  | "pause_writing"
+  | "submit_draft"
+  | "request_revision"
+  | "edit_writer_status"
+  | "edit_google_doc_link"
+  | "assign_writer_self"
+  | "view_writing_queue"
+  | "start_publishing"
+  | "complete_publishing"
+  | "edit_publisher_status"
+  | "assign_publisher_self"
+  | "upload_cover_image"
+  | "edit_live_url"
+  | "view_publishing_queue"
+  | "edit_scheduled_publish_date"
+  | "edit_display_publish_date"
+  | "calendar_drag_reschedule"
+  | "view_calendar"
+  | "view_actual_publish_calendar"
+  | "create_comment"
+  | "edit_own_comment"
+  | "delete_own_comment"
+  | "delete_any_comment"
+  | "view_comment_history"
+  | "mention_users"
+  | "change_writer_assignment"
+  | "change_publisher_assignment"
+  | "bulk_reassign_blogs"
+  | "transfer_user_assignments"
+  | "view_dashboard"
+  | "view_metrics"
+  | "view_more_metrics"
+  | "view_delay_metrics"
+  | "view_pipeline_metrics"
+  | "export_csv"
+  | "export_selected_csv"
+  | "edit_blog_description"
+  | "edit_tags"
+  | "edit_blog_category"
+  | "edit_internal_notes"
+  | "edit_external_links"
+  | "view_month_calendar"
+  | "view_week_calendar"
+  | "view_unscheduled_blogs"
+  | "reschedule_via_calendar"
+  | "manage_users"
+  | "edit_user_profile"
+  | "assign_roles"
+  | "manage_permissions"
+  | "view_user_activity"
+  | "impersonate_user"
+  | "manage_integrations"
+  | "manage_notifications"
+  | "run_data_import"
+  | "view_system_logs"
+  | "repair_workflow_state"
+  | "manage_environment_settings"
+  | "override_writer_status"
+  | "override_publisher_status"
+  | "edit_actual_publish_timestamp"
+  | "force_publish";
+export type LegacyAppPermissionKey =
+  | "submit_writing"
+  | "edit_writing_stage"
+  | "edit_publishing_stage"
+  | "use_calendar_drag_and_drop"
+  | "create_comments"
+  | "edit_own_comments"
+  | "delete_comments"
+  | "manage_roles"
+  | "override_workflow";
+export type AppPermissionKey = CanonicalAppPermissionKey | LegacyAppPermissionKey;
 
 export type BlogSite = "sighthound.com" | "redactor.com";
 
@@ -90,6 +172,24 @@ export interface AppSettingsRecord {
   updated_by: string | null;
   updated_at: string;
 }
+
+export interface RolePermissionRecord {
+  role: AppRole;
+  permission_key: AppPermissionKey;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PermissionAuditLogRecord {
+  id: string;
+  role: AppRole;
+  permission_key: AppPermissionKey;
+  old_value: boolean;
+  new_value: boolean;
+  changed_by: string | null;
+  changed_at: string;
+}
 export interface BlogIdeaRecord {
   id: string;
   title: string;
@@ -175,6 +275,21 @@ export interface Database {
         Row: AppSettingsRecord;
         Insert: Partial<AppSettingsRecord>;
         Update: Partial<AppSettingsRecord>;
+      };
+      role_permissions: {
+        Row: RolePermissionRecord;
+        Insert: Partial<RolePermissionRecord> &
+          Pick<RolePermissionRecord, "role" | "permission_key" | "enabled">;
+        Update: Partial<RolePermissionRecord>;
+      };
+      permission_audit_logs: {
+        Row: PermissionAuditLogRecord;
+        Insert: Partial<PermissionAuditLogRecord> &
+          Pick<
+            PermissionAuditLogRecord,
+            "role" | "permission_key" | "old_value" | "new_value"
+          >;
+        Update: Partial<PermissionAuditLogRecord>;
       };
       blog_ideas: {
         Row: BlogIdeaRecord;

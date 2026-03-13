@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { isMissingUserRolesColumnError } from "@/lib/profile-schema";
 
-import { createAdminClient, createAnonServerClient } from "@/lib/supabase/server";
+import { hasPermission, requirePermission } from "@/lib/server-permissions";
 import type { AppRole } from "@/lib/types";
 
 const createUserSchema = z.object({
@@ -13,57 +12,18 @@ const createUserSchema = z.object({
   userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor"])).optional(),
 });
 
-async function requireAdmin(request: NextRequest) {
-  const authorization = request.headers.get("authorization") ?? "";
-  const token = authorization.startsWith("Bearer ")
-    ? authorization.slice("Bearer ".length)
-    : null;
-
-  if (!token) {
-    return { error: "Missing access token", status: 401 } as const;
-  }
-
-  const anonClient = createAnonServerClient();
-  const { data: userData, error: userError } = await anonClient.auth.getUser(token);
-  if (userError || !userData.user) {
-    return { error: "Invalid session", status: 401 } as const;
-  }
-  const adminClient = createAdminClient();
-  let { data: profile, error: profileError } = await adminClient
-    .from("profiles")
-    .select("id,role,user_roles")
-    .eq("id", userData.user.id)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (isMissingUserRolesColumnError(profileError)) {
-    const fallbackProfileQuery = await adminClient
-      .from("profiles")
-      .select("id,role")
-      .eq("id", userData.user.id)
-      .eq("is_active", true)
-      .maybeSingle();
-    profile = fallbackProfileQuery.data as typeof profile;
-    profileError = fallbackProfileQuery.error;
-  }
-  const roleSet = new Set<string>([
-    profile?.role ?? "",
-    ...((profile?.user_roles as string[] | null | undefined) ?? []),
-  ]);
-  if (profileError || !profile || !roleSet.has("admin")) {
-    return { error: "Admin access required", status: 403 } as const;
-  }
-
-  return { userId: userData.user.id } as const;
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const adminCheck = await requireAdmin(request);
-    if ("error" in adminCheck) {
+    const auth = await requirePermission(request, "manage_users");
+    if ("error" in auth) {
       return NextResponse.json(
-        { error: adminCheck.error },
-        { status: adminCheck.status }
+        { error: auth.error },
+        { status: auth.status }
       );
+    }
+    if (!hasPermission(auth.context, "assign_roles")) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -79,7 +39,7 @@ export async function POST(request: NextRequest) {
     const normalizedUserRoles = Array.from(new Set(userRoles?.length ? userRoles : [role]));
     const [firstName, ...restName] = fullName.trim().split(/\s+/);
     const lastName = restName.length ? restName.join(" ") : null;
-    const adminClient = createAdminClient();
+    const adminClient = auth.context.adminClient;
     const { data: createdUserData, error: createUserError } =
       await adminClient.auth.admin.createUser({
         email,

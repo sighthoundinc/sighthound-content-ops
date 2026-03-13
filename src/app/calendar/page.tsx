@@ -40,7 +40,7 @@ import {
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
-import { hasRole } from "@/lib/roles";
+import { hasWorkflowOverridePermission } from "@/lib/permissions";
 import { getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
@@ -224,7 +224,7 @@ function DraggableCalendarBlogCard({
 }
 
 export default function CalendarPage() {
-  const { profile } = useAuth();
+  const { hasPermission } = useAuth();
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [mode, setMode] = useState<CalendarMode>("month");
   const [cursorDate, setCursorDate] = useState(new Date());
@@ -245,7 +245,11 @@ export default function CalendarPage() {
       activationConstraint: { distance: 6 },
     })
   );
-  const canDragCalendarBlogs = hasRole(profile, "admin") || hasRole(profile, "publisher");
+  const canWorkflowOverride = hasWorkflowOverridePermission(hasPermission);
+  const canDragCalendarBlogs =
+    hasPermission("calendar_drag_reschedule") ||
+    hasPermission("reschedule_via_calendar") ||
+    canWorkflowOverride;
 
   useEffect(() => {
     const loadData = async () => {
@@ -459,6 +463,10 @@ export default function CalendarPage() {
   }, [toastMessage]);
 
   const updateScheduledDate = async (blogId: string, scheduledDate: string) => {
+    if (!canDragCalendarBlogs) {
+      setError("You do not have permission to move publish dates on the calendar.");
+      return;
+    }
     const supabase = getSupabaseBrowserClient();
     const { data, error: updateError } = await supabase
       .from("blogs")
@@ -564,7 +572,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <ProtectedPage>
+    <ProtectedPage requiredPermissions={["view_calendar"]}>
       <AppShell>
         <div className="space-y-6">
           <header className="flex flex-wrap items-end justify-between gap-3">

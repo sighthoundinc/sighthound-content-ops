@@ -11,6 +11,7 @@ import {
   isMissingBlogDateColumnsError,
 } from "@/lib/blog-schema";
 import { notifySlack } from "@/lib/notifications";
+import { hasWorkflowOverridePermission } from "@/lib/permissions";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogSite, ProfileRecord } from "@/lib/types";
@@ -43,7 +44,7 @@ function isMissingBlogCommentUserIdColumnError(error: {
 function NewBlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, profile } = useAuth();
+  const { hasPermission, user, profile } = useAuth();
   const sourceIdeaId = searchParams.get("ideaId");
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [title, setTitle] = useState("");
@@ -59,6 +60,13 @@ function NewBlogPageContent() {
   const [prefilledIdeaId, setPrefilledIdeaId] = useState<string | null>(null);
   const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
   const [convertedIdeaBlogId, setConvertedIdeaBlogId] = useState<string | null>(null);
+  const canWorkflowOverride = hasWorkflowOverridePermission(hasPermission);
+  const canCreateComments = hasPermission("create_comment");
+  const canManageWriterAssignment =
+    hasPermission("change_writer_assignment") || canWorkflowOverride;
+  const canManagePublisherAssignment =
+    hasPermission("change_publisher_assignment") || canWorkflowOverride;
+  const canManageAssignments = canManageWriterAssignment || canManagePublisherAssignment;
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -134,7 +142,7 @@ function NewBlogPageContent() {
       setError("Title is required.");
       return;
     }
-    if (!writerId) {
+    if (canManageWriterAssignment && !writerId) {
       setError("Writer is required.");
       return;
     }
@@ -151,9 +159,9 @@ function NewBlogPageContent() {
       title: title.trim(),
       slug: slugify(title),
       site,
-      writer_id: writerId || null,
-      publisher_id: publisherId || null,
-      writer_status: writerId ? "in_progress" : "not_started",
+      writer_id: canManageWriterAssignment ? writerId || null : null,
+      publisher_id: canManagePublisherAssignment ? publisherId || null : null,
+      writer_status: canManageWriterAssignment && writerId ? "in_progress" : "not_started",
       publisher_status: "not_started",
       google_doc_url: googleDocUrl.trim() || null,
       scheduled_publish_date: scheduledPublishDate || null,
@@ -197,6 +205,11 @@ function NewBlogPageContent() {
 
     const trimmedInitialComment = initialComment.trim();
     if (trimmedInitialComment) {
+      if (!canCreateComments) {
+        setError("You do not have permission to add comments.");
+        setIsSubmitting(false);
+        return;
+      }
       let { error: commentInsertError } = await supabase
         .schema("public")
         .from("blog_comments")
@@ -262,7 +275,7 @@ function NewBlogPageContent() {
   };
 
   return (
-    <ProtectedPage allowedRoles={["admin"]}>
+    <ProtectedPage requiredPermissions={["create_blog"]}>
       <AppShell>
         <div className="max-w-3xl space-y-6">
           <header>
@@ -355,48 +368,56 @@ function NewBlogPageContent() {
               />
             </label>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
-                  Writer
-                </span>
-                <select
-                  required
-                  value={writerId}
-                  onChange={(event) => {
-                    setWriterId(event.target.value);
-                  }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="">Select writer</option>
-                  {users.map((nextUser) => (
-                    <option key={nextUser.id} value={nextUser.id}>
-                      {nextUser.full_name} ({nextUser.role})
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {canManageAssignments ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                    Writer
+                  </span>
+                  <select
+                    required={canManageWriterAssignment}
+                    disabled={!canManageWriterAssignment}
+                    value={writerId}
+                    onChange={(event) => {
+                      setWriterId(event.target.value);
+                    }}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                  >
+                    <option value="">Select writer</option>
+                    {users.map((nextUser) => (
+                      <option key={nextUser.id} value={nextUser.id}>
+                        {nextUser.full_name} ({nextUser.role})
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
-                  Publisher
-                </span>
-                <select
-                  value={publisherId}
-                  onChange={(event) => {
-                    setPublisherId(event.target.value);
-                  }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="">Unassigned</option>
-                  {users.map((nextUser) => (
-                    <option key={nextUser.id} value={nextUser.id}>
-                      {nextUser.full_name} ({nextUser.role})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                    Publisher
+                  </span>
+                  <select
+                    disabled={!canManagePublisherAssignment}
+                    value={publisherId}
+                    onChange={(event) => {
+                      setPublisherId(event.target.value);
+                    }}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                  >
+                    <option value="">Unassigned</option>
+                    {users.map((nextUser) => (
+                      <option key={nextUser.id} value={nextUser.id}>
+                        {nextUser.full_name} ({nextUser.role})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : (
+              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                Blog will be created without assignment unless assignment permissions are enabled.
+              </p>
+            )}
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">
@@ -421,14 +442,20 @@ function NewBlogPageContent() {
                 Optional comment to start discussion before writing or publishing.
               </p>
               <textarea
+                disabled={!canCreateComments}
                 value={initialComment}
                 onChange={(event) => {
                   setInitialComment(event.target.value);
                 }}
-                className="mt-3 min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-3 min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 placeholder="Add an initial comment..."
                 maxLength={2000}
               />
+              {!canCreateComments ? (
+                <p className="mt-2 text-xs text-slate-500">
+                  You do not have permission to add comments.
+                </p>
+              ) : null}
             </section>
 
             {error ? (

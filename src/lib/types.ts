@@ -21,6 +21,14 @@ export type OverallBlogStatus =
   | "published";
 
 export type WorkflowStage = "writing" | "ready" | "publishing" | "published";
+export type SocialPostStatus = "idea" | "review" | "published";
+export type SocialPostProduct =
+  | "alpr_plus"
+  | "redactor"
+  | "hardware"
+  | "general_company";
+export type SocialPostType = "image" | "carousel" | "link" | "video";
+export type SocialPlatform = "linkedin" | "facebook" | "instagram";
 
 export interface ProfileRecord {
   id: string;
@@ -82,6 +90,66 @@ export interface AppSettingsRecord {
   updated_by: string | null;
   updated_at: string;
 }
+export interface BlogIdeaRecord {
+  id: string;
+  title: string;
+  site: BlogSite;
+  description: string | null;
+  created_by: string;
+  created_at: string;
+  is_converted: boolean;
+  converted_blog_id: string | null;
+}
+
+export interface SocialPostRecord {
+  id: string;
+  title: string;
+  product: SocialPostProduct;
+  type: SocialPostType;
+  canva_url: string | null;
+  canva_page: number | null;
+  caption: string | null;
+  platforms: SocialPlatform[];
+  scheduled_date: string | null;
+  status: SocialPostStatus;
+  created_by: string;
+  associated_blog_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialPostLinkRecord {
+  id: string;
+  social_post_id: string;
+  platform: SocialPlatform;
+  url: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialPostCommentRecord {
+  id: string;
+  social_post_id: string;
+  user_id: string;
+  created_by: string | null;
+  parent_comment_id: string | null;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialPostActivityRecord {
+  id: string;
+  social_post_id: string;
+  changed_by: string | null;
+  event_type: string;
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  metadata: Record<string, unknown>;
+  changed_at: string;
+}
 
 export interface Database {
   public: {
@@ -108,6 +176,39 @@ export interface Database {
         Insert: Partial<AppSettingsRecord>;
         Update: Partial<AppSettingsRecord>;
       };
+      blog_ideas: {
+        Row: BlogIdeaRecord;
+        Insert: Partial<BlogIdeaRecord> &
+          Pick<BlogIdeaRecord, "title" | "site" | "created_by">;
+        Update: Partial<BlogIdeaRecord>;
+      };
+      social_posts: {
+        Row: SocialPostRecord;
+        Insert: Partial<SocialPostRecord> &
+          Pick<SocialPostRecord, "title" | "created_by">;
+        Update: Partial<SocialPostRecord>;
+      };
+      social_post_links: {
+        Row: SocialPostLinkRecord;
+        Insert: Partial<SocialPostLinkRecord> &
+          Pick<
+            SocialPostLinkRecord,
+            "social_post_id" | "platform" | "url" | "created_by"
+          >;
+        Update: Partial<SocialPostLinkRecord>;
+      };
+      social_post_comments: {
+        Row: SocialPostCommentRecord;
+        Insert: Partial<SocialPostCommentRecord> &
+          Pick<SocialPostCommentRecord, "social_post_id" | "comment" | "user_id">;
+        Update: Partial<SocialPostCommentRecord>;
+      };
+      social_post_activity_history: {
+        Row: SocialPostActivityRecord;
+        Insert: Partial<SocialPostActivityRecord> &
+          Pick<SocialPostActivityRecord, "social_post_id" | "event_type">;
+        Update: Partial<SocialPostActivityRecord>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -117,6 +218,10 @@ export interface Database {
       writer_stage_status: WriterStageStatus;
       publisher_stage_status: PublisherStageStatus;
       overall_blog_status: OverallBlogStatus;
+      social_post_status: SocialPostStatus;
+      social_post_product: SocialPostProduct;
+      social_post_type: SocialPostType;
+      social_platform: SocialPlatform;
     };
   };
 }

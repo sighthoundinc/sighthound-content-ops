@@ -16,6 +16,8 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/tasks", label: "My Tasks" },
   { href: "/calendar", label: "Calendar" },
+  { href: "/social-posts", label: "Social Posts" },
+  { href: "/ideas", label: "Ideas" },
 ];
 
 export function AppShell({
@@ -60,6 +62,15 @@ export function AppShell({
           keywords: ["settings", "preferences", "configuration"],
           action: () => {
             router.push("/settings");
+          },
+        },
+        {
+          id: "nav-add-social-post",
+          label: "Create new social post",
+          group: "Create",
+          keywords: ["social", "post", "new", "create", "add"],
+          action: () => {
+            router.push("/social-posts");
           },
         }
       );

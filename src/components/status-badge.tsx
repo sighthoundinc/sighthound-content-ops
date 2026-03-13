@@ -1,6 +1,8 @@
 import {
   PUBLISHER_STATUS_COLORS,
   PUBLISHER_STATUS_LABELS,
+  SOCIAL_POST_STATUS_COLORS,
+  SOCIAL_POST_STATUS_LABELS,
   STATUS_COLORS,
   STATUS_LABELS,
   WORKFLOW_STAGE_COLORS,
@@ -11,6 +13,7 @@ import {
 import type {
   OverallBlogStatus,
   PublisherStageStatus,
+  SocialPostStatus,
   WorkflowStage,
   WriterStageStatus,
 } from "@/lib/types";
@@ -66,6 +69,14 @@ export function PublisherStatusBadge({
   return (
     <BaseStatusBadge className={PUBLISHER_STATUS_COLORS[status]}>
       {PUBLISHER_STATUS_LABELS[status]}
+    </BaseStatusBadge>
+  );
+}
+
+export function SocialPostStatusBadge({ status }: { status: SocialPostStatus }) {
+  return (
+    <BaseStatusBadge className={SOCIAL_POST_STATUS_COLORS[status]}>
+      {SOCIAL_POST_STATUS_LABELS[status]}
     </BaseStatusBadge>
   );
 }

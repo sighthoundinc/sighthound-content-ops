@@ -75,6 +75,7 @@ Current migration set:
 - `20260312125500_completion_link_requirements.sql`
 - `20260312131500_publish_timestamp_and_comments.sql`
 - `20260312203000_profile_names_multirole_and_comments_cache.sql`
+- `20260313143000_social_posts_module.sql`
 
 ## Slack Edge Function
 Function path:

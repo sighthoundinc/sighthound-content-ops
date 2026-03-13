@@ -1,11 +1,37 @@
 import type {
   OverallBlogStatus,
   PublisherStageStatus,
+  SocialPlatform,
+  SocialPostProduct,
+  SocialPostStatus,
+  SocialPostType,
   WorkflowStage,
   WriterStageStatus,
 } from "@/lib/types";
 
 export const SITES = ["sighthound.com", "redactor.com"] as const;
+export const SOCIAL_POST_STATUSES: SocialPostStatus[] = [
+  "idea",
+  "review",
+  "published",
+];
+export const SOCIAL_POST_PRODUCTS: SocialPostProduct[] = [
+  "alpr_plus",
+  "redactor",
+  "hardware",
+  "general_company",
+];
+export const SOCIAL_POST_TYPES: SocialPostType[] = [
+  "image",
+  "carousel",
+  "link",
+  "video",
+];
+export const SOCIAL_PLATFORMS: SocialPlatform[] = [
+  "linkedin",
+  "facebook",
+  "instagram",
+];
 
 export const WRITER_STATUSES: WriterStageStatus[] = [
   "not_started",
@@ -35,6 +61,28 @@ export const STATUS_LABELS: Record<OverallBlogStatus, string> = {
   ready_to_publish: "Ready to Publish",
   published: "Published",
 };
+export const SOCIAL_POST_STATUS_LABELS: Record<SocialPostStatus, string> = {
+  idea: "Idea",
+  review: "Review",
+  published: "Published",
+};
+export const SOCIAL_POST_PRODUCT_LABELS: Record<SocialPostProduct, string> = {
+  alpr_plus: "ALPR+",
+  redactor: "Redactor",
+  hardware: "Hardware",
+  general_company: "General / Company",
+};
+export const SOCIAL_POST_TYPE_LABELS: Record<SocialPostType, string> = {
+  image: "Image",
+  carousel: "Carousel",
+  link: "Link",
+  video: "Video",
+};
+export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+  instagram: "Instagram",
+};
 
 export const WRITER_STATUS_LABELS: Record<WriterStageStatus, string> = {
   not_started: "Not Started",
@@ -54,6 +102,11 @@ export const STATUS_COLORS: Record<OverallBlogStatus, string> = {
   writing: "bg-blue-50 text-blue-700",
   needs_revision: "bg-amber-50 text-amber-700",
   ready_to_publish: "bg-purple-50 text-purple-700",
+  published: "bg-emerald-50 text-emerald-700",
+};
+export const SOCIAL_POST_STATUS_COLORS: Record<SocialPostStatus, string> = {
+  idea: "bg-slate-50 text-slate-700",
+  review: "bg-blue-50 text-blue-700",
   published: "bg-emerald-50 text-emerald-700",
 };
 

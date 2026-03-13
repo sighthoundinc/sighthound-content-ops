@@ -1,107 +1,105 @@
 # sighthound-content-ops
 Internal content operations dashboard for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
 
-## What the product does
-- Tracks the full internal blog pipeline from planning to publication.
-- Supports assignment and handoff between writing and publishing stages.
-- Provides dashboard, tasks, calendar, blog detail, add-blog, and settings experiences.
-- Enforces permissions through Supabase RLS and DB triggers.
-- Sends Slack notifications for key workflow milestones.
+## Product snapshot
+- Blog workflow operations from planning to publication
+- Role-aware assignment and status controls
+- Dashboard, Tasks, Calendar, Blog Detail, Add Blog, and Settings pages
+- Supabase-backed authorization (RLS + DB functions/triggers)
+- Slack notifications via Supabase Edge Function
+
+For full behavior/spec details:
+- `SPECIFICATION.md`
+- End-user guide: `HOW_TO_USE_APP.md`
+- Ops runbook: `OPERATIONS.md`
+
+## Current UX highlights
+### Dashboard
+- “More Metrics” toggle for secondary delay metrics
+- “Edit Columns” popover
+- Bottom pagination controls (`Rows per page`, `Prev`, `Next`, `Move to top`)
+
+### Tasks
+- Compact default view with top 3 prioritized pending tasks
+- Priority indicators (`⚠ Overdue`, `Soon`)
+- Expandable full list with 10-row pagination
+- Task click opens detail slide-over
+
+### Blogs
+- Blog detail comments-first layout
+- Assignment/activity history
+- Comments compatibility handling for legacy schema variations
+
+### Settings
+- Profile name editing
+- Multi-role user management for admins
+- Timezone configuration
 
 ## Tech stack
-- Next.js (App Router) + TypeScript + Tailwind CSS
+- Next.js (App Router) + TypeScript + Tailwind
 - Supabase (Postgres, Auth, RLS, Edge Functions)
 - Vercel deployment target
 
-## Current feature set
-### Dashboard
-- Search, filtering, sorting, and customizable visible columns
-- “Edit Columns” popover (collapsed by default)
-- Bottom-of-table pagination controls:
-  - rows per page: `10`, `20`, `50`, `All`
-  - `Prev` / `Next`
-  - `Move to top`
-- Main metrics plus secondary delay metrics behind “More Metrics”
-- Bulk update support for selected rows
-
-### Blogs
-- Add blog flow (`/blogs/new`) with optional initial comment
-- Blog detail (`/blogs/[id]`) with:
-  - role-aware edit controls
-  - comments section
-  - assignment + activity history
-  - comments displayed before activity history
-
-### Calendar
-- Single weekday header row at top
-- Month jump picker
-- Highlighting for today and current week
-- “No Publish Date” section with reason context and pagination
-
-### Settings and users
-- IANA-style timezone selection
-- Profile name editing (`first_name`, `last_name`, `display_name`)
-- Multi-role users (`user_roles`) with admin role management
-- Supported role values: `admin`, `writer`, `publisher`, `editor`
-
-### Integrations and data
-- Slack notifications via Supabase Edge Function (`slack-notify`)
-- Legacy XLSX import script for initial historical data load
-
 ## Local setup
-1. Install dependencies:
-   - `npm install`
-2. Create local env file:
-   - `cp .env.example .env.local`
-3. Populate `.env.local`:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_APP_URL` (default local: `http://localhost:3000`)
-   - `SUPABASE_SERVICE_ROLE_KEY` (required for server/API/import operations)
-   - `IMPORT_CREATED_BY_USER_ID` (required for legacy import)
-   - optional: `LEGACY_XLSX_PATH`
-4. Start dev server:
-   - `npm run dev`
+1. Install dependencies
+```bash
+npm install
+```
+2. Create local env
+```bash
+cp .env.example .env.local
+```
+3. Set required env values
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_APP_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `IMPORT_CREATED_BY_USER_ID`
+- optional: `LEGACY_XLSX_PATH`
+4. Start app
+```bash
+npm run dev
+```
 
-## Supabase setup
-Apply SQL migrations from `supabase/migrations/` in chronological order.
+## Dev scripts
+- `npm run dev` — Next dev server
+- `npm run dev:full` — Next dev + TS watch in parallel
+- `npm run lint` — Next ESLint runner
+- `npm run typecheck` — TypeScript noEmit check
+- `npm run check` — lint + typecheck in parallel
+- `npm run import:legacy` — legacy XLSX import
 
-Current migration set:
+## Supabase migrations
+Apply in timestamp order from `supabase/migrations/`.
+
+Current set:
 - `20260311191500_init.sql`
 - `20260311203000_calendar_model_alignment.sql`
 - `20260312000100_fix_blog_history_trigger_rls.sql`
 - `20260312114000_separate_publish_dates.sql`
 - `20260312124500_pipeline_status_model.sql`
+- `20260312125000_backfill_completion_links.sql`
 - `20260312125500_completion_link_requirements.sql`
 - `20260312131500_publish_timestamp_and_comments.sql`
 - `20260312203000_profile_names_multirole_and_comments_cache.sql`
+- `20260312214500_blog_comments_user_id_compat.sql`
+- `20260312221000_fix_status_trigger_enum_compat.sql`
+- `20260312224000_pipeline_fail_safes_and_import_hash.sql`
+- `20260313113000_blog_ideas.sql`
 - `20260313143000_social_posts_module.sql`
 
 ## Slack Edge Function
-Function path:
+Path:
 - `supabase/functions/slack-notify/index.ts`
 
-Configure secrets:
+Secrets:
 - `SLACK_BOT_TOKEN` (preferred)
-- `SLACK_MARKETING_CHANNEL` (optional, defaults to `#marketing`)
-- `SLACK_WEBHOOK_URL` (fallback mode if no bot token)
-
-## Legacy import
-Dry run:
-- `npm run import:legacy -- --dry-run`
-
-Run import:
-- `npm run import:legacy`
-
-Default source workbook:
-- `critical-data/Blog Content Tracking - Sighthound and Redactor (cleaned).xlsx`
-
-Importer behavior:
-- Uses `Calendar View` as the canonical timeline source.
-- Enriches missing fields from other legacy sheets.
-- Updates matching existing rows where possible to avoid duplicates.
+- `SLACK_MARKETING_CHANNEL` (optional)
+- `SLACK_WEBHOOK_URL` (fallback)
 
 ## Quality checks
-- `npm run lint`
-- `npm run typecheck`
-- `npm run check`
+```bash
+npm run lint
+npm run typecheck
+npm run check
+```

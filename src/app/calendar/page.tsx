@@ -120,7 +120,11 @@ function DraggableCalendarBlogCard({
       style={dragStyle}
       type="button"
       onClick={onOpen}
-      className={`block w-full rounded border border-slate-200 bg-slate-50 p-1 text-left text-xs transition-colors duration-150 hover:bg-neutral-100 ${
+      className={`block w-full rounded border border-slate-200 bg-slate-50 p-1 text-left text-xs transition-colors duration-150 ${
+        canDrag ? "cursor-grab hover:bg-neutral-100 active:cursor-grabbing" : "cursor-default"
+      } ${
+        blog.overall_status === "published" ? "opacity-90" : ""
+      } ${
         isDragging ? "opacity-60" : ""
       }`}
       title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nStage · ${toTitleCase(
@@ -148,6 +152,11 @@ function DraggableCalendarBlogCard({
         <span className="text-[10px] text-slate-500">
           {blog.writer?.full_name ?? "Unassigned"}
         </span>
+        {blog.overall_status === "published" ? (
+          <span className="text-[10px] text-slate-400" aria-label="Published and fixed schedule">
+            🔒
+          </span>
+        ) : null}
       </div>
     </button>
   );
@@ -406,7 +415,7 @@ export default function CalendarPage() {
     if (!nextBlog) {
       return;
     }
-    if (!canDragCalendarBlogs || nextBlog.publisher_status === "completed") {
+    if (!canDragCalendarBlogs || nextBlog.overall_status === "published") {
       return;
     }
     setDraggingBlogId(blogId);
@@ -436,7 +445,7 @@ export default function CalendarPage() {
     if (!draggedBlog || !overId || !overId.startsWith("day-")) {
       return;
     }
-    if (!canDragCalendarBlogs || draggedBlog.publisher_status === "completed") {
+    if (!canDragCalendarBlogs || draggedBlog.overall_status === "published") {
       return;
     }
 
@@ -624,7 +633,7 @@ export default function CalendarPage() {
                                   scheduledDate < todayDateKey &&
                                   blog.publisher_status !== "completed";
                                 const canDragThisBlog =
-                                  canDragCalendarBlogs && blog.publisher_status !== "completed";
+                                  canDragCalendarBlogs && blog.overall_status !== "published";
 
                                 return (
                                   <DraggableCalendarBlogCard

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -40,7 +40,7 @@ function isMissingBlogCommentUserIdColumnError(error: {
   return code === "42703" && text.includes("user_id");
 }
 
-export default function NewBlogPage() {
+function NewBlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, profile } = useAuth();
@@ -459,5 +459,13 @@ export default function NewBlogPage() {
         </div>
       </AppShell>
     </ProtectedPage>
+  );
+}
+
+export default function NewBlogPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewBlogPageContent />
+    </Suspense>
   );
 }

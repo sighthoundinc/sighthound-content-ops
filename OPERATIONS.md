@@ -1,352 +1,133 @@
 # Sighthound Content Ops — Operations Runbook
 
-This runbook is for engineers/operators maintaining the Sighthound Content Ops dashboard in local, staging, and production environments.
-For full product/architecture requirements, workflow rules, and scope boundaries, see `SPECIFICATION.md`.
+This runbook is for maintainers and operators.  
+For product behavior and requirements, see `SPECIFICATION.md`.  
+For end-user instructions, see `HOW_TO_USE_APP.md`.
 
-## 1. System Overview
+## 1) System overview
+- Frontend: Next.js + TypeScript + Tailwind
+- Backend: Supabase (Postgres, Auth, RLS, Edge Functions)
+- Integration: Slack via `supabase/functions/slack-notify`
+- Durable state lives in Supabase; frontend manages UI/session only.
 
-Sighthound Content Ops is an **internal operations dashboard** used to track blog production workflow (planning, writing, publishing) across `sighthound.com` and `redactor.com`.
+## 2) Key directories
+- `src/` — app routes/components/libs
+- `supabase/migrations/` — schema/history migrations
+- `supabase/functions/` — edge functions
+- `scripts/` — operational scripts (legacy import)
+- `critical-data/` — legacy workbook input
 
-Architecture summary:
-
-- **Frontend**
-  - Next.js (App Router)
-  - TypeScript
-  - Tailwind
-  - Deployed on Vercel
-- **Backend**
-  - Supabase
-    - PostgreSQL
-    - Auth
-    - Row Level Security (RLS)
-    - Edge Functions
-- **Integration**
-  - Slack via Supabase Edge Function: `slack-notify`
-
-State/persistence model:
-
-- Next.js holds UI/session state only.
-- Durable state (users, roles, blogs, workflow status, history, notification queue data) lives in Supabase.
-
-## 2. Repository Structure
-
-Key paths:
-
-- `src/`  
-  Next.js application routes, UI, and client/server logic.
-- `supabase/`  
-  Database migration and Edge Function assets.
-- `supabase/migrations/`  
-  SQL schema/state migration files.
-- `supabase/functions/`  
-  Supabase Edge Functions (including Slack integration).
-- `scripts/`  
-  Operational scripts (for example, legacy XLSX import).
-- `critical-data/`  
-  Legacy spreadsheet source used for initial historical migration.
-- `.env.example`  
-  Local environment variable template.
-
-## 3. Local Development Setup
-
-1. Install dependencies:
-
+## 3) Local setup
 ```bash
 npm install
-```
-
-2. Create local env file:
-
-```bash
 cp .env.example .env.local
+npm run dev
 ```
 
-3. Set required variables in `.env.local`:
-
+Required env:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_APP_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `IMPORT_CREATED_BY_USER_ID`
-- `LEGACY_XLSX_PATH` (optional override for importer path)
+- optional `LEGACY_XLSX_PATH`
 
-4. Start the development server:
+## 4) Dev workflows
+- `npm run dev` — app only
+- `npm run dev:full` — app + `tsc --watch`
+- `npm run lint` — `next lint`
+- `npm run typecheck` — `tsc --noEmit`
+- `npm run check` — lint + typecheck in parallel
 
+Pre-commit:
+- Husky is enabled (`prepare` script).
+- `.husky/pre-commit` runs `npx lint-staged`.
+- `lint-staged` runs `next lint --fix` for staged `*.ts`/`*.tsx`.
+
+## 5) Supabase migration operations
+
+### List migration state
 ```bash
-npm run dev
+supabase --workdir "/absolute/path/to/sighthound-content-ops" migration list
 ```
 
-App URL:
-
-- `http://localhost:3000`
-
-## 4. Supabase Setup
-
-1. Create a Supabase project.
-2. Apply SQL migrations from `supabase/migrations/` in timestamp order:
-   - `20260311191500_init.sql`
-   - `20260311203000_calendar_model_alignment.sql`
-3. Confirm required tables exist:
-   - `profiles`
-   - `blogs`
-   - `blog_assignment_history`
-   - `notification_events` (queue table; sometimes referred to as `notification_queue` in older notes)
-4. Verify RLS is enabled on core tables.
-5. Confirm role source is `profiles.role`.
-
-Useful SQL checks:
-
-```sql
-select table_name
-from information_schema.tables
-where table_schema = 'public'
-  and table_name in ('profiles', 'blogs', 'blog_assignment_history', 'notification_events')
-order by table_name;
+### Push migrations
+```bash
+supabase --workdir "/absolute/path/to/sighthound-content-ops" db push --yes
 ```
 
-```sql
-select tablename, rowsecurity
-from pg_tables
-where schemaname = 'public'
-  and tablename in ('profiles', 'blogs', 'blog_assignment_history', 'notification_events');
-```
+### Current migration set
+- `20260311191500_init.sql`
+- `20260311203000_calendar_model_alignment.sql`
+- `20260312000100_fix_blog_history_trigger_rls.sql`
+- `20260312114000_separate_publish_dates.sql`
+- `20260312124500_pipeline_status_model.sql`
+- `20260312125000_backfill_completion_links.sql`
+- `20260312125500_completion_link_requirements.sql`
+- `20260312131500_publish_timestamp_and_comments.sql`
+- `20260312203000_profile_names_multirole_and_comments_cache.sql`
+- `20260312214500_blog_comments_user_id_compat.sql`
+- `20260312221000_fix_status_trigger_enum_compat.sql`
+- `20260312224000_pipeline_fail_safes_and_import_hash.sql`
+- `20260313113000_blog_ideas.sql`
+- `20260313143000_social_posts_module.sql`
 
-## 5. Authentication Setup
+### Notes on compatibility hardening
+Recent migration hardening includes:
+- enum/status trigger compatibility during legacy transitions
+- backfill migration for completion-link constraints
+- comments actor column compatibility (`user_id` + `created_by`)
+- profile role-array compatibility fallbacks
 
-Auth model:
-
-- **Primary login:** Google Workspace SSO (`@sighthound.com`) via Supabase Auth.
-- **Secondary login:** Admin-created email/password accounts in Supabase Auth.
-- **Role storage:** `profiles.role` (not `auth.users.role`).
-
-Steps to add a new user:
-
-1. Create the Auth user in Supabase Auth (Google or email/password).
-2. Insert/update the corresponding role/profile row in `profiles`.
-
-Example SQL:
-
-```sql
-insert into profiles (id, email, full_name, role)
-values ('USER_UUID', 'user@sighthound.com', 'User Name', 'writer')
-on conflict (id) do update
-set email = excluded.email,
-    full_name = excluded.full_name,
-    role = excluded.role,
-    is_active = true,
-    updated_at = timezone('utc', now());
-```
-
-## 6. Slack Integration
-
-Slack delivery path:
-
-- Frontend workflow action -> Supabase Edge Function `slack-notify` -> Slack webhook/API
-
-Function path:
-
-- `supabase/functions/slack-notify`
+## 6) Slack operations
+Function:
+- `supabase/functions/slack-notify/index.ts`
 
 Secrets:
+- `SLACK_BOT_TOKEN` (preferred)
+- `SLACK_MARKETING_CHANNEL` (optional)
+- `SLACK_WEBHOOK_URL` (fallback)
 
-- Required minimum: `SLACK_WEBHOOK_URL`
-- Optional/recommended for DM + richer delivery:
-  - `SLACK_BOT_TOKEN`
-  - `SLACK_MARKETING_CHANNEL` (defaults to `#marketing`)
-
-Operational steps:
-
-1. Create a Slack webhook for `#marketing` (or provide bot token/channel).
-2. Set secrets in Supabase.
-3. Deploy Edge Function.
-
+Deploy/update:
 ```bash
-supabase secrets set SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..." --project-ref <PROJECT_REF>
 supabase functions deploy slack-notify --project-ref <PROJECT_REF>
 ```
 
-Notifications are triggered for:
-
-- blog assignment
-- writing completion
-- blog ready for publishing
-- blog published
-
-## 7. Legacy Data Import
-
-The project includes a one-time historical importer for legacy spreadsheet data.
-
-Default source file:
-
-- `critical-data/Blog Content Tracking - Sighthound and Redactor (cleaned).xlsx`
-
-Run importer:
-
+## 7) Legacy import
 Dry run:
-
 ```bash
 npm run import:legacy -- --dry-run
 ```
 
-Actual import:
-
+Execute:
 ```bash
 npm run import:legacy
 ```
 
-Notes:
+Canonical source: `Calendar View` sheet in the cleaned legacy workbook.
 
-- Importer treats the **Calendar View** sheet as canonical historical source data.
-- Imported records are written into `blogs` and remain editable in the dashboard.
-- Re-runs attempt to update existing matching records instead of duplicating them.
+## 8) Troubleshooting quick map
+### “Comments table is missing from schema cache”
+1. Run latest migrations (`db push`)
+2. Confirm `blog_comments` exists
+3. Ensure migration includes `notify pgrst, 'reload schema'`
 
-## 8. Deployment
+### “Active profile not found”
+1. Confirm requester has active row in `profiles`
+2. Confirm `is_active = true`
+3. Ensure latest profile compatibility migration applied
 
-Deployment platform: **Vercel**
+### Enum/status mismatch during writes
+1. Confirm latest status-trigger compatibility migration is applied
+2. Re-run `migration list` and verify local/remote alignment
 
-Steps:
+### General runtime issue
+1. Run `npm run check`
+2. Validate env vars
+3. Check Supabase logs and Next runtime logs
 
-1. Push repository to GitHub.
-2. Connect repository in Vercel.
-3. Configure environment variables in Vercel project settings.
-4. Deploy.
-
-Vercel rebuild behavior:
-
-- Pushes to `main` trigger automatic redeploys (assuming default Vercel Git integration).
-
-Production URL example:
-
-- `https://content.sighthound.com`
-
-Recommended pre-deploy check:
-
-```bash
-npm run check
-```
-
-## 9. Common Maintenance Tasks
-
-### Add a new writer/publisher
-
-1. Create Auth user.
-2. Set role in `profiles`.
-
-```sql
-update profiles
-set role = 'publisher',
-    is_active = true,
-    updated_at = timezone('utc', now())
-where email = 'user@sighthound.com';
-```
-
-### Fix incorrect blog assignments
-
-Preferred: update assignments in dashboard UI as admin.
-
-Direct SQL fallback:
-
-```sql
-update blogs
-set writer_id = 'WRITER_UUID',
-    publisher_id = 'PUBLISHER_UUID',
-    updated_at = timezone('utc', now())
-where id = 'BLOG_UUID';
-```
-
-### Update Slack webhook
-
-```bash
-supabase secrets set SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..." --project-ref <PROJECT_REF>
-supabase functions deploy slack-notify --project-ref <PROJECT_REF>
-```
-
-### Re-run legacy importer
-
-```bash
-npm run import:legacy -- --dry-run
-npm run import:legacy
-```
-
-Workflow integrity note:
-
-- Workflow status transitions and `overall_status` derivation are enforced at the database layer (constraints/triggers + RLS), not just by UI controls.
-
-## 10. Troubleshooting
-
-### Login failure
-
-Checks:
-
-- User exists in Supabase Auth.
-- Matching `profiles` row exists with valid role.
-- User/domain is allowed for Google provider config.
-
-Useful SQL:
-
-```sql
-select id, email, role, is_active
-from profiles
-where email = 'user@sighthound.com';
-```
-
-### Supabase connection errors
-
-Checks:
-
-- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set correctly.
-- `SUPABASE_SERVICE_ROLE_KEY` is set for server-side/import paths.
-- Restart dev server after env changes.
-
-```bash
-npm run dev
-```
-
-### Slack notifications not firing
-
-Checks:
-
-- `slack-notify` function is deployed.
-- Slack secrets are present (`SLACK_WEBHOOK_URL` or bot-token configuration).
-- Function logs show successful sends.
-
-```bash
-supabase functions logs slack-notify --project-ref <PROJECT_REF>
-```
-
-Queue/event diagnostics:
-
-```sql
-select id, event_type, status, created_at, delivered_at, last_error
-from notification_events
-order by created_at desc
-limit 50;
-```
-
-### Importer parsing errors
-
-Checks:
-
-- XLSX file path exists and is readable.
-- Workbook/sheet format is unchanged.
-- `IMPORT_CREATED_BY_USER_ID` matches an existing `profiles.id`.
-
-Retry with dry-run first:
-
-```bash
-npm run import:legacy -- --dry-run
-```
-
-Log locations:
-
-- Supabase project logs (database + functions)
-- Vercel deployment/build/runtime logs
-
-## 11. Future Enhancements
-
-Potential improvements (not part of v1 scope):
-
-- analytics dashboard
-- editorial review stage
-- Slack reminder/scheduled jobs
-- throughput and cycle-time metrics
+## 9) Deployment baseline
+- Deploy frontend on Vercel
+- Ensure env vars are set in deployment environment
+- Ensure Supabase migration history is in sync before release
+- Run `npm run check` before merge/release

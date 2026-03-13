@@ -16,6 +16,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Project-specific heavy directories:
+    "node_modules/**",
+    ".vercel/**",
+    "dist/**",
+    "coverage/**",
+    "supabase/functions/**",
   ]),
 ]);
 

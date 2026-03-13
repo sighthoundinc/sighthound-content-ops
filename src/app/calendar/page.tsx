@@ -63,6 +63,16 @@ function formatCalendarDateLabel(dateKey: string) {
   return format(parsed, "MMM d");
 }
 
+function getSiteTag(site: BlogRecord["site"]) {
+  return site === "sighthound.com" ? "SH" : "RED";
+}
+
+function getSiteTagClasses(site: BlogRecord["site"]) {
+  return site === "sighthound.com"
+    ? "bg-blue-50 text-blue-700 border-blue-100"
+    : "bg-orange-50 text-orange-700 border-orange-100";
+}
+
 function getNoPublishReason(blog: BlogRecord) {
   const workflowStage = getWorkflowStage({
     writerStatus: blog.writer_status,
@@ -91,6 +101,57 @@ function DroppableDayCell({
     >
       {children}
     </article>
+  );
+}
+
+function DraggableCalendarBlogLine({
+  blog,
+  canDrag,
+  onOpen,
+}: {
+  blog: BlogRecord;
+  canDrag: boolean;
+  onOpen: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: blog.id,
+    disabled: !canDrag,
+  });
+
+  const dragStyle = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={dragStyle}
+      type="button"
+      onClick={onOpen}
+      className={`flex w-full items-center gap-2 rounded border border-slate-200 bg-white px-2 py-1.5 text-left text-xs transition-colors duration-150 ${
+        canDrag ? "cursor-grab hover:bg-neutral-50 active:cursor-grabbing" : "cursor-default"
+      } ${isDragging ? "opacity-60" : ""}`}
+      {...(canDrag ? attributes : {})}
+      {...(canDrag ? listeners : {})}
+    >
+      <span
+        className={`inline-flex items-center justify-center rounded border px-1.5 py-0.5 text-[10px] font-semibold ${getSiteTagClasses(
+          blog.site
+        )}`}
+      >
+        {getSiteTag(blog.site)}
+      </span>
+      <span className="shrink-0 text-slate-600">
+        {formatCalendarDateLabel(getBlogScheduledDate(blog) ?? "")}
+      </span>
+      <span className="text-slate-600">—</span>
+      <span className="min-w-0 truncate font-medium text-slate-800">{blog.title}</span>
+      {blog.overall_status === "published" ? (
+        <span className="text-[10px] text-slate-400" aria-label="Published and fixed schedule">
+          🔒
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -301,6 +362,49 @@ export default function CalendarPage() {
       return acc;
     }, {});
   }, [blogs]);
+
+  const weeks = useMemo(() => {
+    if (mode !== "month") {
+      return [];
+    }
+    const chunked: Date[][] = [];
+    for (let index = 0; index < days.length; index += 7) {
+      chunked.push(days.slice(index, index + 7));
+    }
+    return chunked;
+  }, [days, mode]);
+
+  const blogsByWeekStart = useMemo(() => {
+    if (mode !== "month") {
+      return {};
+    }
+    return weeks.reduce<Record<string, BlogRecord[]>>((acc, weekDays) => {
+      const weekStartKey = format(weekDays[0], "yyyy-MM-dd");
+      const weekEnd = weekDays[6];
+      const weeklyBlogs = blogs
+        .filter((blog) => {
+          const scheduledDate = getBlogScheduledDate(blog);
+          if (!scheduledDate) {
+            return false;
+          }
+          const scheduled = new Date(`${scheduledDate}T00:00:00`);
+          if (Number.isNaN(scheduled.getTime())) {
+            return false;
+          }
+          return scheduled >= weekDays[0] && scheduled <= weekEnd;
+        })
+        .sort((left, right) => {
+          const leftDate = getBlogScheduledDate(left) ?? "";
+          const rightDate = getBlogScheduledDate(right) ?? "";
+          if (leftDate === rightDate) {
+            return left.title.localeCompare(right.title);
+          }
+          return leftDate.localeCompare(rightDate);
+        });
+      acc[weekStartKey] = weeklyBlogs;
+      return acc;
+    }, {});
+  }, [blogs, mode, weeks]);
 
   const noPublishDateBlogs = useMemo(
     () => blogs.filter((blog) => !getBlogScheduledDate(blog)),
@@ -591,68 +695,127 @@ export default function CalendarPage() {
                     setDragOverDateKey(null);
                   }}
                 >
-                  <div className="grid grid-cols-7 gap-2">
-                    {days.map((day) => {
-                      const key = format(day, "yyyy-MM-dd");
-                      const items = blogsByDate[key] ?? [];
-                      const isCurrentMonth =
-                        mode === "week" || day.getMonth() === cursorDate.getMonth();
-                      const isToday = isSameDay(day, new Date());
-                      const isCurrentWeek = isWithinInterval(day, currentWeekRange);
-                      return (
-                        <DroppableDayCell
-                          key={key}
-                          dateKey={key}
-                          className={`min-h-28 rounded-md border p-2 ${
-                            isCurrentMonth
-                              ? "border-neutral-100 bg-white"
-                              : "border-neutral-100 bg-neutral-50 text-neutral-400"
-                          } ${!isToday && isCurrentWeek ? "bg-neutral-50" : ""} ${
-                            isToday ? "bg-indigo-50 border-indigo-400 shadow-sm" : ""
-                          }`}
-                        >
-                          <p
-                            className={`mb-2 text-sm ${
-                              isToday
-                                ? "font-medium text-indigo-700"
-                                : isCurrentMonth
-                                  ? "font-normal text-neutral-900"
-                                  : "font-normal text-neutral-400"
-                            }`}
+                  {mode === "month" ? (
+                    <div className="space-y-3">
+                      {weeks.map((weekDays) => {
+                        const weekStartKey = format(weekDays[0], "yyyy-MM-dd");
+                        const weekBlogs = blogsByWeekStart[weekStartKey] ?? [];
+                        return (
+                          <section
+                            key={weekStartKey}
+                            className="rounded-md border border-slate-200 bg-white p-2"
                           >
-                            {format(day, "d")}
-                          </p>
-                          <div className="space-y-1">
-                            {items.length === 0 ? (
-                              <p className="text-xs text-slate-400">No blogs</p>
-                            ) : (
-                              items.map((blog) => {
-                                const scheduledDate = getBlogScheduledDate(blog);
-                                const isOverdue =
-                                  scheduledDate !== null &&
-                                  scheduledDate < todayDateKey &&
-                                  blog.publisher_status !== "completed";
-                                const canDragThisBlog =
-                                  canDragCalendarBlogs && blog.overall_status !== "published";
-
+                            <div className="grid grid-cols-7 gap-2">
+                              {weekDays.map((day) => {
+                                const key = format(day, "yyyy-MM-dd");
+                                const isCurrentMonth = day.getMonth() === cursorDate.getMonth();
+                                const isToday = isSameDay(day, new Date());
+                                const isCurrentWeek = isWithinInterval(day, currentWeekRange);
                                 return (
-                                  <DraggableCalendarBlogCard
-                                    key={blog.id}
-                                    blog={blog}
-                                    canDrag={canDragThisBlog}
-                                    isOverdue={isOverdue}
-                                    onOpen={() => {
-                                      setActiveBlogId(blog.id);
-                                    }}
-                                  />
+                                  <DroppableDayCell
+                                    key={key}
+                                    dateKey={key}
+                                    className={`min-h-14 rounded-md border px-2 py-1.5 ${
+                                      isCurrentMonth
+                                        ? "border-neutral-100 bg-white"
+                                        : "border-neutral-100 bg-neutral-50 text-neutral-400"
+                                    } ${!isToday && isCurrentWeek ? "bg-neutral-50" : ""} ${
+                                      isToday ? "bg-indigo-50 border-indigo-400 shadow-sm" : ""
+                                    }`}
+                                  >
+                                    <p
+                                      className={`text-sm ${
+                                        isToday
+                                          ? "font-medium text-indigo-700"
+                                          : isCurrentMonth
+                                            ? "font-normal text-neutral-900"
+                                            : "font-normal text-neutral-400"
+                                      }`}
+                                    >
+                                      {format(day, "d")}
+                                    </p>
+                                  </DroppableDayCell>
                                 );
-                              })
-                            )}
-                          </div>
-                        </DroppableDayCell>
-                      );
-                    })}
-                  </div>
+                              })}
+                            </div>
+                            {weekBlogs.length > 0 ? (
+                              <div className="mt-2 space-y-1.5 rounded-md border border-slate-100 bg-slate-50 p-2">
+                                {weekBlogs.map((blog) => {
+                                  const canDragThisBlog =
+                                    canDragCalendarBlogs && blog.overall_status !== "published";
+                                  return (
+                                    <DraggableCalendarBlogLine
+                                      key={blog.id}
+                                      blog={blog}
+                                      canDrag={canDragThisBlog}
+                                      onOpen={() => {
+                                        setActiveBlogId(blog.id);
+                                      }}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </section>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-7 gap-2">
+                      {days.map((day) => {
+                        const key = format(day, "yyyy-MM-dd");
+                        const items = blogsByDate[key] ?? [];
+                        const isToday = isSameDay(day, new Date());
+                        const isCurrentWeek = isWithinInterval(day, currentWeekRange);
+                        return (
+                          <DroppableDayCell
+                            key={key}
+                            dateKey={key}
+                            className={`min-h-28 rounded-md border border-neutral-100 bg-white p-2 ${
+                              !isToday && isCurrentWeek ? "bg-neutral-50" : ""
+                            } ${isToday ? "bg-indigo-50 border-indigo-400 shadow-sm" : ""}`}
+                          >
+                            <p
+                              className={`mb-2 text-sm ${
+                                isToday
+                                  ? "font-medium text-indigo-700"
+                                  : "font-normal text-neutral-900"
+                              }`}
+                            >
+                              {format(day, "d")}
+                            </p>
+                            <div className="space-y-1">
+                              {items.length === 0 ? (
+                                <p className="text-xs text-slate-400">No blogs</p>
+                              ) : (
+                                items.map((blog) => {
+                                  const scheduledDate = getBlogScheduledDate(blog);
+                                  const isOverdue =
+                                    scheduledDate !== null &&
+                                    scheduledDate < todayDateKey &&
+                                    blog.publisher_status !== "completed";
+                                  const canDragThisBlog =
+                                    canDragCalendarBlogs && blog.overall_status !== "published";
+
+                                  return (
+                                    <DraggableCalendarBlogCard
+                                      key={blog.id}
+                                      blog={blog}
+                                      canDrag={canDragThisBlog}
+                                      isOverdue={isOverdue}
+                                      onOpen={() => {
+                                        setActiveBlogId(blog.id);
+                                      }}
+                                    />
+                                  );
+                                })
+                              )}
+                            </div>
+                          </DroppableDayCell>
+                        );
+                      })}
+                    </div>
+                  )}
                 </DndContext>
               </section>
 

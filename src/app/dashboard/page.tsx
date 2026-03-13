@@ -985,10 +985,6 @@ export default function DashboardPage() {
   }, [blogs]);
 
   const visibleBlogIds = useMemo(() => pagedBlogs.map((blog) => blog.id), [pagedBlogs]);
-  const missingPublishDateBlogs = useMemo(
-    () => blogs.filter((blog) => !getBlogScheduledDate(blog)),
-    [blogs]
-  );
   const activeBlogIndex = useMemo(
     () => sortedBlogs.findIndex((blog) => blog.id === activeBlogId),
     [activeBlogId, sortedBlogs]
@@ -1751,60 +1747,152 @@ export default function DashboardPage() {
   ]);
 
   const savedViewsSidebarContent = (
-    <section className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Saved Views
-        </p>
+    <div className="space-y-4">
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Saved Views
+          </p>
+          <button
+            type="button"
+            className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+            onClick={saveCurrentFiltersAsView}
+          >
+            Save
+          </button>
+        </div>
         <button
           type="button"
-          className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-          onClick={saveCurrentFiltersAsView}
+          className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
+          onClick={resetDashboardFilters}
         >
-          Save
+          Reset filters
         </button>
-      </div>
-      <button
-        type="button"
-        className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
-        onClick={resetDashboardFilters}
-      >
-        Reset filters
-      </button>
-      {sortedSavedViews.length === 0 ? (
-        <p className="text-xs text-slate-500">No saved views yet.</p>
-      ) : (
-        <ul className="space-y-1">
-          {sortedSavedViews.map((view) => (
-            <li key={view.id} className="flex items-center gap-1">
-              <button
-                type="button"
-                className={`min-w-0 flex-1 rounded px-2 py-1 text-left text-xs font-medium ${
-                  activeSavedViewId === view.id
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                }`}
-                onClick={() => {
-                  applySavedView(view);
-                }}
-              >
-                <span className="block truncate">{view.name}</span>
-              </button>
-              <button
-                type="button"
-                aria-label={`Delete ${view.name}`}
-                className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
-                onClick={() => {
-                  deleteSavedView(view);
-                }}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+        {sortedSavedViews.length === 0 ? (
+          <p className="text-xs text-slate-500">No saved views yet.</p>
+        ) : (
+          <ul className="space-y-1">
+            {sortedSavedViews.map((view) => (
+              <li key={view.id} className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className={`min-w-0 flex-1 rounded px-2 py-1 text-left text-xs font-medium ${
+                    activeSavedViewId === view.id
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                  onClick={() => {
+                    applySavedView(view);
+                  }}
+                >
+                  <span className="block truncate">{view.name}</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete ${view.name}`}
+                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                  onClick={() => {
+                    deleteSavedView(view);
+                  }}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Needs Attention
+        </h3>
+        <div className="flex flex-col gap-1.5">
+          <button
+            type="button"
+            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
+            onClick={() => {
+              setSearch("");
+              setStatusFilters([]);
+              setWriterStatusFilters([]);
+              setPublisherStatusFilters([]);
+              setSortField("publish_date");
+              setSortDirection("asc");
+              setCurrentPage(1);
+            }}
+          >
+            Show all
+          </button>
+          <button
+            type="button"
+            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
+            onClick={() => {
+              setSearch("");
+              setSortField("publish_date");
+              setSortDirection("asc");
+              setCurrentPage(1);
+              setPublisherStatusFilters(["not_started"]);
+              setWriterStatusFilters([]);
+              setStatusFilters([]);
+            }}
+          >
+            {attentionSummary.missingPublishDate} missing publish date
+          </button>
+          <button
+            type="button"
+            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
+            onClick={() => {
+              setSearch("");
+              setCurrentPage(1);
+              setWriterStatusFilters(["completed"]);
+              setPublisherStatusFilters(["not_started"]);
+              setStatusFilters([]);
+              setSortField("publish_date");
+              setSortDirection("asc");
+            }}
+          >
+            {attentionSummary.readyToPublish} ready to publish
+          </button>
+          <button
+            type="button"
+            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
+            onClick={() => {
+              setSearch("");
+              setCurrentPage(1);
+              setStatusFilters(["published"]);
+              setSortField("publish_date");
+              setSortDirection("desc");
+            }}
+          >
+            {attentionSummary.delayed} delayed
+          </button>
+        </div>
+      </section>
+      <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+        <button
+          type="button"
+          className="text-xs font-semibold uppercase tracking-wide text-slate-600 hover:text-slate-900"
+          onClick={() => {
+            setShowMoreMetrics((previous) => !previous);
+          }}
+        >
+          {showMoreMetrics ? "Hide More Metrics" : "More Metrics"}
+        </button>
+        {showMoreMetrics ? (
+          <div className="space-y-1">
+            <p className="text-xs text-slate-600">
+              Published With Delay:{" "}
+              <span className="font-semibold text-slate-900">{publishDelaySummary.trackedCount}</span>
+            </p>
+            <p className="text-xs text-slate-600">
+              Avg Delay:{" "}
+              <span className="font-semibold text-slate-900">
+                {publishDelaySummary.averageDelayDays ?? "—"} days
+              </span>
+            </p>
+          </div>
+        ) : null}
+      </section>
+    </div>
   );
 
 
@@ -1954,134 +2042,6 @@ export default function DashboardPage() {
               <option value="desc">Sort Direction: Descending</option>
             </select>
 
-          </section>
-          <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Needs Attention
-            </h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  setSearch("");
-                  setStatusFilters([]);
-                  setWriterStatusFilters([]);
-                  setPublisherStatusFilters([]);
-                  setSortField("publish_date");
-                  setSortDirection("asc");
-                  setCurrentPage(1);
-                }}
-              >
-                Show all
-              </button>
-              <button
-                type="button"
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  setSearch("");
-                  setSortField("publish_date");
-                  setSortDirection("asc");
-                  setCurrentPage(1);
-                  setPublisherStatusFilters(["not_started"]);
-                  setWriterStatusFilters([]);
-                  setStatusFilters([]);
-                }}
-              >
-                {attentionSummary.missingPublishDate} missing publish date
-              </button>
-              <button
-                type="button"
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  setSearch("");
-                  setCurrentPage(1);
-                  setWriterStatusFilters(["completed"]);
-                  setPublisherStatusFilters(["not_started"]);
-                  setStatusFilters([]);
-                  setSortField("publish_date");
-                  setSortDirection("asc");
-                }}
-              >
-                {attentionSummary.readyToPublish} ready to publish
-              </button>
-              <button
-                type="button"
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  setSearch("");
-                  setCurrentPage(1);
-                  setStatusFilters(["published"]);
-                  setSortField("publish_date");
-                  setSortDirection("desc");
-                }}
-              >
-                {attentionSummary.delayed} delayed
-              </button>
-            </div>
-            {attentionSummary.missingPublishDate > 0 ? (
-              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-3">
-                <h4 className="text-sm font-semibold text-amber-900">Missing Publish Date</h4>
-                <p className="mt-1 text-sm text-amber-800">
-                  {attentionSummary.missingPublishDate} blog
-                  {attentionSummary.missingPublishDate === 1 ? "" : "s"} are missing a scheduled
-                  publish date.
-                </p>
-                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
-                  Common causes
-                </p>
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-amber-800">
-                  <li>Writing is still in progress</li>
-                  <li>Editorial date is not assigned</li>
-                </ul>
-                <button
-                  type="button"
-                  className="mt-3 rounded border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
-                  onClick={() => {
-                    setSearch("");
-                    setSortField("publish_date");
-                    setSortDirection("asc");
-                    setCurrentPage(1);
-                    setPublisherStatusFilters(["not_started"]);
-                    setWriterStatusFilters([]);
-                    setStatusFilters([]);
-                    const firstMissingDateBlog = missingPublishDateBlogs[0];
-                    if (firstMissingDateBlog) {
-                      openPanel(firstMissingDateBlog.id);
-                    }
-                  }}
-                >
-                  Assign Date
-                </button>
-              </div>
-            ) : null}
-          </section>
-          <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-            <button
-              type="button"
-              className="text-xs font-semibold uppercase tracking-wide text-slate-600 hover:text-slate-900"
-              onClick={() => {
-                setShowMoreMetrics((previous) => !previous);
-              }}
-            >
-              {showMoreMetrics ? "Hide More Metrics" : "More Metrics"}
-            </button>
-            {showMoreMetrics ? (
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <p className="text-xs text-slate-600">
-                  Published With Delay:{" "}
-                  <span className="font-semibold text-slate-900">
-                    {publishDelaySummary.trackedCount}
-                  </span>
-                </p>
-                <p className="text-xs text-slate-600">
-                  Avg Delay:{" "}
-                  <span className="font-semibold text-slate-900">
-                    {publishDelaySummary.averageDelayDays ?? "—"} days
-                  </span>
-                </p>
-              </div>
-            ) : null}
           </section>
           {error ? (
             <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
@@ -41,7 +42,9 @@ function isMissingBlogCommentUserIdColumnError(error: {
 
 export default function NewBlogPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, profile } = useAuth();
+  const sourceIdeaId = searchParams.get("ideaId");
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [title, setTitle] = useState("");
   const [site, setSite] = useState<BlogSite>("sighthound.com");
@@ -53,6 +56,9 @@ export default function NewBlogPage() {
   const [initialComment, setInitialComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prefilledIdeaId, setPrefilledIdeaId] = useState<string | null>(null);
+  const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
+  const [convertedIdeaBlogId, setConvertedIdeaBlogId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -71,6 +77,51 @@ export default function NewBlogPage() {
 
     void loadUsers();
   }, []);
+
+  useEffect(() => {
+    const loadIdeaPrefill = async () => {
+      if (!sourceIdeaId) {
+        setPrefilledIdeaId(null);
+        setPrefillNotice(null);
+        setConvertedIdeaBlogId(null);
+        return;
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const { data: ideaData, error: ideaError } = await supabase
+        .from("blog_ideas")
+        .select("id,title,site,description,is_converted,converted_blog_id")
+        .eq("id", sourceIdeaId)
+        .maybeSingle();
+
+      if (ideaError) {
+        setError(ideaError.message);
+        return;
+      }
+      if (!ideaData) {
+        setError("Idea not found.");
+        return;
+      }
+
+      if (ideaData.is_converted) {
+        setPrefillNotice("This idea has already been converted.");
+        setConvertedIdeaBlogId(ideaData.converted_blog_id ?? null);
+        setPrefilledIdeaId(null);
+        return;
+      }
+
+      setTitle((previous) => previous || ideaData.title || "");
+      setSite(ideaData.site as BlogSite);
+      setInitialComment((previous) => previous || ideaData.description || "");
+      setPrefilledIdeaId(ideaData.id);
+      setPrefillNotice(
+        "Idea converted to blog. Continue assigning writer and schedule."
+      );
+      setConvertedIdeaBlogId(null);
+    };
+
+    void loadIdeaPrefill();
+  }, [sourceIdeaId]);
 
   const selectedWriter = useMemo(
     () => users.find((nextUser) => nextUser.id === writerId) ?? null,
@@ -191,6 +242,21 @@ export default function NewBlogPage() {
       });
     }
 
+    if (prefilledIdeaId) {
+      const { error: ideaUpdateError } = await supabase
+        .from("blog_ideas")
+        .update({
+          is_converted: true,
+          converted_blog_id: data.id,
+        })
+        .eq("id", prefilledIdeaId)
+        .eq("is_converted", false);
+
+      if (ideaUpdateError) {
+        console.warn("Blog was created, but idea conversion flag failed:", ideaUpdateError);
+      }
+    }
+
     setIsSubmitting(false);
     router.push(`/blogs/${data.id}`);
   };
@@ -207,6 +273,25 @@ export default function NewBlogPage() {
           </header>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
+            {prefillNotice ? (
+              <div
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  convertedIdeaBlogId
+                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                <p>{prefillNotice}</p>
+                {convertedIdeaBlogId ? (
+                  <Link
+                    href={`/blogs/${convertedIdeaBlogId}`}
+                    className="mt-1 inline-flex font-medium underline"
+                  >
+                    View Blog
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">
                 Title

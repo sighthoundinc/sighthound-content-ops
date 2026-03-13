@@ -3,6 +3,7 @@ alter table public.blogs
 
 create index if not exists blogs_legacy_import_hash_idx
   on public.blogs (legacy_import_hash);
+alter table public.blogs disable trigger user;
 
 update public.blogs
 set legacy_import_hash = md5(
@@ -11,6 +12,8 @@ set legacy_import_hash = md5(
   coalesce(scheduled_publish_date::text, target_publish_date::text, 'unscheduled')
 )
 where legacy_import_hash is null;
+
+alter table public.blogs enable trigger user;
 
 create or replace function public.enforce_blog_update_permissions()
 returns trigger

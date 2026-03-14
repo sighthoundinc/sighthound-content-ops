@@ -13,18 +13,12 @@ import {
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
-import { getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogRecord, BlogSite } from "@/lib/types";
+import { useAuth } from "@/providers/auth-provider";
 
 type LibraryStatusFilter = "published" | "published_and_unpublished" | "unpublished";
-type LibraryStageFilter =
-  | "all"
-  | "writing"
-  | "needs_revision"
-  | "ready_to_publish"
-  | "publishing"
-  | "published";
+type LibraryStage = "writing" | "needs_revision" | "ready_to_publish" | "publishing" | "published";
 type LibrarySiteFilter = "all" | BlogSite;
 type LibrarySortField = "published_date" | "title" | "site";
 type LibrarySortDirection = "asc" | "desc";
@@ -35,17 +29,8 @@ const DEFAULT_ROW_LIMIT: LibraryRowLimit = 20;
 
 const STATUS_FILTER_OPTIONS: Array<{ value: LibraryStatusFilter; label: string }> = [
   { value: "published", label: "Published" },
-  { value: "published_and_unpublished", label: "Published + Unpublished" },
+  { value: "published_and_unpublished", label: "Include Unpublished" },
   { value: "unpublished", label: "Unpublished only" },
-];
-
-const STAGE_FILTER_OPTIONS: Array<{ value: LibraryStageFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "writing", label: "Writing" },
-  { value: "needs_revision", label: "Needs Revision" },
-  { value: "ready_to_publish", label: "Ready to Publish" },
-  { value: "publishing", label: "Publishing" },
-  { value: "published", label: "Published" },
 ];
 
 const SITE_FILTER_OPTIONS: Array<{ value: LibrarySiteFilter; label: string }> = [
@@ -66,6 +51,13 @@ const SORT_DIRECTION_OPTIONS: Array<{ value: LibrarySortDirection; label: string
 ];
 
 const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
+const escapeHtmlValue = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
 
 function getPublishedDateKey(blog: BlogRecord) {
   return blog.display_published_date ?? getBlogPublishDate(blog);
@@ -116,15 +108,65 @@ function getSiteBadgeClasses(site: BlogSite) {
   }
   return "border-orange-200 bg-orange-50 text-orange-700";
 }
+function getStageForBadge(blog: BlogRecord): LibraryStage {
+  if (blog.overall_status === "published") {
+    return "published";
+  }
+  if (blog.publisher_status === "in_progress") {
+    return "publishing";
+  }
+  if (blog.overall_status === "needs_revision") {
+    return "needs_revision";
+  }
+  if (blog.overall_status === "ready_to_publish") {
+    return "ready_to_publish";
+  }
+  return "writing";
+}
+
+function getStageLabel(stage: LibraryStage) {
+  if (stage === "needs_revision") {
+    return "Needs Revision";
+  }
+  if (stage === "ready_to_publish") {
+    return "Ready to Publish";
+  }
+  if (stage === "publishing") {
+    return "Publishing";
+  }
+  if (stage === "published") {
+    return "Published";
+  }
+  return "Writing";
+}
+
+function getStageBadgeClasses(stage: LibraryStage) {
+  if (stage === "published") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (stage === "publishing") {
+    return "border-blue-200 bg-blue-50 text-blue-700";
+  }
+  if (stage === "ready_to_publish") {
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  }
+  if (stage === "needs_revision") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-slate-200 bg-slate-100 text-slate-700";
+}
 
 export default function BlogLibraryPage() {
+  const { hasPermission } = useAuth();
+  const canExportCsv = hasPermission("export_csv");
+  const canExportSelectedCsv = hasPermission("export_selected_csv") || canExportCsv;
+  const canSelectRows = canExportSelectedCsv;
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<LibraryStatusFilter>("published");
-  const [stageFilter, setStageFilter] = useState<LibraryStageFilter>("all");
   const [siteFilter, setSiteFilter] = useState<LibrarySiteFilter>("all");
   const [sortField, setSortField] = useState<LibrarySortField>("published_date");
   const [sortDirection, setSortDirection] = useState<LibrarySortDirection>("desc");
@@ -177,12 +219,18 @@ export default function BlogLibraryPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, rowLimit, siteFilter, sortDirection, sortField, stageFilter, statusFilter]);
+  }, [searchQuery, rowLimit, siteFilter, sortDirection, sortField, statusFilter]);
 
   useEffect(() => {
     const existingIds = new Set(blogs.map((blog) => blog.id));
     setSelectedBlogIds((previous) => previous.filter((id) => existingIds.has(id)));
   }, [blogs]);
+
+  useEffect(() => {
+    if (!canSelectRows) {
+      setSelectedBlogIds([]);
+    }
+  }, [canSelectRows]);
 
   useEffect(() => {
     if (!copiedCell) {
@@ -207,20 +255,6 @@ export default function BlogLibraryPage() {
         return false;
       }
 
-      if (stageFilter !== "all") {
-        if (stageFilter === "publishing") {
-          const stage = getWorkflowStage({
-            writerStatus: blog.writer_status,
-            publisherStatus: blog.publisher_status,
-          });
-          if (stage !== "publishing") {
-            return false;
-          }
-        } else if (blog.overall_status !== stageFilter) {
-          return false;
-        }
-      }
-
       if (siteFilter !== "all" && blog.site !== siteFilter) {
         return false;
       }
@@ -235,7 +269,7 @@ export default function BlogLibraryPage() {
 
       return true;
     });
-  }, [blogs, searchQuery, siteFilter, stageFilter, statusFilter]);
+  }, [blogs, searchQuery, siteFilter, statusFilter]);
 
   const sortedBlogs = useMemo(() => {
     const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
@@ -289,6 +323,8 @@ export default function BlogLibraryPage() {
     () => getVisibleRange(sortedBlogs.length, currentPage, rowLimit),
     [currentPage, rowLimit, sortedBlogs.length]
   );
+  const shouldShowStageColumn = statusFilter !== "published";
+  const tableColumnCount = 5 + (canSelectRows ? 1 : 0) + (shouldShowStageColumn ? 1 : 0);
   const allVisibleSelected =
     pagedBlogs.length > 0 && pagedBlogs.every((blog) => selectedIdSet.has(blog.id));
 
@@ -334,6 +370,9 @@ export default function BlogLibraryPage() {
   };
 
   const toggleSelectAllVisible = (nextChecked: boolean) => {
+    if (!canSelectRows) {
+      return;
+    }
     if (!nextChecked) {
       const visibleIds = new Set(pagedBlogs.map((blog) => blog.id));
       setSelectedBlogIds((previous) => previous.filter((id) => !visibleIds.has(id)));
@@ -349,6 +388,9 @@ export default function BlogLibraryPage() {
   };
 
   const toggleRowSelection = (blogId: string, nextChecked: boolean) => {
+    if (!canSelectRows) {
+      return;
+    }
     setSelectedBlogIds((previous) => {
       if (nextChecked) {
         return previous.includes(blogId) ? previous : [...previous, blogId];
@@ -377,17 +419,36 @@ export default function BlogLibraryPage() {
 
   const triggerDownload = (content: BlobPart, filename: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
+    if (blob.size === 0) {
+      setError("Export failed because the generated file was empty.");
+      setSuccessMessage(null);
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = filename;
+    link.rel = "noopener";
+    link.style.display = "none";
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+      link.remove();
+    }, 1200);
   };
 
   const exportCsv = (scope: "view" | "selected") => {
+    if (scope === "view" && !canExportCsv) {
+      setError("You do not have permission to export the current view.");
+      setSuccessMessage(null);
+      return;
+    }
+    if (scope === "selected" && !canExportSelectedCsv) {
+      setError("You do not have permission to export selected rows.");
+      setSuccessMessage(null);
+      return;
+    }
     const rows = scope === "selected" ? selectedBlogs : sortedBlogs;
     if (rows.length === 0) {
       setError(scope === "selected" ? "No selected rows to export." : "No rows to export.");
@@ -404,6 +465,16 @@ export default function BlogLibraryPage() {
   };
 
   const exportPdf = (scope: "view" | "selected") => {
+    if (scope === "view" && !canExportCsv) {
+      setError("You do not have permission to export the current view.");
+      setSuccessMessage(null);
+      return;
+    }
+    if (scope === "selected" && !canExportSelectedCsv) {
+      setError("You do not have permission to export selected rows.");
+      setSuccessMessage(null);
+      return;
+    }
     const rows = scope === "selected" ? selectedBlogs : sortedBlogs;
     if (rows.length === 0) {
       setError(scope === "selected" ? "No selected rows to export." : "No rows to export.");
@@ -411,26 +482,27 @@ export default function BlogLibraryPage() {
       return;
     }
 
-    const popup = window.open("", "_blank", "noopener,noreferrer,width=1100,height=800");
+    const popup = window.open("", "_blank", "width=1100,height=800");
     if (!popup) {
       setError("Popup blocked. Allow popups to export PDF.");
       setSuccessMessage(null);
       return;
     }
+    const generatedAt = format(new Date(), "MMM d yyyy, h:mm a");
 
     const rowsMarkup = rows
       .map((blog, index) => {
         const site = blog.site === "sighthound.com" ? "SH" : "RED";
         return `<tr>
           <td>${index + 1}</td>
-          <td>${blog.title}</td>
-          <td>${blog.live_url ?? ""}</td>
-          <td>${formatPublishedDate(blog)}</td>
-          <td>${site}</td>
+          <td>${escapeHtmlValue(blog.title)}</td>
+          <td>${escapeHtmlValue(blog.live_url ?? "")}</td>
+          <td>${escapeHtmlValue(formatPublishedDate(blog))}</td>
+          <td>${escapeHtmlValue(site)}</td>
         </tr>`;
       })
       .join("");
-
+    popup.document.open();
     popup.document.write(`<!doctype html>
 <html>
 <head>
@@ -447,7 +519,7 @@ export default function BlogLibraryPage() {
 </head>
 <body>
   <h1>Blog Library Export (${scope === "view" ? "View" : "Selected"})</h1>
-  <p>Generated ${format(new Date(), "MMM d yyyy, h:mm a")}</p>
+  <p>Generated ${escapeHtmlValue(generatedAt)}</p>
   <table>
     <thead>
       <tr>
@@ -463,8 +535,22 @@ export default function BlogLibraryPage() {
 </body>
 </html>`);
     popup.document.close();
-    popup.focus();
-    popup.print();
+
+    const triggerPrintWhenReady = () => {
+      if (popup.closed) {
+        return;
+      }
+      const isReady = popup.document.readyState === "complete";
+      const hasBody = Boolean(popup.document.body?.childElementCount);
+      if (!isReady || !hasBody) {
+        window.setTimeout(triggerPrintWhenReady, 120);
+        return;
+      }
+      popup.focus();
+      popup.print();
+    };
+
+    window.setTimeout(triggerPrintWhenReady, 180);
 
     setError(null);
     setSuccessMessage(`Prepared ${scope} PDF export.`);
@@ -475,9 +561,9 @@ export default function BlogLibraryPage() {
       <AppShell>
         <div className="space-y-5">
           <header className="space-y-1">
-            <h2 className="text-xl font-semibold text-slate-900">Blog Library</h2>
+            <h2 className="text-xl font-semibold text-slate-900">Blogs</h2>
             <p className="text-sm text-slate-600">
-              Fast searchable reference for published titles and live URLs.
+              Searchable reference library for blog titles, URLs, and published history.
             </p>
           </header>
 
@@ -488,12 +574,12 @@ export default function BlogLibraryPage() {
               onChange={(event) => {
                 setSearchQuery(event.target.value);
               }}
-              placeholder="Search title or URL"
+              placeholder="Search blog title or URL"
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             />
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Status
+                Publish State
                 <select
                   value={statusFilter}
                   onChange={(event) => {
@@ -502,22 +588,6 @@ export default function BlogLibraryPage() {
                   className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                 >
                   {STATUS_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Stage
-                <select
-                  value={stageFilter}
-                  onChange={(event) => {
-                    setStageFilter(event.target.value as LibraryStageFilter);
-                  }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                >
-                  {STAGE_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -618,44 +688,52 @@ export default function BlogLibraryPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  exportCsv("view");
-                }}
-              >
-                Export View CSV
-              </button>
-              <button
-                type="button"
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  exportPdf("view");
-                }}
-              >
-                Export View PDF
-              </button>
-              <button
-                type="button"
-                disabled={selectedBlogs.length === 0}
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => {
-                  exportCsv("selected");
-                }}
-              >
-                Export Selected CSV
-              </button>
-              <button
-                type="button"
-                disabled={selectedBlogs.length === 0}
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => {
-                  exportPdf("selected");
-                }}
-              >
-                Export Selected PDF
-              </button>
+              {canExportCsv ? (
+                <>
+                  <button
+                    type="button"
+                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
+                    onClick={() => {
+                      exportCsv("view");
+                    }}
+                  >
+                    Export View CSV
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
+                    onClick={() => {
+                      exportPdf("view");
+                    }}
+                  >
+                    Export View PDF
+                  </button>
+                </>
+              ) : null}
+              {canExportSelectedCsv ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={selectedBlogs.length === 0}
+                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      exportCsv("selected");
+                    }}
+                  >
+                    Export Selected CSV
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedBlogs.length === 0}
+                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      exportPdf("selected");
+                    }}
+                  >
+                    Export Selected PDF
+                  </button>
+                </>
+              ) : null}
             </div>
 
             {isLoading ? (
@@ -667,26 +745,29 @@ export default function BlogLibraryPage() {
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                   <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
                     <tr>
-                      <th className="px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={allVisibleSelected}
-                          onChange={(event) => {
-                            toggleSelectAllVisible(event.target.checked);
-                          }}
-                        />
-                      </th>
+                      {canSelectRows ? (
+                        <th className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={allVisibleSelected}
+                            onChange={(event) => {
+                              toggleSelectAllVisible(event.target.checked);
+                            }}
+                          />
+                        </th>
+                      ) : null}
                       <th className="px-3 py-2">Sr #</th>
                       <th className="px-3 py-2">Blog Title</th>
                       <th className="px-3 py-2">Live URL</th>
                       <th className="px-3 py-2">Published Date</th>
+                      {shouldShowStageColumn ? <th className="px-3 py-2">Stage</th> : null}
                       <th className="px-3 py-2">Site</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {pagedBlogs.length === 0 ? (
                       <tr>
-                        <td className="px-3 py-5 text-center text-slate-500" colSpan={6}>
+                        <td className="px-3 py-5 text-center text-slate-500" colSpan={tableColumnCount}>
                           No blogs found with current filters.
                         </td>
                       </tr>
@@ -700,17 +781,20 @@ export default function BlogLibraryPage() {
                           copiedCell?.blogId === blog.id && copiedCell.field === "title";
                         const copiedUrl =
                           copiedCell?.blogId === blog.id && copiedCell.field === "url";
+                        const stage = getStageForBadge(blog);
                         return (
                           <tr key={blog.id} className="group hover:bg-slate-50">
-                            <td className="px-3 py-2 align-top">
-                              <input
-                                type="checkbox"
-                                checked={selectedIdSet.has(blog.id)}
-                                onChange={(event) => {
-                                  toggleRowSelection(blog.id, event.target.checked);
-                                }}
-                              />
-                            </td>
+                            {canSelectRows ? (
+                              <td className="px-3 py-2 align-top">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIdSet.has(blog.id)}
+                                  onChange={(event) => {
+                                    toggleRowSelection(blog.id, event.target.checked);
+                                  }}
+                                />
+                              </td>
+                            ) : null}
                             <td className="px-3 py-2 align-top text-slate-600">{globalIndex}</td>
                             <td className="px-3 py-2 align-top text-slate-900">
                               <div className="group/title inline-flex max-w-[34rem] items-center gap-2">
@@ -773,6 +857,17 @@ export default function BlogLibraryPage() {
                             <td className="px-3 py-2 align-top text-slate-600">
                               {formatPublishedDate(blog)}
                             </td>
+                            {shouldShowStageColumn ? (
+                              <td className="px-3 py-2 align-top">
+                                <span
+                                  className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getStageBadgeClasses(
+                                    stage
+                                  )}`}
+                                >
+                                  {getStageLabel(stage)}
+                                </span>
+                              </td>
+                            ) : null}
                             <td className="px-3 py-2 align-top">
                               <span
                                 className={`inline-flex min-w-10 items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getSiteBadgeClasses(

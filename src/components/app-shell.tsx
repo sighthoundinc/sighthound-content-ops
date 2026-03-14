@@ -39,7 +39,9 @@ export function AppShell({
   const router = useRouter();
   const { hasPermission, profile, signOut } = useAuth();
   const canCreateBlogs = hasPermission("create_blog");
-  const canManagePermissions = hasPermission("manage_permissions");
+  const userRoles = getUserRoles(profile);
+  const isAdmin = userRoles.includes("admin");
+  const canManagePermissions = isAdmin;
   const canManageSocialPosts =
     hasPermission("view_dashboard") || hasWorkflowOverridePermission(hasPermission);
 
@@ -107,7 +109,9 @@ export function AppShell({
     () => [...builtInCommandPaletteCommands, ...commandPaletteCommands],
     [builtInCommandPaletteCommands, commandPaletteCommands]
   );
-  const rolesLabel = getUserRoles(profile).join(", ");
+  const activeRoleLabel = profile?.role
+    ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
+    : "Unknown";
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
@@ -183,7 +187,7 @@ export function AppShell({
               <p className="font-medium text-slate-900">
                 {profile?.display_name || profile?.full_name}
               </p>
-              <p className="text-slate-500">{rolesLabel || profile?.role}</p>
+              <p className="text-slate-500">Active role: {activeRoleLabel}</p>
             </div>
             <button
               type="button"
@@ -202,7 +206,7 @@ export function AppShell({
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-6 py-6">
         <aside className="w-full max-w-56 shrink-0 rounded-lg border border-slate-200 bg-white p-3">
           <nav className="space-y-1">
-            {[...NAV_ITEMS, { href: "/settings", label: "Settings" }].map((item) => {
+            {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
 
               return (
@@ -210,24 +214,60 @@ export function AppShell({
                   key={`${item.href}-${item.label}`}
                   href={item.href}
                   className={cn(
-                    "block rounded-md px-3 py-2 text-sm font-medium",
-                    isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+                    "group flex items-center gap-2 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition",
+                    isActive
+                      ? "border-l-slate-900 bg-slate-900 text-white font-semibold"
+                      : "border-l-transparent text-slate-700 hover:bg-slate-100"
                   )}
                 >
+                  <span
+                    className={cn(
+                      "inline-block h-2 w-2 rounded-full",
+                      isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
+                    )}
+                  />
                   {item.label}
                 </Link>
               );
             })}
+            <div className="my-3 border-t border-slate-200/70" />
+            <Link
+              href="/settings"
+              className={cn(
+                "group flex items-center gap-2 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition",
+                pathname === "/settings"
+                  ? "border-l-slate-900 bg-slate-900 text-white font-semibold"
+                  : "border-l-transparent text-slate-700 hover:bg-slate-100"
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  pathname === "/settings"
+                    ? "bg-white"
+                    : "bg-slate-300 group-hover:bg-slate-500"
+                )}
+              />
+              Settings
+            </Link>
             {canManagePermissions ? (
               <Link
                 href="/settings/permissions"
                 className={cn(
-                  "block rounded-md px-3 py-2 text-sm font-medium",
+                  "group flex items-center gap-2 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition",
                   pathname === "/settings/permissions"
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-700 hover:bg-slate-100"
+                    ? "border-l-slate-900 bg-slate-900 text-white font-semibold"
+                    : "border-l-transparent text-slate-700 hover:bg-slate-100"
                 )}
               >
+                <span
+                  className={cn(
+                    "inline-block h-2 w-2 rounded-full",
+                    pathname === "/settings/permissions"
+                      ? "bg-white"
+                      : "bg-slate-300 group-hover:bg-slate-500"
+                  )}
+                />
                 Permissions
               </Link>
             ) : null}

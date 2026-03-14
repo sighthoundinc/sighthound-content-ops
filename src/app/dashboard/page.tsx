@@ -226,6 +226,18 @@ const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }
   { value: "writer_status", label: "Writer Status" },
   { value: "publisher_status", label: "Publisher Status" },
 ];
+const WRITER_STAGE_DISPLAY_LABELS: Record<WriterStageStatus, string> = {
+  not_started: "Draft",
+  in_progress: "Draft",
+  needs_revision: "Needs Revision",
+  completed: "Approved",
+};
+const PUBLISHER_STAGE_DISPLAY_LABELS: Record<PublisherStageStatus, string> = {
+  not_started: "Scheduled",
+  in_progress: "Publishing",
+  completed: "Published",
+};
+type MetricFilterKey = "scheduled_this_week" | "ready_to_publish" | "delayed";
 
 type DashboardFilterState = {
   search: string;
@@ -478,6 +490,7 @@ export default function DashboardPage() {
   const [isPanelLoading, setIsPanelLoading] = useState(false);
   const [isPanelCommentSaving, setIsPanelCommentSaving] = useState(false);
   const [activeQuickQueue, setActiveQuickQueue] = useState<QuickQueueKey | null>(null);
+  const [activeMetricFilter, setActiveMetricFilter] = useState<MetricFilterKey | null>(null);
   const [isEditColumnsOpen, setIsEditColumnsOpen] = useState(false);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const [, setCompletionTimingsByBlog] = useState<
@@ -988,6 +1001,39 @@ export default function DashboardPage() {
       }
       return blog.publisher_id === currentUserId && blog.publisher_status === "completed";
     };
+    const matchesMetricFilter = (blog: BlogRecord) => {
+      if (!activeMetricFilter) {
+        return true;
+      }
+
+      if (activeMetricFilter === "ready_to_publish") {
+        return blog.overall_status === "ready_to_publish";
+      }
+
+      if (activeMetricFilter === "delayed") {
+        const scheduledDate = getBlogScheduledDate(blog);
+        const todayKey = format(new Date(), "yyyy-MM-dd");
+        return (
+          scheduledDate !== null &&
+          scheduledDate < todayKey &&
+          blog.publisher_status !== "completed"
+        );
+      }
+
+      const todayDate = new Date();
+      const weekStart = new Date(todayDate);
+      weekStart.setDate(todayDate.getDate() - todayDate.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      const scheduledDate = getBlogScheduledDate(blog);
+      if (!scheduledDate) {
+        return false;
+      }
+      const scheduledTime = new Date(`${scheduledDate}T00:00:00`).getTime();
+      return scheduledTime >= weekStart.getTime() && scheduledTime <= weekEnd.getTime();
+    };
     return blogs.filter((blog) => {
       const normalizedSearch = search.toLowerCase().trim();
       const searchHaystack = [
@@ -1019,6 +1065,7 @@ export default function DashboardPage() {
         publisherStatusFilters.includes(blog.publisher_status);
       return (
         matchesQuickQueue(blog) &&
+        matchesMetricFilter(blog) &&
         matchesSearch &&
         matchesSite &&
         matchesStatus &&
@@ -1037,6 +1084,7 @@ export default function DashboardPage() {
     statusFilters,
     profile?.id,
     activeQuickQueue,
+    activeMetricFilter,
     writerFilters,
     writerStatusFilters,
   ]);
@@ -1316,6 +1364,7 @@ export default function DashboardPage() {
   const resetDashboardFilters = useCallback(() => {
     applyFilterState(DEFAULT_DASHBOARD_FILTER_STATE);
     setActiveQuickQueue(null);
+    setActiveMetricFilter(null);
     setActiveSavedViewId(null);
     setError(null);
     setSuccessMessage("Dashboard filters reset.");
@@ -1323,6 +1372,7 @@ export default function DashboardPage() {
 
   const applyQuickQueuePreset = useCallback((queue: QuickQueueKey) => {
     setActiveQuickQueue(queue);
+    setActiveMetricFilter(null);
     setActiveSavedViewId(null);
     setSearch("");
     setSiteFilters([]);
@@ -1335,6 +1385,20 @@ export default function DashboardPage() {
     setSortDirection(queue === "publisher_published" ? "desc" : "asc");
     setCurrentPage(1);
   }, []);
+  const clearAllFilters = useCallback(() => {
+    resetDashboardFilters();
+    setSuccessMessage("All filters cleared.");
+  }, [resetDashboardFilters]);
+  const activeFilterChipCount =
+    siteFilters.length +
+    writerFilters.length +
+    publisherFilters.length +
+    writerStatusFilters.length +
+    publisherStatusFilters.length +
+    statusFilters.length +
+    (search.trim().length > 0 ? 1 : 0) +
+    (activeQuickQueue ? 1 : 0) +
+    (activeMetricFilter ? 1 : 0);
 
   const saveCurrentFiltersAsView = useCallback(() => {
     const rawName = prompt("Saved view name");
@@ -2091,6 +2155,135 @@ export default function DashboardPage() {
                 Track assignments, writing progress, and publishing readiness.
               </p>
             </div>
+            {activeFilterChipCount > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {search.trim() ? (
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
+                    onClick={() => setSearch("")}
+                  >
+                    Search: {search.trim()} ×
+                  </button>
+                ) : null}
+                {siteFilters.map((site) => (
+                  <button
+                    key={site}
+                    type="button"
+                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
+                    onClick={() => setSiteFilters((previous) => previous.filter((value) => value !== site))}
+                  >
+                    Site: {site} ×
+                  </button>
+                ))}
+                {writerFilters.map((writerId) => {
+                  const writerName =
+                    writerOptions.find((writer) => writer.id === writerId)?.full_name ?? writerId;
+                  return (
+                    <button
+                      key={writerId}
+                      type="button"
+                      className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
+                      onClick={() =>
+                        setWriterFilters((previous) => previous.filter((value) => value !== writerId))
+                      }
+                    >
+                      Writer: {writerName} ×
+                    </button>
+                  );
+                })}
+                {publisherFilters.map((publisherId) => {
+                  const publisherName =
+                    publisherOptions.find((publisher) => publisher.id === publisherId)?.full_name ??
+                    publisherId;
+                  return (
+                    <button
+                      key={publisherId}
+                      type="button"
+                      className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
+                      onClick={() =>
+                        setPublisherFilters((previous) =>
+                          previous.filter((value) => value !== publisherId)
+                        )
+                      }
+                    >
+                      Publisher: {publisherName} ×
+                    </button>
+                  );
+                })}
+                {writerStatusFilters.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
+                    onClick={() =>
+                      setWriterStatusFilters((previous) =>
+                        previous.filter((value) => value !== status)
+                      )
+                    }
+                  >
+                    Writer: {WRITER_STATUS_LABELS[status]} ×
+                  </button>
+                ))}
+                {publisherStatusFilters.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
+                    onClick={() =>
+                      setPublisherStatusFilters((previous) =>
+                        previous.filter((value) => value !== status)
+                      )
+                    }
+                  >
+                    Publisher: {PUBLISHER_STATUS_LABELS[status]} ×
+                  </button>
+                ))}
+                {statusFilters.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
+                    onClick={() =>
+                      setStatusFilters((previous) => previous.filter((value) => value !== status))
+                    }
+                  >
+                    Stage: {STATUS_LABELS[status]} ×
+                  </button>
+                ))}
+                {activeMetricFilter ? (
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-300 bg-blue-50 px-2.5 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                    onClick={() => setActiveMetricFilter(null)}
+                  >
+                    Metric:{" "}
+                    {activeMetricFilter === "scheduled_this_week"
+                      ? "Scheduled This Week"
+                      : activeMetricFilter === "ready_to_publish"
+                        ? "Ready to Publish"
+                        : "Delayed"}{" "}
+                    ×
+                  </button>
+                ) : null}
+                {activeQuickQueue ? (
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-300 bg-blue-50 px-2.5 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                    onClick={() => setActiveQuickQueue(null)}
+                  >
+                    Pipeline filter active ×
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                  onClick={clearAllFilters}
+                >
+                  Clear all filters
+                </button>
+              </div>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-2">
               <details className="relative">
@@ -2163,13 +2356,16 @@ export default function DashboardPage() {
           <section className="space-y-3">
             <input
               type="search"
-              placeholder="Search title, writer, publisher, site, URL..."
+              placeholder="Search title, URL, writer, publisher, or site"
               className="rounded-md border border-slate-300 px-3 py-2 text-sm"
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
               }}
             />
+            <p className="text-xs text-slate-500">
+              Case-insensitive partial match across title, URL, writer, publisher, and site.
+            </p>
             <div className="grid gap-3 md:grid-cols-3">
               <CheckboxMultiSelect
                 label="Sites"
@@ -2228,38 +2424,75 @@ export default function DashboardPage() {
               >
                 {DASHBOARD_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    Sort: {option.label}
+                    {option.label}
                   </option>
                 ))}
               </select>
-
-              <select
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                value={sortDirection}
-                onChange={(event) => {
-                  setSortDirection(event.target.value as SortDirection);
+              <button
+                type="button"
+                className="rounded-md border border-slate-300 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                onClick={() => {
+                  setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
                 }}
               >
-                <option value="asc">Sort Direction: Ascending</option>
-                <option value="desc">Sort Direction: Descending</option>
-              </select>
+                {DASHBOARD_SORT_OPTIONS.find((option) => option.value === sortField)?.label}{" "}
+                {sortDirection === "asc" ? "↑" : "↓"}
+              </button>
             </div>
 
           </section>
           <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Today</p>
             <div className="mt-2 grid gap-2 text-sm md:grid-cols-3">
-              <p className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700">
+              <button
+                type="button"
+                className={`rounded border px-2 py-1 text-left text-slate-700 ${
+                  activeMetricFilter === "scheduled_this_week"
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) =>
+                    previous === "scheduled_this_week" ? null : "scheduled_this_week"
+                  );
+                  setActiveQuickQueue(null);
+                }}
+              >
                 Scheduled This Week:{" "}
-                <span className="font-semibold text-slate-900">{focusStripMetrics.scheduledThisWeek}</span>
-              </p>
-              <p className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700">
+                <span className="font-semibold">{focusStripMetrics.scheduledThisWeek}</span>
+              </button>
+              <button
+                type="button"
+                className={`rounded border px-2 py-1 text-left text-slate-700 ${
+                  activeMetricFilter === "ready_to_publish"
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) =>
+                    previous === "ready_to_publish" ? null : "ready_to_publish"
+                  );
+                  setActiveQuickQueue(null);
+                }}
+              >
                 Ready to Publish:{" "}
-                <span className="font-semibold text-slate-900">{focusStripMetrics.readyToPublish}</span>
-              </p>
-              <p className="rounded border border-slate-200 bg-white px-2 py-1 text-slate-700">
-                Delayed: <span className="font-semibold text-slate-900">{focusStripMetrics.delayed}</span>
-              </p>
+                <span className="font-semibold">{focusStripMetrics.readyToPublish}</span>
+              </button>
+              <button
+                type="button"
+                title="Blogs whose scheduled publish date has passed but publisher status is not completed."
+                className={`rounded border px-2 py-1 text-left text-slate-700 ${
+                  activeMetricFilter === "delayed"
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) => (previous === "delayed" ? null : "delayed"));
+                  setActiveQuickQueue(null);
+                }}
+              >
+                Delayed: <span className="font-semibold">{focusStripMetrics.delayed}</span>
+              </button>
             </div>
           </section>
           <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
@@ -2267,7 +2500,9 @@ export default function DashboardPage() {
               Recently Published
             </p>
             {recentPublishedBlogs.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">No recently published blogs yet.</p>
+              <p className="mt-2 text-sm text-slate-500">
+                No blogs published recently. Next step: review blogs ready to publish.
+              </p>
             ) : (
               <ul className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                 {recentPublishedBlogs.map((blog) => {
@@ -2291,18 +2526,19 @@ export default function DashboardPage() {
             <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Writing Pipeline
+                  Writing Pipeline (filter only)
                 </p>
-                <button
-                  type="button"
-                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  onClick={() => {
-                    setActiveQuickQueue(null);
-                    resetDashboardFilters();
-                  }}
-                >
-                  Clear Queue Filter
-                </button>
+                {activeQuickQueue ? (
+                  <button
+                    type="button"
+                    className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                    onClick={() => {
+                      setActiveQuickQueue(null);
+                    }}
+                  >
+                    Clear Queue Filter
+                  </button>
+                ) : null}
               </div>
               <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                 <button
@@ -2363,7 +2599,7 @@ export default function DashboardPage() {
           {canShowPublisherQueue ? (
             <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Publishing Pipeline
+                Publishing Pipeline (filter only)
               </p>
               <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                 <button
@@ -2814,10 +3050,34 @@ export default function DashboardPage() {
                               if (column === "writer_status") {
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-center text-slate-600`}>
-                                    <div className="inline-flex items-center gap-1.5">
-                                      <span className="text-xs text-slate-500">Writer:</span>
-                                      <WriterStatusBadge status={blog.writer_status} />
-                                    </div>
+                                    {canEditWritingStage ? (
+                                      <select
+                                        className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
+                                        value={blog.writer_status}
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                        }}
+                                        onChange={(event) => {
+                                          event.stopPropagation();
+                                          void updateBlogInline(
+                                            blog,
+                                            { writer_status: event.target.value as WriterStageStatus },
+                                            `Writer stage updated for "${blog.title}".`
+                                          );
+                                        }}
+                                      >
+                                        {WRITER_STATUSES.map((status) => (
+                                          <option key={status} value={status}>
+                                            {WRITER_STAGE_DISPLAY_LABELS[status]}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <div className="inline-flex items-center gap-1.5">
+                                        <span className="text-xs text-slate-500">Writer:</span>
+                                        <WriterStatusBadge status={blog.writer_status} />
+                                      </div>
+                                    )}
                                   </td>
                                 );
                               }
@@ -2833,10 +3093,34 @@ export default function DashboardPage() {
                               if (column === "publisher_status") {
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-center text-slate-600`}>
-                                    <div className="inline-flex items-center gap-1.5">
-                                      <span className="text-xs text-slate-500">Publisher:</span>
-                                      <PublisherStatusBadge status={blog.publisher_status} />
-                                    </div>
+                                    {canEditPublishingStage ? (
+                                      <select
+                                        className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
+                                        value={blog.publisher_status}
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                        }}
+                                        onChange={(event) => {
+                                          event.stopPropagation();
+                                          void updateBlogInline(
+                                            blog,
+                                            { publisher_status: event.target.value as PublisherStageStatus },
+                                            `Publisher stage updated for "${blog.title}".`
+                                          );
+                                        }}
+                                      >
+                                        {PUBLISHER_STATUSES.map((status) => (
+                                          <option key={status} value={status}>
+                                            {PUBLISHER_STAGE_DISPLAY_LABELS[status]}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <div className="inline-flex items-center gap-1.5">
+                                        <span className="text-xs text-slate-500">Publisher:</span>
+                                        <PublisherStatusBadge status={blog.publisher_status} />
+                                      </div>
+                                    )}
                                   </td>
                                 );
                               }

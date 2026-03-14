@@ -99,9 +99,9 @@ export const PUBLISHER_STATUS_LABELS: Record<PublisherStageStatus, string> = {
 
 export const STATUS_COLORS: Record<OverallBlogStatus, string> = {
   planned: "bg-slate-50 text-slate-700",
-  writing: "bg-blue-50 text-blue-700",
+  writing: "bg-slate-100 text-slate-700",
   needs_revision: "bg-amber-50 text-amber-700",
-  ready_to_publish: "bg-purple-50 text-purple-700",
+  ready_to_publish: "bg-blue-50 text-blue-700",
   published: "bg-emerald-50 text-emerald-700",
 };
 export const SOCIAL_POST_STATUS_COLORS: Record<SocialPostStatus, string> = {
@@ -138,7 +138,7 @@ export const WORKFLOW_STAGE_LABELS: Record<WorkflowStage, string> = {
 };
 
 export const WORKFLOW_STAGE_COLORS: Record<WorkflowStage, string> = {
-  writing: "bg-blue-50 text-blue-700",
+  writing: "bg-slate-100 text-slate-700",
   ready: "bg-purple-50 text-purple-700",
   publishing: "bg-blue-50 text-blue-700",
   published: "bg-emerald-50 text-emerald-700",

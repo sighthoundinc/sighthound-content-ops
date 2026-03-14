@@ -477,11 +477,10 @@ export default function DashboardPage() {
   const [panelError, setPanelError] = useState<string | null>(null);
   const [isPanelLoading, setIsPanelLoading] = useState(false);
   const [isPanelCommentSaving, setIsPanelCommentSaving] = useState(false);
-  const [showMoreMetrics, setShowMoreMetrics] = useState(false);
   const [activeQuickQueue, setActiveQuickQueue] = useState<QuickQueueKey | null>(null);
   const [isEditColumnsOpen, setIsEditColumnsOpen] = useState(false);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
-  const [completionTimingsByBlog, setCompletionTimingsByBlog] = useState<
+  const [, setCompletionTimingsByBlog] = useState<
     Record<string, BlogCompletionTiming>
   >({});
   const columnEditorRef = useRef<HTMLDivElement | null>(null);
@@ -1153,165 +1152,6 @@ export default function DashboardPage() {
     [assignableUsers, publisherOptions, writerOptions]
   );
 
-  const publishDelaySummary = useMemo(() => {
-    const delays = blogs
-      .map((blog) => {
-        const scheduledDate = getBlogScheduledDate(blog);
-        const actualPublishedAt = blog.actual_published_at ?? blog.published_at;
-        if (!scheduledDate || !actualPublishedAt) {
-          return null;
-        }
-        return Math.floor(
-          (new Date(actualPublishedAt).getTime() -
-            new Date(`${scheduledDate}T00:00:00Z`).getTime()) /
-            (24 * 60 * 60 * 1000)
-        );
-      })
-      .filter((value): value is number => value !== null)
-      .filter((delayDays) => delayDays > 0);
-
-    const averageDelayDays =
-      delays.length === 0
-        ? null
-        : Number((delays.reduce((sum, value) => sum + value, 0) / delays.length).toFixed(1));
-    return {
-      delayedCount: delays.length,
-      averageDelayDays,
-    };
-  }, [blogs]);
-
-  const editorialMetrics = useMemo(() => {
-    const nowTime = now.getTime();
-    const todayKey = format(now, "yyyy-MM-dd");
-    const inThirtyDaysKey = format(
-      new Date(nowTime + 30 * 24 * 60 * 60 * 1000),
-      "yyyy-MM-dd"
-    );
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
-
-    const publishedBlogs = blogs.filter(
-      (blog) => Boolean(blog.actual_published_at ?? blog.published_at)
-    );
-    const publishedWithSchedule = publishedBlogs.filter((blog) =>
-      Boolean(getBlogScheduledDate(blog))
-    );
-    const onTimePublishedCount = publishedWithSchedule.filter((blog) => {
-      const scheduledDate = getBlogScheduledDate(blog);
-      const actualPublishedAt = blog.actual_published_at ?? blog.published_at;
-      if (!scheduledDate || !actualPublishedAt) {
-        return false;
-      }
-      return actualPublishedAt.slice(0, 10) <= scheduledDate;
-    }).length;
-    const onTimePublishRate =
-      publishedWithSchedule.length > 0
-        ? Math.round((onTimePublishedCount / publishedWithSchedule.length) * 100)
-        : null;
-
-    const publishedThisMonth = publishedBlogs.filter((blog) => {
-      const publishedAt = blog.actual_published_at ?? blog.published_at;
-      if (!publishedAt) {
-        return false;
-      }
-      const publishedTime = new Date(publishedAt).getTime();
-      return publishedTime >= monthStart && publishedTime < nextMonthStart;
-    }).length;
-
-    const scheduledNext30Days = blogs.filter((blog) => {
-      const scheduledDate = getBlogScheduledDate(blog);
-      if (!scheduledDate) {
-        return false;
-      }
-      return scheduledDate >= todayKey && scheduledDate <= inThirtyDaysKey;
-    }).length;
-
-    const writingPipelineSize = blogs.filter(
-      (blog) => blog.writer_status !== "completed"
-    ).length;
-    const readyToPublishCount = blogs.filter(
-      (blog) => blog.overall_status === "ready_to_publish"
-    ).length;
-
-    const oldestActiveDraftAgeDays = blogs
-      .filter((blog) => blog.writer_status !== "completed")
-      .map((blog) =>
-        Math.max(
-          0,
-          Math.floor(
-            (nowTime - new Date(blog.created_at).getTime()) / (24 * 60 * 60 * 1000)
-          )
-        )
-      )
-      .reduce<number | null>((oldest, ageDays) => {
-        if (oldest === null || ageDays > oldest) {
-          return ageDays;
-        }
-        return oldest;
-      }, null);
-
-    const writingDurationDays = blogs
-      .map((blog) => {
-        const completionTiming = completionTimingsByBlog[blog.id];
-        if (!completionTiming?.writerCompletedAt) {
-          return null;
-        }
-        return (
-          (new Date(completionTiming.writerCompletedAt).getTime() -
-            new Date(blog.created_at).getTime()) /
-          (24 * 60 * 60 * 1000)
-        );
-      })
-      .filter((value): value is number => value !== null && value >= 0);
-    const averageWritingTimeDays =
-      writingDurationDays.length > 0
-        ? Number(
-            (
-              writingDurationDays.reduce((sum, value) => sum + value, 0) /
-              writingDurationDays.length
-            ).toFixed(1)
-          )
-        : null;
-
-    const publishingDurationDays = blogs
-      .map((blog) => {
-        const completionTiming = completionTimingsByBlog[blog.id];
-        const writerCompletedAt = completionTiming?.writerCompletedAt;
-        const publishedAt =
-          blog.actual_published_at ??
-          blog.published_at ??
-          completionTiming?.publisherCompletedAt ??
-          null;
-        if (!writerCompletedAt || !publishedAt) {
-          return null;
-        }
-        return (
-          (new Date(publishedAt).getTime() - new Date(writerCompletedAt).getTime()) /
-          (24 * 60 * 60 * 1000)
-        );
-      })
-      .filter((value): value is number => value !== null && value >= 0);
-    const averagePublishingTimeDays =
-      publishingDurationDays.length > 0
-        ? Number(
-            (
-              publishingDurationDays.reduce((sum, value) => sum + value, 0) /
-              publishingDurationDays.length
-            ).toFixed(1)
-          )
-        : null;
-
-    return {
-      onTimePublishRate,
-      publishedThisMonth,
-      scheduledNext30Days,
-      writingPipelineSize,
-      readyToPublishCount,
-      oldestActiveDraftAgeDays,
-      averageWritingTimeDays,
-      averagePublishingTimeDays,
-    };
-  }, [blogs, completionTimingsByBlog, now]);
 
   const focusStripMetrics = useMemo(() => {
     const todayDate = new Date();
@@ -1561,21 +1401,6 @@ export default function DashboardPage() {
         : `Saved new view "${trimmedName}".`
     );
   }, [buildCurrentFilterState, columnOrder]);
-
-  const deleteSavedView = useCallback(
-    (view: SavedDashboardView) => {
-      if (!confirm(`Delete saved view "${view.name}"?`)) {
-        return;
-      }
-      setSavedViews((previous) => previous.filter((candidate) => candidate.id !== view.id));
-      if (activeSavedViewId === view.id) {
-        setActiveSavedViewId(null);
-      }
-      setError(null);
-      setSuccessMessage(`Deleted saved view "${view.name}".`);
-    },
-    [activeSavedViewId]
-  );
 
 
   const getExportCellValue = useCallback(
@@ -2253,387 +2078,11 @@ export default function DashboardPage() {
     sortedSavedViews,
   ]);
 
-  const savedViewsSidebarContent = (
-    <div className="space-y-4">
-      <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Saved Views
-          </p>
-          <button
-            type="button"
-            className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-            onClick={saveCurrentFiltersAsView}
-          >
-            Save
-          </button>
-        </div>
-        <button
-          type="button"
-          className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
-          onClick={resetDashboardFilters}
-        >
-          Reset filters
-        </button>
-        {sortedSavedViews.length === 0 ? (
-          <p className="text-xs text-slate-500">No saved views yet.</p>
-        ) : (
-          <ul className="space-y-1">
-            {sortedSavedViews.map((view) => (
-              <li key={view.id} className="flex items-center gap-1">
-                <button
-                  type="button"
-                  className={`min-w-0 flex-1 rounded px-2 py-1 text-left text-xs font-medium ${
-                    activeSavedViewId === view.id
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                  onClick={() => {
-                    applySavedView(view);
-                  }}
-                >
-                  <span className="block truncate">{view.name}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Delete ${view.name}`}
-                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
-                  onClick={() => {
-                    deleteSavedView(view);
-                  }}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      {canShowWriterQueue ? (
-        <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Your Writing Work
-          </h3>
-          <div className="rounded border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600">
-            <p className="font-semibold uppercase tracking-wide text-slate-500">Writing Pipeline</p>
-            <div className="mt-1 grid grid-cols-2 gap-1">
-              <button
-                type="button"
-                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-left text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  applyQuickQueuePreset("writer_not_started");
-                }}
-              >
-                Not Started ({quickQueueCounts.writerNotStarted})
-              </button>
-              <button
-                type="button"
-                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-left text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  applyQuickQueuePreset("writer_in_progress");
-                }}
-              >
-                In Progress ({quickQueueCounts.writerInProgress})
-              </button>
-              <button
-                type="button"
-                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-left text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  applyQuickQueuePreset("writer_needs_revision");
-                }}
-              >
-                Needs Revision ({quickQueueCounts.writerNeedsRevision})
-              </button>
-              <button
-                type="button"
-                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-left text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => {
-                  applyQuickQueuePreset("writer_completed_waiting_publish");
-                }}
-              >
-                Completed ({quickQueueCounts.writerCompletedWaitingPublishing})
-              </button>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <button
-              type="button"
-              className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-                activeQuickQueue === "writer_not_started"
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-              onClick={() => {
-                applyQuickQueuePreset("writer_not_started");
-              }}
-            >
-              Writing Not Started ({quickQueueCounts.writerNotStarted})
-            </button>
-            <button
-              type="button"
-              className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-                activeQuickQueue === "writer_in_progress"
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-              onClick={() => {
-                applyQuickQueuePreset("writer_in_progress");
-              }}
-            >
-              Writing In Progress ({quickQueueCounts.writerInProgress})
-            </button>
-            <button
-              type="button"
-              className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-                activeQuickQueue === "writer_needs_revision"
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-              onClick={() => {
-                applyQuickQueuePreset("writer_needs_revision");
-              }}
-            >
-              Needs Revision ({quickQueueCounts.writerNeedsRevision})
-            </button>
-            <button
-              type="button"
-              className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-                activeQuickQueue === "writer_completed_waiting_publish"
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-              onClick={() => {
-                applyQuickQueuePreset("writer_completed_waiting_publish");
-              }}
-            >
-              Completed — Waiting for Publishing ({quickQueueCounts.writerCompletedWaitingPublishing})
-            </button>
-          </div>
-        </section>
-      ) : null}
-      {canShowWriterQueue ? (
-        <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Backlog
-          </h3>
-          <button
-            type="button"
-            className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-              activeQuickQueue === "backlog_unscheduled"
-                ? "border-slate-900 bg-slate-900 text-white"
-                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-            }`}
-            onClick={() => {
-              applyQuickQueuePreset("backlog_unscheduled");
-            }}
-          >
-            Unscheduled Ideas ({quickQueueCounts.backlogUnscheduledIdeas})
-          </button>
-        </section>
-      ) : null}
-      {canShowPublisherQueue ? (
-        <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Your Publishing Work
-          </h3>
-          <div className="rounded border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600">
-            <p className="font-semibold uppercase tracking-wide text-slate-500">
-              Publishing Pipeline
-            </p>
-            <p className="mt-1">
-              Not Started → In Progress → Final Review → Published
-            </p>
-            <p className="mt-1 font-medium text-slate-700">
-              {quickQueueCounts.publisherNotStarted} → {quickQueueCounts.publisherInProgress} →{" "}
-              {quickQueueCounts.publisherFinalReview} → {quickQueueCounts.publisherPublished}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <button
-              type="button"
-              className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-                activeQuickQueue === "publisher_not_started"
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-              onClick={() => {
-                applyQuickQueuePreset("publisher_not_started");
-              }}
-            >
-              Publishing Not Started ({quickQueueCounts.publisherNotStarted})
-            </button>
-            <button
-              type="button"
-              className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-                activeQuickQueue === "publisher_in_progress"
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-              onClick={() => {
-                applyQuickQueuePreset("publisher_in_progress");
-              }}
-            >
-              Publishing In Progress ({quickQueueCounts.publisherInProgress})
-            </button>
-            <button
-              type="button"
-              className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-                activeQuickQueue === "publisher_final_review"
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-              onClick={() => {
-                applyQuickQueuePreset("publisher_final_review");
-              }}
-            >
-              Ready for Final Review ({quickQueueCounts.publisherFinalReview})
-            </button>
-            <button
-              type="button"
-              className={`w-full rounded border px-2 py-1 text-left text-xs font-medium ${
-                activeQuickQueue === "publisher_published"
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-              onClick={() => {
-                applyQuickQueuePreset("publisher_published");
-              }}
-            >
-              Published ({quickQueueCounts.publisherPublished})
-            </button>
-          </div>
-        </section>
-      ) : null}
-      {canShowWriterQueue || canShowPublisherQueue ? (
-        <button
-          type="button"
-          className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs font-medium text-slate-700 hover:bg-slate-100"
-          onClick={() => {
-            setActiveQuickQueue(null);
-            resetDashboardFilters();
-          }}
-        >
-          Clear Queue Filter
-        </button>
-      ) : null}
-      <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-        <button
-          type="button"
-          className="text-xs font-semibold uppercase tracking-wide text-slate-600 hover:text-slate-900"
-          onClick={() => {
-            setShowMoreMetrics((previous) => !previous);
-          }}
-        >
-          {showMoreMetrics ? "Hide More Metrics" : "More Metrics"}
-        </button>
-        {showMoreMetrics ? (
-          <div className="space-y-2 text-xs text-slate-600">
-            <div className="space-y-1">
-              <p>
-                Published With Delay:{" "}
-                <span className="font-semibold text-slate-900">
-                  {publishDelaySummary.delayedCount}
-                </span>
-              </p>
-              <p>
-                Avg Delay:{" "}
-                <span className="font-semibold text-slate-900">
-                  {publishDelaySummary.averageDelayDays ?? "—"} days
-                </span>
-              </p>
-              <p>
-                On-Time Publish Rate:{" "}
-                <span className="font-semibold text-slate-900">
-                  {editorialMetrics.onTimePublishRate ?? "—"}%
-                </span>
-              </p>
-            </div>
-            <div className="space-y-1 border-t border-slate-200 pt-1.5">
-              <p>
-                Published This Month:{" "}
-                <span className="font-semibold text-slate-900">
-                  {editorialMetrics.publishedThisMonth}
-                </span>
-              </p>
-              <p>
-                Scheduled Next 30 Days:{" "}
-                <span className="font-semibold text-slate-900">
-                  {editorialMetrics.scheduledNext30Days}
-                </span>
-              </p>
-            </div>
-            <div className="space-y-1 border-t border-slate-200 pt-1.5">
-              <p>
-                Avg Writing Time:{" "}
-                <span className="font-semibold text-slate-900">
-                  {editorialMetrics.averageWritingTimeDays ?? "—"} days
-                </span>
-              </p>
-              <p>
-                Avg Publishing Time:{" "}
-                <span className="font-semibold text-slate-900">
-                  {editorialMetrics.averagePublishingTimeDays ?? "—"} days
-                </span>
-              </p>
-            </div>
-            <div className="space-y-1 border-t border-slate-200 pt-1.5">
-              <p>
-                Writing Pipeline:{" "}
-                <span className="font-semibold text-slate-900">
-                  {editorialMetrics.writingPipelineSize}
-                </span>
-              </p>
-              <p>
-                Ready to Publish:{" "}
-                <span className="font-semibold text-slate-900">
-                  {editorialMetrics.readyToPublishCount}
-                </span>
-              </p>
-              <p>
-                Oldest Draft Age:{" "}
-                <span className="font-semibold text-slate-900">
-                  {editorialMetrics.oldestActiveDraftAgeDays ?? "—"} days
-                </span>
-              </p>
-            </div>
-          </div>
-        ) : null}
-      </section>
-      <section className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Recently Published
-        </h3>
-        {recentPublishedBlogs.length === 0 ? (
-          <p className="text-xs text-slate-500">No recently published blogs yet.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {recentPublishedBlogs.map((blog) => {
-              const publishedAt = blog.actual_published_at ?? blog.published_at;
-              const shortSite = blog.site === "sighthound.com" ? "SH" : "RED";
-              return (
-                <li key={blog.id} className="rounded border border-slate-200 bg-white px-2 py-1">
-                  <p className="text-[11px] text-slate-500">
-                    {publishedAt ? format(new Date(publishedAt), "MMM d") : "—"} · {shortSite}
-                  </p>
-                  <p className="overflow-hidden text-xs font-medium text-slate-700 text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                    {blog.title}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
 
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
-      <AppShell
-        commandPaletteCommands={dashboardCommandPaletteCommands}
-        sidebarContent={savedViewsSidebarContent}
-      >
+      <AppShell commandPaletteCommands={dashboardCommandPaletteCommands}>
         <div className="space-y-5 transition-opacity duration-200">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -2813,6 +2262,165 @@ export default function DashboardPage() {
               </p>
             </div>
           </section>
+          <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Recently Published
+            </p>
+            {recentPublishedBlogs.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500">No recently published blogs yet.</p>
+            ) : (
+              <ul className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {recentPublishedBlogs.map((blog) => {
+                  const publishedAt = blog.actual_published_at ?? blog.published_at;
+                  const shortSite = blog.site === "sighthound.com" ? "SH" : "RED";
+                  return (
+                    <li key={blog.id} className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+                      <p className="text-[11px] text-slate-500">
+                        {publishedAt ? format(new Date(publishedAt), "MMM d") : "—"} · {shortSite}
+                      </p>
+                      <p className="overflow-hidden text-xs font-medium text-slate-700 text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                        {blog.title}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+          {canShowWriterQueue ? (
+            <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Writing Pipeline
+                </p>
+                <button
+                  type="button"
+                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                  onClick={() => {
+                    setActiveQuickQueue(null);
+                    resetDashboardFilters();
+                  }}
+                >
+                  Clear Queue Filter
+                </button>
+              </div>
+              <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                <button
+                  type="button"
+                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
+                    activeQuickQueue === "writer_in_progress"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  onClick={() => {
+                    applyQuickQueuePreset("writer_in_progress");
+                  }}
+                >
+                  Drafting ({quickQueueCounts.writerInProgress})
+                </button>
+                <button
+                  type="button"
+                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
+                    activeQuickQueue === "writer_needs_revision"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  onClick={() => {
+                    applyQuickQueuePreset("writer_needs_revision");
+                  }}
+                >
+                  Needs Revision ({quickQueueCounts.writerNeedsRevision})
+                </button>
+                <button
+                  type="button"
+                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
+                    activeQuickQueue === "writer_completed_waiting_publish"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  onClick={() => {
+                    applyQuickQueuePreset("writer_completed_waiting_publish");
+                  }}
+                >
+                  Ready for Publishing ({quickQueueCounts.writerCompletedWaitingPublishing})
+                </button>
+                <button
+                  type="button"
+                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
+                    activeQuickQueue === "backlog_unscheduled"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  onClick={() => {
+                    applyQuickQueuePreset("backlog_unscheduled");
+                  }}
+                >
+                  Backlog ({quickQueueCounts.backlogUnscheduledIdeas})
+                </button>
+              </div>
+            </section>
+          ) : null}
+          {canShowPublisherQueue ? (
+            <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Publishing Pipeline
+              </p>
+              <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                <button
+                  type="button"
+                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
+                    activeQuickQueue === "publisher_not_started"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  onClick={() => {
+                    applyQuickQueuePreset("publisher_not_started");
+                  }}
+                >
+                  Not Started ({quickQueueCounts.publisherNotStarted})
+                </button>
+                <button
+                  type="button"
+                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
+                    activeQuickQueue === "publisher_in_progress"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  onClick={() => {
+                    applyQuickQueuePreset("publisher_in_progress");
+                  }}
+                >
+                  In Progress ({quickQueueCounts.publisherInProgress})
+                </button>
+                <button
+                  type="button"
+                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
+                    activeQuickQueue === "publisher_final_review"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  onClick={() => {
+                    applyQuickQueuePreset("publisher_final_review");
+                  }}
+                >
+                  Final Review ({quickQueueCounts.publisherFinalReview})
+                </button>
+                <button
+                  type="button"
+                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
+                    activeQuickQueue === "publisher_published"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                  onClick={() => {
+                    applyQuickQueuePreset("publisher_published");
+                  }}
+                >
+                  Published ({quickQueueCounts.publisherPublished})
+                </button>
+              </div>
+            </section>
+          ) : null}
           {error ? (
             <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               {error}
@@ -3206,10 +2814,8 @@ export default function DashboardPage() {
                               if (column === "writer_status") {
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-center text-slate-600`}>
-                                    <div className="flex flex-col items-center gap-1">
-                                      <span className="text-[10px] uppercase tracking-wide text-slate-400">
-                                        Writer
-                                      </span>
+                                    <div className="inline-flex items-center gap-1.5">
+                                      <span className="text-xs text-slate-500">Writer:</span>
                                       <WriterStatusBadge status={blog.writer_status} />
                                     </div>
                                   </td>
@@ -3227,10 +2833,8 @@ export default function DashboardPage() {
                               if (column === "publisher_status") {
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-center text-slate-600`}>
-                                    <div className="flex flex-col items-center gap-1">
-                                      <span className="text-[10px] uppercase tracking-wide text-slate-400">
-                                        Publisher
-                                      </span>
+                                    <div className="inline-flex items-center gap-1.5">
+                                      <span className="text-xs text-slate-500">Publisher:</span>
                                       <PublisherStatusBadge status={blog.publisher_status} />
                                     </div>
                                   </td>
@@ -3241,7 +2845,7 @@ export default function DashboardPage() {
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-center`}>
                                     <div className="flex items-center justify-center gap-2">
-                                      <WorkflowStageBadge stage={rowWorkflowStage} />
+                                      <StatusBadge status={blog.overall_status} />
                                       {isOverdue ? (
                                         <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
                                           Overdue

@@ -20,9 +20,9 @@ const WORK_NAV_ITEMS = [
 ];
 
 const CONTENT_NAV_ITEMS = [
-  { href: "/dashboard", label: "Blogs" },
-  { href: "/social-posts", label: "Social Posts" },
+  { href: "/blogs", label: "Blogs" },
   { href: "/ideas", label: "Ideas" },
+  { href: "/social-posts", label: "Social Posts" },
 ];
 const NAV_ITEMS = [...WORK_NAV_ITEMS, ...CONTENT_NAV_ITEMS];
 
@@ -201,83 +201,36 @@ export function AppShell({
 
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-6 py-6">
         <aside className="w-full max-w-56 shrink-0 rounded-lg border border-slate-200 bg-white p-3">
-          <nav className="space-y-3">
-            <section className="space-y-1">
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Work</p>
-              {WORK_NAV_ITEMS.map((item) => (
+          <nav className="space-y-1">
+            {[...NAV_ITEMS, { href: "/settings", label: "Settings" }].map((item) => {
+              const isActive = pathname === item.href;
+
+              return (
                 <Link
                   key={`${item.href}-${item.label}`}
                   href={item.href}
                   className={cn(
                     "block rounded-md px-3 py-2 text-sm font-medium",
-                    pathname === item.href
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-700 hover:bg-slate-100"
+                    isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
                   )}
                 >
                   {item.label}
                 </Link>
-              ))}
-            </section>
-
-            <section className="space-y-1">
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Content</p>
-              {CONTENT_NAV_ITEMS.map((item) => (
-                <Link
-                  key={`${item.href}-${item.label}`}
-                  href={item.href}
-                  className={cn(
-                    "block rounded-md px-3 py-2 text-sm font-medium",
-                    pathname === item.href && !(item.href === "/dashboard" && item.label === "Blogs")
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-700 hover:bg-slate-100"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </section>
-
-            <section className="space-y-1">
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">System</p>
-              {canCreateBlogs ? (
-                <Link
-                  href="/blogs/new"
-                  className={cn(
-                    "block rounded-md px-3 py-2 text-sm font-medium",
-                    pathname === "/blogs/new"
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-700 hover:bg-slate-100"
-                  )}
-                >
-                  Add Blog
-                </Link>
-              ) : null}
+              );
+            })}
+            {canManagePermissions ? (
               <Link
-                href="/settings"
+                href="/settings/permissions"
                 className={cn(
                   "block rounded-md px-3 py-2 text-sm font-medium",
-                  pathname === "/settings"
+                  pathname === "/settings/permissions"
                     ? "bg-slate-900 text-white"
                     : "text-slate-700 hover:bg-slate-100"
                 )}
               >
-                Settings
+                Permissions
               </Link>
-              {canManagePermissions ? (
-                <Link
-                  href="/settings/permissions"
-                  className={cn(
-                    "block rounded-md px-3 py-2 text-sm font-medium",
-                    pathname === "/settings/permissions"
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-700 hover:bg-slate-100"
-                  )}
-                >
-                  Permissions
-                </Link>
-              ) : null}
-            </section>
+            ) : null}
           </nav>
           {sidebarContent ? (
             <div className="mt-4 border-t border-slate-200 pt-3">{sidebarContent}</div>

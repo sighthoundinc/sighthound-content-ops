@@ -1,21 +1,26 @@
 # Sighthound Content Ops — Operations Runbook
-
 This runbook is for maintainers and operators.  
-For product behavior and requirements, see `SPECIFICATION.md`.  
+For product behavior, see `SPECIFICATION.md`.  
 For end-user instructions, see `HOW_TO_USE_APP.md`.
 
 ## 1) System overview
 - Frontend: Next.js + TypeScript + Tailwind
-- Backend: Supabase (Postgres, Auth, RLS, Edge Functions)
+- Backend: Supabase (Postgres, Auth, RLS, triggers/functions)
 - Integration: Slack via `supabase/functions/slack-notify`
-- Durable state lives in Supabase; frontend manages UI/session only.
+- Authorization: permission matrix + role templates + DB checks
+
+Durable state and authorization decisions are DB-authoritative. UI checks are UX guardrails.
 
 ## 2) Key directories
 - `src/` — app routes/components/libs
+- `src/lib/permissions.ts` — permission definitions/templates/helpers
+- `src/lib/server-permissions.ts` — server-side permission resolution
+- `src/app/settings/permissions/` — permission management UI
+- `src/app/api/admin/permissions/` — permission CRUD/reset APIs
+- `src/app/api/admin/reassign-assignments/` — assignment transfer API
 - `supabase/migrations/` — schema/history migrations
 - `supabase/functions/` — edge functions
 - `scripts/` — operational scripts (legacy import)
-- `critical-data/` — legacy workbook input
 
 ## 3) Local setup
 ```bash
@@ -34,18 +39,18 @@ Required env:
 
 ## 4) Dev workflows
 - `npm run dev` — app only
-- `npm run dev:full` — app + `tsc --watch`
+- `npm run dev:full` — app + TypeScript watch
 - `npm run lint` — `next lint`
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run check` — lint + typecheck in parallel
+- `npm run import:legacy` — legacy import
 
 Pre-commit:
-- Husky is enabled (`prepare` script).
-- `.husky/pre-commit` runs `npx lint-staged`.
-- `lint-staged` runs `next lint --fix` for staged `*.ts`/`*.tsx`.
+- Husky enabled via `prepare`
+- `.husky/pre-commit` runs `lint-staged`
+- staged TS/TSX files run `eslint --fix`
 
 ## 5) Supabase migration operations
-
 ### List migration state
 ```bash
 supabase --workdir "/absolute/path/to/sighthound-content-ops" migration list
@@ -71,15 +76,34 @@ supabase --workdir "/absolute/path/to/sighthound-content-ops" db push --yes
 - `20260312224000_pipeline_fail_safes_and_import_hash.sql`
 - `20260313113000_blog_ideas.sql`
 - `20260313143000_social_posts_module.sql`
+- `20260313193000_shared_non_admin_role_model.sql`
+- `20260313200000_role_permissions_and_audit.sql`
+- `20260313213000_expand_permission_matrix.sql`
 
-### Notes on compatibility hardening
-Recent migration hardening includes:
-- enum/status trigger compatibility during legacy transitions
-- backfill migration for completion-link constraints
-- comments actor column compatibility (`user_id` + `created_by`)
-- profile role-array compatibility fallbacks
+## 6) Permission operations
+Primary control plane:
+- UI: `/settings/permissions`
+- API: `/api/admin/permissions`
 
-## 6) Slack operations
+Behavior:
+- role-level permission toggles by configurable permission keys
+- reset selected role to default template
+- permission change audit log
+- admin-locked permissions remain non-configurable
+
+When debugging access:
+1. verify role assignment (`profiles.role`, `profiles.user_roles`)
+2. verify `role_permissions` rows for role
+3. confirm permission key naming (canonical vs legacy aliases)
+4. refresh profile/session permissions cache
+
+## 7) Assignment transfer operations
+API:
+- `/api/admin/reassign-assignments`
+
+Use this to move writer/publisher assignments safely between users, instead of manual SQL updates.
+
+## 8) Slack operations
 Function:
 - `supabase/functions/slack-notify/index.ts`
 
@@ -93,7 +117,7 @@ Deploy/update:
 supabase functions deploy slack-notify --project-ref <PROJECT_REF>
 ```
 
-## 7) Legacy import
+## 9) Legacy import operations
 Dry run:
 ```bash
 npm run import:legacy -- --dry-run
@@ -104,30 +128,36 @@ Execute:
 npm run import:legacy
 ```
 
-Canonical source: `Calendar View` sheet in the cleaned legacy workbook.
+Canonical source is the cleaned workbook (`Calendar View` sheet).
 
-## 8) Troubleshooting quick map
+## 10) Troubleshooting quick map
 ### “Comments table is missing from schema cache”
-1. Run latest migrations (`db push`)
-2. Confirm `blog_comments` exists
-3. Ensure migration includes `notify pgrst, 'reload schema'`
+1. run latest migrations
+2. confirm `blog_comments` exists
+3. confirm schema reload notify executed
 
-### “Active profile not found”
-1. Confirm requester has active row in `profiles`
-2. Confirm `is_active = true`
-3. Ensure latest profile compatibility migration applied
+### “Permission denied for action”
+1. verify user role(s)
+2. verify permission matrix rows for role
+3. verify required permission key for that action
+4. re-login or refresh permission cache
 
-### Enum/status mismatch during writes
-1. Confirm latest status-trigger compatibility migration is applied
-2. Re-run `migration list` and verify local/remote alignment
+### “Queue sections empty unexpectedly”
+1. verify assignment (`writer_id` / `publisher_id`)
+2. verify current queue filter and stage state
+3. confirm `view_writing_queue` / `view_publishing_queue` permission
+
+### “Enum/status mismatch during writes”
+1. verify latest status compatibility migrations are applied
+2. verify local/remote migration alignment
 
 ### General runtime issue
-1. Run `npm run check`
-2. Validate env vars
-3. Check Supabase logs and Next runtime logs
+1. run `npm run check`
+2. verify env vars
+3. check Supabase logs + Next runtime logs
 
-## 9) Deployment baseline
-- Deploy frontend on Vercel
-- Ensure env vars are set in deployment environment
-- Ensure Supabase migration history is in sync before release
-- Run `npm run check` before merge/release
+## 11) Deployment baseline
+- deploy frontend on Vercel
+- set env vars in deployment target
+- ensure migrations are fully applied before release
+- run `npm run check` before merge/release

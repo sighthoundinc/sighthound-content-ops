@@ -1,27 +1,29 @@
 # Sighthound Content Operations — Product Specification
 ## 1) Product purpose
-Sighthound Content Operations is an internal workflow application for managing blog production across:
+Sighthound Content Operations is an internal workflow application for managing content production across:
 - `sighthound.com`
 - `redactor.com`
 
-The app is an operations/coordination system (not a CMS). It tracks assignments, statuses, dates, links, comments, and workflow history.
+It is an operations system (not a CMS). It tracks ownership, workflow stage, scheduling, publication metadata, comments, and audit history.
 
 ## 2) Scope
 ### In scope
-- Blog planning/writing/publishing lifecycle tracking
-- Role-aware operations UI (dashboard, tasks, blog detail, calendar, settings)
-- Assignment and status history trail
-- Blog comments
-- Slack notifications for workflow events
-- Legacy XLSX import for historical migration
+- blog planning/writing/publishing lifecycle
+- queue-first execution UX (dashboard/tasks/calendar)
+- role + permission based access control
+- assignment and status audit history
+- comments and collaboration trail
+- ideas + social posts operational modules
+- Slack workflow notifications
+- legacy XLSX import path
 
 ### Out of scope
-- Rich-text content authoring
-- Public website rendering
-- SEO/content optimization tooling
-- Asset storage pipeline
+- rich-text drafting/editing
+- public rendering of content
+- SEO authoring tools
+- media/asset pipeline management
 
-## 3) Roles and permissions
+## 3) Roles and permissions model
 Supported roles:
 - `admin`
 - `writer`
@@ -29,14 +31,21 @@ Supported roles:
 - `editor`
 
 Role model:
-- Multi-role users are supported via `profiles.user_roles`.
-- `profiles.role` remains the primary role value and is synchronized.
-- Authorization is DB-authoritative (RLS + triggers/functions), with UI checks as convenience.
+- multi-role users are supported (`profiles.user_roles`)
+- `profiles.role` remains synchronized primary role
 
-Permission baseline:
-- Admin: full operational control
-- Writer: writing-stage work for assigned blogs
-- Publisher: publishing-stage work for assigned blogs
+Permission model:
+- canonical permission matrix by role
+- role templates + configurable subset for managed roles
+- admin-locked permissions not editable in role matrix
+- permission audit history for changes
+
+Control plane:
+- UI: `/settings/permissions`
+- API: `/api/admin/permissions`
+
+Authorization source of truth:
+- database policies/functions/triggers (UI is assistive, not authoritative)
 
 ## 4) Workflow model
 Stages:
@@ -49,63 +58,77 @@ Enums:
 - `overall_status`: `planned | writing | needs_revision | ready_to_publish | published`
 
 Rules:
-- Publishing cannot be completed before writing is completed.
-- Relevant assignee (`writer_id` / `publisher_id`) must exist before stage progression.
-- `overall_status` is derived (not directly user-edited).
-- `status_updated_at` updates on status changes.
+- publishing cannot complete before writing completes
+- assignee must exist for non-default stage progression
+- `overall_status` is derived from stage statuses
+- `status_updated_at` advances with stage transitions
 
 ## 5) Date model
 Primary fields:
-- `scheduled_publish_date` (planning/scheduling)
-- `display_published_date` (display-oriented date)
-- `actual_published_at` (actual completion timestamp)
+- `scheduled_publish_date`
+- `display_published_date`
+- `actual_published_at`
 - `published_at` (compatibility mirror)
-- `target_publish_date` (legacy-compatible companion)
+- `target_publish_date` (legacy compatibility companion)
 
 Behavior:
-- Schedule fields are synchronized for compatibility.
-- Publishing completion can auto-populate actual publish timestamp.
+- scheduling fields remain compatible with legacy consumers
+- publish completion can set publish timestamp
 
 ## 6) Core UX and pages
 ### Dashboard (`/dashboard`)
-- Search/filter/sort operations
-- Bottom pagination controls
-- Edit Columns popover (hidden by default)
-- Main metrics + “More Metrics” toggle for secondary delay metrics
-- Bulk actions and right-side detail panel
+Primary operations page.
+
+Key behavior:
+- queue hierarchy:
+  - Your Writing Work
+  - Backlog
+  - Your Publishing Work
+- clickable queue filters and pipeline chips
+- today strip (scheduled this week / ready / delayed)
+- table optimized for scanability:
+  - two-line clamped titles
+  - site badges (`SH`, `RED`)
+  - urgency/state row tones
+- export controls (permission-gated)
+- edit columns popover
+- bulk actions (permission-gated)
+- right-side detail panel
+- bottom pagination controls
 
 ### Tasks (`/tasks`)
-- Compact default view: top 3 prioritized pending tasks
-- Priority order:
-  1) overdue scheduled date
-  2) nearest scheduled date
-  3) status urgency
-- “View all tasks” expands full list
-- Full list paginated (10 rows/page, bottom controls)
-- Minimal task rows: title, task type, status, scheduled date
-- Visual urgency cues:
-  - `⚠ Overdue`
-  - `Soon` (within 3 days)
-
-### Blog detail (`/blogs/[id]`)
-- Role-aware edits and stage actions
-- Comments displayed before assignment/activity history
-- Comments read/write against `public.blog_comments` with compatibility fallbacks
-
-### Add blog (`/blogs/new`)
-- Admin-oriented creation flow
-- Optional initial comment
+- top-3 priority items first
+- full list expansion with pagination
+- urgency tags (`⚠ Overdue`, `Soon`)
 
 ### Calendar (`/calendar`)
-- Weekday labels shown once
-- Month jump selector
-- Today/current-week highlighting
-- “No Publish Date” list with status reason and pagination
+- month/week views
+- month layout grouped by week with weekly blog lines
+- drag-and-drop rescheduling (permission-gated)
+- published blogs non-draggable
+- unscheduled bucket with pagination
+
+### Blog detail (`/blogs/[id]`)
+- role-aware edits
+- comments + activity timeline
+- assignment and stage management with permission checks
+
+### Ideas (`/ideas`)
+- idea intake and management
+- conversion path toward blog workflow
+
+### Social Posts (`/social-posts`)
+- social workflow operations connected to content planning
 
 ### Settings (`/settings`)
-- Timezone configuration
-- Self and admin profile name edits (`first_name`, `last_name`, `display_name`)
-- Admin user role management (multi-role)
+- profile fields
+- admin user/role management
+- timezone configuration
+
+### Permissions (`/settings/permissions`)
+- role-level configurable permission matrix
+- reset managed role to defaults
+- permission audit log
 
 ## 7) Data model (logical)
 Core tables:
@@ -113,27 +136,32 @@ Core tables:
 - `blogs`
 - `blog_assignment_history`
 - `blog_comments`
+- `role_permissions`
+- `permission_audit_log`
 
-Selected table highlights:
-- `profiles`: role + `user_roles`, display/name fields, active state
-- `blogs`: workflow fields, assignment fields, scheduling/publish dates, archive flag
-- `blog_assignment_history`: activity/audit timeline
-- `blog_comments`: per-blog comments with actor compatibility (`user_id` + `created_by`)
+Additional modules:
+- `blog_ideas`
+- `social_posts` and supporting social tables
+
+Highlights:
+- profiles support multi-role representation
+- blogs carry stage, ownership, and schedule/publish fields
+- history/comments support operational traceability
+- permission tables drive effective capability resolution
 
 ## 8) Integrations
-Slack integration via Supabase Edge Function:
+Slack via Supabase Edge Function:
 - `supabase/functions/slack-notify/index.ts`
 
-Event types:
-- `writer_assigned`
-- `writer_completed`
-- `ready_to_publish`
-- `published`
+Event examples:
+- writer assigned/completed
+- ready to publish
+- published
 
 Delivery:
-- marketing channel
-- optional DM lookup by email (bot-token mode)
-- webhook fallback mode
+- configured channel
+- optional DM resolution by email
+- webhook fallback
 
 ## 9) Environment requirements
 Frontend:
@@ -146,28 +174,29 @@ Server/import:
 - `IMPORT_CREATED_BY_USER_ID`
 - optional `LEGACY_XLSX_PATH`
 
-Slack secrets:
-- `SLACK_BOT_TOKEN` (preferred)
-- `SLACK_MARKETING_CHANNEL` (optional)
-- `SLACK_WEBHOOK_URL` (fallback)
+Slack:
+- `SLACK_BOT_TOKEN`
+- `SLACK_MARKETING_CHANNEL`
+- `SLACK_WEBHOOK_URL`
 
-## 10) Migrations and compatibility state
-The project is migration-driven (`supabase/migrations`), with compatibility safeguards for:
-- enum/status transition edge cases
-- missing/legacy comments actor columns (`user_id` vs `created_by`)
-- schema drift in profile role arrays
-- remote data backfills required for stricter constraints
+## 10) Migration and compatibility status
+The project is migration-driven (`supabase/migrations`) with compatibility layers for:
+- legacy/expanded role model transitions
+- status trigger and enum transition safety
+- comments actor compatibility (`user_id` / `created_by`)
+- import collision prevention via deterministic hash
+- permission matrix introduction + expansion migrations
 
 ## 11) Non-functional requirements
-- Fast daily operation for internal users
-- Deterministic workflow invariants at DB layer
-- Strong traceability (history + comments)
-- Clear, minimal, action-oriented UX
+- fast internal workflow execution
+- deterministic DB-level invariants for workflow integrity
+- high traceability (history + comments + permission audits)
+- low-cognitive-load UI for operational scanning
 
 ## 12) Acceptance criteria (current)
-1. Role-aware workflows function with DB-enforced authorization.
-2. Dashboard and Tasks views are minimal and scan-friendly.
-3. Blog comments and activity history function with compatibility fallbacks.
-4. Calendar and no-date workflows are clear and paginated where applicable.
-5. Settings supports profile edits, role management, and timezone configuration.
-6. Lint/typecheck and migration flow are operationally stable.
+1. Permission-guarded workflows execute with DB-authoritative enforcement.
+2. Dashboard queues/pipelines are actionable and scan-friendly.
+3. Tasks and Calendar prioritize execution clarity.
+4. Comments/history and permission audit logs are available for traceability.
+5. Settings and Permissions pages support operational administration.
+6. Migration, lint, and typecheck workflows remain stable.

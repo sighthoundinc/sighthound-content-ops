@@ -1,106 +1,140 @@
 # How to Use Sighthound Content Ops (End-User Guide)
+Use this app to coordinate blog production across `sighthound.com` and `redactor.com`.
+It tracks workflow, ownership, dates, and publishing state. It is not a CMS.
 
-This is the primary usage guide for existing and future end users.
-
-## 1) What this app is for
-Use this app to track and coordinate blog production across:
-- `sighthound.com`
-- `redactor.com`
-
+## 1) What this app does
 You can:
-- see what work is assigned
-- update writing/publishing status
-- manage scheduling and publish metadata
+- manage writing and publishing workflow status
+- see assignment queues and schedule priorities
+- update links/dates where your permissions allow
 - collaborate with comments
 
 You cannot:
-- write or edit blog body content directly in this app
+- write blog body content in-app
+- bypass permission rules without admin override capabilities
 
 ## 2) Main pages
 ### Dashboard (`/dashboard`)
-Best for overall pipeline visibility and admin coordination.
-- Filter/search blogs
-- Adjust visible columns with **Edit Columns**
-- Use bottom pagination controls
-- Open blog detail panel for quick updates
+Use Dashboard for operations scanning and bulk coordination.
+
+Highlights:
+- queue-based sidebar:
+  - **Your Writing Work**
+  - **Backlog**
+  - **Your Publishing Work**
+- clickable pipeline chips that filter the table
+- focus strip (`Today`) with:
+  - scheduled this week
+  - ready to publish
+  - delayed
+- searchable/filterable table with:
+  - site badges (`SH`, `RED`)
+  - clamped titles for readability
+  - urgency row tones (overdue/ready/publishing)
+- exports:
+  - Export View CSV
+  - Export Selected CSV (permission-based)
+- Edit Columns popover
+- bottom pagination controls
+- right-side blog detail panel
 
 ### Tasks (`/tasks`)
-Best for personal execution.
-- Shows your top 3 prioritized pending tasks first
-- Click **View all tasks** for the full list (paginated)
-- Priority tags:
+Use Tasks for day-to-day execution.
+- Top 3 priority items shown first
+- Expand to full paginated list
+- Priority indicators:
   - `⚠ Overdue`
-  - `Soon` (due within 3 days)
+  - `Soon`
 
 ### Calendar (`/calendar`)
-Best for schedule planning.
-- Monthly view with today/current-week emphasis
-- Month jump selector
-- “No Publish Date” section for unscheduled blogs
+Use Calendar for schedule planning.
+- month/week calendar modes
+- month view grouped by week with blog lines beneath week row
+- drag-and-drop scheduling (permission-based, not allowed for published blogs)
+- unscheduled list for blogs with no publish date
 
 ### Blog detail (`/blogs/[id]`)
-Best for record-level work.
-- Update assignment/status fields (role-permitted)
-- Add/read comments
-- Review assignment/activity history
+Use detail pages for record-level edits:
+- assignment/status updates (permission-based)
+- schedule/display date edits (permission-based)
+- comments and activity history
 
-### Add Blog (`/blogs/new`) (Admin)
-Create new blog records and optionally add initial comment.
+### Ideas (`/ideas`)
+- manage blog idea backlog
+- convert ideas into blog records
+
+### Social Posts (`/social-posts`)
+- track social posting workflow linked to content operations
 
 ### Settings (`/settings`)
-- Manage your profile name fields
-- Admins can manage user roles and defaults
+- self profile fields
+- admin-level user management and role assignments
 
-## 3) Common workflows
-### Writer workflow
-1. Open assigned task/blog
-2. Update Writer Status
-3. Add/maintain Google Doc URL
-4. Mark writing complete when ready
+### Permissions (`/settings/permissions`) (Admin with manage permission)
+- role-by-role permission matrix
+- reset a role to defaults
+- permission change audit log
 
-### Publisher workflow
-1. Open assigned task/blog
-2. Update Publisher Status
-3. Add Live URL when published
-4. Mark publishing complete
+## 3) Workflow basics
+### Writer
+1. Open queue/task/blog
+2. Update `writer_status`
+3. Maintain Google Doc URL
+4. Submit draft when complete
 
-### Admin workflow
-1. Create and assign blogs
-2. Adjust dates and assignees
-3. Monitor dashboard/task/calendar
-4. Manage user roles in settings
+### Publisher
+1. Open queue/task/blog
+2. Update `publisher_status`
+3. Maintain live URL and publish metadata
+4. Complete publishing when done
 
-## 4) Task prioritization logic
-Task order is optimized for action:
-1. Overdue scheduled tasks first
-2. Nearest scheduled date next
-3. Status urgency next
+### Editor/Admin
+1. triage backlog and assignments
+2. manage schedule risk and delayed items
+3. monitor metrics and publish cadence
+4. adjust roles/permissions as needed
 
-This helps users focus on what needs attention now.
+## 4) Queue behavior (Dashboard)
+Queue buttons are one-click filters.
 
-## 5) Commenting
-- Comments are linked to blogs.
-- Use comments for coordination and internal notes.
-- If comments appear unavailable, contact an operator to verify DB migration state.
+Writer queues:
+- Writing Not Started
+- Writing In Progress
+- Needs Revision
+- Completed — Waiting for Publishing
 
-## 6) Status and date expectations
-- Keep statuses current to maintain accurate dashboards/tasks.
-- Keep scheduled dates updated; this drives ordering and urgency indicators.
-- `overall_status` is system-derived from stage statuses.
+Backlog:
+- Unscheduled Ideas
 
-## 7) Troubleshooting for end users
-### I cannot save a profile update
-- Refresh once and try again.
-- If still blocked, contact admin/operator (may be environment migration drift).
+Publisher queues:
+- Publishing Not Started
+- Publishing In Progress
+- Ready for Final Review
+- Published
 
-### Comments are unavailable
-- Report this to operator; they likely need to run/reconcile latest migrations.
+## 5) Comments and activity
+- comments are per-blog
+- activity log records assignment/status transitions
+- use comments for operational context and handoff notes
 
-### Task list looks incomplete
-- Confirm you are assigned as writer/publisher.
-- Confirm status is not already completed for that stage.
+## 6) Troubleshooting (end user)
+### “I cannot update status or assignment”
+- your role may not have that permission
+- ask admin to review role permissions in `/settings/permissions`
 
-## 8) Best practices
-- Keep assignment and stage statuses updated in real-time.
-- Add concise comments instead of ad-hoc side-channel notes.
-- Use Tasks page for daily work and Dashboard/Calendar for planning alignment.
+### “I can’t export selected rows”
+- this is controlled by `export_selected_csv` permission
+
+### “My queue looks empty”
+- confirm assignment and stage
+- confirm active queue filter isn’t too narrow
+
+### “Comments or profile updates fail”
+- refresh and retry once
+- if persistent, report to operator for migration/schema check
+
+## 7) Best practices
+- keep stage status current; it drives all operational views
+- use queue filters instead of manual searching first
+- keep scheduled dates realistic to reduce overdue noise
+- use comments for decisions and blockers, not side channels

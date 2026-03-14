@@ -1,43 +1,55 @@
 # sighthound-content-ops
-Internal content operations dashboard for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
+Internal content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
 
 ## Product snapshot
-- Blog workflow operations from planning to publication
-- Role-aware assignment and status controls
-- Dashboard, Tasks, Calendar, Blog Detail, Add Blog, and Settings pages
-- Supabase-backed authorization (RLS + DB functions/triggers)
-- Slack notifications via Supabase Edge Function
+- Blog lifecycle operations from planning through publishing
+- Role + permission based authorization (DB-authoritative, UI-aware)
+- Queue-first dashboard for writing/publishing pipelines
+- Tasks and Calendar execution/scheduling workflows
+- Ideas + Social Posts modules
+- Settings + Permissions admin control plane
+- Slack workflow notifications via Supabase Edge Function
 
-For full behavior/spec details:
-- `SPECIFICATION.md`
+## Documentation map
+- Product behavior: `SPECIFICATION.md`
 - End-user guide: `HOW_TO_USE_APP.md`
-- Ops runbook: `OPERATIONS.md`
+- Operations runbook: `OPERATIONS.md`
 
 ## Current UX highlights
 ### Dashboard
-- “More Metrics” toggle for secondary delay metrics
-- “Edit Columns” popover
-- Bottom pagination controls (`Rows per page`, `Prev`, `Next`, `Move to top`)
+- Sidebar hierarchy:
+  - Your Writing Work
+  - Backlog
+  - Your Publishing Work
+- Clickable queue/pipeline filters
+- Today strip (scheduled this week, ready, delayed)
+- Scan-friendly table:
+  - clamped title rendering
+  - SH/RED site badges
+  - urgency row tones
+- Export View / Export Selected CSV (permission-gated)
+- Edit Columns popover and bottom pagination controls
 
 ### Tasks
-- Compact default view with top 3 prioritized pending tasks
-- Priority indicators (`⚠ Overdue`, `Soon`)
-- Expandable full list with 10-row pagination
-- Task click opens detail slide-over
+- Top-3 priority summary + expandable full list
+- Overdue/Soon indicators
+- Priority sorting by schedule urgency and status state
 
-### Blogs
-- Blog detail comments-first layout
-- Assignment/activity history
-- Comments compatibility handling for legacy schema variations
+### Calendar
+- Month/week views
+- Week-grouped month layout
+- Drag-and-drop scheduling (permission-gated)
+- Published entries are non-draggable
 
-### Settings
-- Profile name editing
-- Multi-role user management for admins
-- Timezone configuration
+### Settings and Permissions
+- Profile editing
+- User role management
+- Permission matrix management (`/settings/permissions`)
+- Permission audit history
 
 ## Tech stack
 - Next.js (App Router) + TypeScript + Tailwind
-- Supabase (Postgres, Auth, RLS, Edge Functions)
+- Supabase (Postgres, Auth, RLS, Functions)
 - Vercel deployment target
 
 ## Local setup
@@ -63,11 +75,17 @@ npm run dev
 
 ## Dev scripts
 - `npm run dev` — Next dev server
-- `npm run dev:full` — Next dev + TS watch in parallel
-- `npm run lint` — Next ESLint runner
-- `npm run typecheck` — TypeScript noEmit check
-- `npm run check` — lint + typecheck in parallel
+- `npm run dev:full` — Next dev + TS watch
+- `npm run lint` — ESLint
+- `npm run typecheck` — TypeScript check
+- `npm run check` — lint + typecheck
 - `npm run import:legacy` — legacy XLSX import
+
+## API highlights
+- `/api/admin/permissions` — role permission read/update/reset
+- `/api/admin/reassign-assignments` — controlled assignment transfer
+- `/api/admin/users` — admin user operations
+- `/api/users/profile` — current user profile operations
 
 ## Supabase migrations
 Apply in timestamp order from `supabase/migrations/`.
@@ -87,8 +105,11 @@ Current set:
 - `20260312224000_pipeline_fail_safes_and_import_hash.sql`
 - `20260313113000_blog_ideas.sql`
 - `20260313143000_social_posts_module.sql`
+- `20260313193000_shared_non_admin_role_model.sql`
+- `20260313200000_role_permissions_and_audit.sql`
+- `20260313213000_expand_permission_matrix.sql`
 
-## Slack Edge Function
+## Slack edge function
 Path:
 - `supabase/functions/slack-notify/index.ts`
 

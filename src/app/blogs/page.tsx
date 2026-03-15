@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
@@ -101,6 +101,14 @@ const escapeRegexValue = (value: string) =>
 
 function getPublishedDateKey(blog: BlogRecord) {
   return blog.display_published_date ?? getBlogPublishDate(blog);
+}
+
+export default function BlogLibraryPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading blog library...</div>}>
+      <BlogLibraryPageContent />
+    </Suspense>
+  );
 }
 
 function getVisibleRange(totalRows: number, currentPage: number, rowLimit: LibraryRowLimit) {
@@ -224,7 +232,7 @@ function isBoardStageQueryFilter(value: string | null): value is BoardStageQuery
   return value === "idea" || value === "writing" || value === "reviewing" || value === "publishing" || value === "published";
 }
 
-export default function BlogLibraryPage() {
+function BlogLibraryPageContent() {
   const searchParams = useSearchParams();
   const { hasPermission } = useAuth();
   const { showSaving, showSuccess, showError, updateStatus, pushNotification } =

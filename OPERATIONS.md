@@ -61,6 +61,19 @@ supabase --workdir "/absolute/path/to/sighthound-content-ops" migration list
 supabase --workdir "/absolute/path/to/sighthound-content-ops" db push --yes
 ```
 
+### Sanity sequence (recommended)
+```bash
+supabase --workdir "/absolute/path/to/sighthound-content-ops" migration list
+supabase --workdir "/absolute/path/to/sighthound-content-ops" db push --yes
+supabase --workdir "/absolute/path/to/sighthound-content-ops" migration list
+npm run check
+```
+
+### Migration note: `20260313213000_expand_permission_matrix.sql`
+- this migration remaps legacy permission keys into the expanded keyset
+- if permission-key check constraints are still legacy at runtime, remap inserts can fail
+- ensure constraint drops occur before remap inserts (already reflected in current migration file)
+
 ### Current migration set
 - `20260311191500_init.sql`
 - `20260311203000_calendar_model_alignment.sql`
@@ -141,6 +154,11 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 2. verify permission matrix rows for role
 3. verify required permission key for that action
 4. re-login or refresh permission cache
+
+### “Migration 20260313213000 fails with `role_permissions_permission_key_valid`”
+1. confirm local migration file includes early constraint drops before legacy remap insert
+2. rerun `supabase ... db push --yes`
+3. verify local/remote parity with `supabase ... migration list`
 
 ### “Queue sections empty unexpectedly”
 1. verify assignment (`writer_id` / `publisher_id`)

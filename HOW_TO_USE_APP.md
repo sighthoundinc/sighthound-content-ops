@@ -18,25 +18,50 @@ You cannot:
 Use Dashboard for operations scanning and bulk coordination.
 
 Highlights:
-- queue-based sidebar:
-  - **Your Writing Work**
-  - **Backlog**
-  - **Your Publishing Work**
-- clickable pipeline chips that filter the table
+- clickable pipeline sections that filter the table (writer and publisher lanes)
 - focus strip (`Today`) with:
   - scheduled this week
   - ready to publish
   - delayed
+- metrics are clickable and act as table filters
 - searchable/filterable table with:
   - site badges (`SH`, `RED`)
   - clamped titles for readability
   - urgency row tones (overdue/ready/publishing)
+  - inline writer/publisher stage update dropdowns (permission-based)
+- active filter chips + one-click clear-all behavior
 - exports:
   - Export View CSV
   - Export Selected CSV (permission-based)
 - Edit Columns popover
 - bottom pagination controls
 - right-side blog detail panel
+### Blog Library (`/blogs`)
+Use Blog Library as a fast reference index for published and historical content.
+
+Default behavior:
+- published blogs only
+- sorted by display publish date, newest first
+
+Key behavior:
+- minimal table for lookup/copy workflows:
+  - Sr #
+  - Blog Title
+  - Live URL
+  - Published Date
+  - Site badge (`SH`/`RED`)
+- copy interactions:
+  - copy title
+  - copy URL
+  - copy-all titles
+  - copy-all URLs
+- filters:
+  - published / unpublished scope
+  - stage filter
+  - website filter
+- exports:
+  - view/selected CSV
+  - view/selected PDF
 
 ### Tasks (`/tasks`)
 Use Tasks for day-to-day execution.
@@ -74,6 +99,7 @@ Use detail pages for record-level edits:
 - role-by-role permission matrix
 - reset a role to defaults
 - permission change audit log
+- shown in sidebar only for admin users
 
 ## 3) Workflow basics
 ### Writer
@@ -95,7 +121,7 @@ Use detail pages for record-level edits:
 4. adjust roles/permissions as needed
 
 ## 4) Queue behavior (Dashboard)
-Queue buttons are one-click filters.
+Queue buttons are one-click filters (they do not mutate blog state).
 
 Writer queues:
 - Writing Not Started
@@ -138,3 +164,4 @@ Publisher queues:
 - use queue filters instead of manual searching first
 - keep scheduled dates realistic to reduce overdue noise
 - use comments for decisions and blockers, not side channels
+- use Blog Library (`/blogs`) for fast title/URL lookup and copy tasks

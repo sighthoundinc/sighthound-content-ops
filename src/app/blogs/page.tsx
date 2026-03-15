@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
@@ -7,19 +8,28 @@ import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
 import { TablePaginationControls } from "@/components/table-controls";
 import {
-  BLOG_SELECT_LEGACY,
-  BLOG_SELECT_WITH_DATES,
+  BLOG_SELECT_LEGACY_WITH_RELATIONS,
+  BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogPublishDate,
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
+import { PUBLISHER_STATUS_LABELS, WRITER_STATUS_LABELS } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { BlogRecord, BlogSite } from "@/lib/types";
+import type {
+  BlogRecord,
+  BlogSite,
+  PublisherStageStatus,
+  WriterStageStatus,
+} from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type LibraryStatusFilter = "published" | "published_and_unpublished" | "unpublished";
 type LibraryStage = "writing" | "needs_revision" | "ready_to_publish" | "publishing" | "published";
 type LibrarySiteFilter = "all" | BlogSite;
+type LibraryWriterStatusFilter = "all" | WriterStageStatus;
+type LibraryPublisherStatusFilter = "all" | PublisherStageStatus;
 type LibrarySortField = "published_date" | "title" | "site";
 type LibrarySortDirection = "asc" | "desc";
 type LibraryRowLimit = 10 | 20 | 50 | 100 | "all";
@@ -37,6 +47,25 @@ const SITE_FILTER_OPTIONS: Array<{ value: LibrarySiteFilter; label: string }> = 
   { value: "all", label: "All Sites" },
   { value: "sighthound.com", label: "Sighthound (SH)" },
   { value: "redactor.com", label: "Redactor (RED)" },
+];
+const WRITER_STATUS_FILTER_OPTIONS: Array<{
+  value: LibraryWriterStatusFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All Writer Statuses" },
+  { value: "not_started", label: WRITER_STATUS_LABELS.not_started },
+  { value: "in_progress", label: WRITER_STATUS_LABELS.in_progress },
+  { value: "needs_revision", label: WRITER_STATUS_LABELS.needs_revision },
+  { value: "completed", label: WRITER_STATUS_LABELS.completed },
+];
+const PUBLISHER_STATUS_FILTER_OPTIONS: Array<{
+  value: LibraryPublisherStatusFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All Publisher Statuses" },
+  { value: "not_started", label: PUBLISHER_STATUS_LABELS.not_started },
+  { value: "in_progress", label: PUBLISHER_STATUS_LABELS.in_progress },
+  { value: "completed", label: PUBLISHER_STATUS_LABELS.completed },
 ];
 
 const SORT_OPTIONS: Array<{ value: LibrarySortField; label: string }> = [
@@ -156,18 +185,26 @@ function getStageBadgeClasses(stage: LibraryStage) {
   return "border-slate-200 bg-slate-100 text-slate-700";
 }
 
+function getAssigneeLabel(name: string | null | undefined) {
+  return name && name.trim().length > 0 ? name : "Unassigned";
+}
+
 export default function BlogLibraryPage() {
   const { hasPermission } = useAuth();
+  const { showSaving, showSuccess, showError, updateStatus, pushNotification } =
+    useSystemFeedback();
   const canExportCsv = hasPermission("export_csv");
   const canExportSelectedCsv = hasPermission("export_selected_csv") || canExportCsv;
   const canSelectRows = canExportSelectedCsv;
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<LibraryStatusFilter>("published");
   const [siteFilter, setSiteFilter] = useState<LibrarySiteFilter>("all");
+  const [writerStatusFilter, setWriterStatusFilter] = useState<LibraryWriterStatusFilter>("all");
+  const [publisherStatusFilter, setPublisherStatusFilter] =
+    useState<LibraryPublisherStatusFilter>("all");
   const [sortField, setSortField] = useState<LibrarySortField>("published_date");
   const [sortDirection, setSortDirection] = useState<LibrarySortDirection>("desc");
   const [rowLimit, setRowLimit] = useState<LibraryRowLimit>(DEFAULT_ROW_LIMIT);
@@ -186,7 +223,7 @@ export default function BlogLibraryPage() {
 
       let { data, error: blogsError } = await supabase
         .from("blogs")
-        .select(BLOG_SELECT_WITH_DATES)
+        .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
         .eq("is_archived", false)
         .order("display_published_date", { ascending: false, nullsFirst: false })
         .order("updated_at", { ascending: false });
@@ -194,7 +231,7 @@ export default function BlogLibraryPage() {
       if (isMissingBlogDateColumnsError(blogsError)) {
         const fallback = await supabase
           .from("blogs")
-          .select(BLOG_SELECT_LEGACY)
+          .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
           .eq("is_archived", false)
           .order("target_publish_date", { ascending: false, nullsFirst: false })
           .order("updated_at", { ascending: false });
@@ -219,7 +256,16 @@ export default function BlogLibraryPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, rowLimit, siteFilter, sortDirection, sortField, statusFilter]);
+  }, [
+    publisherStatusFilter,
+    rowLimit,
+    searchQuery,
+    siteFilter,
+    sortDirection,
+    sortField,
+    statusFilter,
+    writerStatusFilter,
+  ]);
 
   useEffect(() => {
     const existingIds = new Set(blogs.map((blog) => blog.id));
@@ -258,6 +304,15 @@ export default function BlogLibraryPage() {
       if (siteFilter !== "all" && blog.site !== siteFilter) {
         return false;
       }
+      if (writerStatusFilter !== "all" && blog.writer_status !== writerStatusFilter) {
+        return false;
+      }
+      if (
+        publisherStatusFilter !== "all" &&
+        blog.publisher_status !== publisherStatusFilter
+      ) {
+        return false;
+      }
 
       if (normalizedSearch.length > 0) {
         const titleText = blog.title.toLowerCase();
@@ -269,7 +324,7 @@ export default function BlogLibraryPage() {
 
       return true;
     });
-  }, [blogs, searchQuery, siteFilter, statusFilter]);
+  }, [blogs, publisherStatusFilter, searchQuery, siteFilter, statusFilter, writerStatusFilter]);
 
   const sortedBlogs = useMemo(() => {
     const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
@@ -324,9 +379,25 @@ export default function BlogLibraryPage() {
     [currentPage, rowLimit, sortedBlogs.length]
   );
   const shouldShowStageColumn = statusFilter !== "published";
-  const tableColumnCount = 5 + (canSelectRows ? 1 : 0) + (shouldShowStageColumn ? 1 : 0);
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 ||
+    statusFilter !== "published" ||
+    siteFilter !== "all" ||
+    writerStatusFilter !== "all" ||
+    publisherStatusFilter !== "all";
+  const tableColumnCount = 7 + (canSelectRows ? 1 : 0) + (shouldShowStageColumn ? 1 : 0);
   const allVisibleSelected =
     pagedBlogs.length > 0 && pagedBlogs.every((blog) => selectedIdSet.has(blog.id));
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("published");
+    setSiteFilter("all");
+    setWriterStatusFilter("all");
+    setPublisherStatusFilter("all");
+    setSortField("published_date");
+    setSortDirection("desc");
+  };
 
   const copyToClipboard = async (
     value: string,
@@ -341,11 +412,9 @@ export default function BlogLibraryPage() {
     try {
       await navigator.clipboard.writeText(value);
       setCopiedCell({ blogId, field });
-      setSuccessMessage(successLabel);
-      setError(null);
+      showSuccess(successLabel);
     } catch {
-      setError("Could not copy to clipboard.");
-      setSuccessMessage(null);
+      showError("Could not copy to clipboard.");
     }
   };
 
@@ -355,17 +424,14 @@ export default function BlogLibraryPage() {
         ? sortedBlogs.map((blog) => blog.title)
         : sortedBlogs.map((blog) => blog.live_url ?? "").filter((value) => value.length > 0);
     if (values.length === 0) {
-      setError(field === "title" ? "No titles to copy." : "No URLs to copy.");
-      setSuccessMessage(null);
+      showError(field === "title" ? "No titles to copy." : "No URLs to copy.");
       return;
     }
     try {
       await navigator.clipboard.writeText(values.join("\n"));
-      setSuccessMessage(field === "title" ? "Copied all titles." : "Copied all URLs.");
-      setError(null);
+      showSuccess(field === "title" ? "Copied all titles." : "Copied all URLs.");
     } catch {
-      setError("Could not copy to clipboard.");
-      setSuccessMessage(null);
+      showError("Could not copy to clipboard.");
     }
   };
 
@@ -420,8 +486,7 @@ export default function BlogLibraryPage() {
   const triggerDownload = (content: BlobPart, filename: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
     if (blob.size === 0) {
-      setError("Export failed because the generated file was empty.");
-      setSuccessMessage(null);
+      showError("Export failed because the generated file was empty.");
       return;
     }
     const url = URL.createObjectURL(blob);
@@ -439,20 +504,27 @@ export default function BlogLibraryPage() {
   };
 
   const exportCsv = (scope: "view" | "selected") => {
+    const statusId = showSaving("Generating CSV…");
     if (scope === "view" && !canExportCsv) {
-      setError("You do not have permission to export the current view.");
-      setSuccessMessage(null);
+      updateStatus(statusId, {
+        type: "error",
+        message: "Permission denied for CSV export.",
+      });
       return;
     }
     if (scope === "selected" && !canExportSelectedCsv) {
-      setError("You do not have permission to export selected rows.");
-      setSuccessMessage(null);
+      updateStatus(statusId, {
+        type: "error",
+        message: "Permission denied for selected CSV export.",
+      });
       return;
     }
     const rows = scope === "selected" ? selectedBlogs : sortedBlogs;
     if (rows.length === 0) {
-      setError(scope === "selected" ? "No selected rows to export." : "No rows to export.");
-      setSuccessMessage(null);
+      updateStatus(statusId, {
+        type: "error",
+        message: scope === "selected" ? "No selected rows to export." : "No rows to export.",
+      });
       return;
     }
     triggerDownload(
@@ -460,32 +532,48 @@ export default function BlogLibraryPage() {
       `blog-library-${scope}-${format(new Date(), "yyyyMMdd-HHmm")}.csv`,
       "text/csv;charset=utf-8;"
     );
-    setError(null);
-    setSuccessMessage(`Exported ${scope} CSV.`);
+    updateStatus(statusId, {
+      type: "success",
+      message: "Export complete.",
+      notification: {
+        icon: "📤",
+        message: `Export ready (${scope === "view" ? "view" : "selected"} CSV)`,
+        href: "/blogs",
+      },
+    });
   };
 
   const exportPdf = (scope: "view" | "selected") => {
+    const statusId = showSaving("Generating PDF…");
     if (scope === "view" && !canExportCsv) {
-      setError("You do not have permission to export the current view.");
-      setSuccessMessage(null);
+      updateStatus(statusId, {
+        type: "error",
+        message: "Permission denied for PDF export.",
+      });
       return;
     }
     if (scope === "selected" && !canExportSelectedCsv) {
-      setError("You do not have permission to export selected rows.");
-      setSuccessMessage(null);
+      updateStatus(statusId, {
+        type: "error",
+        message: "Permission denied for selected PDF export.",
+      });
       return;
     }
     const rows = scope === "selected" ? selectedBlogs : sortedBlogs;
     if (rows.length === 0) {
-      setError(scope === "selected" ? "No selected rows to export." : "No rows to export.");
-      setSuccessMessage(null);
+      updateStatus(statusId, {
+        type: "error",
+        message: scope === "selected" ? "No selected rows to export." : "No rows to export.",
+      });
       return;
     }
 
     const popup = window.open("", "_blank", "width=1100,height=800");
     if (!popup) {
-      setError("Popup blocked. Allow popups to export PDF.");
-      setSuccessMessage(null);
+      updateStatus(statusId, {
+        type: "error",
+        message: "Popup blocked. Allow popups to export PDF.",
+      });
       return;
     }
     const generatedAt = format(new Date(), "MMM d yyyy, h:mm a");
@@ -551,9 +639,20 @@ export default function BlogLibraryPage() {
     };
 
     window.setTimeout(triggerPrintWhenReady, 180);
-
-    setError(null);
-    setSuccessMessage(`Prepared ${scope} PDF export.`);
+    updateStatus(statusId, {
+      type: "success",
+      message: "Export complete.",
+      notification: {
+        icon: "📤",
+        message: `Export ready (${scope === "view" ? "view" : "selected"} PDF)`,
+        href: "/blogs",
+      },
+    });
+    pushNotification({
+      icon: "📄",
+      message: "Use browser print dialog to save PDF",
+      href: "/blogs",
+    });
   };
 
   return (
@@ -613,6 +712,40 @@ export default function BlogLibraryPage() {
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                Writer Status
+                <select
+                  value={writerStatusFilter}
+                  onChange={(event) => {
+                    setWriterStatusFilter(event.target.value as LibraryWriterStatusFilter);
+                  }}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                >
+                  {WRITER_STATUS_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                Publisher Status
+                <select
+                  value={publisherStatusFilter}
+                  onChange={(event) => {
+                    setPublisherStatusFilter(event.target.value as LibraryPublisherStatusFilter);
+                  }}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                >
+                  {PUBLISHER_STATUS_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
                 Sort By
                 <select
                   value={sortField}
@@ -644,17 +777,21 @@ export default function BlogLibraryPage() {
                   ))}
                 </select>
               </label>
+              <div className="flex items-end justify-end">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                >
+                  Reset Filters
+                </button>
+              </div>
             </div>
           </section>
 
           {error ? (
             <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               {error}
-            </p>
-          ) : null}
-          {successMessage ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {successMessage}
             </p>
           ) : null}
 
@@ -666,6 +803,9 @@ export default function BlogLibraryPage() {
                 <span className="font-medium text-slate-900">{sortedBlogs.length}</span> blogs
               </p>
               <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Utilities
+                </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -688,6 +828,9 @@ export default function BlogLibraryPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Exports
+              </span>
               {canExportCsv ? (
                 <>
                   <button
@@ -735,6 +878,18 @@ export default function BlogLibraryPage() {
                 </>
               ) : null}
             </div>
+            {!isLoading && sortedBlogs.length === 0 && hasActiveFilters ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <span>No results match the current filters.</span>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                >
+                  Reset filters
+                </button>
+              </div>
+            ) : null}
 
             {isLoading ? (
               <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
@@ -743,7 +898,7 @@ export default function BlogLibraryPage() {
             ) : (
               <div className="overflow-auto rounded-lg border border-slate-200">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+                  <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
                     <tr>
                       {canSelectRows ? (
                         <th className="px-3 py-2">
@@ -759,6 +914,8 @@ export default function BlogLibraryPage() {
                       <th className="px-3 py-2">Sr #</th>
                       <th className="px-3 py-2">Blog Title</th>
                       <th className="px-3 py-2">Live URL</th>
+                      <th className="px-3 py-2">Writer Status</th>
+                      <th className="px-3 py-2">Publisher Status</th>
                       <th className="px-3 py-2">Published Date</th>
                       {shouldShowStageColumn ? <th className="px-3 py-2">Stage</th> : null}
                       <th className="px-3 py-2">Site</th>
@@ -797,43 +954,90 @@ export default function BlogLibraryPage() {
                             ) : null}
                             <td className="px-3 py-2 align-top text-slate-600">{globalIndex}</td>
                             <td className="px-3 py-2 align-top text-slate-900">
-                              <div className="group/title inline-flex max-w-[34rem] items-center gap-2">
-                                <span className="line-clamp-2">{blog.title}</span>
-                                <button
-                                  type="button"
-                                  title="Copy Title"
-                                  className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 opacity-0 transition group-hover/title:opacity-100 hover:bg-slate-100"
-                                  onClick={() => {
-                                    void copyToClipboard(
-                                      blog.title,
-                                      blog.id,
-                                      "title",
-                                      "Copied title."
-                                    );
-                                  }}
-                                >
-                                  {copiedTitle ? "Copied ✓" : "Copy"}
-                                </button>
+                              <div className="max-w-[34rem] space-y-1">
+                                <div className="group/title inline-flex max-w-full items-start gap-2">
+                                  <Link
+                                    href={`/blogs/${blog.id}`}
+                                    className="line-clamp-2 font-medium text-slate-900 hover:underline"
+                                  >
+                                    {blog.title}
+                                  </Link>
+                                  <button
+                                    type="button"
+                                    title="Copy title"
+                                    className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 opacity-0 transition group-hover/title:opacity-100 hover:bg-slate-100"
+                                    onClick={() => {
+                                      void copyToClipboard(
+                                        blog.title,
+                                        blog.id,
+                                        "title",
+                                        "Copied title."
+                                      );
+                                    }}
+                                  >
+                                    {copiedTitle ? "Copied ✓" : "📋"}
+                                  </button>
+                                  <details className="relative">
+                                    <summary className="cursor-pointer list-none rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100">
+                                      ⋯
+                                    </summary>
+                                    <div className="absolute right-0 z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                                      <Link
+                                        href={`/blogs/${blog.id}`}
+                                        className="block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                                      >
+                                        Open details
+                                      </Link>
+                                      <button
+                                        type="button"
+                                        className="block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
+                                        onClick={() => {
+                                          void copyToClipboard(
+                                            blog.title,
+                                            blog.id,
+                                            "title",
+                                            "Copied title."
+                                          );
+                                        }}
+                                      >
+                                        Copy title
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
+                                        onClick={() => {
+                                          void copyToClipboard(
+                                            blog.live_url ?? "",
+                                            blog.id,
+                                            "url",
+                                            "Copied URL."
+                                          );
+                                        }}
+                                      >
+                                        Copy URL
+                                      </button>
+                                    </div>
+                                  </details>
+                                </div>
+                                <p className="line-clamp-1 text-xs text-slate-500">
+                                  {blog.site === "sighthound.com" ? "SH" : "RED"} • Writer:{" "}
+                                  {getAssigneeLabel(blog.writer?.full_name)} • Publisher:{" "}
+                                  {getAssigneeLabel(blog.publisher?.full_name)}
+                                </p>
                               </div>
                             </td>
                             <td className="px-3 py-2 align-top text-slate-700">
                               {blog.live_url ? (
                                 <div className="group/url inline-flex max-w-[24rem] items-center gap-2">
-                                  <button
-                                    type="button"
+                                  <a
+                                    href={blog.live_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="truncate text-left hover:text-slate-900 hover:underline"
-                                    onClick={() => {
-                                      void copyToClipboard(
-                                        blog.live_url ?? "",
-                                        blog.id,
-                                        "url",
-                                        "Copied URL."
-                                      );
-                                    }}
-                                    title="Copy URL"
+                                    title={blog.live_url}
                                   >
-                                    {blog.live_url}
-                                  </button>
+                                    {blog.live_url} ↗
+                                  </a>
                                   <button
                                     type="button"
                                     title="Copy URL"
@@ -847,12 +1051,18 @@ export default function BlogLibraryPage() {
                                       );
                                     }}
                                   >
-                                    {copiedUrl ? "Copied ✓" : "Copy"}
+                                    {copiedUrl ? "Copied ✓" : "🔗"}
                                   </button>
                                 </div>
                               ) : (
                                 "—"
                               )}
+                            </td>
+                            <td className="px-3 py-2 align-top text-xs text-slate-700">
+                              {WRITER_STATUS_LABELS[blog.writer_status]}
+                            </td>
+                            <td className="px-3 py-2 align-top text-xs text-slate-700">
+                              {PUBLISHER_STATUS_LABELS[blog.publisher_status]}
                             </td>
                             <td className="px-3 py-2 align-top text-slate-600">
                               {formatPublishedDate(blog)}

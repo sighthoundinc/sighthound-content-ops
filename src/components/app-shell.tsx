@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getUserRoles } from "@/lib/roles";
 
 import {
@@ -12,6 +12,7 @@ import {
 import { hasWorkflowOverridePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 const WORK_NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -26,6 +27,23 @@ const CONTENT_NAV_ITEMS = [
 ];
 const NAV_ITEMS = [...WORK_NAV_ITEMS, ...CONTENT_NAV_ITEMS];
 
+function formatNotificationAge(createdAt: number) {
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - createdAt) / 1000));
+  if (elapsedSeconds < 60) {
+    return `${elapsedSeconds}s ago`;
+  }
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return `${elapsedMinutes}m ago`;
+  }
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `${elapsedHours}h ago`;
+  }
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `${elapsedDays}d ago`;
+}
+
 export function AppShell({
   children,
   commandPaletteCommands = [],
@@ -38,6 +56,14 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const { hasPermission, profile, signOut } = useAuth();
+  const {
+    notifications,
+    unreadCount,
+    markNotificationAsRead,
+    clearNotifications,
+  } = useSystemFeedback();
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const notificationPanelRef = useRef<HTMLDivElement | null>(null);
   const canCreateBlogs = hasPermission("create_blog");
   const userRoles = getUserRoles(profile);
   const isAdmin = userRoles.includes("admin");
@@ -165,6 +191,21 @@ export function AppShell({
     };
   }, [canCreateBlogs, pathname, router]);
 
+  useEffect(() => {
+    if (!isNotificationPanelOpen) {
+      return;
+    }
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!notificationPanelRef.current?.contains(event.target as Node)) {
+        setIsNotificationPanelOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isNotificationPanelOpen]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <CommandPalette commands={allCommandPaletteCommands} />
@@ -183,6 +224,75 @@ export function AppShell({
             <p className="hidden rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500 md:block">
               ⌘K / Ctrl+K
             </p>
+            <div className="relative" ref={notificationPanelRef}>
+              <button
+                type="button"
+                aria-label="Notifications"
+                className="relative rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  setIsNotificationPanelOpen((previous) => !previous);
+                }}
+              >
+                🔔
+                {unreadCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {unreadCount}
+                  </span>
+                ) : null}
+              </button>
+              {isNotificationPanelOpen ? (
+                <div className="absolute right-0 z-40 mt-2 w-[360px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
+                    <button
+                      type="button"
+                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      onClick={() => {
+                        clearNotifications();
+                      }}
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
+                      No notifications.
+                    </p>
+                  ) : (
+                    <ul className="mt-2 space-y-1">
+                      {notifications.map((notification) => (
+                        <li key={notification.id}>
+                          <button
+                            type="button"
+                            className={cn(
+                              "w-full rounded-md border px-2 py-2 text-left transition hover:bg-slate-50",
+                              notification.read
+                                ? "border-slate-200 bg-white"
+                                : "border-indigo-200 bg-indigo-50"
+                            )}
+                            onClick={() => {
+                              markNotificationAsRead(notification.id);
+                              setIsNotificationPanelOpen(false);
+                              if (notification.href) {
+                                router.push(notification.href);
+                              }
+                            }}
+                          >
+                            <p className="text-sm text-slate-800">
+                              <span className="mr-2">{notification.icon}</span>
+                              {notification.message}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {formatNotificationAge(notification.createdAt)}
+                            </p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
+            </div>
             <div className="text-right text-sm">
               <p className="font-medium text-slate-900">
                 {profile?.display_name || profile?.full_name}

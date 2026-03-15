@@ -40,6 +40,7 @@ import {
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
+import { getUserRoles } from "@/lib/roles";
 import { hasWorkflowOverridePermission } from "@/lib/permissions";
 import { getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -52,8 +53,10 @@ import {
 import type { BlogRecord } from "@/lib/types";
 import { toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type CalendarMode = "month" | "week";
+type CalendarViewScope = "mine" | "all";
 
 function formatCalendarDateLabel(dateKey: string) {
   const parsed = new Date(`${dateKey}T00:00:00`);
@@ -63,14 +66,24 @@ function formatCalendarDateLabel(dateKey: string) {
   return format(parsed, "MMM d");
 }
 
-function getSiteTag(site: BlogRecord["site"]) {
-  return site === "sighthound.com" ? "SH" : "RED";
-}
 
-function getSiteTagClasses(site: BlogRecord["site"]) {
-  return site === "sighthound.com"
-    ? "bg-blue-50 text-blue-700 border-blue-100"
-    : "bg-orange-50 text-orange-700 border-orange-100";
+function getStageColorClasses({
+  stage,
+  isOverdue,
+}: {
+  stage: ReturnType<typeof getWorkflowStage>;
+  isOverdue: boolean;
+}) {
+  if (isOverdue) {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  if (stage === "published") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (stage === "publishing") {
+    return "border-blue-200 bg-blue-50 text-blue-700";
+  }
+  return "border-slate-200 bg-slate-100 text-slate-700";
 }
 
 function getNoPublishReason(blog: BlogRecord) {
@@ -108,10 +121,12 @@ function DraggableCalendarBlogLine({
   blog,
   canDrag,
   onOpen,
+  todayDateKey,
 }: {
   blog: BlogRecord;
   canDrag: boolean;
   onOpen: () => void;
+  todayDateKey: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: blog.id,
@@ -131,26 +146,38 @@ function DraggableCalendarBlogLine({
       className={`flex w-full items-center gap-2 rounded border border-slate-200 bg-white px-2 py-1.5 text-left text-xs transition-colors duration-150 ${
         canDrag ? "cursor-grab hover:bg-neutral-50 active:cursor-grabbing" : "cursor-default"
       } ${isDragging ? "opacity-60" : ""}`}
+      title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nPublisher · ${
+        blog.publisher?.full_name ?? "Unassigned"
+      }\nPublish Date · ${getBlogScheduledDate(blog) ?? "Unscheduled"}\nStatus · ${toTitleCase(
+        getWorkflowStage({
+          writerStatus: blog.writer_status,
+          publisherStatus: blog.publisher_status,
+        })
+      )}`}
       {...(canDrag ? attributes : {})}
       {...(canDrag ? listeners : {})}
     >
-      <span
-        className={`inline-flex items-center justify-center rounded border px-1.5 py-0.5 text-[10px] font-semibold ${getSiteTagClasses(
-          blog.site
-        )}`}
-      >
-        {getSiteTag(blog.site)}
-      </span>
-      <span className="shrink-0 text-slate-600">
-        {formatCalendarDateLabel(getBlogScheduledDate(blog) ?? "")}
-      </span>
-      <span className="text-slate-600">—</span>
       <span className="min-w-0 truncate font-medium text-slate-800">{blog.title}</span>
-      {blog.overall_status === "published" ? (
-        <span className="text-[10px] text-slate-400" aria-label="Published and fixed schedule">
-          🔒
-        </span>
-      ) : null}
+      {(() => {
+        const stage = getWorkflowStage({
+          writerStatus: blog.writer_status,
+          publisherStatus: blog.publisher_status,
+        });
+        const scheduledDate = getBlogScheduledDate(blog);
+        const isOverdue =
+          scheduledDate !== null &&
+          scheduledDate < todayDateKey &&
+          blog.publisher_status !== "completed";
+        return (
+          <span
+            className={`inline-flex shrink-0 items-center justify-center rounded border px-1.5 py-0.5 text-[10px] font-semibold ${getStageColorClasses(
+              { stage, isOverdue }
+            )}`}
+          >
+            {toTitleCase(stage)}
+          </span>
+        );
+      })()}
     </button>
   );
 }
@@ -188,44 +215,44 @@ function DraggableCalendarBlogCard({
       } ${
         isDragging ? "opacity-60" : ""
       }`}
-      title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nStage · ${toTitleCase(
+      title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nPublisher · ${
+        blog.publisher?.full_name ?? "Unassigned"
+      }\nPublish Date · ${getBlogScheduledDate(blog) ?? "Unscheduled"}\nStatus · ${toTitleCase(
         getWorkflowStage({
           writerStatus: blog.writer_status,
           publisherStatus: blog.publisher_status,
         })
-      )}\nScheduled · ${getBlogScheduledDate(blog) ?? "Unscheduled"}`}
+      )}`}
       {...(canDrag ? attributes : {})}
       {...(canDrag ? listeners : {})}
     >
       <p className="line-clamp-2 font-medium text-slate-700">{blog.title}</p>
       <div className="mt-1 flex items-center gap-1">
-        <WorkflowStageBadge
-          stage={getWorkflowStage({
+        {(() => {
+          const stage = getWorkflowStage({
             writerStatus: blog.writer_status,
             publisherStatus: blog.publisher_status,
-          })}
-        />
-        {isOverdue ? (
-          <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700">
-            ⚠ Overdue
-          </span>
-        ) : null}
-        <span className="text-[10px] text-slate-500">
-          {blog.writer?.full_name ?? "Unassigned"}
-        </span>
-        {blog.overall_status === "published" ? (
-          <span className="text-[10px] text-slate-400" aria-label="Published and fixed schedule">
-            🔒
-          </span>
-        ) : null}
+          });
+          return (
+            <span
+              className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-[10px] font-semibold ${getStageColorClasses(
+                { stage, isOverdue }
+              )}`}
+            >
+              {toTitleCase(stage)}
+            </span>
+          );
+        })()}
       </div>
     </button>
   );
 }
 
 export default function CalendarPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, profile, user } = useAuth();
+  const { showSaving, showError, updateStatus } = useSystemFeedback();
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
+  const [viewScope, setViewScope] = useState<CalendarViewScope>("mine");
   const [mode, setMode] = useState<CalendarMode>("month");
   const [cursorDate, setCursorDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(1);
@@ -237,8 +264,6 @@ export default function CalendarPage() {
   const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -250,6 +275,12 @@ export default function CalendarPage() {
     hasPermission("calendar_drag_reschedule") ||
     hasPermission("reschedule_via_calendar") ||
     canWorkflowOverride;
+  const userRoles = useMemo(() => getUserRoles(profile), [profile]);
+  const canViewAllTasks = userRoles.includes("admin");
+
+  useEffect(() => {
+    setViewScope(canViewAllTasks ? "all" : "mine");
+  }, [canViewAllTasks]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -300,6 +331,13 @@ export default function CalendarPage() {
 
     void loadData();
   }, []);
+
+  const scopedBlogs = useMemo(() => {
+    if (viewScope === "all" || !user?.id) {
+      return blogs;
+    }
+    return blogs.filter((blog) => blog.writer_id === user.id || blog.publisher_id === user.id);
+  }, [blogs, user?.id, viewScope]);
 
   const range = useMemo(() => {
     if (mode === "month") {
@@ -353,7 +391,7 @@ export default function CalendarPage() {
   );
 
   const blogsByDate = useMemo(() => {
-    return blogs.reduce<Record<string, BlogRecord[]>>((acc, blog) => {
+    return scopedBlogs.reduce<Record<string, BlogRecord[]>>((acc, blog) => {
       const scheduledDate = getBlogScheduledDate(blog);
       if (!scheduledDate) {
         return acc;
@@ -365,7 +403,7 @@ export default function CalendarPage() {
       acc[key].push(blog);
       return acc;
     }, {});
-  }, [blogs]);
+  }, [scopedBlogs]);
 
   const weeks = useMemo(() => {
     if (mode !== "month") {
@@ -385,7 +423,7 @@ export default function CalendarPage() {
     return weeks.reduce<Record<string, BlogRecord[]>>((acc, weekDays) => {
       const weekStartKey = format(weekDays[0], "yyyy-MM-dd");
       const weekEnd = weekDays[6];
-      const weeklyBlogs = blogs
+      const weeklyBlogs = scopedBlogs
         .filter((blog) => {
           const scheduledDate = getBlogScheduledDate(blog);
           if (!scheduledDate) {
@@ -408,11 +446,11 @@ export default function CalendarPage() {
       acc[weekStartKey] = weeklyBlogs;
       return acc;
     }, {});
-  }, [blogs, mode, weeks]);
+  }, [mode, scopedBlogs, weeks]);
 
   const noPublishDateBlogs = useMemo(
-    () => blogs.filter((blog) => !getBlogScheduledDate(blog)),
-    [blogs]
+    () => scopedBlogs.filter((blog) => !getBlogScheduledDate(blog)),
+    [scopedBlogs]
   );
 
   const noDatePageCount = useMemo(
@@ -434,13 +472,13 @@ export default function CalendarPage() {
   );
 
   const activeBlog = useMemo(
-    () => blogs.find((blog) => blog.id === activeBlogId) ?? null,
-    [activeBlogId, blogs]
+    () => scopedBlogs.find((blog) => blog.id === activeBlogId) ?? null,
+    [activeBlogId, scopedBlogs]
   );
 
   const draggingBlog = useMemo(
-    () => blogs.find((blog) => blog.id === draggingBlogId) ?? null,
-    [blogs, draggingBlogId]
+    () => scopedBlogs.find((blog) => blog.id === draggingBlogId) ?? null,
+    [draggingBlogId, scopedBlogs]
   );
 
   const dragPreviewMessage = useMemo(() => {
@@ -450,23 +488,13 @@ export default function CalendarPage() {
     return `Moving to ${formatCalendarDateLabel(dragOverDateKey)}`;
   }, [dragOverDateKey, draggingBlog]);
 
-  useEffect(() => {
-    if (!toastMessage) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setToastMessage(null);
-    }, 2200);
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [toastMessage]);
 
   const updateScheduledDate = async (blogId: string, scheduledDate: string) => {
     if (!canDragCalendarBlogs) {
-      setError("You do not have permission to move publish dates on the calendar.");
+      showError("You do not have permission to move publish dates on the calendar.");
       return;
     }
+    const statusId = showSaving("Saving changes…");
     const supabase = getSupabaseBrowserClient();
     const { data, error: updateError } = await supabase
       .from("blogs")
@@ -489,7 +517,14 @@ export default function CalendarPage() {
         .single();
 
       if (fallback.error) {
-        setError(fallback.error.message);
+        updateStatus(statusId, {
+          type: "error",
+          message: "Failed to save changes.",
+          actionLabel: "Retry",
+          onAction: () => {
+            void updateScheduledDate(blogId, scheduledDate);
+          },
+        });
         return;
       }
 
@@ -500,13 +535,27 @@ export default function CalendarPage() {
           ) as Array<Record<string, unknown>>
         ) as BlogRecord[]
       );
-      setSuccessMessage("Scheduled date updated.");
-      setError(null);
+      updateStatus(statusId, {
+        type: "success",
+        message: "Status updated.",
+        notification: {
+          icon: "📅",
+          message: "Calendar event rescheduled",
+          href: `/calendar`,
+        },
+      });
       return;
     }
 
     if (updateError) {
-      setError(updateError.message);
+      updateStatus(statusId, {
+        type: "error",
+        message: "Failed to save changes.",
+        actionLabel: "Retry",
+        onAction: () => {
+          void updateScheduledDate(blogId, scheduledDate);
+        },
+      });
       return;
     }
 
@@ -517,13 +566,20 @@ export default function CalendarPage() {
         ) as Array<Record<string, unknown>>
       ) as BlogRecord[]
     );
-    setSuccessMessage("Scheduled date updated.");
-    setError(null);
+    updateStatus(statusId, {
+      type: "success",
+      message: "Status updated.",
+      notification: {
+        icon: "📅",
+        message: "Calendar event rescheduled",
+        href: `/calendar`,
+      },
+    });
   };
 
   const handleDragStart = (event: DragStartEvent) => {
     const blogId = String(event.active.id);
-    const nextBlog = blogs.find((blog) => blog.id === blogId) ?? null;
+    const nextBlog = scopedBlogs.find((blog) => blog.id === blogId) ?? null;
     if (!nextBlog) {
       return;
     }
@@ -548,7 +604,7 @@ export default function CalendarPage() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const draggedBlogId = String(event.active.id);
-    const draggedBlog = blogs.find((blog) => blog.id === draggedBlogId) ?? null;
+    const draggedBlog = scopedBlogs.find((blog) => blog.id === draggedBlogId) ?? null;
     const overId = event.over ? String(event.over.id) : null;
 
     setDraggingBlogId(null);
@@ -567,8 +623,48 @@ export default function CalendarPage() {
       return;
     }
 
+    const confirmationMessage = `Reschedule "${draggedBlog.title}" from ${
+      currentDateKey ? formatCalendarDateLabel(currentDateKey) : "Unscheduled"
+    } to ${formatCalendarDateLabel(nextDateKey)}?`;
+    const isConfirmed = window.confirm(confirmationMessage);
+    if (!isConfirmed) {
+      return;
+    }
+
     await updateScheduledDate(draggedBlogId, nextDateKey);
-    setToastMessage(`Moved to ${formatCalendarDateLabel(nextDateKey)}`);
+  };
+
+  const handlePanelReschedule = async () => {
+    if (!activeBlog) {
+      return;
+    }
+    if (!canDragCalendarBlogs) {
+      setError("You do not have permission to reschedule calendar items.");
+      return;
+    }
+    const currentDate = getBlogScheduledDate(activeBlog);
+    const input = window.prompt(
+      `Reschedule "${activeBlog.title}" to date (YYYY-MM-DD):`,
+      currentDate ?? ""
+    );
+    if (!input) {
+      return;
+    }
+    const normalized = input.trim();
+    const isValid = /^\d{4}-\d{2}-\d{2}$/.test(normalized);
+    if (!isValid) {
+      setError("Use YYYY-MM-DD format for rescheduling.");
+      return;
+    }
+    const isConfirmed = window.confirm(
+      `Reschedule from ${
+        currentDate ? formatCalendarDateLabel(currentDate) : "Unscheduled"
+      } to ${formatCalendarDateLabel(normalized)}?`
+    );
+    if (!isConfirmed) {
+      return;
+    }
+    await updateScheduledDate(activeBlog.id, normalized);
   };
 
   return (
@@ -644,6 +740,21 @@ export default function CalendarPage() {
                 <option value="month">Month</option>
                 <option value="week">Week</option>
               </select>
+              <label className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                <span className="font-medium">View</span>
+                <select
+                  value={viewScope}
+                  onChange={(event) => {
+                    setViewScope(event.target.value as CalendarViewScope);
+                  }}
+                  className="border-none bg-transparent p-0 text-sm focus:outline-none"
+                >
+                  <option value="mine">My tasks</option>
+                  <option value="all" disabled={!canViewAllTasks}>
+                    All tasks
+                  </option>
+                </select>
+              </label>
             </div>
           </header>
 
@@ -663,11 +774,6 @@ export default function CalendarPage() {
             </p>
           ) : (
             <>
-              {successMessage ? (
-                <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  {successMessage}
-                </p>
-              ) : null}
               <section className="space-y-3">
                 {dragPreviewMessage ? (
                   <p className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
@@ -756,6 +862,7 @@ export default function CalendarPage() {
                                       key={blog.id}
                                       blog={blog}
                                       canDrag={canDragThisBlog}
+                                      todayDateKey={todayDateKey}
                                       onOpen={() => {
                                         setActiveBlogId(blog.id);
                                       }}
@@ -943,23 +1050,33 @@ export default function CalendarPage() {
                   </div>
                   <p>Scheduled: {getBlogScheduledDate(activeBlog) ?? "Unscheduled"}</p>
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/blogs/${activeBlog.id}`}
                     className="inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    Open full blog page
+                    Edit
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handlePanelReschedule();
+                    }}
+                    className="inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Reschedule
+                  </button>
+                  <Link
+                    href={`/blogs/${activeBlog.id}`}
+                    className="inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Open blog
                   </Link>
                 </div>
               </aside>
             </>
           ) : null}
         </div>
-        {toastMessage ? (
-          <div className="pointer-events-none fixed bottom-5 right-5 z-50 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm">
-            {toastMessage}
-          </div>
-        ) : null}
       </AppShell>
     </ProtectedPage>
   );

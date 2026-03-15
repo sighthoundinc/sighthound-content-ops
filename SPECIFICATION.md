@@ -80,21 +80,34 @@ Behavior:
 Primary operations page.
 
 Key behavior:
-- queue hierarchy:
-  - Your Writing Work
-  - Backlog
-  - Your Publishing Work
-- clickable queue filters and pipeline chips
-- today strip (scheduled this week / ready / delayed)
+- navigation separates workflow vs configuration pages
+- permissions navigation visible only for admin users
+- active nav link uses stronger visual state (highlight + indicator)
+- clickable queue filters and pipeline chips (filter-only behavior)
+- today strip (scheduled this week / ready / delayed) with clickable metric filtering
+- delayed definition: scheduled date passed while publisher stage is not completed
+- active filter chips and clear-all control
 - table optimized for scanability:
   - two-line clamped titles
   - site badges (`SH`, `RED`)
   - urgency/state row tones
+  - inline writer/publisher stage controls (permission-gated)
 - export controls (permission-gated)
 - edit columns popover
 - bulk actions (permission-gated)
 - right-side detail panel
 - bottom pagination controls
+
+### Blog Library (`/blogs`)
+Reference-first index for historical and published content lookup.
+
+Key behavior:
+- default dataset: published records, newest first by `display_published_date`
+- lightweight table for copy/paste and lookup workflows
+- searchable by title/url
+- stage/site/status filters
+- row-level and bulk copy actions for title/url
+- export view/selected data as CSV or PDF
 
 ### Tasks (`/tasks`)
 - top-3 priority items first
@@ -192,6 +205,7 @@ The project is migration-driven (`supabase/migrations`) with compatibility layer
 - deterministic DB-level invariants for workflow integrity
 - high traceability (history + comments + permission audits)
 - low-cognitive-load UI for operational scanning
+- predictable filter/search behavior with immediate visual state feedback
 
 ## 12) Acceptance criteria (current)
 1. Permission-guarded workflows execute with DB-authoritative enforcement.

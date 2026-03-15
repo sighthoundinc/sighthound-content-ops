@@ -31,9 +31,48 @@ type PermissionRow = {
   enabled: boolean;
 };
 
+const TASK_LABEL_OVERRIDES: Partial<Record<CanonicalAppPermissionKey, string>> = {
+  create_blog: "Create blog drafts",
+  edit_blog_title: "Edit blog titles",
+  request_revision: "Request and approve revisions",
+  edit_scheduled_publish_date: "Schedule publish dates",
+  complete_publishing: "Publish blogs",
+  change_writer_assignment: "Assign writers",
+  change_publisher_assignment: "Assign publishers",
+  view_writing_queue: "Access writing queue",
+  view_publishing_queue: "Access publishing queue",
+  export_csv: "Export filtered results",
+  export_selected_csv: "Export selected rows",
+};
+
+const PERMISSION_UI_IMPACTS: Partial<Record<CanonicalAppPermissionKey, string[]>> = {
+  complete_publishing: [
+    "Publish action button",
+    "Publisher status controls",
+    "Publishing queue access",
+  ],
+  change_writer_assignment: ["Writer assignment dropdowns", "Bulk writer reassignment controls"],
+  change_publisher_assignment: [
+    "Publisher assignment dropdowns",
+    "Bulk publisher reassignment controls",
+  ],
+  edit_scheduled_publish_date: [
+    "Scheduled date edit fields",
+    "Calendar reschedule actions",
+  ],
+  create_blog: ["Create blog entry action", "New blog form access"],
+  export_csv: ["Export View CSV", "Export View PDF"],
+  export_selected_csv: ["Export Selected CSV", "Export Selected PDF"],
+};
+
+function getTaskLabel(permissionKey: CanonicalAppPermissionKey, fallbackLabel: string) {
+  return TASK_LABEL_OVERRIDES[permissionKey] ?? fallbackLabel;
+}
+
 export default function PermissionsSettingsPage() {
   const { refreshPermissions, session } = useAuth();
   const [selectedRole, setSelectedRole] = useState<AppRole>("writer");
+  const [simulatedRole, setSimulatedRole] = useState<AppRole | "off">("off");
   const [permissionRows, setPermissionRows] = useState<PermissionRow[]>([]);
   const [auditRows, setAuditRows] = useState<PermissionAuditRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,11 +126,23 @@ export default function PermissionsSettingsPage() {
     () => getRolePermissionState(selectedRole, permissionRows),
     [permissionRows, selectedRole]
   );
+  const simulationPermissionState = useMemo(
+    () =>
+      simulatedRole === "off"
+        ? null
+        : getRolePermissionState(simulatedRole, permissionRows),
+    [permissionRows, simulatedRole]
+  );
+  const isSimulationActive = simulatedRole !== "off";
 
   const togglePermission = async (
     permissionKey: CanonicalAppPermissionKey,
     enabled: boolean
   ) => {
+    if (isSimulationActive) {
+      setError("Disable role simulation before changing permissions.");
+      return;
+    }
     if (!session?.access_token) {
       setError("Missing active session token.");
       return;
@@ -126,6 +177,10 @@ export default function PermissionsSettingsPage() {
   };
 
   const resetRolePermissions = async () => {
+    if (isSimulationActive) {
+      setError("Disable role simulation before resetting permissions.");
+      return;
+    }
     if (!session?.access_token) {
       setError("Missing active session token.");
       return;
@@ -180,6 +235,12 @@ export default function PermissionsSettingsPage() {
               {success}
             </p>
           ) : null}
+          {isSimulationActive ? (
+            <p className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
+              Viewing dashboard as <span className="font-semibold">{simulatedRole}</span>. Changes
+              are disabled in simulation mode.
+            </p>
+          ) : null}
 
           <section className="rounded-lg border border-slate-200 p-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -199,9 +260,24 @@ export default function PermissionsSettingsPage() {
                   ))}
                 </select>
               </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <span className="font-medium">View as role:</span>
+                <select
+                  value={simulatedRole}
+                  onChange={(event) => {
+                    setSimulatedRole(event.target.value as AppRole | "off");
+                  }}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option value="off">Off</option>
+                  <option value="writer">Writer</option>
+                  <option value="publisher">Publisher</option>
+                  <option value="editor">Editor</option>
+                </select>
+              </label>
               <button
                 type="button"
-                disabled={isResetting || isLoading}
+                disabled={isResetting || isLoading || isSimulationActive}
                 className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => {
                   void resetRolePermissions();
@@ -229,13 +305,29 @@ export default function PermissionsSettingsPage() {
                           className="flex items-start justify-between gap-3 px-3 py-2"
                         >
                           <div>
-                            <p className="text-sm font-medium text-slate-900">{definition.label}</p>
+                            <p className="text-sm font-medium text-slate-900">
+                              {getTaskLabel(definition.key, definition.label)}
+                            </p>
                             <p className="text-xs text-slate-500">{definition.description}</p>
+                            {PERMISSION_UI_IMPACTS[definition.key]?.length ? (
+                              <p className="mt-1 text-xs text-slate-600">
+                                Enables: {PERMISSION_UI_IMPACTS[definition.key]?.join(" • ")}
+                              </p>
+                            ) : null}
                           </div>
                           <input
                             type="checkbox"
-                            checked={Boolean(rolePermissionState[definition.key])}
-                            disabled={savingPermissionKey === definition.key}
+                            checked={Boolean(
+                              (simulationPermissionState ?? rolePermissionState)[definition.key]
+                            )}
+                            disabled={
+                              isSimulationActive || savingPermissionKey === definition.key
+                            }
+                            title={
+                              isSimulationActive
+                                ? "Disable role simulation to change permissions."
+                                : undefined
+                            }
                             onChange={(event) => {
                               void togglePermission(definition.key, event.target.checked);
                             }}

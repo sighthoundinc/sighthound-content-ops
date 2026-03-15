@@ -17,18 +17,30 @@ Internal content operations platform for Sighthound marketing workflows across `
 
 ## Current UX highlights
 ### Dashboard
-- Sidebar hierarchy:
-  - Your Writing Work
-  - Backlog
-  - Your Publishing Work
-- Clickable queue/pipeline filters
-- Today strip (scheduled this week, ready, delayed)
+- Sidebar navigation split:
+  - workflow pages first (`Dashboard`, `My Tasks`, `Calendar`, `Blogs`, `Ideas`, `Social Posts`)
+  - divider
+  - configuration pages (`Settings`, `Permissions` for admins only)
+- Active nav page has stronger visual state (left border + highlighted row)
+- Clickable queue/pipeline filters and clickable Today metrics
+- Active filter chips + clear-all behavior
 - Scan-friendly table:
   - clamped title rendering
   - SH/RED site badges
   - urgency row tones
+  - inline writer/publisher stage controls (permission-gated)
 - Export View / Export Selected CSV (permission-gated)
 - Edit Columns popover and bottom pagination controls
+
+### Blogs Library (`/blogs`)
+- Dedicated reference-first page for title/URL lookup
+- Default: published-only, newest-first by display publish date
+- Copy-first utilities:
+  - row-level title/url copy
+  - copy-all titles / copy-all URLs
+- Exports:
+  - view/selected CSV
+  - view/selected PDF
 
 ### Tasks
 - Top-3 priority summary + expandable full list

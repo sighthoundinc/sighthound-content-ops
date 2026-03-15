@@ -95,6 +95,15 @@ as $$
   ]::text[];
 $$;
 
+alter table public.role_permissions
+drop constraint if exists role_permissions_permission_key_valid;
+
+alter table public.role_permissions
+drop constraint if exists role_permissions_locked_admin_only;
+
+alter table public.permission_audit_logs
+drop constraint if exists permission_audit_logs_permission_key_valid;
+
 with legacy_permission_map as (
   select *
   from (

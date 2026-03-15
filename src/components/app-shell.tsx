@@ -11,7 +11,7 @@ import {
 } from "@/components/command-palette";
 import { Button } from "@/components/button";
 import { KbdShortcut } from "@/components/kbd-shortcut";
-import { hasWorkflowOverridePermission } from "@/lib/permissions";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import {
   clearQuickViewSnapshot,
   readQuickViewSnapshot,
@@ -77,12 +77,16 @@ export function AppShell({
   );
   const [quickViewError, setQuickViewError] = useState<string | null>(null);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
-  const canCreateBlogs = hasPermission("create_blog");
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
+  const canCreateBlogs = permissionContract.canCreateBlog;
   const userRoles = getUserRoles(profile);
   const isAdmin = userRoles.includes("admin");
   const canManagePermissions = isAdmin;
   const canManageSocialPosts =
-    hasPermission("view_dashboard") || hasWorkflowOverridePermission(hasPermission);
+    permissionContract.canViewDashboard || permissionContract.canOverrideWorkflow;
   const isQuickViewActive = Boolean(
     quickViewSnapshot &&
       user?.id &&

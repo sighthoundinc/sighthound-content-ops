@@ -94,30 +94,17 @@ function comparePublishDatesAsc(leftDate: string | null, rightDate: string | nul
 function getTaskReason({
   isDelayed,
   statusPriority,
-  scheduledDate,
-  todayDateKey,
 }: {
   isDelayed: boolean;
   statusPriority: number;
-  scheduledDate: string | null;
-  todayDateKey: string;
 }) {
   if (isDelayed) {
-    return "Delayed";
-  }
-  if (statusPriority === 0) {
-    return "In Progress";
-  }
-  if (scheduledDate && scheduledDate <= todayDateKey) {
-    return "Closest publish date";
-  }
-  if (statusPriority === 1) {
-    return "Newly assigned";
+    return "⚠ Overdue";
   }
   if (statusPriority === 2) {
-    return "Future scheduled";
+    return "Upcoming";
   }
-  return null;
+  return "Due Soon";
 }
 
 export default function MyTasksPage() {
@@ -258,8 +245,6 @@ export default function MyTasksPage() {
           reason: getTaskReason({
             isDelayed,
             statusPriority,
-            scheduledDate,
-            todayDateKey,
           }),
         });
       }
@@ -290,8 +275,6 @@ export default function MyTasksPage() {
           reason: getTaskReason({
             isDelayed,
             statusPriority,
-            scheduledDate,
-            todayDateKey,
           }),
         });
       }
@@ -728,7 +711,7 @@ export default function MyTasksPage() {
                                 </Link>
                                 <p className="mt-1 text-xs text-slate-500">
                                   {task.kind === "writer" ? "Writer task" : "Publisher task"}
-                                  {task.isDelayed ? " · Delayed" : ""}
+                                  {task.isDelayed ? " · ⚠ Overdue" : ""}
                                 </p>
                               </td>
                               <td className="px-3 py-2 align-top">

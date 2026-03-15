@@ -12,7 +12,7 @@ import {
   TableResultsSummary,
   TableRowLimitSelect,
 } from "@/components/table-controls";
-import { hasWorkflowOverridePermission } from "@/lib/permissions";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import {
   clearQuickViewSnapshot,
   readQuickViewSnapshot,
@@ -86,22 +86,17 @@ function splitName(fullName: string) {
 
 export default function SettingsPage() {
   const { hasPermission, session, profile, refreshProfile, user } = useAuth();
-  const canWorkflowOverride = hasWorkflowOverridePermission(hasPermission);
-  const canEditAppSettings =
-    hasPermission("manage_environment_settings") || canWorkflowOverride;
-  const canManageUsers = hasPermission("manage_users");
-  const canManageRoles = hasPermission("assign_roles");
-  const canManagePermissions = hasPermission("manage_permissions");
-  const canReassignWriterAssignments =
-    hasPermission("change_writer_assignment") ||
-    hasPermission("transfer_user_assignments") ||
-    hasPermission("bulk_reassign_blogs") ||
-    canWorkflowOverride;
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
+  const canEditAppSettings = permissionContract.canEditAppSettings;
+  const canManageUsers = permissionContract.canManageUsers;
+  const canManageRoles = permissionContract.canManageRoles;
+  const canManagePermissions = permissionContract.canManagePermissions;
+  const canReassignWriterAssignments = permissionContract.canReassignWriterAssignments;
   const canReassignPublisherAssignments =
-    hasPermission("change_publisher_assignment") ||
-    hasPermission("transfer_user_assignments") ||
-    hasPermission("bulk_reassign_blogs") ||
-    canWorkflowOverride;
+    permissionContract.canReassignPublisherAssignments;
   const canManageUserDirectory = canManageUsers || canManageRoles;
   const canReassignAssignments =
     canReassignWriterAssignments || canReassignPublisherAssignments;

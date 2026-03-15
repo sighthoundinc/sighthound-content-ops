@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogIdeaRecord, BlogSite } from "@/lib/types";
@@ -23,6 +24,10 @@ function formatDateTime(value: string) {
 export default function IdeasPage() {
   const router = useRouter();
   const { hasPermission, user } = useAuth();
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
   const [ideas, setIdeas] = useState<BlogIdeaRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +38,7 @@ export default function IdeasPage() {
   const [site, setSite] = useState<BlogSite>("sighthound.com");
   const [description, setDescription] = useState("");
 
-  const canCreateBlog = hasPermission("create_blog");
+  const canCreateBlog = permissionContract.canCreateBlog;
 
   const loadIdeas = async () => {
     setIsLoading(true);

@@ -25,8 +25,8 @@ import {
 import {
   canTransitionPublisherStatus,
   canTransitionWriterStatus,
-  hasWorkflowOverridePermission,
 } from "@/lib/permissions";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
@@ -191,10 +191,13 @@ export default function BlogCardBoardPage() {
   const router = useRouter();
   const { hasPermission, user } = useAuth();
   const { showSaving, showSuccess, showError, updateStatus } = useSystemFeedback();
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
 
-  const canCreateBlogs = hasPermission("create_blog");
-  const canOverrideWorkflow = hasWorkflowOverridePermission(hasPermission);
-  const canAssignWriter = hasPermission("change_writer_assignment") || canOverrideWorkflow;
+  const canCreateBlogs = permissionContract.canCreateBlog;
+  const canAssignWriter = permissionContract.canChangeWriterAssignment;
 
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [authors, setAuthors] = useState<ProfileRecord[]>([]);

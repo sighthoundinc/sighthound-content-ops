@@ -11,7 +11,7 @@ import {
   isMissingBlogDateColumnsError,
 } from "@/lib/blog-schema";
 import { notifySlack } from "@/lib/notifications";
-import { hasWorkflowOverridePermission } from "@/lib/permissions";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogSite, ProfileRecord } from "@/lib/types";
@@ -60,12 +60,13 @@ function NewBlogPageContent() {
   const [prefilledIdeaId, setPrefilledIdeaId] = useState<string | null>(null);
   const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
   const [convertedIdeaBlogId, setConvertedIdeaBlogId] = useState<string | null>(null);
-  const canWorkflowOverride = hasWorkflowOverridePermission(hasPermission);
-  const canCreateComments = hasPermission("create_comment");
-  const canManageWriterAssignment =
-    hasPermission("change_writer_assignment") || canWorkflowOverride;
-  const canManagePublisherAssignment =
-    hasPermission("change_publisher_assignment") || canWorkflowOverride;
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
+  const canCreateComments = permissionContract.canCreateComment;
+  const canManageWriterAssignment = permissionContract.canChangeWriterAssignment;
+  const canManagePublisherAssignment = permissionContract.canChangePublisherAssignment;
   const canManageAssignments = canManageWriterAssignment || canManagePublisherAssignment;
 
   useEffect(() => {

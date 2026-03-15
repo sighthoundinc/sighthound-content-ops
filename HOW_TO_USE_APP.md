@@ -22,7 +22,7 @@ Highlights:
 - focus strip (`Today`) with:
   - scheduled this week
   - ready to publish
-  - delayed
+  - delayed (scheduled publish date is in the past and overall status is not `Published`)
 - metrics are clickable and act as table filters
 - searchable/filterable table with:
   - site badges (`SH`, `RED`)
@@ -51,8 +51,7 @@ Key behavior:
   - Published Date
   - Site badge (`SH`/`RED`)
 - copy interactions:
-  - copy title
-  - copy URL
+  - row-level copy controls for title/URL (shown on row hover)
   - copy-all titles
   - copy-all URLs
 - filters:
@@ -60,8 +59,8 @@ Key behavior:
   - stage filter
   - website filter
 - exports:
-  - view/selected CSV
-  - view/selected PDF
+  - View Export: CSV + PDF (`export_csv`)
+  - Selected Export: CSV (`export_selected_csv`)
 
 ### CardBoard (`/blogs/cardboard`)
 Use CardBoard for kanban-style pipeline management.
@@ -77,7 +76,8 @@ Use Tasks for day-to-day execution.
 - Expand to full paginated list
 - Priority indicators:
   - `⚠ Overdue`
-  - `Soon`
+  - `Due Soon`
+  - `Upcoming`
 
 ### Calendar (`/calendar`)
 Use Calendar for schedule planning.
@@ -123,6 +123,8 @@ Use detail pages for record-level edits:
 - shown in sidebar only for admin users
 
 ## 3) Workflow basics
+Lifecycle used across CardBoard + filtering:
+- `Idea → Writing → Reviewing → Publishing → Published`
 ### Writer
 1. Open queue/task/blog
 2. Update `writer_status`
@@ -145,18 +147,17 @@ Use detail pages for record-level edits:
 Queue buttons are one-click filters (they do not mutate blog state).
 
 Writer queues:
-- Writing Not Started
-- Writing In Progress
+- Drafting
 - Needs Revision
-- Completed — Waiting for Publishing
+- Ready for Publishing
 
 Backlog:
-- Unscheduled Ideas
+- Backlog (unscheduled ideas)
 
 Publisher queues:
-- Publishing Not Started
-- Publishing In Progress
-- Ready for Final Review
+- Not Started
+- In Progress
+- Final Review
 - Published
 
 ## 5) Comments and activity
@@ -170,8 +171,9 @@ Publisher queues:
 - your role may not have that permission
 - ask admin to review role permissions in `/settings/permissions`
 
-### “I can’t export selected rows”
-- this is controlled by `export_selected_csv` permission
+### “I can’t export rows”
+- View Export requires `export_csv` (Dashboard view CSV, Blog Library view CSV/PDF)
+- Selected Export requires `export_selected_csv` (Dashboard selected CSV, Blog Library selected CSV)
 
 ### “My queue looks empty”
 - confirm assignment and stage

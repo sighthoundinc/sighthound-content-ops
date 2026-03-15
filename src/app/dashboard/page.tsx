@@ -38,8 +38,8 @@ import {
 import {
   canTransitionPublisherStatus,
   canTransitionWriterStatus,
-  hasWorkflowOverridePermission,
 } from "@/lib/permissions";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import {
   OVERALL_STATUSES,
   PUBLISHER_STATUS_LABELS,
@@ -418,37 +418,23 @@ const normalizeSavedViews = (value: unknown): SavedDashboardView[] => {
 export default function DashboardPage() {
   const router = useRouter();
   const { hasPermission, profile, user } = useAuth();
-  const canOverrideWorkflow = hasWorkflowOverridePermission(hasPermission);
-  const canCreateBlog = hasPermission("create_blog");
-  const canExportCsv = hasPermission("export_csv");
-  const canExportSelectedCsv = hasPermission("export_selected_csv") || canExportCsv;
-  const canChangeWriterAssignment =
-    hasPermission("change_writer_assignment") || canOverrideWorkflow;
-  const canChangePublisherAssignment =
-    hasPermission("change_publisher_assignment") || canOverrideWorkflow;
-  const canEditScheduledDate =
-    hasPermission("edit_scheduled_publish_date") || canOverrideWorkflow;
-  const canEditDisplayDate =
-    hasPermission("edit_display_publish_date") || canOverrideWorkflow;
-  const canEditWritingStage =
-    hasPermission("edit_writer_status") ||
-    hasPermission("start_writing") ||
-    hasPermission("submit_draft") ||
-    hasPermission("request_revision") ||
-    canOverrideWorkflow;
-  const canEditPublishingStage =
-    hasPermission("edit_publisher_status") ||
-    hasPermission("start_publishing") ||
-    hasPermission("complete_publishing") ||
-    canOverrideWorkflow;
-  const canDeleteBlog = hasPermission("delete_blog") || canOverrideWorkflow;
-  const canCreateComments = hasPermission("create_comment");
-  const canShowWriterQueue =
-    hasPermission("view_writing_queue") ||
-    canOverrideWorkflow;
-  const canShowPublisherQueue =
-    hasPermission("view_publishing_queue") ||
-    canOverrideWorkflow;
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
+  const canCreateBlog = permissionContract.canCreateBlog;
+  const canExportCsv = permissionContract.canExportCsv;
+  const canExportSelectedCsv = permissionContract.canExportSelectedCsv;
+  const canChangeWriterAssignment = permissionContract.canChangeWriterAssignment;
+  const canChangePublisherAssignment = permissionContract.canChangePublisherAssignment;
+  const canEditScheduledDate = permissionContract.canEditScheduledPublishDate;
+  const canEditDisplayDate = permissionContract.canEditDisplayPublishDate;
+  const canEditWritingStage = permissionContract.canEditWriterWorkflow;
+  const canEditPublishingStage = permissionContract.canEditPublisherWorkflow;
+  const canDeleteBlog = permissionContract.canDeleteBlog;
+  const canCreateComments = permissionContract.canCreateComment;
+  const canShowWriterQueue = permissionContract.canViewWritingQueue;
+  const canShowPublisherQueue = permissionContract.canViewPublishingQueue;
   const canRunBulkActions =
     canChangeWriterAssignment ||
     canChangePublisherAssignment ||
@@ -1052,7 +1038,7 @@ export default function DashboardPage() {
         return (
           scheduledDate !== null &&
           scheduledDate < todayKey &&
-          blog.publisher_status !== "completed"
+          blog.overall_status !== "published"
         );
       }
 
@@ -1666,7 +1652,7 @@ export default function DashboardPage() {
       setSuccessMessage(null);
       return;
     }
-    if (!canExportCsv) {
+    if (scope === "view" && !canExportCsv) {
       setError("You do not have permission to export CSV.");
       setSuccessMessage(null);
       return;
@@ -2490,7 +2476,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                title="Blogs whose scheduled publish date has passed but publisher status is not completed."
+                title="Blogs whose scheduled publish date has passed and overall status is not published."
                 className={`rounded border px-2 py-1 text-left text-slate-700 ${
                   activeMetricFilter === "delayed"
                     ? "border-slate-900 bg-slate-900 text-white"

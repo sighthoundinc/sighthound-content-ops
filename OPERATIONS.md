@@ -9,7 +9,7 @@ For end-user instructions, see `HOW_TO_USE_APP.md`.
 - Integration: Slack via `supabase/functions/slack-notify`
 - Authorization: permission matrix + role templates + DB checks
 
-Durable state and authorization decisions are DB-authoritative. UI checks are UX guardrails.
+Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
 
 ## 2) Key directories
 - `src/` — app routes/components/libs
@@ -106,6 +106,12 @@ Behavior:
 - reset selected role to default template
 - permission change audit log
 - admin-locked permissions remain non-configurable
+- frontend mappings to verify during access debugging:
+  - `edit_scheduled_publish_date` gates Scheduled Publish Date edits and calendar reschedule actions
+  - `edit_display_publish_date` gates Display Publish Date edits
+  - `export_csv` gates View Export actions
+  - `export_selected_csv` gates Selected Export actions
+  - `view_writing_queue` / `view_publishing_queue` gate dashboard queue sections
 
 When debugging access:
 1. verify role assignment (`profiles.role`, `profiles.user_roles`)

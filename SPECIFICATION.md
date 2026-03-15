@@ -42,18 +42,27 @@ Permission model:
 - role templates + configurable subset for managed roles
 - admin-locked permissions not editable in role matrix
 - permission audit history for changes
+- key UI mappings:
+  - `edit_scheduled_publish_date` → Scheduled Publish Date fields + calendar reschedule
+  - `edit_display_publish_date` → Display Publish Date fields
+  - `export_csv` → View Export actions
+  - `export_selected_csv` → Selected Export actions
 
 Control plane:
 - UI: `/settings/permissions`
 - API: `/api/admin/permissions`
 
 Authorization source of truth:
-- database policies/functions/triggers (UI is assistive, not authoritative)
+- content mutations are DB-authorized via policies/functions/triggers (UI is assistive, not authoritative)
+- administrative endpoints are authorized in the application layer before `service_role` execution
 
 ## 4) Workflow model
 Stages:
 1. Writing
 2. Publishing
+
+Operational lifecycle labels used in CardBoard and table-filter deep links:
+- `Idea → Writing → Reviewing → Publishing → Published`
 
 Enums:
 - `writer_status`: `not_started | in_progress | needs_revision | completed`
@@ -87,8 +96,10 @@ Key behavior:
 - permissions navigation visible only for admin users
 - active nav link uses stronger visual state (highlight + indicator)
 - clickable queue filters and pipeline chips (filter-only behavior)
+- writing queue labels: `Drafting`, `Needs Revision`, `Ready for Publishing`, `Backlog`
+- publishing queue labels: `Not Started`, `In Progress`, `Final Review`, `Published`
 - today strip (scheduled this week / ready / delayed) with clickable metric filtering
-- delayed definition: scheduled date passed while publisher stage is not completed
+- delayed definition: scheduled publish date passed while `overall_status != published`
 - active filter chips and clear-all control
 - table optimized for scanability:
   - two-line clamped titles
@@ -109,8 +120,10 @@ Key behavior:
 - lightweight table for copy/paste and lookup workflows
 - searchable by title/url
 - stage/site/status filters
-- row-level and bulk copy actions for title/url
-- export view/selected data as CSV or PDF
+- row-level (hover-revealed) and bulk copy actions for title/url
+- export scope behavior:
+  - View Export: CSV + PDF
+  - Selected Export: CSV
 
 ### CardBoard (`/blogs/cardboard`)
 - kanban board with stages (`Idea`, `Writing`, `Reviewing`, `Publishing`, `Published`)
@@ -121,7 +134,7 @@ Key behavior:
 ### Tasks (`/tasks`)
 - top-3 priority items first
 - full list expansion with pagination
-- urgency tags (`⚠ Overdue`, `Soon`)
+- urgency tags (`⚠ Overdue`, `Due Soon`, `Upcoming`)
 
 ### Calendar (`/calendar`)
 - month/week views

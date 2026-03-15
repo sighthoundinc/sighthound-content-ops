@@ -20,8 +20,8 @@ import { notifySlack } from "@/lib/notifications";
 import {
   canTransitionPublisherStatus,
   canTransitionWriterStatus,
-  hasWorkflowOverridePermission,
 } from "@/lib/permissions";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { PUBLISHER_STATUSES, SITES, WRITER_STATUSES, getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
@@ -258,35 +258,20 @@ export default function BlogDetailPage() {
 
     void loadData();
   }, [blogId]);
-
-  const canOverrideWorkflow = hasWorkflowOverridePermission(hasPermission);
-  const canMetadataEdit =
-    hasPermission("edit_blog_metadata") ||
-    hasPermission("edit_blog_title") ||
-    canOverrideWorkflow;
-  const canChangeWriterAssignment =
-    hasPermission("change_writer_assignment") || canOverrideWorkflow;
-  const canChangePublisherAssignment =
-    hasPermission("change_publisher_assignment") || canOverrideWorkflow;
-  const canEditScheduledDate =
-    hasPermission("edit_scheduled_publish_date") || canOverrideWorkflow;
-  const canEditDisplayDate =
-    hasPermission("edit_display_publish_date") || canOverrideWorkflow;
-  const canArchiveBlog = hasPermission("archive_blog") || canOverrideWorkflow;
-  const canCreateComments = hasPermission("create_comment");
-  const canWriterEdit =
-    hasPermission("edit_writer_status") ||
-    hasPermission("edit_google_doc_link") ||
-    hasPermission("start_writing") ||
-    hasPermission("submit_draft") ||
-    hasPermission("request_revision") ||
-    canOverrideWorkflow;
-  const canPublisherEdit =
-    hasPermission("edit_publisher_status") ||
-    hasPermission("edit_live_url") ||
-    hasPermission("start_publishing") ||
-    hasPermission("complete_publishing") ||
-    canOverrideWorkflow;
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
+  const canOverrideWorkflow = permissionContract.canOverrideWorkflow;
+  const canMetadataEdit = permissionContract.canEditBlogMetadata;
+  const canChangeWriterAssignment = permissionContract.canChangeWriterAssignment;
+  const canChangePublisherAssignment = permissionContract.canChangePublisherAssignment;
+  const canEditScheduledDate = permissionContract.canEditScheduledPublishDate;
+  const canEditDisplayDate = permissionContract.canEditDisplayPublishDate;
+  const canArchiveBlog = permissionContract.canArchiveBlog;
+  const canCreateComments = permissionContract.canCreateComment;
+  const canWriterEdit = permissionContract.canEditWriterWorkflow;
+  const canPublisherEdit = permissionContract.canEditPublisherWorkflow;
   const canSaveDetails =
     canMetadataEdit ||
     canChangeWriterAssignment ||
@@ -870,7 +855,7 @@ export default function BlogDetailPage() {
                     Scheduled Publish Date
                   </span>
                   <input
-                    disabled={!canEditDisplayDate}
+                    disabled={!canEditScheduledDate}
                     type="date"
                     value={form.scheduled_publish_date}
                     onChange={(event) => {
@@ -879,7 +864,7 @@ export default function BlogDetailPage() {
                       );
                     }}
                     onBlur={() => {
-                      if (!canEditDisplayDate) {
+                      if (!canEditScheduledDate) {
                         return;
                       }
                       const nextDate = form.scheduled_publish_date || null;
@@ -903,7 +888,7 @@ export default function BlogDetailPage() {
                     Display Publish Date
                   </span>
                   <input
-                    disabled={!canEditScheduledDate}
+                    disabled={!canEditDisplayDate}
                     type="date"
                     value={form.display_published_date}
                     onChange={(event) => {
@@ -912,7 +897,7 @@ export default function BlogDetailPage() {
                       );
                     }}
                     onBlur={() => {
-                      if (!canEditScheduledDate) {
+                      if (!canEditDisplayDate) {
                         return;
                       }
                       const nextDisplayDate = form.display_published_date || null;

@@ -47,8 +47,10 @@ import {
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
-import { getUserRoles } from "@/lib/roles";
-import { hasWorkflowOverridePermission } from "@/lib/permissions";
+import {
+  canViewAllTaskScope,
+  createUiPermissionContract,
+} from "@/lib/permissions/uiPermissions";
 import { getWorkflowStage } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
@@ -258,6 +260,10 @@ function DraggableCalendarBlogCard({
 export default function CalendarPage() {
   const { hasPermission, profile, user } = useAuth();
   const { showSaving, showError, updateStatus } = useSystemFeedback();
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [viewScope, setViewScope] = useState<CalendarViewScope>("mine");
   const [mode, setMode] = useState<CalendarMode>("month");
@@ -283,13 +289,8 @@ export default function CalendarPage() {
       activationConstraint: { distance: 6 },
     })
   );
-  const canWorkflowOverride = hasWorkflowOverridePermission(hasPermission);
-  const canDragCalendarBlogs =
-    hasPermission("calendar_drag_reschedule") ||
-    hasPermission("reschedule_via_calendar") ||
-    canWorkflowOverride;
-  const userRoles = useMemo(() => getUserRoles(profile), [profile]);
-  const canViewAllTasks = userRoles.includes("admin");
+  const canDragCalendarBlogs = permissionContract.canCalendarDragReschedule;
+  const canViewAllTasks = useMemo(() => canViewAllTaskScope(profile), [profile]);
 
   useEffect(() => {
     setViewScope(canViewAllTasks ? "all" : "mine");

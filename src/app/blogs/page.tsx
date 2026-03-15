@@ -12,6 +12,7 @@ import {
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { ProtectedPage } from "@/components/protected-page";
 import { TablePaginationControls } from "@/components/table-controls";
 import {
@@ -23,6 +24,10 @@ import {
 } from "@/lib/blog-schema";
 import { PUBLISHER_STATUS_LABELS, WRITER_STATUS_LABELS } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  ExportScopePermissions,
+  createUiPermissionContract,
+} from "@/lib/permissions/uiPermissions";
 import type {
   BlogRecord,
   BlogSite,
@@ -237,9 +242,13 @@ function BlogLibraryPageContent() {
   const { hasPermission } = useAuth();
   const { showSaving, showSuccess, showError, updateStatus, pushNotification } =
     useSystemFeedback();
-  const canCreateBlogs = hasPermission("create_blog");
-  const canExportCsv = hasPermission("export_csv");
-  const canExportSelectedCsv = hasPermission("export_selected_csv") || canExportCsv;
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
+  const canCreateBlogs = permissionContract.canCreateBlog;
+  const canExportCsv = permissionContract.canExportCsv;
+  const canExportSelectedCsv = permissionContract.canExportSelectedCsv;
   const canSelectRows = canExportSelectedCsv;
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -889,7 +898,11 @@ function BlogLibraryPageContent() {
                 >
                   Copy URLs
                 </Button>
-                {canExportCsv ? (
+                <PermissionGate
+                  can={canExportCsv}
+                  reason="You do not have permission to export the current blog view."
+                  requiredPermission={ExportScopePermissions.viewExport}
+                >
                   <Button
                     type="button"
                     variant="secondary"
@@ -900,8 +913,12 @@ function BlogLibraryPageContent() {
                   >
                     Export CSV
                   </Button>
-                ) : null}
-                {canExportCsv ? (
+                </PermissionGate>
+                <PermissionGate
+                  can={canExportCsv}
+                  reason="You do not have permission to export the current blog view."
+                  requiredPermission={ExportScopePermissions.viewExport}
+                >
                   <Button
                     type="button"
                     className="pressable rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
@@ -911,11 +928,15 @@ function BlogLibraryPageContent() {
                   >
                     Export PDF
                   </Button>
-                ) : null}
-                {canExportSelectedCsv ? (
+                </PermissionGate>
+                <PermissionGate
+                  can={canExportSelectedCsv}
+                  reason="You do not have permission to export selected blog rows."
+                  requiredPermission={ExportScopePermissions.selectedExport}
+                >
                   <Button
                     type="button"
-                    disabled={selectedBlogs.length === 0}
+                    disabled={!canExportSelectedCsv || selectedBlogs.length === 0}
                     variant="secondary"
                     size="sm"
                     onClick={() => {
@@ -924,7 +945,7 @@ function BlogLibraryPageContent() {
                   >
                     Export Selection
                   </Button>
-                ) : null}
+                </PermissionGate>
               </>
             }
             filters={

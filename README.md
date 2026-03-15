@@ -23,6 +23,9 @@ Internal content operations platform for Sighthound marketing workflows across `
   - configuration pages (`Settings`, `Permissions` for admins only)
 - Active nav page has stronger visual state (left border + highlighted row)
 - Clickable queue/pipeline filters and clickable Today metrics
+- Writing queue shortcuts: `Drafting`, `Needs Revision`, `Ready for Publishing`, `Backlog`
+- Publishing queue shortcuts: `Not Started`, `In Progress`, `Final Review`, `Published`
+- Delayed metric: scheduled publish date is in the past and overall status is not `Published`
 - Active filter chips + clear-all behavior
 - Scan-friendly table:
   - clamped title rendering
@@ -36,11 +39,11 @@ Internal content operations platform for Sighthound marketing workflows across `
 - Dedicated reference-first page for title/URL lookup
 - Default: published-only, newest-first by display publish date
 - Copy-first utilities:
-  - row-level title/url copy
+  - row-level title/url copy (hover-revealed controls)
   - copy-all titles / copy-all URLs
 - Exports:
-  - view/selected CSV
-  - view/selected PDF
+  - View Export: CSV + PDF (`export_csv`)
+  - Selected Export: CSV (`export_selected_csv`)
 
 ### CardBoard (`/blogs/cardboard`)
 - Kanban-style pipeline board (`Idea`, `Writing`, `Reviewing`, `Publishing`, `Published`)
@@ -50,7 +53,7 @@ Internal content operations platform for Sighthound marketing workflows across `
 
 ### Tasks
 - Top-3 priority summary + expandable full list
-- Overdue/Soon indicators
+- `⚠ Overdue` / `Due Soon` / `Upcoming` indicators
 - Priority sorting by schedule urgency and status state
 
 ### Calendar

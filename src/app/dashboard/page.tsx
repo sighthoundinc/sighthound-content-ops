@@ -59,6 +59,7 @@ import {
   type SortDirection,
   type TableRowLimit,
 } from "@/lib/table";
+import { getSiteBadgeClasses, getSiteLabel } from "@/lib/site";
 import type {
   BlogSite,
   BlogHistoryRecord,
@@ -156,6 +157,7 @@ type DashboardSortField =
   | "overall_status"
   | "writer_status"
   | "publisher_status";
+type RowDensity = "compact" | "comfortable";
 type DashboardColumnKey =
   | "title"
   | "site"
@@ -181,19 +183,22 @@ const CENTER_ALIGNED_DASHBOARD_COLUMNS: DashboardColumnKey[] = [
   "publisher_status",
   "overall_status",
 ];
+const DEFAULT_DASHBOARD_HIDDEN_COLUMNS: DashboardColumnKey[] = ["overall_status"];
 
 const DEFAULT_DASHBOARD_COLUMN_ORDER: DashboardColumnKey[] = [
-  "title",
   "site",
+  "title",
   "writer",
   "writer_status",
   "publisher",
   "publisher_status",
-  "overall_status",
   "publish_date",
+  "overall_status",
 ];
 
 const DASHBOARD_COLUMN_VIEW_STORAGE_KEY = "dashboard-column-view:v1";
+const DASHBOARD_COLUMN_HIDDEN_STORAGE_KEY = "dashboard-column-hidden:v1";
+const DASHBOARD_ROW_DENSITY_STORAGE_KEY = "dashboard-row-density:v1";
 
 const isDashboardColumnKey = (value: string): value is DashboardColumnKey =>
   value in DASHBOARD_COLUMN_LABELS;
@@ -222,6 +227,23 @@ const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => 
   }
 
   return normalized;
+};
+
+const normalizeDashboardHiddenColumns = (value: unknown): DashboardColumnKey[] => {
+  if (!Array.isArray(value)) {
+    return DEFAULT_DASHBOARD_HIDDEN_COLUMNS;
+  }
+
+  const hiddenColumns: DashboardColumnKey[] = [];
+  const seen = new Set<DashboardColumnKey>();
+  for (const item of value) {
+    if (typeof item !== "string" || !isDashboardColumnKey(item) || seen.has(item)) {
+      continue;
+    }
+    hiddenColumns.push(item);
+    seen.add(item);
+  }
+  return hiddenColumns;
 };
 
 const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }> = [
@@ -460,8 +482,12 @@ export default function DashboardPage() {
   const [columnOrder, setColumnOrder] = useState<DashboardColumnKey[]>(
     DEFAULT_DASHBOARD_COLUMN_ORDER
   );
+  const [hiddenColumns, setHiddenColumns] = useState<DashboardColumnKey[]>(
+    DEFAULT_DASHBOARD_HIDDEN_COLUMNS
+  );
   const [savedViews, setSavedViews] = useState<SavedDashboardView[]>([]);
   const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
+  const [rowDensity, setRowDensity] = useState<RowDensity>("comfortable");
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [staleDraftDays, setStaleDraftDays] = useState(10);
@@ -505,6 +531,14 @@ export default function DashboardPage() {
   );
   const columnViewStorageKey = useMemo(
     () => buildUserScopedStorageKey(DASHBOARD_COLUMN_VIEW_STORAGE_KEY, profile?.id),
+    [profile?.id]
+  );
+  const columnHiddenStorageKey = useMemo(
+    () => buildUserScopedStorageKey(DASHBOARD_COLUMN_HIDDEN_STORAGE_KEY, profile?.id),
+    [profile?.id]
+  );
+  const rowDensityStorageKey = useMemo(
+    () => buildUserScopedStorageKey(DASHBOARD_ROW_DENSITY_STORAGE_KEY, profile?.id),
     [profile?.id]
   );
   const closeOpenDashboardMenus = useCallback(() => {
@@ -680,17 +714,35 @@ export default function DashboardPage() {
     }
 
     const savedColumnView = window.localStorage.getItem(columnViewStorageKey);
-    if (!savedColumnView) {
-      return;
+    if (savedColumnView) {
+      try {
+        const parsedColumnOrder = JSON.parse(savedColumnView) as unknown;
+        setColumnOrder(normalizeDashboardColumnOrder(parsedColumnOrder));
+      } catch {
+        setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
+      }
+    }
+    const savedRowDensity = window.localStorage.getItem(rowDensityStorageKey);
+    if (savedRowDensity === "compact" || savedRowDensity === "comfortable") {
+      setRowDensity(savedRowDensity);
     }
 
-    try {
-      const parsedColumnOrder = JSON.parse(savedColumnView) as unknown;
-      setColumnOrder(normalizeDashboardColumnOrder(parsedColumnOrder));
-    } catch {
-      setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
+    const savedHiddenColumns = window.localStorage.getItem(columnHiddenStorageKey);
+    if (savedHiddenColumns) {
+      try {
+        const parsedHiddenColumns = JSON.parse(savedHiddenColumns) as unknown;
+        setHiddenColumns(normalizeDashboardHiddenColumns(parsedHiddenColumns));
+      } catch {
+        setHiddenColumns(DEFAULT_DASHBOARD_HIDDEN_COLUMNS);
+      }
     }
-  }, [columnViewStorageKey]);
+  }, [columnHiddenStorageKey, columnViewStorageKey, rowDensityStorageKey]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(rowDensityStorageKey, rowDensity);
+  }, [rowDensity, rowDensityStorageKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1280,8 +1332,16 @@ export default function DashboardPage() {
     () => sortedBlogs.findIndex((blog) => blog.id === activeBlogId),
     [activeBlogId, sortedBlogs]
   );
-  const headerCellClass = "px-3 py-3";
-  const bodyCellClass = "px-3 py-2.5";
+  const headerCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-3";
+  const bodyCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
+  const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
+  const visibleColumnOrder = useMemo(
+    () => {
+      const visibleColumns = columnOrder.filter((column) => !hiddenColumnSet.has(column));
+      return visibleColumns.length > 0 ? visibleColumns : [DEFAULT_DASHBOARD_COLUMN_ORDER[0]];
+    },
+    [columnOrder, hiddenColumnSet]
+  );
   const selectedIdSet = useMemo(() => new Set(selectedBlogIds), [selectedBlogIds]);
   const selectedBlogs = useMemo(
     () => blogs.filter((blog) => selectedIdSet.has(blog.id)),
@@ -1350,6 +1410,20 @@ export default function DashboardPage() {
       return nextOrder;
     });
   };
+  const toggleColumnVisibility = (column: DashboardColumnKey) => {
+    setHiddenColumns((previous) => {
+      if (previous.includes(column)) {
+        return previous.filter((hiddenColumn) => hiddenColumn !== column);
+      }
+      const currentlyVisibleColumns = columnOrder.filter(
+        (columnKey) => !previous.includes(columnKey)
+      );
+      if (currentlyVisibleColumns.length <= 1) {
+        return previous;
+      }
+      return [...previous, column];
+    });
+  };
 
   const saveColumnView = () => {
     if (typeof window === "undefined") {
@@ -1359,14 +1433,20 @@ export default function DashboardPage() {
       columnViewStorageKey,
       JSON.stringify(columnOrder)
     );
+    window.localStorage.setItem(
+      columnHiddenStorageKey,
+      JSON.stringify(hiddenColumns)
+    );
     setError(null);
     setSuccessMessage("Column view saved.");
   };
 
   const resetColumnView = () => {
     setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
+    setHiddenColumns(DEFAULT_DASHBOARD_HIDDEN_COLUMNS);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(columnViewStorageKey);
+      window.localStorage.removeItem(columnHiddenStorageKey);
     }
     setError(null);
     setSuccessMessage("Column view reset to default.");
@@ -1584,7 +1664,7 @@ export default function DashboardPage() {
       }
 
       if (column === "site") {
-        return blog.site;
+        return getSiteLabel(blog.site);
       }
 
       if (column === "writer") {
@@ -1619,17 +1699,17 @@ export default function DashboardPage() {
 
   const buildCsvContent = useCallback(
     (rows: BlogRecord[]) => {
-      const headers = columnOrder.map((column) =>
+      const headers = visibleColumnOrder.map((column) =>
         escapeCsvValue(DASHBOARD_COLUMN_LABELS[column])
       );
       const csvRows = rows.map((blog) =>
-        columnOrder
+        visibleColumnOrder
           .map((column) => escapeCsvValue(getExportCellValue(blog, column)))
           .join(",")
       );
       return [headers.join(","), ...csvRows].join("\n");
     },
-    [columnOrder, getExportCellValue]
+    [getExportCellValue, visibleColumnOrder]
   );
 
   const triggerCsvDownload = useCallback((csvContent: string, filename: string) => {
@@ -2818,16 +2898,44 @@ export default function DashboardPage() {
                       </button>
                     ) : null}
                   </div>
-                  <div className="ml-auto">
-                  <button
-                    type="button"
-                    className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      setIsEditColumnsOpen((previous) => !previous);
-                    }}
-                  >
-                    Edit Columns
-                  </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white">
+                      <button
+                        type="button"
+                        className={`px-2.5 py-1.5 text-xs font-medium ${
+                          rowDensity === "compact"
+                            ? "bg-slate-900 text-white"
+                            : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                        onClick={() => {
+                          setRowDensity("compact");
+                        }}
+                      >
+                        Compact
+                      </button>
+                      <button
+                        type="button"
+                        className={`border-l border-slate-300 px-2.5 py-1.5 text-xs font-medium ${
+                          rowDensity === "comfortable"
+                            ? "bg-slate-900 text-white"
+                            : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                        onClick={() => {
+                          setRowDensity("comfortable");
+                        }}
+                      >
+                        Comfortable
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                      onClick={() => {
+                        setIsEditColumnsOpen((previous) => !previous);
+                      }}
+                    >
+                      Edit Columns
+                    </button>
                   </div>
                 </div>
                 {isEditColumnsOpen ? (
@@ -2853,40 +2961,55 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 grid gap-2 md:grid-cols-2">
                       {columnOrder.map((column, index) => (
                         <div
                           key={column}
-                          className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
+                          className="inline-flex items-center justify-between gap-2 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
                         >
-                          <span className="font-medium">{DASHBOARD_COLUMN_LABELS[column]}</span>
-                          <button
-                            type="button"
-                            aria-label={`Move ${DASHBOARD_COLUMN_LABELS[column]} left`}
-                            disabled={index === 0}
-                            className="rounded border border-slate-200 px-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            onClick={() => {
-                              moveColumn(column, -1);
-                            }}
-                          >
-                            ←
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Move ${DASHBOARD_COLUMN_LABELS[column]} right`}
-                            disabled={index === columnOrder.length - 1}
-                            className="rounded border border-slate-200 px-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            onClick={() => {
-                              moveColumn(column, 1);
-                            }}
-                          >
-                            →
-                          </button>
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={!hiddenColumnSet.has(column)}
+                              disabled={
+                                !hiddenColumnSet.has(column) &&
+                                visibleColumnOrder.length <= 1
+                              }
+                              onChange={() => {
+                                toggleColumnVisibility(column);
+                              }}
+                            />
+                            <span className="font-medium">{DASHBOARD_COLUMN_LABELS[column]}</span>
+                          </label>
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              aria-label={`Move ${DASHBOARD_COLUMN_LABELS[column]} left`}
+                              disabled={index === 0}
+                              className="rounded border border-slate-200 px-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              onClick={() => {
+                                moveColumn(column, -1);
+                              }}
+                            >
+                              ←
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Move ${DASHBOARD_COLUMN_LABELS[column]} right`}
+                              disabled={index === columnOrder.length - 1}
+                              className="rounded border border-slate-200 px-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              onClick={() => {
+                                moveColumn(column, 1);
+                              }}
+                            >
+                              →
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
-                      Move columns and save to keep this layout.
+                      Show or hide columns, then save to keep this layout.
                     </p>
                   </div>
                 ) : null}
@@ -2912,7 +3035,7 @@ export default function DashboardPage() {
                           />
                         </th>
                       ) : null}
-                      {columnOrder.map((column) => (
+                      {visibleColumnOrder.map((column) => (
                         <th
                           key={column}
                           className={`${headerCellClass} sticky top-0 z-10 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)] ${
@@ -2931,7 +3054,7 @@ export default function DashboardPage() {
                       <tr>
                         <td
                           className={`${bodyCellClass} text-center text-slate-500`}
-                          colSpan={columnOrder.length + (canSelectRows ? 1 : 0)}
+                          colSpan={visibleColumnOrder.length + (canSelectRows ? 1 : 0)}
                         >
                           No blogs found with current filters.
                         </td>
@@ -2981,7 +3104,7 @@ export default function DashboardPage() {
                         return (
                           <tr
                             key={blog.id}
-                            className={`group cursor-pointer ${
+                            className={`group table-row-focus cursor-pointer ${
                               activeBlogId === blog.id ? "bg-slate-100" : `${rowToneClass} hover:bg-slate-100`
                             }`}
                             onClick={() => {
@@ -3004,7 +3127,7 @@ export default function DashboardPage() {
                                 />
                               </td>
                             ) : null}
-                            {columnOrder.map((column) => {
+                            {visibleColumnOrder.map((column) => {
                               if (column === "title") {
                                 return (
                                   <td
@@ -3019,17 +3142,14 @@ export default function DashboardPage() {
                               }
 
                               if (column === "site") {
-                                const isSighthound = blog.site === "sighthound.com";
                                 return (
                                   <td key={column} className={`${bodyCellClass} text-slate-600`}>
                                     <span
-                                      className={`inline-flex min-w-10 items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${
-                                        isSighthound
-                                          ? "border-blue-200 bg-blue-50 text-blue-700"
-                                          : "border-orange-200 bg-orange-50 text-orange-700"
-                                      }`}
+                                      className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${getSiteBadgeClasses(
+                                        blog.site
+                                      )}`}
                                     >
-                                      {isSighthound ? "SH" : "RED"}
+                                      {getSiteLabel(blog.site)}
                                     </span>
                                   </td>
                                 );

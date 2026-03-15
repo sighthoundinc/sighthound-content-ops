@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
+import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DataPageEmptyState,
   DataPageFilterPills,
@@ -25,9 +26,16 @@ import {
   normalizeBlogRows,
 } from "@/lib/blog-schema";
 import { PUBLISHER_STATUSES, WRITER_STATUSES } from "@/lib/status";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
+import { getSiteBadgeClasses, getSiteLabel } from "@/lib/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getTablePageCount, getTablePageRows } from "@/lib/table";
-import type { BlogRecord, PublisherStageStatus, WriterStageStatus } from "@/lib/types";
+import type {
+  BlogRecord,
+  BlogSite,
+  PublisherStageStatus,
+  WriterStageStatus,
+} from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
@@ -37,6 +45,7 @@ type TaskKind = "writer" | "publisher";
 type TaskItem = {
   id: string;
   blogId: string;
+  site: BlogSite;
   title: string;
   kind: TaskKind;
   createdAt: string;
@@ -49,6 +58,72 @@ type TaskItem = {
   writerStatus: WriterStageStatus;
   publisherStatus: PublisherStageStatus;
   reason: string | null;
+};
+type TaskTableColumnKey =
+  | "site"
+  | "task"
+  | "writer_status"
+  | "publisher_status"
+  | "publish_date"
+  | "options";
+type RowDensity = "compact" | "comfortable";
+const TASK_TABLE_COLUMN_VIEW_STORAGE_KEY = "tasks-column-view:v1";
+const TASK_TABLE_ROW_DENSITY_STORAGE_KEY = "tasks-row-density:v1";
+const DEFAULT_TASK_TABLE_COLUMN_ORDER: TaskTableColumnKey[] = [
+  "site",
+  "task",
+  "writer_status",
+  "publisher_status",
+  "publish_date",
+  "options",
+];
+const DEFAULT_TASK_TABLE_HIDDEN_COLUMNS: TaskTableColumnKey[] = [];
+const TASK_TABLE_COLUMN_LABELS: Record<TaskTableColumnKey, string> = {
+  site: "Site",
+  task: "Task",
+  writer_status: "Writer Status",
+  publisher_status: "Publisher Status",
+  publish_date: "Publish Date",
+  options: "Options",
+};
+const isTaskTableColumnKey = (value: string): value is TaskTableColumnKey =>
+  value in TASK_TABLE_COLUMN_LABELS;
+
+const normalizeTaskColumnOrder = (value: unknown): TaskTableColumnKey[] => {
+  if (!Array.isArray(value)) {
+    return DEFAULT_TASK_TABLE_COLUMN_ORDER;
+  }
+  const seen = new Set<TaskTableColumnKey>();
+  const normalized: TaskTableColumnKey[] = [];
+  for (const item of value) {
+    if (typeof item !== "string" || !isTaskTableColumnKey(item) || seen.has(item)) {
+      continue;
+    }
+    seen.add(item);
+    normalized.push(item);
+  }
+  for (const defaultColumn of DEFAULT_TASK_TABLE_COLUMN_ORDER) {
+    if (!seen.has(defaultColumn)) {
+      normalized.push(defaultColumn);
+    }
+  }
+  return normalized;
+};
+
+const normalizeTaskHiddenColumns = (value: unknown): TaskTableColumnKey[] => {
+  if (!Array.isArray(value)) {
+    return DEFAULT_TASK_TABLE_HIDDEN_COLUMNS;
+  }
+  const hiddenColumns: TaskTableColumnKey[] = [];
+  const seen = new Set<TaskTableColumnKey>();
+  for (const item of value) {
+    if (typeof item !== "string" || !isTaskTableColumnKey(item) || seen.has(item)) {
+      continue;
+    }
+    hiddenColumns.push(item);
+    seen.add(item);
+  }
+  return hiddenColumns;
 };
 
 const FULL_LIST_PAGE_SIZE = 10;
@@ -108,8 +183,13 @@ function getTaskReason({
 }
 
 export default function MyTasksPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { showSaving, showSuccess, showError, updateStatus } = useSystemFeedback();
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
+  const canExportCsv = permissionContract.canExportCsv;
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,10 +203,17 @@ export default function MyTasksPage() {
     "all" | "in_progress" | "not_started" | "needs_revision"
   >("all");
   const [siteFilter, setSiteFilter] = useState<"all" | "sighthound.com" | "redactor.com">("all");
+  const [rowDensity, setRowDensity] = useState<RowDensity>("comfortable");
   const [copiedCell, setCopiedCell] = useState<{
     taskId: string;
     field: "title" | "url";
   } | null>(null);
+  const [columnOrder, setColumnOrder] = useState<TaskTableColumnKey[]>(
+    DEFAULT_TASK_TABLE_COLUMN_ORDER
+  );
+  const [hiddenColumns, setHiddenColumns] = useState<TaskTableColumnKey[]>(
+    DEFAULT_TASK_TABLE_HIDDEN_COLUMNS
+  );
   const taskRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const loadTasks = useCallback(async () => {
     if (!user?.id) {
@@ -207,6 +294,50 @@ export default function MyTasksPage() {
       window.clearTimeout(timeout);
     };
   }, [copiedCell]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const stored = window.localStorage.getItem(TASK_TABLE_COLUMN_VIEW_STORAGE_KEY);
+    if (!stored) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(stored) as {
+        order?: unknown;
+        hidden?: unknown;
+      };
+      setColumnOrder(normalizeTaskColumnOrder(parsed.order));
+      setHiddenColumns(normalizeTaskHiddenColumns(parsed.hidden));
+    } catch {
+      setColumnOrder(DEFAULT_TASK_TABLE_COLUMN_ORDER);
+      setHiddenColumns(DEFAULT_TASK_TABLE_HIDDEN_COLUMNS);
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      TASK_TABLE_COLUMN_VIEW_STORAGE_KEY,
+      JSON.stringify({ order: columnOrder, hidden: hiddenColumns })
+    );
+  }, [columnOrder, hiddenColumns]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const storedDensity = window.localStorage.getItem(TASK_TABLE_ROW_DENSITY_STORAGE_KEY);
+    if (storedDensity === "compact" || storedDensity === "comfortable") {
+      setRowDensity(storedDensity);
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(TASK_TABLE_ROW_DENSITY_STORAGE_KEY, rowDensity);
+  }, [rowDensity]);
 
   const taskItems = useMemo(() => {
     if (!user?.id) {
@@ -231,6 +362,7 @@ export default function MyTasksPage() {
         items.push({
           id: `${blog.id}:writer`,
           blogId: blog.id,
+          site: blog.site,
           title: blog.title,
           kind: "writer",
           createdAt: blog.created_at,
@@ -258,6 +390,7 @@ export default function MyTasksPage() {
         items.push({
           id: `${blog.id}:publisher`,
           blogId: blog.id,
+          site: blog.site,
           title: blog.title,
           kind: "publisher",
           createdAt: blog.created_at,
@@ -312,8 +445,7 @@ export default function MyTasksPage() {
       if (statusFilter !== "all" && task.statusValue !== statusFilter) {
         return false;
       }
-      const blog = blogs.find((entry) => entry.id === task.blogId);
-      if (siteFilter !== "all" && blog?.site !== siteFilter) {
+      if (siteFilter !== "all" && task.site !== siteFilter) {
         return false;
       }
       if (!normalizedSearch) {
@@ -322,7 +454,7 @@ export default function MyTasksPage() {
       const searchText = `${task.title} ${task.liveUrl ?? ""}`.toLowerCase();
       return searchText.includes(normalizedSearch);
     });
-  }, [blogs, kindFilter, searchQuery, siteFilter, statusFilter, taskItems]);
+  }, [kindFilter, searchQuery, siteFilter, statusFilter, taskItems]);
 
   const nextTasks = useMemo(() => filteredTaskItems.slice(0, 3), [filteredTaskItems]);
 
@@ -334,6 +466,88 @@ export default function MyTasksPage() {
     () => getTablePageRows(filteredTaskItems, currentPage, FULL_LIST_PAGE_SIZE),
     [currentPage, filteredTaskItems]
   );
+  const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
+  const visibleColumnOrder = useMemo(
+    () => {
+      const visibleColumns = columnOrder.filter((column) => !hiddenColumnSet.has(column));
+      return visibleColumns.length > 0 ? visibleColumns : [DEFAULT_TASK_TABLE_COLUMN_ORDER[0]];
+    },
+    [columnOrder, hiddenColumnSet]
+  );
+  const headerCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
+  const bodyCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
+
+  const toggleColumnVisibility = (column: TaskTableColumnKey) => {
+    setHiddenColumns((previous) => {
+      if (previous.includes(column)) {
+        return previous.filter((hiddenColumn) => hiddenColumn !== column);
+      }
+      const currentlyVisibleColumns = columnOrder.filter(
+        (columnKey) => !previous.includes(columnKey)
+      );
+      if (currentlyVisibleColumns.length <= 1) {
+        return previous;
+      }
+      return [...previous, column];
+    });
+  };
+  const resetColumnVisibility = () => {
+    setColumnOrder(DEFAULT_TASK_TABLE_COLUMN_ORDER);
+    setHiddenColumns(DEFAULT_TASK_TABLE_HIDDEN_COLUMNS);
+  };
+  const getTaskExportCellValue = (task: TaskItem, column: TaskTableColumnKey) => {
+    if (column === "site") {
+      return getSiteLabel(task.site);
+    }
+    if (column === "task") {
+      return task.title;
+    }
+    if (column === "writer_status") {
+      return toTitleCase(task.writerStatus);
+    }
+    if (column === "publisher_status") {
+      return toTitleCase(task.publisherStatus);
+    }
+    if (column === "publish_date") {
+      return formatDateInput(task.scheduledDate) || "Not scheduled";
+    }
+    return "View options";
+  };
+  const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
+  const exportTaskCsv = () => {
+    if (!canExportCsv) {
+      showError("You do not have permission to export tasks.");
+      return;
+    }
+    if (filteredTaskItems.length === 0) {
+      showError("No tasks to export.");
+      return;
+    }
+    const exportableColumns = visibleColumnOrder.filter((column) => column !== "options");
+    if (exportableColumns.length === 0) {
+      showError("Select at least one data column before exporting.");
+      return;
+    }
+    const headerRow = exportableColumns
+      .map((column) => escapeCsvValue(TASK_TABLE_COLUMN_LABELS[column]))
+      .join(",");
+    const dataRows = filteredTaskItems.map((task) =>
+      exportableColumns
+        .map((column) => escapeCsvValue(getTaskExportCellValue(task, column)))
+        .join(",")
+    );
+    const csvContent = `\uFEFF${[headerRow, ...dataRows].join("\n")}`;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `my-tasks-${format(new Date(), "yyyyMMdd-HHmm")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(downloadUrl);
+    showSuccess("Task export complete.");
+  };
 
   useEffect(() => {
     setCurrentPage((previous) => Math.min(previous, pageCount));
@@ -379,7 +593,7 @@ export default function MyTasksPage() {
         siteFilter !== "all"
           ? {
               id: "site",
-              label: `Site: ${siteFilter === "sighthound.com" ? "Sighthound (SH)" : "Redactor (RED)"}`,
+              label: `Site: ${getSiteLabel(siteFilter)}`,
               onRemove: () => {
                 setSiteFilter("all");
               },
@@ -511,6 +725,89 @@ export default function MyTasksPage() {
               setCurrentPage(1);
             }}
             searchPlaceholder="Search task title or URL"
+            actions={
+              <>
+                <details className="relative">
+                  <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100">
+                    Edit Columns
+                  </summary>
+                  <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Show Columns
+                      </p>
+                      <button
+                        type="button"
+                        className="pressable rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                        onClick={() => {
+                          resetColumnVisibility();
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      {columnOrder.map((column) => (
+                        <label
+                          key={column}
+                          className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          <span>{TASK_TABLE_COLUMN_LABELS[column]}</span>
+                          <input
+                            type="checkbox"
+                            checked={!hiddenColumnSet.has(column)}
+                            disabled={
+                              !hiddenColumnSet.has(column) &&
+                              visibleColumnOrder.length <= 1
+                            }
+                            onChange={() => {
+                              toggleColumnVisibility(column);
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </details>
+                <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white">
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1.5 text-xs font-medium ${
+                      rowDensity === "compact"
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                    onClick={() => {
+                      setRowDensity("compact");
+                    }}
+                  >
+                    Compact
+                  </button>
+                  <button
+                    type="button"
+                    className={`border-l border-slate-300 px-2.5 py-1.5 text-xs font-medium ${
+                      rowDensity === "comfortable"
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                    onClick={() => {
+                      setRowDensity("comfortable");
+                    }}
+                  >
+                    Comfortable
+                  </button>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!canExportCsv || filteredTaskItems.length === 0}
+                  onClick={exportTaskCsv}
+                >
+                  Export
+                </Button>
+              </>
+            }
             filters={
               <>
                 <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -547,7 +844,7 @@ export default function MyTasksPage() {
                   </select>
                 </label>
                 <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Product
+                  Site
                   <select
                     value={siteFilter}
                     onChange={(event) => {
@@ -556,9 +853,9 @@ export default function MyTasksPage() {
                     }}
                     className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                   >
-                    <option value="all">All Products</option>
-                    <option value="sighthound.com">Sighthound (SH)</option>
-                    <option value="redactor.com">Redactor (RED)</option>
+                    <option value="all">All Sites</option>
+                    <option value="sighthound.com">Sighthound</option>
+                    <option value="redactor.com">Redactor</option>
                   </select>
                 </label>
               </>
@@ -597,18 +894,17 @@ export default function MyTasksPage() {
                   <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
                       <tr>
-                        <th className="px-3 py-2">#</th>
-                        <th className="px-3 py-2">Task</th>
-                        <th className="px-3 py-2">Writer Status</th>
-                        <th className="px-3 py-2">Publisher Status</th>
-                        <th className="px-3 py-2">Publish Date</th>
-                        <th className="px-3 py-2">Utilities</th>
+                        {visibleColumnOrder.map((column) => (
+                          <th key={column} className={headerCellClass}>
+                            {TASK_TABLE_COLUMN_LABELS[column]}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {Array.from({ length: 5 }).map((_, rowIndex) => (
                         <tr key={`task-skeleton-row-${rowIndex}`}>
-                          <td className="px-3 py-3" colSpan={6}>
+                          <td className={`${bodyCellClass} py-3`} colSpan={visibleColumnOrder.length}>
                             <div className="skeleton h-4 w-full" />
                           </td>
                         </tr>
@@ -667,24 +963,25 @@ export default function MyTasksPage() {
                   <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
                       <tr>
-                        <th className="px-3 py-2">#</th>
-                        <th className="px-3 py-2">Task</th>
-                        <th className="px-3 py-2">Writer Status</th>
-                        <th className="px-3 py-2">Publisher Status</th>
-                        <th className="px-3 py-2">Publish Date</th>
-                        <th className="px-3 py-2">Utilities</th>
+                        {visibleColumnOrder.map((column) => (
+                          <th key={column} className={headerCellClass}>
+                            {TASK_TABLE_COLUMN_LABELS[column]}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {pagedTasks.length === 0 ? (
                         <tr>
-                          <td className="px-3 py-5 text-center text-slate-500" colSpan={6}>
+                          <td
+                            className={`${bodyCellClass} py-5 text-center text-slate-500`}
+                            colSpan={visibleColumnOrder.length}
+                          >
                             You have no assigned tasks. You&apos;re all caught up.
                           </td>
                         </tr>
                       ) : (
-                        pagedTasks.map((task, index) => {
-                          const globalIndex = (currentPage - 1) * FULL_LIST_PAGE_SIZE + index + 1;
+                        pagedTasks.map((task) => {
                           const isSaving = savingTaskId === task.id;
                           const isHighlighted = highlightedTaskId === task.id;
                           const copiedTitle =
@@ -697,106 +994,140 @@ export default function MyTasksPage() {
                               ref={(node) => {
                                 taskRowRefs.current[task.id] = node;
                               }}
-                              className={`group ${
-                                isHighlighted ? "bg-indigo-50" : "hover:bg-slate-50"
+                              className={`group table-row-focus ${
+                                isHighlighted ? "bg-indigo-50" : ""
                               }`}
                             >
-                              <td className="px-3 py-2 align-top text-slate-600">{globalIndex}</td>
-                              <td className="px-3 py-2 align-top">
-                                <Link
-                                  href={`/blogs/${task.blogId}`}
-                                  className="interactive-link font-medium text-slate-800"
-                                >
-                                  {task.title}
-                                </Link>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  {task.kind === "writer" ? "Writer task" : "Publisher task"}
-                                  {task.isDelayed ? " · ⚠ Overdue" : ""}
-                                </p>
-                              </td>
-                              <td className="px-3 py-2 align-top">
-                                {task.kind === "writer" ? (
-                                  <select
-                                    value={task.writerStatus}
-                                    disabled={isSaving}
-                                    onChange={(event) => {
-                                      void updateTaskStatus(
-                                        task,
-                                        event.target.value as WriterStageStatus
-                                      );
-                                    }}
-                                    className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
-                                  >
-                                    {WRITER_STATUSES.map((status) => (
-                                      <option key={status} value={status}>
-                                        {toTitleCase(status)}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className="text-xs text-slate-700">
-                                    {toTitleCase(task.writerStatus)}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 align-top">
-                                {task.kind === "publisher" ? (
-                                  <select
-                                    value={task.publisherStatus}
-                                    disabled={isSaving}
-                                    onChange={(event) => {
-                                      void updateTaskStatus(
-                                        task,
-                                        event.target.value as PublisherStageStatus
-                                      );
-                                    }}
-                                    className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
-                                  >
-                                    {PUBLISHER_STATUSES.map((status) => (
-                                      <option key={status} value={status}>
-                                        {toTitleCase(status)}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className="text-xs text-slate-700">
-                                    {toTitleCase(task.publisherStatus)}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 align-top text-slate-600">
-                                {formatDateInput(task.scheduledDate) || "Not scheduled"}
-                              </td>
-                              <td className="px-3 py-2 align-top">
-                                <div className="reveal-on-row-hover inline-flex items-center gap-1">
-                                  <span className="tooltip-container">
-                                    <button
-                                      type="button"
-                                      aria-label="Copy task title"
-                                      className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
-                                      onClick={() => {
-                                        void copyTaskValue(task, "title");
-                                      }}
-                                    >
-                                      {copiedTitle ? "✓" : "📋"}
-                                    </button>
-                                    <span className="tooltip-bubble">Copy task title</span>
-                                  </span>
-                                  <span className="tooltip-container">
-                                    <button
-                                      type="button"
-                                      aria-label="Copy publish URL"
-                                      className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
-                                      onClick={() => {
-                                        void copyTaskValue(task, "url");
-                                      }}
-                                    >
-                                      {copiedUrl ? "✓" : "🔗"}
-                                    </button>
-                                    <span className="tooltip-bubble">Copy publish URL</span>
-                                  </span>
-                                </div>
-                              </td>
+                              {visibleColumnOrder.map((column) => {
+                                if (column === "site") {
+                                  return (
+                                    <td key={column} className={`${bodyCellClass} align-top`}>
+                                      <span
+                                        className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${getSiteBadgeClasses(
+                                          task.site
+                                        )}`}
+                                      >
+                                        {getSiteLabel(task.site)}
+                                      </span>
+                                    </td>
+                                  );
+                                }
+
+                                if (column === "task") {
+                                  return (
+                                    <td key={column} className={`${bodyCellClass} align-top`}>
+                                      <Link
+                                        href={`/blogs/${task.blogId}`}
+                                        title={task.title}
+                                        className="interactive-link block max-w-[28rem] truncate font-medium text-slate-800"
+                                      >
+                                        {task.title}
+                                      </Link>
+                                      <p className="mt-1 text-xs text-slate-500">
+                                        {task.kind === "writer" ? "Writer task" : "Publisher task"}
+                                        {task.isDelayed ? " · ⚠ Overdue" : ""}
+                                      </p>
+                                    </td>
+                                  );
+                                }
+
+                                if (column === "writer_status") {
+                                  return (
+                                    <td key={column} className={`${bodyCellClass} align-top`}>
+                                      {task.kind === "writer" ? (
+                                        <select
+                                          value={task.writerStatus}
+                                          disabled={isSaving}
+                                          onChange={(event) => {
+                                            void updateTaskStatus(
+                                              task,
+                                              event.target.value as WriterStageStatus
+                                            );
+                                          }}
+                                          className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+                                        >
+                                          {WRITER_STATUSES.map((status) => (
+                                            <option key={status} value={status}>
+                                              {toTitleCase(status)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      ) : (
+                                        <WriterStatusBadge status={task.writerStatus} />
+                                      )}
+                                    </td>
+                                  );
+                                }
+
+                                if (column === "publisher_status") {
+                                  return (
+                                    <td key={column} className={`${bodyCellClass} align-top`}>
+                                      {task.kind === "publisher" ? (
+                                        <select
+                                          value={task.publisherStatus}
+                                          disabled={isSaving}
+                                          onChange={(event) => {
+                                            void updateTaskStatus(
+                                              task,
+                                              event.target.value as PublisherStageStatus
+                                            );
+                                          }}
+                                          className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+                                        >
+                                          {PUBLISHER_STATUSES.map((status) => (
+                                            <option key={status} value={status}>
+                                              {toTitleCase(status)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      ) : (
+                                        <PublisherStatusBadge status={task.publisherStatus} />
+                                      )}
+                                    </td>
+                                  );
+                                }
+
+                                if (column === "publish_date") {
+                                  return (
+                                    <td key={column} className={`${bodyCellClass} align-top text-slate-600`}>
+                                      {formatDateInput(task.scheduledDate) || "Not scheduled"}
+                                    </td>
+                                  );
+                                }
+
+                                return (
+                                  <td key={column} className={`${bodyCellClass} align-top`}>
+                                    <div className="reveal-on-row-hover inline-flex items-center gap-1">
+                                      <span className="tooltip-container">
+                                        <button
+                                          type="button"
+                                          aria-label="Copy task title"
+                                          className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
+                                          onClick={() => {
+                                            void copyTaskValue(task, "title");
+                                          }}
+                                        >
+                                          {copiedTitle ? "✓" : "📋"}
+                                        </button>
+                                        <span className="tooltip-bubble">Copy task title</span>
+                                      </span>
+                                      <span className="tooltip-container">
+                                        <button
+                                          type="button"
+                                          aria-label="Copy publish URL"
+                                          className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
+                                          onClick={() => {
+                                            void copyTaskValue(task, "url");
+                                          }}
+                                        >
+                                          {copiedUrl ? "✓" : "🔗"}
+                                        </button>
+                                        <span className="tooltip-bubble">Copy publish URL</span>
+                                      </span>
+                                    </div>
+                                  </td>
+                                );
+                              })}
                             </tr>
                           );
                         })

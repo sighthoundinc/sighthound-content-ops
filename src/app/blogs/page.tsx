@@ -1,12 +1,20 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button, buttonClass } from "@/components/button";
+import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DataPageFilterPills,
   DataPageHeader,
@@ -28,6 +36,7 @@ import {
   ExportScopePermissions,
   createUiPermissionContract,
 } from "@/lib/permissions/uiPermissions";
+import { getSiteBadgeClasses, getSiteLabel } from "@/lib/site";
 import type {
   BlogRecord,
   BlogSite,
@@ -42,13 +51,94 @@ type LibraryStage = "writing" | "needs_revision" | "ready_to_publish" | "publish
 type LibrarySiteFilter = "all" | BlogSite;
 type LibraryWriterStatusFilter = "all" | WriterStageStatus;
 type LibraryPublisherStatusFilter = "all" | PublisherStageStatus;
-type LibrarySortField = "published_date" | "title" | "site";
+type LibrarySortField = "none" | "published_date" | "title" | "site";
 type LibrarySortDirection = "asc" | "desc";
 type LibraryRowLimit = 10 | 20 | 50 | 100 | "all";
+type RowDensity = "compact" | "comfortable";
+type LibraryColumnKey =
+  | "site"
+  | "title"
+  | "live_url"
+  | "writer_status"
+  | "published_date"
+  | "writer"
+  | "publisher"
+  | "publisher_status"
+  | "stage";
 type BoardStageQueryFilter = "idea" | "writing" | "reviewing" | "publishing" | "published";
 
 const ROW_LIMIT_OPTIONS: LibraryRowLimit[] = [10, 20, 50, 100, "all"];
 const DEFAULT_ROW_LIMIT: LibraryRowLimit = 20;
+const BLOG_LIBRARY_COLUMN_VIEW_STORAGE_KEY = "blog-library-column-view:v1";
+const BLOG_LIBRARY_COLUMN_WIDTH_STORAGE_KEY = "blog-library-column-width:v1";
+const BLOG_LIBRARY_ROW_DENSITY_STORAGE_KEY = "blog-library-row-density:v1";
+const DEFAULT_LIBRARY_COLUMN_ORDER: LibraryColumnKey[] = [
+  "site",
+  "title",
+  "live_url",
+  "writer_status",
+  "published_date",
+  "writer",
+  "publisher",
+  "publisher_status",
+  "stage",
+];
+const DEFAULT_LIBRARY_HIDDEN_COLUMNS: LibraryColumnKey[] = [
+  "writer",
+  "publisher",
+  "publisher_status",
+  "stage",
+];
+const LIBRARY_COLUMN_LABELS: Record<LibraryColumnKey, string> = {
+  site: "Site",
+  title: "Title",
+  live_url: "Live URL",
+  writer_status: "Writer Stage",
+  published_date: "Published Date",
+  writer: "Writer",
+  publisher: "Publisher",
+  publisher_status: "Publisher Status",
+  stage: "Stage",
+};
+const isLibraryColumnKey = (value: string): value is LibraryColumnKey =>
+  value in LIBRARY_COLUMN_LABELS;
+
+const normalizeLibraryColumnOrder = (value: unknown): LibraryColumnKey[] => {
+  if (!Array.isArray(value)) {
+    return DEFAULT_LIBRARY_COLUMN_ORDER;
+  }
+  const seen = new Set<LibraryColumnKey>();
+  const normalized: LibraryColumnKey[] = [];
+  for (const item of value) {
+    if (typeof item !== "string" || !isLibraryColumnKey(item) || seen.has(item)) {
+      continue;
+    }
+    seen.add(item);
+    normalized.push(item);
+  }
+  for (const defaultColumn of DEFAULT_LIBRARY_COLUMN_ORDER) {
+    if (!seen.has(defaultColumn)) {
+      normalized.push(defaultColumn);
+    }
+  }
+  return normalized;
+};
+
+const normalizeLibraryHiddenColumns = (value: unknown): LibraryColumnKey[] => {
+  if (!Array.isArray(value)) {
+    return DEFAULT_LIBRARY_HIDDEN_COLUMNS;
+  }
+  const hiddenColumns: LibraryColumnKey[] = [];
+  const seen = new Set<LibraryColumnKey>();
+  for (const item of value) {
+    if (typeof item !== "string" || !isLibraryColumnKey(item) || seen.has(item)) {
+      continue;
+    }
+    hiddenColumns.push(item);
+    seen.add(item);
+  }
+  return hiddenColumns;
+};
 
 const STATUS_FILTER_OPTIONS: Array<{ value: LibraryStatusFilter; label: string }> = [
   { value: "published", label: "Published" },
@@ -58,8 +148,8 @@ const STATUS_FILTER_OPTIONS: Array<{ value: LibraryStatusFilter; label: string }
 
 const SITE_FILTER_OPTIONS: Array<{ value: LibrarySiteFilter; label: string }> = [
   { value: "all", label: "All Sites" },
-  { value: "sighthound.com", label: "Sighthound (SH)" },
-  { value: "redactor.com", label: "Redactor (RED)" },
+  { value: "sighthound.com", label: "Sighthound" },
+  { value: "redactor.com", label: "Redactor" },
 ];
 const WRITER_STATUS_FILTER_OPTIONS: Array<{
   value: LibraryWriterStatusFilter;
@@ -82,6 +172,7 @@ const PUBLISHER_STATUS_FILTER_OPTIONS: Array<{
 ];
 
 const SORT_OPTIONS: Array<{ value: LibrarySortField; label: string }> = [
+  { value: "none", label: "None" },
   { value: "published_date", label: "Published Date" },
   { value: "title", label: "Title" },
   { value: "site", label: "Site" },
@@ -91,6 +182,11 @@ const SORT_DIRECTION_OPTIONS: Array<{ value: LibrarySortDirection; label: string
   { value: "desc", label: "Descending" },
   { value: "asc", label: "Ascending" },
 ];
+const SORTABLE_LIBRARY_COLUMNS: Partial<Record<LibraryColumnKey, LibrarySortField>> = {
+  site: "site",
+  title: "title",
+  published_date: "published_date",
+};
 
 
 const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
@@ -155,12 +251,6 @@ function formatPublishedDate(blog: BlogRecord) {
   return format(dateValue, "MMM d yyyy");
 }
 
-function getSiteBadgeClasses(site: BlogSite) {
-  if (site === "sighthound.com") {
-    return "border-blue-200 bg-blue-50 text-blue-700";
-  }
-  return "border-orange-200 bg-orange-50 text-orange-700";
-}
 function getStageForBadge(blog: BlogRecord): LibraryStage {
   if (blog.overall_status === "published") {
     return "published";
@@ -261,13 +351,24 @@ function BlogLibraryPageContent() {
     useState<LibraryPublisherStatusFilter>("all");
   const [sortField, setSortField] = useState<LibrarySortField>("published_date");
   const [sortDirection, setSortDirection] = useState<LibrarySortDirection>("desc");
+  const [rowDensity, setRowDensity] = useState<RowDensity>("comfortable");
   const [rowLimit, setRowLimit] = useState<LibraryRowLimit>(DEFAULT_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
+  const [focusedBlogId, setFocusedBlogId] = useState<string | null>(null);
+  const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
   const [copiedCell, setCopiedCell] = useState<{
     blogId: string;
     field: "title" | "url";
   } | null>(null);
+  const [columnOrder, setColumnOrder] = useState<LibraryColumnKey[]>(
+    DEFAULT_LIBRARY_COLUMN_ORDER
+  );
+  const [hiddenColumns, setHiddenColumns] = useState<LibraryColumnKey[]>(
+    DEFAULT_LIBRARY_HIDDEN_COLUMNS
+  );
+  const [columnWidths, setColumnWidths] = useState<Partial<Record<LibraryColumnKey, number>>>({});
+  const blogRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const boardStageQuery = searchParams.get("boardStage");
 
   const loadBlogs = useCallback(async () => {
@@ -375,6 +476,74 @@ function BlogLibraryPageContent() {
       window.clearTimeout(timeout);
     };
   }, [copiedCell]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const stored = window.localStorage.getItem(BLOG_LIBRARY_COLUMN_VIEW_STORAGE_KEY);
+    if (!stored) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(stored) as {
+        order?: unknown;
+        hidden?: unknown;
+      };
+      setColumnOrder(normalizeLibraryColumnOrder(parsed.order));
+      setHiddenColumns(normalizeLibraryHiddenColumns(parsed.hidden));
+    } catch {
+      setColumnOrder(DEFAULT_LIBRARY_COLUMN_ORDER);
+      setHiddenColumns(DEFAULT_LIBRARY_HIDDEN_COLUMNS);
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      BLOG_LIBRARY_COLUMN_VIEW_STORAGE_KEY,
+      JSON.stringify({ order: columnOrder, hidden: hiddenColumns })
+    );
+  }, [columnOrder, hiddenColumns]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const storedDensity = window.localStorage.getItem(BLOG_LIBRARY_ROW_DENSITY_STORAGE_KEY);
+    if (storedDensity === "compact" || storedDensity === "comfortable") {
+      setRowDensity(storedDensity);
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(BLOG_LIBRARY_ROW_DENSITY_STORAGE_KEY, rowDensity);
+  }, [rowDensity]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const storedWidths = window.localStorage.getItem(BLOG_LIBRARY_COLUMN_WIDTH_STORAGE_KEY);
+    if (!storedWidths) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(storedWidths) as Partial<Record<LibraryColumnKey, number>>;
+      setColumnWidths(parsed ?? {});
+    } catch {
+      setColumnWidths({});
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      BLOG_LIBRARY_COLUMN_WIDTH_STORAGE_KEY,
+      JSON.stringify(columnWidths)
+    );
+  }, [columnWidths]);
   const closeOpenDetailsMenus = useCallback(() => {
     document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
       menu.open = false;
@@ -394,6 +563,7 @@ function BlogLibraryPageContent() {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeOpenDetailsMenus();
+        setActiveBlogId(null);
       }
     };
 
@@ -404,6 +574,14 @@ function BlogLibraryPageContent() {
       window.removeEventListener("keydown", handleEscape);
     };
   }, [closeOpenDetailsMenus]);
+  useEffect(() => {
+    if (!activeBlogId) {
+      return;
+    }
+    if (!blogs.some((blog) => blog.id === activeBlogId)) {
+      setActiveBlogId(null);
+    }
+  }, [activeBlogId, blogs]);
 
   const filteredBlogs = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -442,6 +620,9 @@ function BlogLibraryPageContent() {
   }, [blogs, publisherStatusFilter, searchQuery, siteFilter, statusFilter, writerStatusFilter]);
 
   const sortedBlogs = useMemo(() => {
+    if (sortField === "none") {
+      return filteredBlogs;
+    }
     const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
     const directionMultiplier = sortDirection === "asc" ? 1 : -1;
 
@@ -483,17 +664,33 @@ function BlogLibraryPageContent() {
     () => getPageRows(sortedBlogs, currentPage, rowLimit),
     [currentPage, rowLimit, sortedBlogs]
   );
+  useEffect(() => {
+    if (pagedBlogs.length === 0) {
+      setFocusedBlogId(null);
+      return;
+    }
+    if (!focusedBlogId || !pagedBlogs.some((blog) => blog.id === focusedBlogId)) {
+      setFocusedBlogId(pagedBlogs[0]?.id ?? null);
+    }
+  }, [focusedBlogId, pagedBlogs]);
 
   const selectedIdSet = useMemo(() => new Set(selectedBlogIds), [selectedBlogIds]);
   const selectedBlogs = useMemo(
     () => sortedBlogs.filter((blog) => selectedIdSet.has(blog.id)),
     [selectedIdSet, sortedBlogs]
   );
+  const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
+  const visibleColumnOrder = useMemo(
+    () => {
+      const visibleColumns = columnOrder.filter((column) => !hiddenColumnSet.has(column));
+      return visibleColumns.length > 0 ? visibleColumns : [DEFAULT_LIBRARY_COLUMN_ORDER[0]];
+    },
+    [columnOrder, hiddenColumnSet]
+  );
   const visibleRange = useMemo(
     () => getVisibleRange(sortedBlogs.length, currentPage, rowLimit),
     [currentPage, rowLimit, sortedBlogs.length]
   );
-  const shouldShowStageColumn = statusFilter !== "published";
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
     statusFilter !== "published" ||
@@ -501,9 +698,32 @@ function BlogLibraryPageContent() {
     writerStatusFilter !== "all" ||
     publisherStatusFilter !== "all";
   const hasNoResults = !isLoading && sortedBlogs.length === 0;
-  const tableColumnCount = 7 + (canSelectRows ? 1 : 0) + (shouldShowStageColumn ? 1 : 0);
+  const activeBlog = useMemo(
+    () => blogs.find((blog) => blog.id === activeBlogId) ?? null,
+    [activeBlogId, blogs]
+  );
+  const headerCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
+  const bodyCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
+  const tableColumnCount = visibleColumnOrder.length + (canSelectRows ? 1 : 0);
   const allVisibleSelected =
     pagedBlogs.length > 0 && pagedBlogs.every((blog) => selectedIdSet.has(blog.id));
+  const getColumnSortDirection = (column: LibraryColumnKey) => {
+    const mappedSortField = SORTABLE_LIBRARY_COLUMNS[column];
+    if (!mappedSortField || mappedSortField === "none" || sortField !== mappedSortField) {
+      return null;
+    }
+    return sortDirection;
+  };
+  const getColumnSortIndicator = (column: LibraryColumnKey) => {
+    const direction = getColumnSortDirection(column);
+    if (direction === "asc") {
+      return "▲";
+    }
+    if (direction === "desc") {
+      return "▼";
+    }
+    return null;
+  };
   const activeFilterPills = useMemo(
     () => [
       searchQuery.trim().length > 0
@@ -583,25 +803,148 @@ function BlogLibraryPageContent() {
     setSortField("published_date");
     setSortDirection("desc");
   };
-
-  const copyToClipboard = async (
-    value: string,
-    blogId: string,
-    field: "title" | "url",
-    successLabel: string
-  ) => {
-    if (!value) {
+  const toggleColumnVisibility = (column: LibraryColumnKey) => {
+    setHiddenColumns((previous) => {
+      if (previous.includes(column)) {
+        return previous.filter((hiddenColumn) => hiddenColumn !== column);
+      }
+      const currentlyVisibleColumns = columnOrder.filter(
+        (columnKey) => !previous.includes(columnKey)
+      );
+      if (currentlyVisibleColumns.length <= 1) {
+        return previous;
+      }
+      return [...previous, column];
+    });
+  };
+  const resetColumnVisibility = () => {
+    setColumnOrder(DEFAULT_LIBRARY_COLUMN_ORDER);
+    setHiddenColumns(DEFAULT_LIBRARY_HIDDEN_COLUMNS);
+  };
+  const toggleSortByColumn = (column: LibraryColumnKey) => {
+    const mappedSortField = SORTABLE_LIBRARY_COLUMNS[column];
+    if (!mappedSortField || mappedSortField === "none") {
       return;
     }
-
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopiedCell({ blogId, field });
-      showSuccess(successLabel);
-    } catch {
-      showError("Could not copy to clipboard.");
+    if (sortField !== mappedSortField) {
+      setSortField(mappedSortField);
+      setSortDirection("asc");
+      return;
     }
+    if (sortDirection === "asc") {
+      setSortDirection("desc");
+      return;
+    }
+    setSortField("none");
+    setSortDirection("asc");
   };
+  const handleOpenBlogPanel = (blogId: string) => {
+    setActiveBlogId(blogId);
+  };
+  const handleColumnResizeStart = (
+    column: LibraryColumnKey,
+    event: ReactMouseEvent<HTMLButtonElement>
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const headerCell = event.currentTarget.parentElement;
+    const initialWidth = Math.round(headerCell?.getBoundingClientRect().width ?? 160);
+    const startX = event.clientX;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const nextWidth = Math.max(96, initialWidth + delta);
+      setColumnWidths((previous) => ({
+        ...previous,
+        [column]: nextWidth,
+      }));
+    };
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+  const copyToClipboard = useCallback(
+    async (
+      value: string,
+      blogId: string,
+      field: "title" | "url",
+      successLabel: string
+    ) => {
+      if (!value) {
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(value);
+        setCopiedCell({ blogId, field });
+        showSuccess(successLabel);
+      } catch {
+        showError("Could not copy to clipboard.");
+      }
+    },
+    [showError, showSuccess]
+  );
+  useEffect(() => {
+    const isFormElement = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+      const tagName = target.tagName.toLowerCase();
+      return (
+        target.isContentEditable ||
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select"
+      );
+    };
+    const handleKeyboardNavigation = (event: KeyboardEvent) => {
+      if (isFormElement(event.target) || pagedBlogs.length === 0) {
+        return;
+      }
+      const currentIndex = pagedBlogs.findIndex((blog) => blog.id === focusedBlogId);
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        const nextIndex =
+          ((currentIndex < 0 ? 0 : currentIndex) + delta + pagedBlogs.length) % pagedBlogs.length;
+        const nextBlog = pagedBlogs[nextIndex];
+        if (!nextBlog) {
+          return;
+        }
+        setFocusedBlogId(nextBlog.id);
+        blogRowRefs.current[nextBlog.id]?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+        return;
+      }
+      if (event.key === "Enter" && focusedBlogId) {
+        event.preventDefault();
+        handleOpenBlogPanel(focusedBlogId);
+        return;
+      }
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "c" &&
+        focusedBlogId
+      ) {
+        const focusedBlog = pagedBlogs.find((blog) => blog.id === focusedBlogId);
+        if (!focusedBlog) {
+          return;
+        }
+        event.preventDefault();
+        void copyToClipboard(focusedBlog.title, focusedBlog.id, "title", "Copied title.");
+      }
+    };
+    window.addEventListener("keydown", handleKeyboardNavigation);
+    return () => {
+      window.removeEventListener("keydown", handleKeyboardNavigation);
+    };
+  }, [copyToClipboard, focusedBlogId, pagedBlogs]);
 
   const copyAll = async (field: "title" | "url") => {
     const values =
@@ -650,19 +993,41 @@ function BlogLibraryPageContent() {
     });
   };
 
+  const getExportCellValue = (blog: BlogRecord, column: LibraryColumnKey) => {
+    if (column === "site") {
+      return getSiteLabel(blog.site);
+    }
+    if (column === "title") {
+      return blog.title;
+    }
+    if (column === "live_url") {
+      return blog.live_url ?? "";
+    }
+    if (column === "writer_status") {
+      return WRITER_STATUS_LABELS[blog.writer_status];
+    }
+    if (column === "published_date") {
+      return formatPublishedDate(blog);
+    }
+    if (column === "writer") {
+      return getAssigneeLabel(blog.writer?.full_name);
+    }
+    if (column === "publisher") {
+      return getAssigneeLabel(blog.publisher?.full_name);
+    }
+    if (column === "publisher_status") {
+      return PUBLISHER_STATUS_LABELS[blog.publisher_status];
+    }
+    return getStageLabel(getStageForBadge(blog));
+  };
+
   const buildCsv = (rows: BlogRecord[]) => {
-    const headers = ["Sr #", "Blog Title", "Live URL", "Published Date", "Site"].map(
-      escapeCsvValue
+    const headers = visibleColumnOrder.map((column) =>
+      escapeCsvValue(LIBRARY_COLUMN_LABELS[column])
     );
-    const dataRows = rows.map((blog, index) =>
-      [
-        String(index + 1),
-        blog.title,
-        blog.live_url ?? "",
-        formatPublishedDate(blog),
-        blog.site === "sighthound.com" ? "SH" : "RED",
-      ]
-        .map(escapeCsvValue)
+    const dataRows = rows.map((blog) =>
+      visibleColumnOrder
+        .map((column) => escapeCsvValue(getExportCellValue(blog, column)))
         .join(",")
     );
     return [headers.join(","), ...dataRows].join("\n");
@@ -763,16 +1128,15 @@ function BlogLibraryPageContent() {
     }
     const generatedAt = format(new Date(), "MMM d yyyy, h:mm a");
 
+    const headerMarkup = visibleColumnOrder
+      .map((column) => `<th>${escapeHtmlValue(LIBRARY_COLUMN_LABELS[column])}</th>`)
+      .join("");
     const rowsMarkup = rows
-      .map((blog, index) => {
-        const site = blog.site === "sighthound.com" ? "SH" : "RED";
-        return `<tr>
-          <td>${index + 1}</td>
-          <td>${escapeHtmlValue(blog.title)}</td>
-          <td>${escapeHtmlValue(blog.live_url ?? "")}</td>
-          <td>${escapeHtmlValue(formatPublishedDate(blog))}</td>
-          <td>${escapeHtmlValue(site)}</td>
-        </tr>`;
+      .map((blog) => {
+        const cellMarkup = visibleColumnOrder
+          .map((column) => `<td>${escapeHtmlValue(getExportCellValue(blog, column))}</td>`)
+          .join("");
+        return `<tr>${cellMarkup}</tr>`;
       })
       .join("");
     popup.document.open();
@@ -796,11 +1160,7 @@ function BlogLibraryPageContent() {
   <table>
     <thead>
       <tr>
-        <th>Sr #</th>
-        <th>Blog Title</th>
-        <th>Live URL</th>
-        <th>Published Date</th>
-        <th>Site</th>
+        ${headerMarkup}
       </tr>
     </thead>
     <tbody>${rowsMarkup}</tbody>
@@ -838,6 +1198,52 @@ function BlogLibraryPageContent() {
       message: "Use browser print dialog to save PDF",
       href: "/blogs",
     });
+  };
+  const renderHeaderCell = (column: LibraryColumnKey) => {
+    const mappedSortField = SORTABLE_LIBRARY_COLUMNS[column];
+    const isSortable = Boolean(mappedSortField && mappedSortField !== "none");
+    const sortIndicator = getColumnSortIndicator(column);
+    const isSorted = getColumnSortDirection(column) !== null;
+    const width = columnWidths[column];
+    return (
+      <th
+        key={column}
+        className={`group/column relative ${headerCellClass} ${isSorted ? "bg-slate-200" : ""}`}
+        style={
+          width
+            ? {
+                width: `${width}px`,
+                minWidth: `${width}px`,
+              }
+            : undefined
+        }
+      >
+        {isSortable ? (
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1 ${
+              isSorted ? "font-semibold text-slate-900" : "text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => {
+              toggleSortByColumn(column);
+            }}
+          >
+            <span>{LIBRARY_COLUMN_LABELS[column]}</span>
+            <span className="w-3 text-[10px] text-slate-500">{sortIndicator ?? ""}</span>
+          </button>
+        ) : (
+          <span className="font-semibold text-slate-600">{LIBRARY_COLUMN_LABELS[column]}</span>
+        )}
+        <button
+          type="button"
+          aria-label={`Resize ${LIBRARY_COLUMN_LABELS[column]} column`}
+          className="absolute right-0 top-0 h-full w-2 cursor-col-resize rounded-sm border-l border-transparent transition-colors hover:border-slate-400 group-hover/column:border-slate-300"
+          onMouseDown={(event) => {
+            handleColumnResizeStart(column, event);
+          }}
+        />
+      </th>
+    );
   };
 
   return (
@@ -878,26 +1284,76 @@ function BlogLibraryPageContent() {
             searchPlaceholder="Search blog title or URL"
             actions={
               <>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    void copyAll("title");
-                  }}
-                  variant="secondary"
-                  size="sm"
-                >
-                  Copy Titles
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    void copyAll("url");
-                  }}
-                  variant="secondary"
-                  size="sm"
-                >
-                  Copy URLs
-                </Button>
+                <details className="relative">
+                  <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100">
+                    Edit Columns
+                  </summary>
+                  <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Show Columns
+                      </p>
+                      <button
+                        type="button"
+                        className="pressable rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                        onClick={() => {
+                          resetColumnVisibility();
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      {columnOrder.map((column) => (
+                        <label
+                          key={column}
+                          className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          <span>{LIBRARY_COLUMN_LABELS[column]}</span>
+                          <input
+                            type="checkbox"
+                            checked={!hiddenColumnSet.has(column)}
+                            disabled={
+                              !hiddenColumnSet.has(column) &&
+                              visibleColumnOrder.length <= 1
+                            }
+                            onChange={() => {
+                              toggleColumnVisibility(column);
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </details>
+                <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white">
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1.5 text-xs font-medium ${
+                      rowDensity === "compact"
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                    onClick={() => {
+                      setRowDensity("compact");
+                    }}
+                  >
+                    Compact
+                  </button>
+                  <button
+                    type="button"
+                    className={`border-l border-slate-300 px-2.5 py-1.5 text-xs font-medium ${
+                      rowDensity === "comfortable"
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                    onClick={() => {
+                      setRowDensity("comfortable");
+                    }}
+                  >
+                    Comfortable
+                  </button>
+                </div>
                 <PermissionGate
                   can={canExportCsv}
                   reason="You do not have permission to export the current blog view."
@@ -946,6 +1402,26 @@ function BlogLibraryPageContent() {
                     Export Selection
                   </Button>
                 </PermissionGate>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void copyAll("title");
+                  }}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Copy Titles
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void copyAll("url");
+                  }}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Copy URLs
+                </Button>
               </>
             }
             filters={
@@ -1034,10 +1510,11 @@ function BlogLibraryPageContent() {
                 Direction
                 <select
                   value={sortDirection}
+                  disabled={sortField === "none"}
                   onChange={(event) => {
                     setSortDirection(event.target.value as LibrarySortDirection);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   {SORT_DIRECTION_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1085,6 +1562,46 @@ function BlogLibraryPageContent() {
                 <span className="font-medium text-slate-900">{sortedBlogs.length}</span> blogs
               </p>
             </div>
+            {canSelectRows && selectedBlogs.length > 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                <p className="text-sm text-slate-700">
+                  <span className="font-semibold text-slate-900">{selectedBlogs.length}</span>{" "}
+                  selected
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => {
+                      exportCsv("selected");
+                    }}
+                  >
+                    Export CSV
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => {
+                      exportPdf("selected");
+                    }}
+                  >
+                    Export PDF
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => {
+                      setSelectedBlogIds([]);
+                    }}
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             {hasNoResults && hasActiveFilters ? (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 <span>No blogs match your filters. Try clearing filters or create a new blog.</span>
@@ -1121,15 +1638,8 @@ function BlogLibraryPageContent() {
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                   <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
                     <tr>
-                      {canSelectRows ? <th className="px-3 py-2" /> : null}
-                      <th className="px-3 py-2">Sr #</th>
-                      <th className="px-3 py-2">Blog Title</th>
-                      <th className="px-3 py-2">Live URL</th>
-                      <th className="px-3 py-2">Writer Status</th>
-                      <th className="px-3 py-2">Publisher Status</th>
-                      <th className="px-3 py-2">Published Date</th>
-                      {shouldShowStageColumn ? <th className="px-3 py-2">Stage</th> : null}
-                      <th className="px-3 py-2">Site</th>
+                      {canSelectRows ? <th className={headerCellClass} /> : null}
+                      {visibleColumnOrder.map((column) => renderHeaderCell(column))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1149,7 +1659,7 @@ function BlogLibraryPageContent() {
                   <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
                     <tr>
                       {canSelectRows ? (
-                        <th className="px-3 py-2">
+                        <th className={headerCellClass}>
                           <input
                             type="checkbox"
                             checked={allVisibleSelected}
@@ -1159,185 +1669,242 @@ function BlogLibraryPageContent() {
                           />
                         </th>
                       ) : null}
-                      <th className="px-3 py-2">Sr #</th>
-                      <th className="px-3 py-2">Blog Title</th>
-                      <th className="px-3 py-2">Live URL</th>
-                      <th className="px-3 py-2">Writer Status</th>
-                      <th className="px-3 py-2">Publisher Status</th>
-                      <th className="px-3 py-2">Published Date</th>
-                      {shouldShowStageColumn ? <th className="px-3 py-2">Stage</th> : null}
-                      <th className="px-3 py-2">Site</th>
+                      {visibleColumnOrder.map((column) => renderHeaderCell(column))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {pagedBlogs.map((blog, index) => {
-                      const globalIndex =
-                        rowLimit === "all"
-                          ? index + 1
-                          : (currentPage - 1) * rowLimit + index + 1;
+                    {pagedBlogs.map((blog) => {
                       const copiedTitle =
                         copiedCell?.blogId === blog.id && copiedCell.field === "title";
                       const copiedUrl = copiedCell?.blogId === blog.id && copiedCell.field === "url";
                       const stage = getStageForBadge(blog);
                       return (
-                        <tr key={blog.id} className="group hover:bg-slate-50">
+                        <tr
+                          key={blog.id}
+                          ref={(node) => {
+                            blogRowRefs.current[blog.id] = node;
+                          }}
+                          className={`group table-row-focus cursor-pointer ${
+                            activeBlogId === blog.id ? "bg-slate-100" : ""
+                          } ${focusedBlogId === blog.id ? "bg-slate-100" : ""}`}
+                          onClick={(event) => {
+                            const target = event.target as HTMLElement;
+                            if (
+                              target.closest(
+                                "a,button,input,textarea,select,summary,details,label"
+                              )
+                            ) {
+                              return;
+                            }
+                            setFocusedBlogId(blog.id);
+                            handleOpenBlogPanel(blog.id);
+                          }}
+                        >
                           {canSelectRows ? (
-                            <td className="px-3 py-2 align-top">
+                            <td className={`${bodyCellClass} align-top`}>
                               <input
                                 type="checkbox"
                                 checked={selectedIdSet.has(blog.id)}
                                 onChange={(event) => {
+                                  setFocusedBlogId(blog.id);
                                   toggleRowSelection(blog.id, event.target.checked);
                                 }}
                               />
                             </td>
                           ) : null}
-                          <td className="px-3 py-2 align-top text-slate-600">{globalIndex}</td>
-                          <td className="px-3 py-2 align-top text-slate-900">
-                            <div className="max-w-[34rem] space-y-1">
-                              <div className="group/title inline-flex max-w-full items-start gap-2">
-                                <Link
-                                  href={`/blogs/${blog.id}`}
-                                  className="interactive-link line-clamp-2 font-medium text-slate-800"
-                                >
-                                  {renderHighlightedText(blog.title, searchQuery)}
-                                </Link>
-                                <span className="tooltip-container">
-                                  <button
-                                    type="button"
-                                    aria-label="Copy blog title"
-                                    className="pressable reveal-on-row-hover rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-                                    onClick={() => {
-                                      void copyToClipboard(
-                                        blog.title,
-                                        blog.id,
-                                        "title",
-                                        "Copied title."
-                                      );
-                                    }}
+                          {visibleColumnOrder.map((column) => {
+                            if (column === "site") {
+                              return (
+                                <td key={column} className={`${bodyCellClass} align-top`}>
+                                  <span
+                                    className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${getSiteBadgeClasses(
+                                      blog.site
+                                    )}`}
                                   >
-                                    {copiedTitle ? "✓" : "📋"}
-                                  </button>
-                                  <span className="tooltip-bubble">Copy blog title</span>
-                                </span>
-                                <details className="relative">
-                                  <summary className="pressable reveal-on-row-hover cursor-pointer list-none rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100">
-                                    ⋯
-                                  </summary>
-                                  <div className="absolute right-0 z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white p-1 shadow-md">
-                                    <Link
-                                      href={`/blogs/${blog.id}`}
-                                      className="interactive-link block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-                                      onClick={() => {
-                                        closeOpenDetailsMenus();
-                                      }}
-                                    >
-                                      Open details
-                                    </Link>
-                                    <button
-                                      type="button"
-                                      className="pressable block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
-                                      onClick={() => {
-                                        closeOpenDetailsMenus();
-                                        void copyToClipboard(
-                                          blog.title,
-                                          blog.id,
-                                          "title",
-                                          "Copied title."
-                                        );
-                                      }}
-                                    >
-                                      Copy title
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="pressable block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
-                                      onClick={() => {
-                                        closeOpenDetailsMenus();
-                                        void copyToClipboard(
-                                          blog.live_url ?? "",
-                                          blog.id,
-                                          "url",
-                                          "Copied URL."
-                                        );
-                                      }}
-                                    >
-                                      Copy URL
-                                    </button>
+                                    {getSiteLabel(blog.site)}
+                                  </span>
+                                </td>
+                              );
+                            }
+
+                            if (column === "title") {
+                              return (
+                                <td key={column} className={`${bodyCellClass} align-top text-slate-900`}>
+                                  <div className="max-w-[34rem] space-y-1">
+                                    <div className="group/title inline-flex max-w-full items-start gap-2">
+                                      <Link
+                                        href={`/blogs/${blog.id}`}
+                                        title={blog.title}
+                                        className="interactive-link block max-w-[30rem] truncate font-medium text-slate-800"
+                                      >
+                                        {renderHighlightedText(blog.title, searchQuery)}
+                                      </Link>
+                                      <span className="tooltip-container">
+                                        <button
+                                          type="button"
+                                          aria-label="Copy blog title"
+                                          className="pressable reveal-on-row-hover rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+                                          onClick={() => {
+                                            void copyToClipboard(
+                                              blog.title,
+                                              blog.id,
+                                              "title",
+                                              "Copied title."
+                                            );
+                                          }}
+                                        >
+                                          {copiedTitle ? "✓" : "📋"}
+                                        </button>
+                                        <span className="tooltip-bubble">Copy title</span>
+                                      </span>
+                                      <details className="relative">
+                                        <summary className="pressable reveal-on-row-hover cursor-pointer list-none rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100">
+                                          ⋯
+                                        </summary>
+                                        <div className="absolute right-0 z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                                          <Link
+                                            href={`/blogs/${blog.id}`}
+                                            className="interactive-link block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                                            onClick={() => {
+                                              closeOpenDetailsMenus();
+                                            }}
+                                          >
+                                            Open details
+                                          </Link>
+                                          <button
+                                            type="button"
+                                            className="pressable block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
+                                            onClick={() => {
+                                              closeOpenDetailsMenus();
+                                              void copyToClipboard(
+                                                blog.title,
+                                                blog.id,
+                                                "title",
+                                                "Copied title."
+                                              );
+                                            }}
+                                          >
+                                            Copy title
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="pressable block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
+                                            onClick={() => {
+                                              closeOpenDetailsMenus();
+                                              void copyToClipboard(
+                                                blog.live_url ?? "",
+                                                blog.id,
+                                                "url",
+                                                "Copied URL."
+                                              );
+                                            }}
+                                          >
+                                            Copy URL
+                                          </button>
+                                        </div>
+                                      </details>
+                                    </div>
+                                    <p className="line-clamp-1 text-xs text-slate-500">
+                                      Writer: {getAssigneeLabel(blog.writer?.full_name)} • Publisher:{" "}
+                                      {getAssigneeLabel(blog.publisher?.full_name)}
+                                    </p>
                                   </div>
-                                </details>
-                              </div>
-                              <p className="line-clamp-1 text-xs text-slate-500">
-                                {blog.site === "sighthound.com" ? "SH" : "RED"} • Writer:{" "}
-                                {getAssigneeLabel(blog.writer?.full_name)} • Publisher:{" "}
-                                {getAssigneeLabel(blog.publisher?.full_name)}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 align-top text-slate-700">
-                            {blog.live_url ? (
-                              <div className="group/url inline-flex max-w-[24rem] items-center gap-2">
-                                <a
-                                  href={blog.live_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="interactive-link truncate text-left text-slate-700"
-                                  title={blog.live_url}
+                                </td>
+                              );
+                            }
+
+                            if (column === "live_url") {
+                              return (
+                                <td key={column} className={`${bodyCellClass} align-top text-slate-700`}>
+                                  {blog.live_url ? (
+                                    <div className="group/url inline-flex max-w-[24rem] items-center gap-2">
+                                      <a
+                                        href={blog.live_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="interactive-link truncate text-left text-slate-700"
+                                        title={blog.live_url}
+                                      >
+                                        {renderHighlightedText(blog.live_url, searchQuery)} ↗
+                                      </a>
+                                      <span className="tooltip-container">
+                                        <button
+                                          type="button"
+                                          aria-label="Copy blog URL"
+                                          className="pressable reveal-on-row-hover rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+                                          onClick={() => {
+                                            void copyToClipboard(
+                                              blog.live_url ?? "",
+                                              blog.id,
+                                              "url",
+                                              "Copied URL."
+                                            );
+                                          }}
+                                        >
+                                          {copiedUrl ? "✓" : "🔗"}
+                                        </button>
+                                        <span className="tooltip-bubble">Copy URL</span>
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                              );
+                            }
+
+                            if (column === "writer_status") {
+                              return (
+                                <td key={column} className={`${bodyCellClass} align-top`}>
+                                  <WriterStatusBadge status={blog.writer_status} />
+                                </td>
+                              );
+                            }
+
+                            if (column === "published_date") {
+                              return (
+                                <td key={column} className={`${bodyCellClass} align-top text-slate-600`}>
+                                  {formatPublishedDate(blog)}
+                                </td>
+                              );
+                            }
+
+                            if (column === "writer") {
+                              return (
+                                <td key={column} className={`${bodyCellClass} align-top text-slate-700`}>
+                                  {getAssigneeLabel(blog.writer?.full_name)}
+                                </td>
+                              );
+                            }
+
+                            if (column === "publisher") {
+                              return (
+                                <td key={column} className={`${bodyCellClass} align-top text-slate-700`}>
+                                  {getAssigneeLabel(blog.publisher?.full_name)}
+                                </td>
+                              );
+                            }
+
+                            if (column === "publisher_status") {
+                              return (
+                                <td key={column} className={`${bodyCellClass} align-top`}>
+                                  <PublisherStatusBadge status={blog.publisher_status} />
+                                </td>
+                              );
+                            }
+
+                            return (
+                              <td key={column} className={`${bodyCellClass} align-top`}>
+                                <span
+                                  className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getStageBadgeClasses(
+                                    stage
+                                  )}`}
                                 >
-                                  {renderHighlightedText(blog.live_url, searchQuery)} ↗
-                                </a>
-                                <span className="tooltip-container">
-                                  <button
-                                    type="button"
-                                    aria-label="Copy blog URL"
-                                    className="pressable reveal-on-row-hover rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-                                    onClick={() => {
-                                      void copyToClipboard(
-                                        blog.live_url ?? "",
-                                        blog.id,
-                                        "url",
-                                        "Copied URL."
-                                      );
-                                    }}
-                                  >
-                                    {copiedUrl ? "✓" : "🔗"}
-                                  </button>
-                                  <span className="tooltip-bubble">Copy blog URL</span>
+                                  {getStageLabel(stage)}
                                 </span>
-                              </div>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="px-3 py-2 align-top text-xs text-slate-700">
-                            {WRITER_STATUS_LABELS[blog.writer_status]}
-                          </td>
-                          <td className="px-3 py-2 align-top text-xs text-slate-700">
-                            {PUBLISHER_STATUS_LABELS[blog.publisher_status]}
-                          </td>
-                          <td className="px-3 py-2 align-top text-slate-600">
-                            {formatPublishedDate(blog)}
-                          </td>
-                          {shouldShowStageColumn ? (
-                            <td className="px-3 py-2 align-top">
-                              <span
-                                className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getStageBadgeClasses(
-                                  stage
-                                )}`}
-                              >
-                                {getStageLabel(stage)}
-                              </span>
-                            </td>
-                          ) : null}
-                          <td className="px-3 py-2 align-top">
-                            <span
-                              className={`inline-flex min-w-10 items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getSiteBadgeClasses(
-                                blog.site
-                              )}`}
-                            >
-                              {blog.site === "sighthound.com" ? "SH" : "RED"}
-                            </span>
-                          </td>
+                              </td>
+                            );
+                          })}
                         </tr>
                       );
                     })}
@@ -1373,6 +1940,120 @@ function BlogLibraryPageContent() {
               />
             </div>
           </section>
+          {activeBlog ? (
+            <>
+              <button
+                type="button"
+                aria-label="Close blog preview"
+                className="fixed inset-0 z-30 bg-slate-900/25"
+                onClick={() => {
+                  setActiveBlogId(null);
+                }}
+              />
+              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-slate-200 bg-white shadow-2xl">
+                <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-2">
+                      <span
+                        className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${getSiteBadgeClasses(
+                          activeBlog.site
+                        )}`}
+                      >
+                        {getSiteLabel(activeBlog.site)}
+                      </span>
+                      <h3 className="text-lg font-semibold text-slate-900">{activeBlog.title}</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+                      onClick={() => {
+                        setActiveBlogId(null);
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-4 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <WriterStatusBadge status={activeBlog.writer_status} />
+                    <PublisherStatusBadge status={activeBlog.publisher_status} />
+                    <span
+                      className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getStageBadgeClasses(
+                        getStageForBadge(activeBlog)
+                      )}`}
+                    >
+                      {getStageLabel(getStageForBadge(activeBlog))}
+                    </span>
+                  </div>
+                  <dl className="grid gap-3 rounded-lg border border-slate-200 p-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-slate-500">Writer</dt>
+                      <dd className="mt-1 text-slate-800">
+                        {getAssigneeLabel(activeBlog.writer?.full_name)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-slate-500">Publisher</dt>
+                      <dd className="mt-1 text-slate-800">
+                        {getAssigneeLabel(activeBlog.publisher?.full_name)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-slate-500">
+                        Published Date
+                      </dt>
+                      <dd className="mt-1 text-slate-800">{formatPublishedDate(activeBlog)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-slate-500">Live URL</dt>
+                      <dd className="mt-1 break-all text-slate-800">
+                        {activeBlog.live_url ?? "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/blogs/${activeBlog.id}`}
+                      className="pressable inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+                    >
+                      ↗ Open full page
+                    </Link>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        void copyToClipboard(
+                          activeBlog.title,
+                          activeBlog.id,
+                          "title",
+                          "Copied title."
+                        );
+                      }}
+                    >
+                      Copy title
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        void copyToClipboard(
+                          activeBlog.live_url ?? "",
+                          activeBlog.id,
+                          "url",
+                          "Copied URL."
+                        );
+                      }}
+                    >
+                      Copy URL
+                    </Button>
+                  </div>
+                </div>
+              </aside>
+            </>
+          ) : null}
         </div>
       </AppShell>
     </ProtectedPage>

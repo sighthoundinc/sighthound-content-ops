@@ -114,6 +114,24 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+.table-row-focus {
+  transition: background-color 120ms ease;
+}
+
+.table-row-focus:hover,
+.table-row-focus:focus-within {
+  background-color: #f8fafc;
+}
+
+.table-row-focus td:first-child {
+  transition: box-shadow 120ms ease;
+}
+
+.table-row-focus:hover td:first-child,
+.table-row-focus:focus-within td:first-child {
+  box-shadow: inset 2px 0 0 #cbd5e1;
+}
+
 @keyframes skeleton-shimmer {
   0% {
     transform: translateX(-100%);

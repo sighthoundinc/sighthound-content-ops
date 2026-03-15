@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { ConfirmationModal } from "@/components/confirmation-modal";
+import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import {
@@ -34,6 +34,7 @@ import type {
 } from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type BlogFormState = {
   title: string;
@@ -124,6 +125,7 @@ export default function BlogDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { hasPermission, user, profile } = useAuth();
+  const { showError, showSuccess } = useSystemFeedback();
   const blogId = params.id;
 
   const [blog, setBlog] = useState<BlogRecord | null>(null);
@@ -141,6 +143,20 @@ export default function BlogDetailPage() {
   const [pendingCompletionAction, setPendingCompletionAction] = useState<
     "writer" | "publisher" | null
   >(null);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
+
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+    showSuccess(successMessage);
+  }, [showSuccess, successMessage]);
 
   useEffect(() => {
     if (!blogId) {
@@ -713,16 +729,6 @@ export default function BlogDetailPage() {
             </div>
           </header>
 
-          {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {error}
-            </p>
-          ) : null}
-          {successMessage ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {successMessage}
-            </p>
-          ) : null}
 
           <section className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -1274,24 +1280,22 @@ export default function BlogDetailPage() {
               <div className="mt-2 space-y-2 text-sm">
                 <p>
                   Draft:{" "}
-                  <Link
+                  <ExternalLink
                     href={blog.google_doc_url}
                     className="text-blue-600 underline"
-                    target="_blank"
                   >
                     {blog.google_doc_url}
-                  </Link>
+                  </ExternalLink>
                 </p>
                 {blog.live_url ? (
                   <p>
                     Live URL:{" "}
-                    <Link
+                    <ExternalLink
                       href={blog.live_url}
                       className="text-blue-600 underline"
-                      target="_blank"
                     >
                       {blog.live_url}
-                    </Link>
+                    </ExternalLink>
                   </p>
                 ) : null}
               </div>

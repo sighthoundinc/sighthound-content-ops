@@ -55,10 +55,10 @@ export const OVERALL_STATUSES: OverallBlogStatus[] = [
 ];
 
 export const STATUS_LABELS: Record<OverallBlogStatus, string> = {
-  planned: "Planned",
+  planned: "Draft",
   writing: "Writing",
   needs_revision: "Needs Revision",
-  ready_to_publish: "Ready to Publish",
+  ready_to_publish: "Ready for Publishing",
   published: "Published",
 };
 export const SOCIAL_POST_STATUS_LABELS: Record<SocialPostStatus, string> = {
@@ -85,10 +85,10 @@ export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
 };
 
 export const WRITER_STATUS_LABELS: Record<WriterStageStatus, string> = {
-  not_started: "Not Started",
-  in_progress: "In Progress",
-  needs_revision: "Needs Review",
-  completed: "Completed",
+  not_started: "Draft",
+  in_progress: "Writing",
+  needs_revision: "Needs Revision",
+  completed: "Ready for Publishing",
 };
 
 export const PUBLISHER_STATUS_LABELS: Record<PublisherStageStatus, string> = {
@@ -98,11 +98,11 @@ export const PUBLISHER_STATUS_LABELS: Record<PublisherStageStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<OverallBlogStatus, string> = {
-  planned: "bg-slate-50 text-slate-700",
-  writing: "bg-slate-100 text-slate-700",
-  needs_revision: "bg-amber-50 text-amber-700",
-  ready_to_publish: "bg-blue-50 text-blue-700",
-  published: "bg-emerald-50 text-emerald-700",
+  planned: "bg-slate-100 text-slate-700 border border-slate-200",
+  writing: "bg-blue-100 text-blue-700 border border-blue-200",
+  needs_revision: "bg-amber-100 text-amber-700 border border-amber-200",
+  ready_to_publish: "bg-orange-100 text-orange-700 border border-orange-200",
+  published: "bg-emerald-100 text-emerald-700 border border-emerald-200",
 };
 export const SOCIAL_POST_STATUS_COLORS: Record<SocialPostStatus, string> = {
   idea: "bg-slate-50 text-slate-700",
@@ -111,16 +111,16 @@ export const SOCIAL_POST_STATUS_COLORS: Record<SocialPostStatus, string> = {
 };
 
 export const WRITER_STATUS_COLORS: Record<WriterStageStatus, string> = {
-  not_started: "bg-slate-50 text-slate-700",
-  in_progress: "bg-blue-50 text-blue-700",
-  needs_revision: "bg-amber-50 text-amber-700",
-  completed: "bg-emerald-50 text-emerald-700",
+  not_started: "bg-slate-100 text-slate-700 border border-slate-200",
+  in_progress: "bg-blue-100 text-blue-700 border border-blue-200",
+  needs_revision: "bg-amber-100 text-amber-700 border border-amber-200",
+  completed: "bg-orange-100 text-orange-700 border border-orange-200",
 };
 
 export const PUBLISHER_STATUS_COLORS: Record<PublisherStageStatus, string> = {
-  not_started: "bg-slate-50 text-slate-700",
-  in_progress: "bg-blue-50 text-blue-700",
-  completed: "bg-emerald-50 text-emerald-700",
+  not_started: "bg-slate-100 text-slate-700 border border-slate-200",
+  in_progress: "bg-violet-100 text-violet-700 border border-violet-200",
+  completed: "bg-emerald-100 text-emerald-700 border border-emerald-200",
 };
 
 export const WORKFLOW_STAGES: WorkflowStage[] = [
@@ -132,16 +132,16 @@ export const WORKFLOW_STAGES: WorkflowStage[] = [
 
 export const WORKFLOW_STAGE_LABELS: Record<WorkflowStage, string> = {
   writing: "Writing",
-  ready: "Ready",
+  ready: "Ready for Publishing",
   publishing: "Publishing",
   published: "Published",
 };
 
 export const WORKFLOW_STAGE_COLORS: Record<WorkflowStage, string> = {
-  writing: "bg-slate-100 text-slate-700",
-  ready: "bg-purple-50 text-purple-700",
-  publishing: "bg-blue-50 text-blue-700",
-  published: "bg-emerald-50 text-emerald-700",
+  writing: "bg-blue-100 text-blue-700 border border-blue-200",
+  ready: "bg-orange-100 text-orange-700 border border-orange-200",
+  publishing: "bg-violet-100 text-violet-700 border border-violet-200",
+  published: "bg-emerald-100 text-emerald-700 border border-emerald-200",
 };
 
 export function getWorkflowStage({

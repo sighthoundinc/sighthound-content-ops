@@ -1,8 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   DndContext,
   PointerSensor,
@@ -27,11 +26,13 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
+import { CalendarTile } from "@/components/calendar-tile";
 import {
   DataPageFilterPills,
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
+import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import {
@@ -68,7 +69,7 @@ import type {
   SocialPostStatus,
   SocialPostType,
 } from "@/lib/types";
-import { formatDateInput, toTitleCase } from "@/lib/utils";
+import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
@@ -254,7 +255,7 @@ function SocialPostCard({
         {SOCIAL_POST_PRODUCT_LABELS[post.product]} • {SOCIAL_POST_TYPE_LABELS[post.type]}
       </p>
       <p className="mt-1 text-xs text-slate-500">
-        Scheduled: {formatDateInput(post.scheduled_date) || "Unscheduled"}
+        Scheduled: {formatDisplayDate(post.scheduled_date) || "Unscheduled"}
       </p>
       <p className="mt-1 text-xs text-slate-500">
         Platforms:{" "}
@@ -269,6 +270,14 @@ function SocialPostCard({
       ) : null}
       <p className="mt-2 text-[11px] text-slate-400">{linkCount} published links</p>
     </button>
+  );
+}
+
+export default function SocialPostsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SocialPostsPageContent />
+    </Suspense>
   );
 }
 
@@ -324,10 +333,14 @@ function SocialStatusColumn({
   );
 }
 
-export default function SocialPostsPage() {
+function SocialPostsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { showSuccess } = useSystemFeedback();
+  const { showError, showSuccess } = useSystemFeedback();
+  const requestedView = searchParams.get("view");
+  const shouldOpenCreateModal = searchParams.get("create") === "1";
+  const requestedScheduledDate = searchParams.get("scheduled_date");
   const [posts, setPosts] = useState<SocialPostWithRelations[]>([]);
   const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -341,9 +354,11 @@ export default function SocialPostsPage() {
   const [listCurrentPage, setListCurrentPage] = useState(1);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [hasAppliedCreateQuery, setHasAppliedCreateQuery] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newProduct, setNewProduct] = useState<SocialPostProduct>("general_company");
   const [newType, setNewType] = useState<SocialPostType>("image");
+  const [newScheduledDate, setNewScheduledDate] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   const [panelForm, setPanelForm] = useState<SocialPostFormState | null>(null);
@@ -413,6 +428,48 @@ export default function SocialPostsPage() {
   useEffect(() => {
     void loadPosts();
   }, []);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
+
+  useEffect(() => {
+    if (requestedView === "board" || requestedView === "list" || requestedView === "calendar") {
+      setView(requestedView);
+    }
+  }, [requestedView]);
+
+  useEffect(() => {
+    if (!shouldOpenCreateModal) {
+      setHasAppliedCreateQuery(false);
+      return;
+    }
+    if (hasAppliedCreateQuery) {
+      return;
+    }
+    setIsCreateModalOpen(true);
+    if (
+      requestedScheduledDate &&
+      /^\d{4}-\d{2}-\d{2}$/.test(requestedScheduledDate)
+    ) {
+      setNewScheduledDate(requestedScheduledDate);
+    }
+    setHasAppliedCreateQuery(true);
+  }, [
+    hasAppliedCreateQuery,
+    requestedScheduledDate,
+    shouldOpenCreateModal,
+  ]);
+
+  useEffect(() => {
+    if (!panelError) {
+      return;
+    }
+    showError(panelError);
+  }, [panelError, showError]);
 
   const linksByPost = useMemo(() => {
     return postLinks.reduce<Record<string, SocialPostLinkRecord[]>>((acc, link) => {
@@ -722,6 +779,7 @@ export default function SocialPostsPage() {
         title: trimmedTitle,
         product: newProduct,
         type: newType,
+        scheduled_date: newScheduledDate || null,
         status: "idea",
         platforms: [],
         created_by: user.id,
@@ -747,6 +805,7 @@ export default function SocialPostsPage() {
     setNewTitle("");
     setNewProduct("general_company");
     setNewType("image");
+    setNewScheduledDate("");
     setIsCreateModalOpen(false);
     showSuccess("Social post created.");
     setIsCreating(false);
@@ -1020,6 +1079,7 @@ export default function SocialPostsPage() {
                 variant="primary"
                 size="md"
                 onClick={() => {
+                  setNewScheduledDate("");
                   setIsCreateModalOpen(true);
                 }}
               >
@@ -1074,11 +1134,6 @@ export default function SocialPostsPage() {
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
-          {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {error}
-            </p>
-          ) : null}
 
           {isLoading ? (
             <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
@@ -1139,8 +1194,16 @@ export default function SocialPostsPage() {
                       pagedListPosts.map((post) => (
                         <tr
                           key={post.id}
-                          className="cursor-pointer hover:bg-slate-50"
+                          tabIndex={0}
+                          className="table-row-focus cursor-pointer"
                           onClick={() => {
+                            openPostPanel(post.id);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter" && event.key !== " ") {
+                              return;
+                            }
+                            event.preventDefault();
                             openPostPanel(post.id);
                           }}
                         >
@@ -1155,7 +1218,7 @@ export default function SocialPostsPage() {
                             {SOCIAL_POST_TYPE_LABELS[post.type]}
                           </td>
                           <td className="px-3 py-2 text-slate-700">
-                            {formatDateInput(post.scheduled_date) || "—"}
+                            {formatDisplayDate(post.scheduled_date) || "—"}
                           </td>
                           <td className="px-3 py-2 text-slate-700">
                             {post.platforms.length > 0
@@ -1242,21 +1305,15 @@ export default function SocialPostsPage() {
                   const isCurrentMonth = day.getMonth() === activeMonth.getMonth();
                   const isToday = isSameDay(day, new Date());
                   return (
-                    <article
+                    <CalendarTile
                       key={key}
-                      className={`min-h-28 rounded-md border p-2 ${
-                        isCurrentMonth
-                          ? "border-slate-200 bg-white"
-                          : "border-slate-100 bg-slate-50"
-                      } ${isToday ? "border-blue-300 bg-blue-50" : ""}`}
+                      dayLabel={format(day, "d")}
+                      isToday={isToday}
+                      isCurrentMonth={isCurrentMonth}
+                      todayContainerClassName="border-blue-300 bg-blue-50"
+                      todayDayLabelClassName="font-semibold text-blue-700"
+                      dayLabelClassName={!isToday ? "text-slate-700" : undefined}
                     >
-                      <p
-                        className={`text-sm ${
-                          isToday ? "font-semibold text-blue-700" : "text-slate-700"
-                        }`}
-                      >
-                        {format(day, "d")}
-                      </p>
                       <div className="mt-2 space-y-1">
                         {items.length === 0 ? (
                           <p className="text-xs text-slate-400">No posts</p>
@@ -1278,7 +1335,7 @@ export default function SocialPostsPage() {
                           ))
                         )}
                       </div>
-                    </article>
+                    </CalendarTile>
                   );
                 })}
               </div>
@@ -1358,11 +1415,6 @@ export default function SocialPostsPage() {
                 </div>
               </div>
 
-              {panelError ? (
-                <p className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                  {panelError}
-                </p>
-              ) : null}
 
               <section className="mt-4 space-y-3 rounded-lg border border-slate-200 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1456,6 +1508,19 @@ export default function SocialPostsPage() {
                         </option>
                       ))}
                     </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-slate-700">
+                      Scheduled Date
+                    </span>
+                    <input
+                      type="date"
+                      value={newScheduledDate}
+                      onChange={(event) => {
+                        setNewScheduledDate(event.target.value);
+                      }}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
                   </label>
                 </div>
 
@@ -1674,13 +1739,12 @@ export default function SocialPostsPage() {
                       {activePostLinks.map((link) => (
                         <li key={link.id} className="truncate">
                           {SOCIAL_PLATFORM_LABELS[link.platform]}:{" "}
-                          <Link
+                          <ExternalLink
                             href={link.url}
-                            target="_blank"
                             className="text-blue-600 underline"
                           >
                             {link.url}
-                          </Link>
+                          </ExternalLink>
                         </li>
                       ))}
                     </ul>
@@ -1791,6 +1855,7 @@ export default function SocialPostsPage() {
               className="absolute inset-0 bg-slate-900/30"
               onClick={() => {
                 if (!isCreating) {
+                  setNewScheduledDate("");
                   setIsCreateModalOpen(false);
                 }
               }}
@@ -1808,6 +1873,7 @@ export default function SocialPostsPage() {
                   className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
                   onClick={() => {
                     if (!isCreating) {
+                      setNewScheduledDate("");
                       setIsCreateModalOpen(false);
                     }
                   }}
@@ -1877,6 +1943,7 @@ export default function SocialPostsPage() {
                     className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     onClick={() => {
                       if (!isCreating) {
+                        setNewScheduledDate("");
                         setIsCreateModalOpen(false);
                       }
                     }}

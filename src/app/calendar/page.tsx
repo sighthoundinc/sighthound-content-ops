@@ -31,6 +31,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
+import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import {
   DataPageFilterPills,
@@ -194,12 +195,12 @@ function DroppableDayCell({
   });
 
   return (
-    <article
+    <div
       ref={setNodeRef}
       className={`${className} ${isOver ? "ring-2 ring-indigo-300 ring-offset-1" : ""}`}
     >
       {children}
-    </article>
+    </div>
   );
 }
 
@@ -348,6 +349,7 @@ export default function CalendarPage() {
   const [quickCreateDateKey, setQuickCreateDateKey] = useState<string | null>(null);
   const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
   const [activeSocialPostId, setActiveSocialPostId] = useState<string | null>(null);
+  const [panelRescheduleDate, setPanelRescheduleDate] = useState("");
   const [pendingReschedule, setPendingReschedule] = useState<{
     blogId: string;
     blogTitle: string;
@@ -437,6 +439,14 @@ export default function CalendarPage() {
 
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
+
 
   const hasBlogsEnabled = contentFilters.includes("blogs");
   const hasSocialPostsEnabled = contentFilters.includes("social_posts");
@@ -598,6 +608,13 @@ export default function CalendarPage() {
     () => blogs.find((blog) => blog.id === activeBlogId) ?? null,
     [activeBlogId, blogs]
   );
+  useEffect(() => {
+    if (!activeBlog) {
+      setPanelRescheduleDate("");
+      return;
+    }
+    setPanelRescheduleDate(getBlogScheduledDate(activeBlog) ?? "");
+  }, [activeBlog]);
   const activeSocialPost = useMemo(
     () => socialPosts.find((post) => post.id === activeSocialPostId) ?? null,
     [activeSocialPostId, socialPosts]
@@ -773,14 +790,11 @@ export default function CalendarPage() {
       return;
     }
     const currentDate = getBlogScheduledDate(activeBlog);
-    const input = window.prompt(
-      `Reschedule "${activeBlog.title}" to date (YYYY-MM-DD):`,
-      currentDate ?? ""
-    );
-    if (!input) {
+    const normalized = panelRescheduleDate.trim();
+    if (!normalized) {
+      setError("Select a date before rescheduling.");
       return;
     }
-    const normalized = input.trim();
     const isValid = /^\d{4}-\d{2}-\d{2}$/.test(normalized);
     if (!isValid) {
       setError("Use YYYY-MM-DD format for rescheduling.");
@@ -1054,20 +1068,6 @@ export default function CalendarPage() {
                 ))}
               </div>
             </section>
-          ) : error ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm text-rose-700">{error}</p>
-              <Button
-                type="button"
-                variant="secondary"
-                size="xs"
-                onClick={() => {
-                  void loadData();
-                }}
-              >
-                Retry
-              </Button>
-            </div>
           ) : (
             <>
               <section className="space-y-3">
@@ -1138,41 +1138,35 @@ export default function CalendarPage() {
                         <DroppableDayCell
                           key={key}
                           dateKey={key}
-                          className={`relative overflow-visible rounded-md border p-2 ${
-                            compact ? "min-h-36" : "min-h-[18rem]"
-                          } ${
-                            isCurrentMonth
-                              ? "border-slate-200 bg-white"
-                              : "border-slate-100 bg-slate-50"
-                          } ${!isToday && isCurrentWeek ? "bg-neutral-50" : ""} ${
-                            isToday ? "border-indigo-400 bg-indigo-50 shadow-sm" : ""
-                          }`}
+                          className="relative overflow-visible rounded-md"
                         >
-                          <div className="mb-2 flex items-center justify-between gap-1">
-                            <p
-                              className={`text-sm ${
-                                isToday
-                                  ? "font-medium text-indigo-700"
-                                  : isCurrentMonth
-                                    ? "font-normal text-slate-900"
-                                    : "font-normal text-slate-400"
-                              }`}
-                            >
-                              {format(day, "d")}
-                            </p>
-                            <button
-                              type="button"
-                              className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setQuickCreateDateKey((previous) =>
-                                  previous === key ? null : key
-                                );
-                              }}
-                            >
-                              +
-                            </button>
-                          </div>
+                          <CalendarTile
+                            dayLabel={format(day, "d")}
+                            isToday={isToday}
+                            isCurrentMonth={isCurrentMonth}
+                            className={`overflow-visible ${
+                              compact ? "min-h-36" : "min-h-[18rem]"
+                            } ${!isToday && isCurrentWeek ? "bg-neutral-50" : ""}`}
+                            todayContainerClassName="border-indigo-400 bg-indigo-50 shadow-sm"
+                            todayDayLabelClassName="font-medium text-indigo-700"
+                            currentMonthDayLabelClassName="font-normal text-slate-900"
+                            outOfMonthDayLabelClassName="font-normal text-slate-400"
+                            headerAction={
+                              <button
+                                type="button"
+                                className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setQuickCreateDateKey((previous) =>
+                                    previous === key ? null : key
+                                  );
+                                }}
+                              >
+                                +
+                              </button>
+                            }
+                            bodyClassName="space-y-1.5"
+                          >
                           {quickCreateDateKey === key ? (
                             <div className="absolute right-2 top-8 z-20 w-40 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
                               <Link
@@ -1228,6 +1222,7 @@ export default function CalendarPage() {
                               )
                             )}
                           </div>
+                          </CalendarTile>
                         </DroppableDayCell>
                       );
                     })}
@@ -1399,6 +1394,14 @@ export default function CalendarPage() {
                   >
                     Edit
                   </Link>
+                  <input
+                    type="date"
+                    value={panelRescheduleDate}
+                    onChange={(event) => {
+                      setPanelRescheduleDate(event.target.value);
+                    }}
+                    className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  />
                   <button
                     type="button"
                     onClick={() => {

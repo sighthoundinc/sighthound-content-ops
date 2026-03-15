@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 export default function LoginPage() {
   const router = useRouter();
   const { session } = useAuth();
+  const { showError } = useSystemFeedback();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +22,13 @@ export default function LoginPage() {
       router.replace("/dashboard");
     }
   }, [router, session]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
 
   const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -126,11 +135,6 @@ export default function LoginPage() {
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
 
-          {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {error}
-            </p>
-          ) : null}
         </form>
       </div>
     </main>

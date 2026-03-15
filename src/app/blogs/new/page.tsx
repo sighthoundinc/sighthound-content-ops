@@ -16,6 +16,7 @@ import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogSite, ProfileRecord } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 function slugify(value: string) {
   return value
@@ -45,7 +46,9 @@ function NewBlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { hasPermission, user, profile } = useAuth();
+  const { showError } = useSystemFeedback();
   const sourceIdeaId = searchParams.get("ideaId");
+  const requestedScheduledPublishDate = searchParams.get("scheduled_publish_date");
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [title, setTitle] = useState("");
   const [site, setSite] = useState<BlogSite>("sighthound.com");
@@ -131,6 +134,24 @@ function NewBlogPageContent() {
 
     void loadIdeaPrefill();
   }, [sourceIdeaId]);
+
+  useEffect(() => {
+    if (
+      !requestedScheduledPublishDate ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(requestedScheduledPublishDate)
+    ) {
+      return;
+    }
+    setScheduledPublishDate((previous) => previous || requestedScheduledPublishDate);
+    setDisplayPublishDate((previous) => previous || requestedScheduledPublishDate);
+  }, [requestedScheduledPublishDate]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
 
   const selectedWriter = useMemo(
     () => users.find((nextUser) => nextUser.id === writerId) ?? null,
@@ -459,11 +480,6 @@ function NewBlogPageContent() {
               ) : null}
             </section>
 
-            {error ? (
-              <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                {error}
-              </p>
-            ) : null}
 
             <div className="flex items-center gap-2">
               <button

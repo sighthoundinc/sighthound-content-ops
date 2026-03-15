@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button, buttonClass } from "@/components/button";
+import { ExternalLink } from "@/components/external-link";
 import {
   DataPageEmptyState,
   DataPageFilterPills,
@@ -36,6 +37,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
+import { formatDisplayDate } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
@@ -126,14 +128,7 @@ function getBoardStage(blog: BlogRecord): BoardStage {
 
 function formatPublishedDate(blog: BlogRecord) {
   const dateValue = blog.display_published_date ?? getBlogPublishDate(blog);
-  if (!dateValue) {
-    return "—";
-  }
-  const parsed = new Date(`${dateValue}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) {
-    return "—";
-  }
-  return format(parsed, "MMM d");
+  return formatDisplayDate(dateValue) || "—";
 }
 
 function formatUpdatedDistance(isoValue: string | null | undefined) {
@@ -268,6 +263,13 @@ export default function BlogCardBoardPage() {
   useEffect(() => {
     void loadBoardData();
   }, [loadBoardData]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
 
   const activeFilterPills = useMemo(
     () =>
@@ -727,22 +729,6 @@ export default function BlogCardBoardPage() {
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
-          {error ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm text-rose-700">{error}</p>
-              <Button
-                type="button"
-                onClick={() => {
-                  void loadBoardData();
-                }}
-                variant="secondary"
-                size="xs"
-              >
-                Retry
-              </Button>
-            </div>
-          ) : null}
-
 
           <section className="rounded-lg border border-slate-200 bg-white p-3">
             <div className="overflow-x-auto pb-1">
@@ -918,10 +904,8 @@ export default function BlogCardBoardPage() {
                                   {isPublishedStage ? (
                                     <>
                                       {blog.live_url ? (
-                                        <a
+                                        <ExternalLink
                                           href={blog.live_url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
                                           className={buttonClass({
                                             variant: "icon",
                                             size: "icon",
@@ -929,7 +913,7 @@ export default function BlogCardBoardPage() {
                                           aria-label="Open blog"
                                         >
                                           ↗
-                                        </a>
+                                        </ExternalLink>
                                       ) : null}
                                       <Button
                                         type="button"
@@ -966,10 +950,8 @@ export default function BlogCardBoardPage() {
                                         ✎
                                       </Link>
                                       {blog.google_doc_url ? (
-                                        <a
+                                        <ExternalLink
                                           href={blog.google_doc_url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
                                           className={buttonClass({
                                             variant: "icon",
                                             size: "icon",
@@ -977,7 +959,7 @@ export default function BlogCardBoardPage() {
                                           aria-label="Open document"
                                         >
                                           📄
-                                        </a>
+                                        </ExternalLink>
                                       ) : null}
                                       <Button
                                         type="button"

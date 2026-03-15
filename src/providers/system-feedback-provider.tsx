@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 
-type SystemStatusType = "saving" | "success" | "error";
+type SystemStatusType = "saving" | "success" | "warning" | "error" | "info";
 
 type NotificationInput = {
   message: string;
@@ -50,7 +50,9 @@ interface SystemFeedbackContextValue {
   unreadCount: number;
   showSaving: (message: string, options?: ShowStatusOptions) => string;
   showSuccess: (message: string, options?: ShowStatusOptions) => string;
+  showWarning: (message: string, options?: ShowStatusOptions) => string;
   showError: (message: string, options?: ShowStatusOptions) => string;
+  showInfo: (message: string, options?: ShowStatusOptions) => string;
   updateStatus: (
     id: string,
     payload: { type: SystemStatusType; message: string } & ShowStatusOptions
@@ -66,7 +68,9 @@ const SystemFeedbackContext = createContext<SystemFeedbackContextValue | null>(n
 const STATUS_DEFAULT_DURATIONS: Record<SystemStatusType, number | null> = {
   saving: null,
   success: 3600,
+  warning: 4200,
   error: 5000,
+  info: 3600,
 };
 
 const STATUS_EXIT_MS = 250;
@@ -88,6 +92,12 @@ function getStatusIcon(type: SystemStatusType) {
   }
   if (type === "success") {
     return <span className="text-sm font-semibold text-emerald-600">✔</span>;
+  }
+  if (type === "warning") {
+    return <span className="text-sm font-semibold text-amber-600">⚠</span>;
+  }
+  if (type === "info") {
+    return <span className="text-sm font-semibold text-blue-600">ℹ</span>;
   }
   return <span className="text-sm font-semibold text-rose-600">⚠</span>;
 }
@@ -174,8 +184,12 @@ function SystemStatusCard({
       className={`pointer-events-auto flex w-full items-start gap-3 rounded-[10px] border bg-white px-3 py-2 shadow-sm transition-all ${
         item.type === "error"
           ? "border-rose-200"
+          : item.type === "warning"
+            ? "border-amber-200"
           : item.type === "success"
             ? "border-emerald-200"
+            : item.type === "info"
+              ? "border-blue-200"
             : "border-slate-200"
       } ${
         item.closing ? "translate-y-0 opacity-0 duration-[250ms]" : ""
@@ -308,12 +322,29 @@ export function SystemFeedbackProvider({ children }: { children: React.ReactNode
       }),
     [enqueueStatus]
   );
+  const showWarning = useCallback(
+    (message: string, options?: ShowStatusOptions) =>
+      enqueueStatus("warning", message, {
+        ...options,
+        durationMs: options?.durationMs ?? STATUS_DEFAULT_DURATIONS.warning,
+      }),
+    [enqueueStatus]
+  );
 
   const showError = useCallback(
     (message: string, options?: ShowStatusOptions) =>
       enqueueStatus("error", message, {
         ...options,
         durationMs: options?.durationMs ?? STATUS_DEFAULT_DURATIONS.error,
+      }),
+    [enqueueStatus]
+  );
+
+  const showInfo = useCallback(
+    (message: string, options?: ShowStatusOptions) =>
+      enqueueStatus("info", message, {
+        ...options,
+        durationMs: options?.durationMs ?? STATUS_DEFAULT_DURATIONS.info,
       }),
     [enqueueStatus]
   );
@@ -369,7 +400,9 @@ export function SystemFeedbackProvider({ children }: { children: React.ReactNode
     unreadCount,
     showSaving,
     showSuccess,
+    showWarning,
     showError,
+    showInfo,
     updateStatus,
     dismissStatus,
     pushNotification,

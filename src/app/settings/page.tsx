@@ -30,6 +30,7 @@ import {
 } from "@/lib/table";
 import type { AppRole, AppSettingsRecord, ProfileRecord } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 const WEEK_DAYS = [
   { label: "Sunday", value: 0 },
@@ -86,6 +87,7 @@ function splitName(fullName: string) {
 
 export default function SettingsPage() {
   const { hasPermission, session, profile, refreshProfile, user } = useAuth();
+  const { showError, showSuccess } = useSystemFeedback();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -160,6 +162,20 @@ export default function SettingsPage() {
   useEffect(() => {
     setQuickViewSnapshot(readQuickViewSnapshot());
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
+
+  useEffect(() => {
+    if (!success) {
+      return;
+    }
+    showSuccess(success);
+  }, [showSuccess, success]);
 
   const loadUsers = async () => {
     const supabase = getSupabaseBrowserClient();
@@ -665,16 +681,6 @@ export default function SettingsPage() {
             ) : null}
           </header>
 
-          {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {error}
-            </p>
-          ) : null}
-          {success ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {success}
-            </p>
-          ) : null}
 
           {isLoading || !settings ? (
             <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">

@@ -278,94 +278,7 @@ export default function ResourcesPage() {
             />
           </Section>
 
-          <Section id="ui-contract" title="11. UI Contract (Compact AI Implementation Reference)">
-            <p>
-              This subsection is an implementation contract. Keep labels and row behavior aligned
-              with the definitions below.
-            </p>
-            <div className="space-y-2">
-              <p className="font-semibold text-slate-900">Dashboard (`/dashboard`)</p>
-              <BulletList
-                items={[
-                  "`ui.dashboard.search` — input placeholder: \"Search title, URL, writer, publisher, or site\"",
-                  "`ui.dashboard.filters.site` — label: \"Sites\" (multi-select)",
-                  "`ui.dashboard.filters.writer` — label: \"Writers\" (multi-select)",
-                  "`ui.dashboard.filters.publisher` — label: \"Publishers\" (multi-select)",
-                  "`ui.dashboard.filters.writerStatus` — label: \"Writer Status\" (multi-select)",
-                  "`ui.dashboard.filters.publisherStatus` — label: \"Publisher Status\" (multi-select)",
-                  "`ui.dashboard.filters.overallStatus` — label: \"Overall Status\" (multi-select)",
-                  "`ui.dashboard.action.clearFilters` — button label: \"Clear all filters\"",
-                  "`ui.dashboard.action.editColumns` — button label: \"Edit Columns\"",
-                  "`ui.dashboard.action.exportViewCsv` — button label: \"Export View CSV\"",
-                  "`ui.dashboard.action.exportSelectedCsv` — button label: \"Export Selected CSV\"",
-                  "Row action contract: clicking a non-interactive row area opens the right-side blog panel.",
-                ]}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="font-semibold text-slate-900">My Tasks (`/tasks`)</p>
-              <BulletList
-                items={[
-                  "`ui.tasks.search` — input placeholder: \"Search task title or URL\"",
-                  "`ui.tasks.filters.status` — label: \"Status\"",
-                  "`ui.tasks.filters.type` — label: \"Type\"",
-                  "`ui.tasks.filters.site` — label: \"Site\"",
-                  "`ui.tasks.action.editColumns` — button label: \"Edit Columns\"",
-                  "`ui.tasks.action.export` — button label: \"Export\"",
-                  "Row action contract: task title cell links to `/blogs/{blogId}`; status cells allow inline status changes.",
-                ]}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="font-semibold text-slate-900">Blogs (`/blogs`)</p>
-              <BulletList
-                items={[
-                  "`ui.blogs.search` — input placeholder: \"Search blog title or URL\"",
-                  "`ui.blogs.filters.publishState` — label: \"Publish State\"",
-                  "`ui.blogs.filters.site` — label: \"Site\"",
-                  "`ui.blogs.filters.writerStatus` — label: \"Writer Status\"",
-                  "`ui.blogs.filters.publisherStatus` — label: \"Publisher Status\"",
-                  "`ui.blogs.action.createBlog` — button label: \"Create Blog\"",
-                  "`ui.blogs.action.editColumns` — button label: \"Edit Columns\"",
-                  "`ui.blogs.action.exportCsv` — button label: \"Export CSV\"",
-                  "`ui.blogs.action.exportPdf` — button label: \"Export PDF\"",
-                  "`ui.blogs.action.exportSelection` — button label: \"Export Selection\"",
-                  "Row action contract: clicking non-interactive row area opens right-side blog detail panel.",
-                ]}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="font-semibold text-slate-900">Social Posts (`/social-posts`)</p>
-              <BulletList
-                items={[
-                  "`ui.social.search` — input placeholder: \"Search title, caption, blog...\"",
-                  "`ui.social.filters.status` — label: \"Status\"",
-                  "`ui.social.view.board` — tab label: \"Board\"",
-                  "`ui.social.view.list` — tab label: \"List\"",
-                  "`ui.social.view.calendar` — tab label: \"Calendar\"",
-                  "`ui.social.action.new` — button label: \"New Social Post\"",
-                  "Row action contract (list view): clicking a row opens social post side panel.",
-                ]}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="font-semibold text-slate-900">Calendar (`/calendar`)</p>
-              <BulletList
-                items={[
-                  "`ui.calendar.toggle.blogs` — toggle label: \"Blogs\"",
-                  "`ui.calendar.toggle.socialPosts` — toggle label: \"Social Posts\"",
-                  "`ui.calendar.view.month` — button label: \"Month\"",
-                  "`ui.calendar.view.week` — button label: \"Week\"",
-                  "`ui.calendar.filters.writer` — label: \"Writer\"",
-                  "`ui.calendar.quickCreate.blog` — action label: \"+ Add Blog\"",
-                  "`ui.calendar.quickCreate.social` — action label: \"+ Add Social Post\"",
-                  "Row action contract: blog card click opens blog panel; social card click opens social post panel.",
-                ]}
-              />
-            </div>
-          </Section>
-
-          <Section id="editing-updating" title="12. Editing and Updating Content Entries">
+          <Section id="editing-updating" title="11. Editing and Updating Content Entries">
             <p>
               Records are expected to evolve over time. Update them frequently to keep team context
               accurate.
@@ -383,7 +296,7 @@ export default function ResourcesPage() {
             <p>Open Blogs or Social Posts table, click the row, and edit fields in detail panel.</p>
           </Section>
 
-          <Section id="common-mistakes" title="13. Common Mistakes to Avoid">
+          <Section id="common-mistakes" title="12. Common Mistakes to Avoid">
             <BulletList
               items={[
                 "Creating duplicate blog entries",
@@ -394,7 +307,7 @@ export default function ResourcesPage() {
             />
           </Section>
 
-          <Section id="daily-workflow-writer" title="14. Daily Workflow (Writer)">
+          <Section id="daily-workflow-writer" title="13. Daily Workflow (Writer)">
             <ol className="list-decimal space-y-1 pl-5">
               <li>Open My Tasks and review assigned blogs with upcoming deadlines.</li>
               <li>Start writing; set status to Writing.</li>
@@ -404,7 +317,7 @@ export default function ResourcesPage() {
             <p>Optional: update title/date and leave contextual notes for publisher.</p>
           </Section>
 
-          <Section id="daily-workflow-publisher" title="15. Daily Workflow (Publisher)">
+          <Section id="daily-workflow-publisher" title="14. Daily Workflow (Publisher)">
             <ol className="list-decimal space-y-1 pl-5">
               <li>Filter Blogs by Ready for Publishing.</li>
               <li>Review draft and format in CMS (headings, images, metadata, links).</li>
@@ -413,7 +326,7 @@ export default function ResourcesPage() {
             </ol>
           </Section>
 
-          <Section id="troubleshooting" title="17. Troubleshooting">
+          <Section id="troubleshooting" title="15. Troubleshooting">
             <div className="space-y-2">
               <p className="font-semibold text-slate-900">Cannot find a blog entry</p>
               <BulletList
@@ -442,7 +355,7 @@ export default function ResourcesPage() {
             </div>
           </Section>
 
-          <Section id="feature-reference" title="18. Feature Reference">
+          <Section id="feature-reference" title="16. Feature Reference">
             <p className="font-semibold text-slate-900">Blog Tracking</p>
             <p>
               End-to-end blog lifecycle tracking with title, owner assignments, status, date, and

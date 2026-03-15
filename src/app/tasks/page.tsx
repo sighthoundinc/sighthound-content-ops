@@ -36,7 +36,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDateInput, toTitleCase } from "@/lib/utils";
+import { formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
@@ -270,6 +270,13 @@ export default function MyTasksPage() {
       window.clearTimeout(timeout);
     };
   }, [highlightedTaskId, currentPage]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
 
   useEffect(() => {
     if (!highlightedTaskId) {
@@ -509,7 +516,7 @@ export default function MyTasksPage() {
       return toTitleCase(task.publisherStatus);
     }
     if (column === "publish_date") {
-      return formatDateInput(task.scheduledDate) || "Not scheduled";
+      return formatDisplayDate(task.scheduledDate) || "Not scheduled";
     }
     return "View options";
   };
@@ -863,21 +870,6 @@ export default function MyTasksPage() {
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
-          {error ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm text-rose-700">{error}</p>
-              <Button
-                type="button"
-                onClick={() => {
-                  void loadTasks();
-                }}
-                variant="secondary"
-                size="xs"
-              >
-                Retry
-              </Button>
-            </div>
-          ) : null}
 
           {isLoading ? (
             <>
@@ -944,7 +936,7 @@ export default function MyTasksPage() {
                             {task.statusLabel}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">
-                            Publish Date: {formatDateInput(task.scheduledDate) || "Not scheduled"}
+                            Publish Date: {formatDisplayDate(task.scheduledDate) || "Not scheduled"}
                           </p>
                           {task.reason ? (
                             <p className="mt-1 text-xs font-medium text-slate-700">
@@ -1090,7 +1082,7 @@ export default function MyTasksPage() {
                                 if (column === "publish_date") {
                                   return (
                                     <td key={column} className={`${bodyCellClass} align-top text-slate-600`}>
-                                      {formatDateInput(task.scheduledDate) || "Not scheduled"}
+                                      {formatDisplayDate(task.scheduledDate) || "Not scheduled"}
                                     </td>
                                   );
                                 }

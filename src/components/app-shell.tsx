@@ -73,6 +73,7 @@ export function AppShell({
     clearNotifications,
   } = useSystemFeedback();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickViewSnapshot, setQuickViewSnapshot] = useState<QuickViewSnapshot | null>(
     null
   );
@@ -128,6 +129,18 @@ export function AppShell({
       });
     }
 
+    if (canCreateBlogs || canManageSocialPosts) {
+      navigationCommands.push({
+        id: "open-quick-create",
+        label: "Open quick create",
+        group: "Create",
+        keywords: ["quick", "create", "new", "content", "c"],
+        action: () => {
+          setIsQuickCreateOpen(true);
+        },
+      });
+    }
+
     if (canManageSocialPosts) {
       navigationCommands.push({
         id: "nav-add-social-post",
@@ -135,7 +148,7 @@ export function AppShell({
         group: "Create",
         keywords: ["social", "post", "new", "create", "add"],
         action: () => {
-          router.push("/social-posts");
+          router.push("/social-posts?create=1");
         },
       });
     }
@@ -163,6 +176,11 @@ export function AppShell({
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (event.key === "Escape" && isQuickCreateOpen) {
+        event.preventDefault();
+        setIsQuickCreateOpen(false);
         return;
       }
 
@@ -194,7 +212,13 @@ export function AppShell({
         return;
       }
 
-      if (event.key.toLowerCase() === "c" && pathname !== "/calendar") {
+      if (event.key.toLowerCase() === "c" && (canCreateBlogs || canManageSocialPosts)) {
+        event.preventDefault();
+        setIsQuickCreateOpen(true);
+        return;
+      }
+
+      if (event.key.toLowerCase() === "g" && pathname !== "/calendar") {
         event.preventDefault();
         router.push("/calendar");
         return;
@@ -210,7 +234,13 @@ export function AppShell({
     return () => {
       window.removeEventListener("keydown", handleKeydown);
     };
-  }, [canCreateBlogs, pathname, router]);
+  }, [
+    canCreateBlogs,
+    canManageSocialPosts,
+    isQuickCreateOpen,
+    pathname,
+    router,
+  ]);
 
   useEffect(() => {
     if (!isNotificationPanelOpen) {
@@ -281,8 +311,21 @@ export function AppShell({
                 {canCreateBlogs ? <KbdShortcut>N</KbdShortcut> : null}
                 <KbdShortcut>D</KbdShortcut>
                 <KbdShortcut>C</KbdShortcut>
+                <KbdShortcut>G</KbdShortcut>
               </div>
             </div>
+            {canCreateBlogs || canManageSocialPosts ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setIsQuickCreateOpen(true);
+                }}
+              >
+                Quick Create
+              </Button>
+            ) : null}
             <div className="relative" ref={notificationPanelRef}>
               <Button
                 type="button"
@@ -481,6 +524,65 @@ export function AppShell({
           {children}
         </main>
       </div>
+      {isQuickCreateOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close quick create"
+            className="absolute inset-0 bg-slate-900/35"
+            onClick={() => {
+              setIsQuickCreateOpen(false);
+            }}
+          />
+          <section className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Quick Create</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Jump straight into a new content item.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setIsQuickCreateOpen(false);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-2">
+              {canCreateBlogs ? (
+                <Link
+                  href="/blogs/new"
+                  className="pressable rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                  onClick={() => {
+                    setIsQuickCreateOpen(false);
+                  }}
+                >
+                  New Blog
+                </Link>
+              ) : null}
+              {canManageSocialPosts ? (
+                <Link
+                  href="/social-posts?create=1"
+                  className="pressable rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                  onClick={() => {
+                    setIsQuickCreateOpen(false);
+                  }}
+                >
+                  New Social Post
+                </Link>
+              ) : null}
+            </div>
+            <p className="mt-4 text-xs text-slate-500">
+              Shortcut: press <KbdShortcut>C</KbdShortcut> outside form fields.
+            </p>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

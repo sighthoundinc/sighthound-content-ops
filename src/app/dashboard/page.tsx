@@ -14,6 +14,7 @@ import {
   DataPageToolbar,
 } from "@/components/data-page";
 import { KbdShortcut } from "@/components/kbd-shortcut";
+import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   PublisherStatusBadge,
@@ -69,8 +70,9 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDateInput, toTitleCase } from "@/lib/utils";
+import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type BlogCommentRecord = {
   id: string;
@@ -440,6 +442,7 @@ const normalizeSavedViews = (value: unknown): SavedDashboardView[] => {
 export default function DashboardPage() {
   const router = useRouter();
   const { hasPermission, profile, user } = useAuth();
+  const { showError, showSuccess, showWarning } = useSystemFeedback();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -546,6 +549,27 @@ export default function DashboardPage() {
       menu.open = false;
     });
   }, []);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
+
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+    showSuccess(successMessage);
+  }, [showSuccess, successMessage]);
+
+  useEffect(() => {
+    if (!panelError) {
+      return;
+    }
+    showError(panelError);
+  }, [panelError, showError]);
 
   const applyFilterState = useCallback((nextState: DashboardFilterState) => {
     setSearch(nextState.search);
@@ -1591,70 +1615,39 @@ export default function DashboardPage() {
   );
 
   const saveCurrentFiltersAsView = useCallback(() => {
-    const rawName = prompt("Saved view name");
-    if (!rawName) {
-      return;
-    }
-    const trimmedName = rawName.trim();
-    if (!trimmedName) {
-      setError("Saved view name cannot be empty.");
-      return;
+    const baseName = `View ${format(new Date(), "MMM d yyyy, h:mm a")}`;
+    const existingNames = new Set(savedViews.map((view) => view.name.toLowerCase()));
+    let trimmedName = baseName;
+    if (existingNames.has(trimmedName.toLowerCase())) {
+      let suffix = 2;
+      while (existingNames.has(`${baseName} (${suffix})`.toLowerCase())) {
+        suffix += 1;
+      }
+      trimmedName = `${baseName} (${suffix})`;
     }
 
     const snapshot = buildCurrentFilterState();
     const snapshotColumnOrder = [...columnOrder];
     const nowIso = new Date().toISOString();
-    let didUpdateExisting = false;
-    let nextActiveId = "";
-
-    setSavedViews((previous) => {
-      const existingView = previous.find(
-        (view) => view.name.toLowerCase() === trimmedName.toLowerCase()
-      );
-      if (existingView) {
-        didUpdateExisting = true;
-        nextActiveId = existingView.id;
-        return previous.map((view) =>
-          view.id === existingView.id
-            ? {
-                ...view,
-                state: snapshot,
-                columnOrder: snapshotColumnOrder,
-                name: trimmedName,
-                updatedAt: nowIso,
-              }
-            : view
-        );
-      }
-
-      const nextId =
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `${Date.now()}`;
-      nextActiveId = nextId;
-      return [
-        ...previous,
-        {
-          id: nextId,
-          name: trimmedName,
-          state: snapshot,
-          columnOrder: snapshotColumnOrder,
-          createdAt: nowIso,
-          updatedAt: nowIso,
-        },
-      ];
-    });
-
-    if (nextActiveId) {
-      setActiveSavedViewId(nextActiveId);
-    }
+    const nextId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}`;
+    setSavedViews((previous) => [
+      ...previous,
+      {
+        id: nextId,
+        name: trimmedName,
+        state: snapshot,
+        columnOrder: snapshotColumnOrder,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+    ]);
+    setActiveSavedViewId(nextId);
     setError(null);
-    setSuccessMessage(
-      didUpdateExisting
-        ? `Updated saved view "${trimmedName}".`
-        : `Saved new view "${trimmedName}".`
-    );
-  }, [buildCurrentFilterState, columnOrder]);
+    setSuccessMessage(`Saved new view "${trimmedName}".`);
+  }, [buildCurrentFilterState, columnOrder, savedViews]);
 
 
   const getExportCellValue = useCallback(
@@ -1692,7 +1685,7 @@ export default function DashboardPage() {
       }
 
       const publishDate = getBlogPublishDate(blog);
-      return formatDateInput(publishDate) || "—";
+      return formatDisplayDate(publishDate) || "—";
     },
     []
   );
@@ -1921,20 +1914,26 @@ export default function DashboardPage() {
     if (!ensureBulkSelection()) {
       return;
     }
-    if (!confirm(`Delete ${selectedBlogIds.length} selected blog(s)? This cannot be undone.`)) {
-      return;
-    }
-
-    await runBulkMutation(async () => {
-      const supabase = getSupabaseBrowserClient();
-      const { error: deleteError } = await supabase
-        .from("blogs")
-        .delete()
-        .in("id", selectedBlogIds);
-      if (deleteError) {
-        throw new Error(deleteError.message);
-      }
-      return `Deleted ${selectedBlogIds.length} blog(s).`;
+    const selectedIdsSnapshot = [...selectedBlogIds];
+    const selectedCount = selectedIdsSnapshot.length;
+    setError(null);
+    setSuccessMessage(null);
+    showWarning(`Delete ${selectedCount} selected blog(s)? This cannot be undone.`, {
+      actionLabel: "Delete",
+      durationMs: 7000,
+      onAction: () => {
+        void runBulkMutation(async () => {
+          const supabase = getSupabaseBrowserClient();
+          const { error: deleteError } = await supabase
+            .from("blogs")
+            .delete()
+            .in("id", selectedIdsSnapshot);
+          if (deleteError) {
+            throw new Error(deleteError.message);
+          }
+          return `Deleted ${selectedCount} blog(s).`;
+        });
+      },
     });
   };
 
@@ -2733,16 +2732,6 @@ export default function DashboardPage() {
               </div>
             </section>
           ) : null}
-          {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
-            </p>
-          ) : null}
-          {successMessage ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {successMessage}
-            </p>
-          ) : null}
 
           {canRunBulkActions && selectedBlogIds.length > 0 ? (
             <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -3269,7 +3258,7 @@ export default function DashboardPage() {
 
                               return (
                                 <td key={column} className={`${bodyCellClass} text-slate-600`}>
-                                  {formatDateInput(displayPublishDate) || "—"}
+                                  {formatDisplayDate(displayPublishDate) || "—"}
                                 </td>
                               );
                             })}
@@ -3388,11 +3377,6 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-5 p-4">
-                  {panelError ? (
-                    <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                      {panelError}
-                    </p>
-                  ) : null}
 
                   <section className="rounded-lg border border-slate-200 p-3">
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -3572,13 +3556,12 @@ export default function DashboardPage() {
                       <p>
                         Google Doc:{" "}
                         {activeBlog.google_doc_url ? (
-                          <Link
+                          <ExternalLink
                             href={activeBlog.google_doc_url}
-                            target="_blank"
                             className="text-blue-600 underline"
                           >
                             {activeBlog.google_doc_url}
-                          </Link>
+                          </ExternalLink>
                         ) : (
                           "—"
                         )}
@@ -3586,13 +3569,12 @@ export default function DashboardPage() {
                       <p>
                         Live URL:{" "}
                         {activeBlog.live_url ? (
-                          <Link
+                          <ExternalLink
                             href={activeBlog.live_url}
-                            target="_blank"
                             className="text-blue-600 underline"
                           >
                             {activeBlog.live_url}
-                          </Link>
+                          </ExternalLink>
                         ) : (
                           "—"
                         )}

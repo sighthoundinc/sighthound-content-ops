@@ -10,6 +10,7 @@ import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogIdeaRecord, BlogSite } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -24,6 +25,7 @@ function formatDateTime(value: string) {
 export default function IdeasPage() {
   const router = useRouter();
   const { hasPermission, user } = useAuth();
+  const { showError, showSuccess } = useSystemFeedback();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -62,6 +64,13 @@ export default function IdeasPage() {
   useEffect(() => {
     void loadIdeas();
   }, []);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
 
   const activeIdeas = useMemo(
     () => ideas.filter((idea) => !idea.is_converted),
@@ -110,6 +119,7 @@ export default function IdeasPage() {
 
     if (data) {
       setIdeas((previous) => [data as BlogIdeaRecord, ...previous]);
+      showSuccess("Idea saved.");
     }
     setIsSubmitting(false);
     return true;
@@ -192,11 +202,6 @@ export default function IdeasPage() {
             </div>
           </form>
 
-          {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {error}
-            </p>
-          ) : null}
 
           <section className="space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">

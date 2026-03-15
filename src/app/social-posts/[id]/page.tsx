@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { DataPageHeader } from "@/components/data-page";
+import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import {
@@ -680,13 +680,12 @@ export default function SocialPostEditorPage() {
                         Copy URL
                       </Button>
                       {post.associated_blog.live_url ? (
-                        <Link
+                        <ExternalLink
                           href={post.associated_blog.live_url}
-                          target="_blank"
                           className="text-xs font-medium text-blue-600 underline"
                         >
                           Open blog
-                        </Link>
+                        </ExternalLink>
                       ) : null}
                     </div>
                   </>

@@ -14,6 +14,7 @@ import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button, buttonClass } from "@/components/button";
+import { ExternalLink } from "@/components/external-link";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DataPageFilterPills,
@@ -43,6 +44,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
+import { formatDisplayDate } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
@@ -241,14 +243,7 @@ function getPageRows<T>(rows: T[], currentPage: number, rowLimit: LibraryRowLimi
 
 function formatPublishedDate(blog: BlogRecord) {
   const dateKey = getPublishedDateKey(blog);
-  if (!dateKey) {
-    return "—";
-  }
-  const dateValue = new Date(`${dateKey}T00:00:00`);
-  if (Number.isNaN(dateValue.getTime())) {
-    return "—";
-  }
-  return format(dateValue, "MMM d yyyy");
+  return formatDisplayDate(dateKey) || "—";
 }
 
 function getStageForBadge(blog: BlogRecord): LibraryStage {
@@ -476,6 +471,13 @@ function BlogLibraryPageContent() {
       window.clearTimeout(timeout);
     };
   }, [copiedCell]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -1538,21 +1540,6 @@ function BlogLibraryPageContent() {
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
-          {error ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm text-rose-700">{error}</p>
-              <Button
-                type="button"
-                onClick={() => {
-                  void loadBlogs();
-                }}
-                variant="secondary"
-                size="xs"
-              >
-                Retry
-              </Button>
-            </div>
-          ) : null}
 
           <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1818,15 +1805,13 @@ function BlogLibraryPageContent() {
                                 <td key={column} className={`${bodyCellClass} align-top text-slate-700`}>
                                   {blog.live_url ? (
                                     <div className="group/url inline-flex max-w-[24rem] items-center gap-2">
-                                      <a
+                                      <ExternalLink
                                         href={blog.live_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
                                         className="interactive-link truncate text-left text-slate-700"
                                         title={blog.live_url}
                                       >
                                         {renderHighlightedText(blog.live_url, searchQuery)} ↗
-                                      </a>
+                                      </ExternalLink>
                                       <span className="tooltip-container">
                                         <button
                                           type="button"

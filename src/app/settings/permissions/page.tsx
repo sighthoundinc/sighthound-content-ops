@@ -13,6 +13,7 @@ import {
 } from "@/lib/permissions";
 import type { AppRole, CanonicalAppPermissionKey } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type PermissionAuditRow = {
   id: string;
@@ -71,6 +72,7 @@ function getTaskLabel(permissionKey: CanonicalAppPermissionKey, fallbackLabel: s
 
 export default function PermissionsSettingsPage() {
   const { refreshPermissions, session } = useAuth();
+  const { showError, showSuccess } = useSystemFeedback();
   const [selectedRole, setSelectedRole] = useState<AppRole>("writer");
   const [simulatedRole, setSimulatedRole] = useState<AppRole | "off">("off");
   const [permissionRows, setPermissionRows] = useState<PermissionRow[]>([]);
@@ -80,6 +82,20 @@ export default function PermissionsSettingsPage() {
   const [savingPermissionKey, setSavingPermissionKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    showError(error);
+  }, [error, showError]);
+
+  useEffect(() => {
+    if (!success) {
+      return;
+    }
+    showSuccess(success);
+  }, [showSuccess, success]);
 
   const loadPermissions = useCallback(async () => {
     if (!session?.access_token) {
@@ -225,16 +241,6 @@ export default function PermissionsSettingsPage() {
             </p>
           </header>
 
-          {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {error}
-            </p>
-          ) : null}
-          {success ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {success}
-            </p>
-          ) : null}
           {isSimulationActive ? (
             <p className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
               Viewing dashboard as <span className="font-semibold">{simulatedRole}</span>. Changes

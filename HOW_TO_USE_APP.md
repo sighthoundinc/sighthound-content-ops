@@ -63,6 +63,14 @@ Key behavior:
   - view/selected CSV
   - view/selected PDF
 
+### CardBoard (`/blogs/cardboard`)
+Use CardBoard for kanban-style pipeline management.
+- drag cards between stages (`Idea`, `Writing`, `Reviewing`, `Publishing`, `Published`)
+- stage moves enforce workflow permissions and required fields
+- stage columns open corresponding table filters in `/blogs`
+- quick-add from `Idea` for fast backlog intake
+- card-level quick actions (open links, copy title/URL, edit)
+
 ### Tasks (`/tasks`)
 Use Tasks for day-to-day execution.
 - Top 3 priority items shown first
@@ -91,9 +99,22 @@ Use detail pages for record-level edits:
 ### Social Posts (`/social-posts`)
 - track social posting workflow linked to content operations
 
+### Social Post Editor (`/social-posts/[id]`)
+- focused editor for one social post at a time
+- autosave + manual save
+- caption formatting helpers (LinkedIn-friendly)
+- blog lookup/linking, platform selection, checklist, and copy utilities
+
 ### Settings (`/settings`)
 - self profile fields
 - admin-level user management and role assignments
+- admin-only activity cleanup:
+  - delete all activity history
+  - delete history for selected users
+  - optional comments cleanup (blog + social comments)
+- admin quick-view as non-admin user:
+  - switch into writer/publisher/editor perspective
+  - actions are executed/logged as selected user until return
 
 ### Permissions (`/settings/permissions`) (Admin with manage permission)
 - role-by-role permission matrix
@@ -140,7 +161,8 @@ Publisher queues:
 
 ## 5) Comments and activity
 - comments are per-blog
-- activity log records assignment/status transitions
+- social post comments and activity history are tracked in social workflow
+- activity log records assignment/status transitions and permission changes
 - use comments for operational context and handoff notes
 
 ## 6) Troubleshooting (end user)
@@ -158,6 +180,10 @@ Publisher queues:
 ### “Comments or profile updates fail”
 - refresh and retry once
 - if persistent, report to operator for migration/schema check
+
+### “I’m seeing actions under the wrong user”
+- check whether admin quick-view mode is active
+- use “Return to Admin” before continuing admin operations
 
 ## 7) Best practices
 - keep stage status current; it drives all operational views

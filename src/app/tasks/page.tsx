@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { Button } from "@/components/button";
+import {
+  DataPageEmptyState,
+  DataPageFilterPills,
+  DataPageHeader,
+  DataPageToolbar,
+} from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   TablePaginationControls,
@@ -123,51 +130,58 @@ export default function MyTasksPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [kindFilter, setKindFilter] = useState<TaskKind | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "in_progress" | "not_started" | "needs_revision"
+  >("all");
+  const [siteFilter, setSiteFilter] = useState<"all" | "sighthound.com" | "redactor.com">("all");
+  const [copiedCell, setCopiedCell] = useState<{
+    taskId: string;
+    field: "title" | "url";
+  } | null>(null);
   const taskRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
-
-  useEffect(() => {
+  const loadTasks = useCallback(async () => {
     if (!user?.id) {
       return;
     }
+    const supabase = getSupabaseBrowserClient();
+    setIsLoading(true);
+    setError(null);
+    let { data, error: tasksError } = await supabase
+      .from("blogs")
+      .select(BLOG_SELECT_WITH_DATES)
+      .eq("is_archived", false)
+      .or(`writer_id.eq.${user.id},publisher_id.eq.${user.id}`)
+      .order("scheduled_publish_date", { ascending: true, nullsFirst: false })
+      .order("updated_at", { ascending: false });
 
-    const loadTasks = async () => {
-      const supabase = getSupabaseBrowserClient();
-      setIsLoading(true);
-      setError(null);
-      let { data, error: tasksError } = await supabase
+    if (isMissingBlogDateColumnsError(tasksError)) {
+      const fallback = await supabase
         .from("blogs")
-        .select(BLOG_SELECT_WITH_DATES)
+        .select(BLOG_SELECT_LEGACY)
         .eq("is_archived", false)
         .or(`writer_id.eq.${user.id},publisher_id.eq.${user.id}`)
-        .order("scheduled_publish_date", { ascending: true, nullsFirst: false })
+        .order("target_publish_date", { ascending: true, nullsFirst: false })
         .order("updated_at", { ascending: false });
+      data = fallback.data as typeof data;
+      tasksError = fallback.error;
+    }
 
-      if (isMissingBlogDateColumnsError(tasksError)) {
-        const fallback = await supabase
-          .from("blogs")
-          .select(BLOG_SELECT_LEGACY)
-          .eq("is_archived", false)
-          .or(`writer_id.eq.${user.id},publisher_id.eq.${user.id}`)
-          .order("target_publish_date", { ascending: true, nullsFirst: false })
-          .order("updated_at", { ascending: false });
-        data = fallback.data as typeof data;
-        tasksError = fallback.error;
-      }
-
-      if (tasksError) {
-        setError(tasksError.message);
-        setIsLoading(false);
-        return;
-      }
-
-      setBlogs(
-        normalizeBlogRows((data ?? []) as Array<Record<string, unknown>>) as BlogRecord[]
-      );
+    if (tasksError) {
+      setError(tasksError.message);
       setIsLoading(false);
-    };
+      return;
+    }
+
+    setBlogs(normalizeBlogRows((data ?? []) as Array<Record<string, unknown>>) as BlogRecord[]);
+    setIsLoading(false);
+  }, [user?.id]);
+
+  useEffect(() => {
 
     void loadTasks();
-  }, [user?.id]);
+  }, [loadTasks]);
 
 
   useEffect(() => {
@@ -194,6 +208,18 @@ export default function MyTasksPage() {
       window.clearTimeout(timeout);
     };
   }, [highlightedTaskId]);
+
+  useEffect(() => {
+    if (!copiedCell) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setCopiedCell(null);
+    }, 1000);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [copiedCell]);
 
   const taskItems = useMemo(() => {
     if (!user?.id) {
@@ -294,15 +320,36 @@ export default function MyTasksPage() {
     });
   }, [blogs, todayDateKey, user?.id]);
 
-  const nextTasks = useMemo(() => taskItems.slice(0, 3), [taskItems]);
+  const filteredTaskItems = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    return taskItems.filter((task) => {
+      if (kindFilter !== "all" && task.kind !== kindFilter) {
+        return false;
+      }
+      if (statusFilter !== "all" && task.statusValue !== statusFilter) {
+        return false;
+      }
+      const blog = blogs.find((entry) => entry.id === task.blogId);
+      if (siteFilter !== "all" && blog?.site !== siteFilter) {
+        return false;
+      }
+      if (!normalizedSearch) {
+        return true;
+      }
+      const searchText = `${task.title} ${task.liveUrl ?? ""}`.toLowerCase();
+      return searchText.includes(normalizedSearch);
+    });
+  }, [blogs, kindFilter, searchQuery, siteFilter, statusFilter, taskItems]);
+
+  const nextTasks = useMemo(() => filteredTaskItems.slice(0, 3), [filteredTaskItems]);
 
   const pageCount = useMemo(
-    () => getTablePageCount(taskItems.length, FULL_LIST_PAGE_SIZE),
-    [taskItems.length]
+    () => getTablePageCount(filteredTaskItems.length, FULL_LIST_PAGE_SIZE),
+    [filteredTaskItems.length]
   );
   const pagedTasks = useMemo(
-    () => getTablePageRows(taskItems, currentPage, FULL_LIST_PAGE_SIZE),
-    [currentPage, taskItems]
+    () => getTablePageRows(filteredTaskItems, currentPage, FULL_LIST_PAGE_SIZE),
+    [currentPage, filteredTaskItems]
   );
 
   useEffect(() => {
@@ -310,12 +357,54 @@ export default function MyTasksPage() {
   }, [pageCount]);
 
   const focusTaskRow = (taskId: string) => {
-    const taskIndex = taskItems.findIndex((task) => task.id === taskId);
+    const taskIndex = filteredTaskItems.findIndex((task) => task.id === taskId);
     if (taskIndex >= 0) {
       setCurrentPage(Math.floor(taskIndex / FULL_LIST_PAGE_SIZE) + 1);
     }
     setHighlightedTaskId(taskId);
   };
+  const activeFilterPills = useMemo(
+    () =>
+      [
+        searchQuery.trim().length > 0
+          ? {
+              id: "search",
+              label: `Search: ${searchQuery.trim()}`,
+              onRemove: () => {
+                setSearchQuery("");
+              },
+            }
+          : null,
+        kindFilter !== "all"
+          ? {
+              id: "kind",
+              label: `Task Type: ${toTitleCase(kindFilter)}`,
+              onRemove: () => {
+                setKindFilter("all");
+              },
+            }
+          : null,
+        statusFilter !== "all"
+          ? {
+              id: "status",
+              label: `Status: ${toTitleCase(statusFilter)}`,
+              onRemove: () => {
+                setStatusFilter("all");
+              },
+            }
+          : null,
+        siteFilter !== "all"
+          ? {
+              id: "site",
+              label: `Site: ${siteFilter === "sighthound.com" ? "Sighthound (SH)" : "Redactor (RED)"}`,
+              onRemove: () => {
+                setSiteFilter("all");
+              },
+            }
+          : null,
+      ].filter((pill) => pill !== null),
+    [kindFilter, searchQuery, siteFilter, statusFilter]
+  );
 
   const copyTaskValue = async (
     task: TaskItem,
@@ -328,7 +417,8 @@ export default function MyTasksPage() {
     }
     try {
       await navigator.clipboard.writeText(value);
-      showSuccess("Copied to clipboard");
+      setCopiedCell({ taskId: task.id, field });
+      showSuccess(field === "title" ? "Copied title." : "Copied URL.");
     } catch {
       showError("Could not copy to clipboard.");
     }
@@ -427,23 +517,124 @@ export default function MyTasksPage() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-6">
-          <header>
-            <h2 className="text-xl font-semibold text-slate-900">My Tasks</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Prioritized writing and publishing assignments, sorted by urgency.
-            </p>
-          </header>
+          <DataPageHeader
+            title="Tasks"
+            description="Prioritized writing and publishing assignments, sorted by urgency."
+          />
+          <DataPageToolbar
+            searchValue={searchQuery}
+            onSearchChange={(value) => {
+              setSearchQuery(value);
+              setCurrentPage(1);
+            }}
+            searchPlaceholder="Search task title or URL"
+            filters={
+              <>
+                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Status
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => {
+                      setStatusFilter(
+                        event.target.value as "all" | "in_progress" | "not_started" | "needs_revision"
+                      );
+                      setCurrentPage(1);
+                    }}
+                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="not_started">Not Started</option>
+                    <option value="needs_revision">Needs Revision</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Type
+                  <select
+                    value={kindFilter}
+                    onChange={(event) => {
+                      setKindFilter(event.target.value as TaskKind | "all");
+                      setCurrentPage(1);
+                    }}
+                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  >
+                    <option value="all">All Task Types</option>
+                    <option value="writer">Writer</option>
+                    <option value="publisher">Publisher</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Product
+                  <select
+                    value={siteFilter}
+                    onChange={(event) => {
+                      setSiteFilter(event.target.value as "all" | "sighthound.com" | "redactor.com");
+                      setCurrentPage(1);
+                    }}
+                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  >
+                    <option value="all">All Products</option>
+                    <option value="sighthound.com">Sighthound (SH)</option>
+                    <option value="redactor.com">Redactor (RED)</option>
+                  </select>
+                </label>
+              </>
+            }
+          />
+          <DataPageFilterPills pills={activeFilterPills} />
 
           {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-sm text-rose-700">{error}</p>
+              <Button
+                type="button"
+                onClick={() => {
+                  void loadTasks();
+                }}
+                variant="secondary"
+                size="xs"
+              >
+                Retry
+              </Button>
+            </div>
           ) : null}
 
           {isLoading ? (
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-              Loading tasks…
-            </p>
+            <>
+              <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="skeleton h-4 w-24" />
+                <div className="space-y-2">
+                  <div className="skeleton h-12 w-full" />
+                  <div className="skeleton h-12 w-full" />
+                  <div className="skeleton h-12 w-full" />
+                </div>
+              </section>
+              <section className="space-y-3 rounded-lg border border-slate-200 p-4">
+                <div className="overflow-auto rounded-lg border border-slate-200">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+                      <tr>
+                        <th className="px-3 py-2">#</th>
+                        <th className="px-3 py-2">Task</th>
+                        <th className="px-3 py-2">Writer Status</th>
+                        <th className="px-3 py-2">Publisher Status</th>
+                        <th className="px-3 py-2">Publish Date</th>
+                        <th className="px-3 py-2">Utilities</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {Array.from({ length: 5 }).map((_, rowIndex) => (
+                        <tr key={`task-skeleton-row-${rowIndex}`}>
+                          <td className="px-3 py-3" colSpan={6}>
+                            <div className="skeleton h-4 w-full" />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
           ) : (
             <>
               <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -451,7 +642,10 @@ export default function MyTasksPage() {
                   Next Tasks
                 </h3>
                 {nextTasks.length === 0 ? (
-                  <p className="text-sm text-slate-500">No pending tasks.</p>
+                  <DataPageEmptyState
+                    title="No tasks found."
+                    description="No tasks match your current filters."
+                  />
                 ) : (
                   <ol className="space-y-2">
                     {nextTasks.map((task, index) => (
@@ -461,7 +655,7 @@ export default function MyTasksPage() {
                           onClick={() => {
                             focusTaskRow(task.id);
                           }}
-                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-100"
+                          className="pressable w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-100"
                         >
                           <p className="font-medium text-slate-900">
                             {index + 1}. {task.title}
@@ -502,7 +696,7 @@ export default function MyTasksPage() {
                       {pagedTasks.length === 0 ? (
                         <tr>
                           <td className="px-3 py-5 text-center text-slate-500" colSpan={6}>
-                            No tasks to display.
+                            You have no assigned tasks. You&apos;re all caught up.
                           </td>
                         </tr>
                       ) : (
@@ -510,6 +704,10 @@ export default function MyTasksPage() {
                           const globalIndex = (currentPage - 1) * FULL_LIST_PAGE_SIZE + index + 1;
                           const isSaving = savingTaskId === task.id;
                           const isHighlighted = highlightedTaskId === task.id;
+                          const copiedTitle =
+                            copiedCell?.taskId === task.id && copiedCell.field === "title";
+                          const copiedUrl =
+                            copiedCell?.taskId === task.id && copiedCell.field === "url";
                           return (
                             <tr
                               key={task.id}
@@ -524,7 +722,7 @@ export default function MyTasksPage() {
                               <td className="px-3 py-2 align-top">
                                 <Link
                                   href={`/blogs/${task.blogId}`}
-                                  className="font-medium text-slate-900 hover:underline"
+                                  className="interactive-link font-medium text-slate-800"
                                 >
                                   {task.title}
                                 </Link>
@@ -544,7 +742,7 @@ export default function MyTasksPage() {
                                         event.target.value as WriterStageStatus
                                       );
                                     }}
-                                    className="rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
                                   >
                                     {WRITER_STATUSES.map((status) => (
                                       <option key={status} value={status}>
@@ -569,7 +767,7 @@ export default function MyTasksPage() {
                                         event.target.value as PublisherStageStatus
                                       );
                                     }}
-                                    className="rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
                                   >
                                     {PUBLISHER_STATUSES.map((status) => (
                                       <option key={status} value={status}>
@@ -587,27 +785,33 @@ export default function MyTasksPage() {
                                 {formatDateInput(task.scheduledDate) || "Not scheduled"}
                               </td>
                               <td className="px-3 py-2 align-top">
-                                <div className="inline-flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
-                                  <button
-                                    type="button"
-                                    title="Copy title"
-                                    className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
-                                    onClick={() => {
-                                      void copyTaskValue(task, "title");
-                                    }}
-                                  >
-                                    📋
-                                  </button>
-                                  <button
-                                    type="button"
-                                    title="Copy publish URL"
-                                    className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
-                                    onClick={() => {
-                                      void copyTaskValue(task, "url");
-                                    }}
-                                  >
-                                    🔗
-                                  </button>
+                                <div className="reveal-on-row-hover inline-flex items-center gap-1">
+                                  <span className="tooltip-container">
+                                    <button
+                                      type="button"
+                                      aria-label="Copy task title"
+                                      className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
+                                      onClick={() => {
+                                        void copyTaskValue(task, "title");
+                                      }}
+                                    >
+                                      {copiedTitle ? "✓" : "📋"}
+                                    </button>
+                                    <span className="tooltip-bubble">Copy task title</span>
+                                  </span>
+                                  <span className="tooltip-container">
+                                    <button
+                                      type="button"
+                                      aria-label="Copy publish URL"
+                                      className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
+                                      onClick={() => {
+                                        void copyTaskValue(task, "url");
+                                      }}
+                                    >
+                                      {copiedUrl ? "✓" : "🔗"}
+                                    </button>
+                                    <span className="tooltip-bubble">Copy publish URL</span>
+                                  </span>
                                 </div>
                               </td>
                             </tr>
@@ -619,7 +823,7 @@ export default function MyTasksPage() {
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                   <TableResultsSummary
-                    totalRows={taskItems.length}
+                    totalRows={filteredTaskItems.length}
                     currentPage={currentPage}
                     rowLimit={FULL_LIST_PAGE_SIZE}
                     noun="tasks"

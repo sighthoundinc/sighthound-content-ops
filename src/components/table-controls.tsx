@@ -3,6 +3,7 @@ import {
   getTableVisibleRange,
   type TableRowLimit,
 } from "@/lib/table";
+import { Button } from "@/components/button";
 
 export function TableRowLimitSelect({
   value,
@@ -15,7 +16,7 @@ export function TableRowLimitSelect({
     <label className="flex items-center gap-2 text-sm text-slate-600">
       <span className="font-medium text-slate-700">Rows per page</span>
       <select
-        className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+        className="focus-field rounded-md border border-slate-300 px-2 py-1 text-sm"
         value={String(value)}
         onChange={(event) => {
           const nextValue =
@@ -71,30 +72,32 @@ export function TablePaginationControls({
 
   return (
     <div className="flex items-center gap-2">
-      <button
+      <Button
         type="button"
-        className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+        variant="secondary"
+        size="xs"
         onClick={() => {
           onPageChange(Math.max(1, currentPage - 1));
         }}
         disabled={currentPage <= 1}
       >
         Prev
-      </button>
+      </Button>
       <p className="text-sm text-slate-600">
         Page <span className="font-medium text-slate-900">{currentPage}</span> of{" "}
         <span className="font-medium text-slate-900">{pageCount}</span>
       </p>
-      <button
+      <Button
         type="button"
-        className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+        variant="secondary"
+        size="xs"
         onClick={() => {
           onPageChange(Math.min(pageCount, currentPage + 1));
         }}
         disabled={currentPage >= pageCount}
       >
         Next
-      </button>
+      </Button>
     </div>
   );
 }

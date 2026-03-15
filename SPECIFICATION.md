@@ -10,10 +10,13 @@ It is an operations system (not a CMS). It tracks ownership, workflow stage, sch
 ### In scope
 - blog planning/writing/publishing lifecycle
 - queue-first execution UX (dashboard/tasks/calendar)
+- kanban pipeline execution view (`/blogs/cardboard`)
 - role + permission based access control
 - assignment and status audit history
 - comments and collaboration trail
 - ideas + social posts operational modules
+- admin test-data cleanup controls for activity history/comments
+- admin quick-view session switching into non-admin user context
 - Slack workflow notifications
 - legacy XLSX import path
 
@@ -109,6 +112,12 @@ Key behavior:
 - row-level and bulk copy actions for title/url
 - export view/selected data as CSV or PDF
 
+### CardBoard (`/blogs/cardboard`)
+- kanban board with stages (`Idea`, `Writing`, `Reviewing`, `Publishing`, `Published`)
+- drag-and-drop transitions with permission checks and required-field validation
+- fast idea creation directly in board lane
+- table-view deep-linking by stage filter
+
 ### Tasks (`/tasks`)
 - top-3 priority items first
 - full list expansion with pagination
@@ -133,10 +142,18 @@ Key behavior:
 ### Social Posts (`/social-posts`)
 - social workflow operations connected to content planning
 
+### Social Post Editor (`/social-posts/[id]`)
+- focused single-record editor
+- autosave plus manual save option
+- caption helper tools, copy actions, and linked-blog lookup
+
 ### Settings (`/settings`)
 - profile fields
 - admin user/role management
 - timezone configuration
+- admin-only activity history cleanup (global or user-scoped)
+- optional comments cleanup during history purge
+- admin quick-view as non-admin user, with return-to-admin flow
 
 ### Permissions (`/settings/permissions`)
 - role-level configurable permission matrix
@@ -150,7 +167,9 @@ Core tables:
 - `blog_assignment_history`
 - `blog_comments`
 - `role_permissions`
-- `permission_audit_log`
+- `permission_audit_logs`
+- `social_post_activity_history`
+- `social_post_comments`
 
 Additional modules:
 - `blog_ideas`
@@ -161,8 +180,14 @@ Highlights:
 - blogs carry stage, ownership, and schedule/publish fields
 - history/comments support operational traceability
 - permission tables drive effective capability resolution
+- quick-view state is client-side snapshot state (browser local storage), not persisted in DB
 
-## 8) Integrations
+## 8) Admin control APIs (logical)
+- `/api/admin/permissions` — permission matrix read/update/reset
+- `/api/admin/reassign-assignments` — assignment transfer
+- `/api/admin/activity-history` — activity cleanup, optional comments cleanup
+- `/api/admin/quick-view` — admin quick-view token generation/session switch support
+## 9) Integrations
 Slack via Supabase Edge Function:
 - `supabase/functions/slack-notify/index.ts`
 
@@ -175,8 +200,7 @@ Delivery:
 - configured channel
 - optional DM resolution by email
 - webhook fallback
-
-## 9) Environment requirements
+## 10) Environment requirements
 Frontend:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -191,26 +215,25 @@ Slack:
 - `SLACK_BOT_TOKEN`
 - `SLACK_MARKETING_CHANNEL`
 - `SLACK_WEBHOOK_URL`
-
-## 10) Migration and compatibility status
+## 11) Migration and compatibility status
 The project is migration-driven (`supabase/migrations`) with compatibility layers for:
 - legacy/expanded role model transitions
 - status trigger and enum transition safety
 - comments actor compatibility (`user_id` / `created_by`)
 - import collision prevention via deterministic hash
 - permission matrix introduction + expansion migrations
-
-## 11) Non-functional requirements
+## 12) Non-functional requirements
 - fast internal workflow execution
 - deterministic DB-level invariants for workflow integrity
 - high traceability (history + comments + permission audits)
 - low-cognitive-load UI for operational scanning
 - predictable filter/search behavior with immediate visual state feedback
-
-## 12) Acceptance criteria (current)
+## 13) Acceptance criteria (current)
 1. Permission-guarded workflows execute with DB-authoritative enforcement.
 2. Dashboard queues/pipelines are actionable and scan-friendly.
 3. Tasks and Calendar prioritize execution clarity.
 4. Comments/history and permission audit logs are available for traceability.
 5. Settings and Permissions pages support operational administration.
-6. Migration, lint, and typecheck workflows remain stable.
+6. Admin quick-view runs actions in selected non-admin user context and supports clean return flow.
+7. Admin cleanup controls can purge activity history with optional comments cleanup.
+8. Migration, lint, and typecheck workflows remain stable.

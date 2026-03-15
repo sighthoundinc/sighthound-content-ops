@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -30,6 +30,13 @@ import {
 } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { Button } from "@/components/button";
+import { ConfirmationModal } from "@/components/confirmation-modal";
+import {
+  DataPageFilterPills,
+  DataPageHeader,
+  DataPageToolbar,
+} from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import { WorkflowStageBadge } from "@/components/status-badge";
 import { TablePaginationControls, TableRowLimitSelect } from "@/components/table-controls";
@@ -262,6 +269,12 @@ export default function CalendarPage() {
   const [draggingBlogId, setDraggingBlogId] = useState<string | null>(null);
   const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
   const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
+  const [pendingReschedule, setPendingReschedule] = useState<{
+    blogId: string;
+    blogTitle: string;
+    fromDateKey: string | null;
+    toDateKey: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
@@ -281,56 +294,54 @@ export default function CalendarPage() {
   useEffect(() => {
     setViewScope(canViewAllTasks ? "all" : "mine");
   }, [canViewAllTasks]);
+  const loadData = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    setIsLoading(true);
+    setError(null);
+    const fetchBlogs = async () => {
+      let { data, error } = await supabase
+        .from("blogs")
+        .select(BLOG_SELECT_WITH_DATES)
+        .eq("is_archived", false)
+        .order("scheduled_publish_date", { ascending: true, nullsFirst: false });
 
-  useEffect(() => {
-    const loadData = async () => {
-      const supabase = getSupabaseBrowserClient();
-      setIsLoading(true);
-      setError(null);
-      const fetchBlogs = async () => {
-        let { data, error } = await supabase
+      if (isMissingBlogDateColumnsError(error)) {
+        const fallback = await supabase
           .from("blogs")
-          .select(BLOG_SELECT_WITH_DATES)
+          .select(BLOG_SELECT_LEGACY)
           .eq("is_archived", false)
-          .order("scheduled_publish_date", { ascending: true, nullsFirst: false });
-
-        if (isMissingBlogDateColumnsError(error)) {
-          const fallback = await supabase
-            .from("blogs")
-            .select(BLOG_SELECT_LEGACY)
-            .eq("is_archived", false)
-            .order("target_publish_date", { ascending: true, nullsFirst: false });
-          data = fallback.data as typeof data;
-          error = fallback.error;
-        }
-
-        return { data, error };
-      };
-
-      const [{ data: blogsData, error: blogsError }, { data: settingsData }] =
-        await Promise.all([
-          fetchBlogs(),
-          supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
-        ]);
-
-      if (blogsError) {
-        setError(blogsError.message);
-        setIsLoading(false);
-        return;
+          .order("target_publish_date", { ascending: true, nullsFirst: false });
+        data = fallback.data as typeof data;
+        error = fallback.error;
       }
 
-      setBlogs(
-        normalizeBlogRows((blogsData ?? []) as Array<Record<string, unknown>>) as BlogRecord[]
-      );
-      if (settingsData) {
-        setWeekStart(settingsData.week_start ?? 1);
-        setTimezone(settingsData.timezone ?? "America/Chicago");
-      }
-      setIsLoading(false);
+      return { data, error };
     };
 
-    void loadData();
+    const [{ data: blogsData, error: blogsError }, { data: settingsData }] =
+      await Promise.all([
+        fetchBlogs(),
+        supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+      ]);
+
+    if (blogsError) {
+      setError(blogsError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    setBlogs(normalizeBlogRows((blogsData ?? []) as Array<Record<string, unknown>>) as BlogRecord[]);
+    if (settingsData) {
+      setWeekStart(settingsData.week_start ?? 1);
+      setTimezone(settingsData.timezone ?? "America/Chicago");
+    }
+    setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+
+    void loadData();
+  }, [loadData]);
 
   const scopedBlogs = useMemo(() => {
     if (viewScope === "all" || !user?.id) {
@@ -623,15 +634,12 @@ export default function CalendarPage() {
       return;
     }
 
-    const confirmationMessage = `Reschedule "${draggedBlog.title}" from ${
-      currentDateKey ? formatCalendarDateLabel(currentDateKey) : "Unscheduled"
-    } to ${formatCalendarDateLabel(nextDateKey)}?`;
-    const isConfirmed = window.confirm(confirmationMessage);
-    if (!isConfirmed) {
-      return;
-    }
-
-    await updateScheduledDate(draggedBlogId, nextDateKey);
+    setPendingReschedule({
+      blogId: draggedBlogId,
+      blogTitle: draggedBlog.title,
+      fromDateKey: currentDateKey,
+      toDateKey: nextDateKey,
+    });
   };
 
   const handlePanelReschedule = async () => {
@@ -656,34 +664,68 @@ export default function CalendarPage() {
       setError("Use YYYY-MM-DD format for rescheduling.");
       return;
     }
-    const isConfirmed = window.confirm(
-      `Reschedule from ${
-        currentDate ? formatCalendarDateLabel(currentDate) : "Unscheduled"
-      } to ${formatCalendarDateLabel(normalized)}?`
-    );
-    if (!isConfirmed) {
+    setPendingReschedule({
+      blogId: activeBlog.id,
+      blogTitle: activeBlog.title,
+      fromDateKey: currentDate,
+      toDateKey: normalized,
+    });
+  };
+
+  const confirmPendingReschedule = async () => {
+    if (!pendingReschedule) {
       return;
     }
-    await updateScheduledDate(activeBlog.id, normalized);
+    const { blogId, toDateKey } = pendingReschedule;
+    setPendingReschedule(null);
+    await updateScheduledDate(blogId, toDateKey);
   };
+  const activeFilterPills = useMemo(
+    () =>
+      [
+        mode !== "month"
+          ? {
+              id: "mode",
+              label: `Mode: ${toTitleCase(mode)}`,
+              onRemove: () => {
+                setMode("month");
+              },
+            }
+          : null,
+        viewScope !== "mine"
+          ? {
+              id: "scope",
+              label: "View: All tasks",
+              onRemove: () => {
+                setViewScope("mine");
+              },
+            }
+          : null,
+      ].filter((pill) => pill !== null),
+    [mode, viewScope]
+  );
 
   return (
     <ProtectedPage requiredPermissions={["view_calendar"]}>
       <AppShell>
         <div className="space-y-6">
-          <header className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900">Calendar</h2>
-              <p className="text-sm text-slate-600">
-                {timezone} timezone • week starts on{" "}
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][weekStart]}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
+          <DataPageHeader
+            title="Calendar"
+            description={`${timezone} timezone • week starts on ${
+              ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][weekStart]
+            }`}
+          />
+          <DataPageToolbar
+            showSearch={false}
+            searchValue=""
+            onSearchChange={() => {}}
+            searchPlaceholder=""
+            actions={
+              <>
+              <Button
                 type="button"
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                variant="secondary"
+                size="md"
                 onClick={() => {
                   setCursorDate((prev) =>
                     mode === "month" ? subMonths(prev, 1) : subWeeks(prev, 1)
@@ -691,19 +733,19 @@ export default function CalendarPage() {
                 }}
               >
                 Prev
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm"
                 onClick={() => {
                   setCursorDate(new Date());
                 }}
               >
                 Today
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm"
                 onClick={() => {
                   setCursorDate((prev) =>
                     mode === "month" ? addMonths(prev, 1) : addWeeks(prev, 1)
@@ -711,7 +753,7 @@ export default function CalendarPage() {
                 }}
               >
                 Next
-              </button>
+              </Button>
               <label className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
                 <span className="sr-only">Jump to month</span>
                 <input
@@ -727,7 +769,7 @@ export default function CalendarPage() {
                       setCursorDate(nextDate);
                     }
                   }}
-                  className="border-none p-0 text-sm focus:outline-none"
+                  className="focus-field rounded border-none p-0 text-sm focus:outline-none"
                 />
               </label>
               <select
@@ -735,7 +777,7 @@ export default function CalendarPage() {
                 onChange={(event) => {
                   setMode(event.target.value as CalendarMode);
                 }}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="focus-field rounded-md border border-slate-300 px-3 py-2 text-sm"
               >
                 <option value="month">Month</option>
                 <option value="week">Week</option>
@@ -747,7 +789,7 @@ export default function CalendarPage() {
                   onChange={(event) => {
                     setViewScope(event.target.value as CalendarViewScope);
                   }}
-                  className="border-none bg-transparent p-0 text-sm focus:outline-none"
+                  className="focus-field rounded border-none bg-transparent p-0 text-sm focus:outline-none"
                 >
                   <option value="mine">My tasks</option>
                   <option value="all" disabled={!canViewAllTasks}>
@@ -755,8 +797,10 @@ export default function CalendarPage() {
                   </option>
                 </select>
               </label>
-            </div>
-          </header>
+              </>
+            }
+          />
+          <DataPageFilterPills pills={activeFilterPills} />
 
           <p className="text-sm font-medium text-slate-700">
             {mode === "month"
@@ -765,13 +809,28 @@ export default function CalendarPage() {
           </p>
 
           {isLoading ? (
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-              Loading calendar…
-            </p>
+            <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <div className="skeleton h-4 w-40" />
+              <div className="grid grid-cols-7 gap-2">
+                {Array.from({ length: 14 }).map((_, cellIndex) => (
+                  <div key={`calendar-skeleton-cell-${cellIndex}`} className="skeleton h-24 w-full" />
+                ))}
+              </div>
+            </section>
           ) : error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">
-              {error}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-sm text-rose-700">{error}</p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                onClick={() => {
+                  void loadData();
+                }}
+              >
+                Retry
+              </Button>
+            </div>
           ) : (
             <>
               <section className="space-y-3">
@@ -957,7 +1016,7 @@ export default function CalendarPage() {
                         >
                           <Link
                             href={`/blogs/${blog.id}`}
-                            className="font-medium text-slate-900 hover:underline"
+                            className="interactive-link font-medium text-slate-800"
                           >
                             {blog.title}
                           </Link>
@@ -1009,7 +1068,7 @@ export default function CalendarPage() {
                   </div>
                   <button
                     type="button"
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                     onClick={() => {
                       setActiveBlogId(null);
                     }}
@@ -1053,7 +1112,7 @@ export default function CalendarPage() {
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/blogs/${activeBlog.id}`}
-                    className="inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="pressable inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
                     Edit
                   </Link>
@@ -1062,13 +1121,13 @@ export default function CalendarPage() {
                     onClick={() => {
                       void handlePanelReschedule();
                     }}
-                    className="inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="pressable inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
                     Reschedule
                   </button>
                   <Link
                     href={`/blogs/${activeBlog.id}`}
-                    className="inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="pressable inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
                     Open blog
                   </Link>
@@ -1076,6 +1135,27 @@ export default function CalendarPage() {
               </aside>
             </>
           ) : null}
+          <ConfirmationModal
+            isOpen={pendingReschedule !== null}
+            title="Confirm reschedule"
+            description={
+              pendingReschedule
+                ? `Reschedule "${pendingReschedule.blogTitle}" from ${
+                    pendingReschedule.fromDateKey
+                      ? formatCalendarDateLabel(pendingReschedule.fromDateKey)
+                      : "Unscheduled"
+                  } to ${formatCalendarDateLabel(pendingReschedule.toDateKey)}?`
+                : ""
+            }
+            confirmLabel="Confirm reschedule"
+            tone="default"
+            onCancel={() => {
+              setPendingReschedule(null);
+            }}
+            onConfirm={() => {
+              void confirmPendingReschedule();
+            }}
+          />
         </div>
       </AppShell>
     </ProtectedPage>

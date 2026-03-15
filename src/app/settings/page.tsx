@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
+import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   TablePaginationControls,
@@ -11,6 +13,12 @@ import {
   TableRowLimitSelect,
 } from "@/components/table-controls";
 import { hasWorkflowOverridePermission } from "@/lib/permissions";
+import {
+  clearQuickViewSnapshot,
+  readQuickViewSnapshot,
+  saveQuickViewSnapshot,
+  type QuickViewSnapshot,
+} from "@/lib/quick-view";
 import { getUserRoles } from "@/lib/roles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
@@ -58,6 +66,7 @@ type EditableUserState = {
   userRoles: AppRole[];
   isActive: boolean;
 };
+type ActivityHistoryDeleteScope = "all" | "users";
 
 const USER_SORT_OPTIONS: Array<{ value: UserSortField; label: string }> = [
   { value: "created_at", label: "Created Date" },
@@ -76,7 +85,7 @@ function splitName(fullName: string) {
 }
 
 export default function SettingsPage() {
-  const { hasPermission, session, profile, refreshProfile } = useAuth();
+  const { hasPermission, session, profile, refreshProfile, user } = useAuth();
   const canWorkflowOverride = hasWorkflowOverridePermission(hasPermission);
   const canEditAppSettings =
     hasPermission("manage_environment_settings") || canWorkflowOverride;
@@ -119,6 +128,21 @@ export default function SettingsPage() {
   const [reassignToUserId, setReassignToUserId] = useState("");
   const [includeWriterAssignments, setIncludeWriterAssignments] = useState(true);
   const [includePublisherAssignments, setIncludePublisherAssignments] = useState(true);
+  const [activityHistoryDeleteScope, setActivityHistoryDeleteScope] =
+    useState<ActivityHistoryDeleteScope>("all");
+  const [activityHistoryDeleteUserIds, setActivityHistoryDeleteUserIds] =
+    useState<string[]>([]);
+  const [activityCleanupIncludeComments, setActivityCleanupIncludeComments] =
+    useState(false);
+  const [isDeleteHistoryModalOpen, setIsDeleteHistoryModalOpen] = useState(false);
+  const [isDeletingActivityHistory, setIsDeletingActivityHistory] = useState(false);
+  const [quickViewTargetUserId, setQuickViewTargetUserId] = useState("");
+  const [isSwitchingQuickViewUser, setIsSwitchingQuickViewUser] = useState(false);
+  const [isRestoringAdminFromQuickView, setIsRestoringAdminFromQuickView] =
+    useState(false);
+  const [quickViewSnapshot, setQuickViewSnapshot] = useState<QuickViewSnapshot | null>(
+    null
+  );
 
   useEffect(() => {
     if (!canReassignWriterAssignments) {
@@ -131,6 +155,16 @@ export default function SettingsPage() {
       setIncludePublisherAssignments(false);
     }
   }, [canReassignPublisherAssignments]);
+
+  useEffect(() => {
+    if (activityHistoryDeleteScope === "all") {
+      setActivityHistoryDeleteUserIds([]);
+    }
+  }, [activityHistoryDeleteScope]);
+
+  useEffect(() => {
+    setQuickViewSnapshot(readQuickViewSnapshot());
+  }, [user?.id]);
 
   const loadUsers = async () => {
     const supabase = getSupabaseBrowserClient();
@@ -160,6 +194,109 @@ export default function SettingsPage() {
         })
       )
     );
+  };
+
+  const startQuickViewAsUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!session?.access_token || !session.refresh_token) {
+      setError("Missing active session token.");
+      return;
+    }
+    if (!profile || !getUserRoles(profile).includes("admin")) {
+      setError("Only admins can start quick-view mode.");
+      return;
+    }
+    if (!quickViewTargetUserId) {
+      setError("Select a user to quick-view as.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsSwitchingQuickViewUser(true);
+
+    const response = await fetch("/api/admin/quick-view", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        targetUserId: quickViewTargetUserId,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      tokenHash?: string;
+      targetUserId?: string;
+      targetDisplayName?: string;
+    };
+    if (!response.ok || !payload.tokenHash || !payload.targetUserId) {
+      setError(payload.error ?? "Failed to start quick-view mode.");
+      setIsSwitchingQuickViewUser(false);
+      return;
+    }
+
+    const snapshot: QuickViewSnapshot = {
+      adminAccessToken: session.access_token,
+      adminRefreshToken: session.refresh_token,
+      adminUserId: profile.id,
+      adminDisplayName: profile.display_name || profile.full_name,
+      targetUserId: payload.targetUserId,
+      targetDisplayName: payload.targetDisplayName ?? "selected user",
+      startedAt: new Date().toISOString(),
+    };
+    saveQuickViewSnapshot(snapshot);
+    setQuickViewSnapshot(snapshot);
+
+    const supabase = getSupabaseBrowserClient();
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      type: "magiclink",
+      token_hash: payload.tokenHash,
+    });
+    if (verifyError) {
+      clearQuickViewSnapshot();
+      setQuickViewSnapshot(null);
+      setError(verifyError.message);
+      setIsSwitchingQuickViewUser(false);
+      return;
+    }
+
+    setQuickViewTargetUserId("");
+    setIsSwitchingQuickViewUser(false);
+    setSuccess(
+      `Quick-view enabled. You are now acting as ${
+        payload.targetDisplayName ?? "the selected user"
+      }.`
+    );
+  };
+
+  const restoreAdminFromQuickView = async () => {
+    const snapshot = readQuickViewSnapshot();
+    if (!snapshot) {
+      setError("No quick-view admin session found.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsRestoringAdminFromQuickView(true);
+
+    const supabase = getSupabaseBrowserClient();
+    const { error: restoreError } = await supabase.auth.setSession({
+      access_token: snapshot.adminAccessToken,
+      refresh_token: snapshot.adminRefreshToken,
+    });
+    if (restoreError) {
+      setError(restoreError.message);
+      setIsRestoringAdminFromQuickView(false);
+      return;
+    }
+
+    clearQuickViewSnapshot();
+    setQuickViewSnapshot(null);
+    setIsRestoringAdminFromQuickView(false);
+    setSuccess(`Returned to admin view as ${snapshot.adminDisplayName}.`);
   };
 
   useEffect(() => {
@@ -355,6 +492,75 @@ export default function SettingsPage() {
     );
   };
 
+  const deleteActivityHistory = async () => {
+    if (!session?.access_token) {
+      setError("Missing active session token.");
+      return;
+    }
+    if (!profile || !getUserRoles(profile).includes("admin")) {
+      setError("Only admins can delete activity history.");
+      return;
+    }
+    if (
+      activityHistoryDeleteScope === "users" &&
+      activityHistoryDeleteUserIds.length === 0
+    ) {
+      setError("Select at least one user for targeted cleanup.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsDeletingActivityHistory(true);
+
+    const response = await fetch("/api/admin/activity-history", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        scope: activityHistoryDeleteScope,
+        includeCommentsActivity: activityCleanupIncludeComments,
+        userIds:
+          activityHistoryDeleteScope === "users"
+            ? activityHistoryDeleteUserIds
+            : undefined,
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      totalDeleted?: number;
+      blogAssignmentHistoryDeleted?: number;
+      socialPostActivityHistoryDeleted?: number;
+      permissionAuditLogsDeleted?: number;
+      blogCommentsDeleted?: number;
+      socialPostCommentsDeleted?: number;
+    };
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to delete activity history.");
+      setIsDeletingActivityHistory(false);
+      return;
+    }
+
+    setIsDeleteHistoryModalOpen(false);
+    setIsDeletingActivityHistory(false);
+    setActivityHistoryDeleteUserIds([]);
+    const commentsSummary = activityCleanupIncludeComments
+      ? `, blog comments: ${payload.blogCommentsDeleted ?? 0}, social comments: ${
+          payload.socialPostCommentsDeleted ?? 0
+        }`
+      : "";
+    setSuccess(
+      `Deleted ${payload.totalDeleted ?? 0} activity records (blog: ${
+        payload.blogAssignmentHistoryDeleted ?? 0
+      }, social: ${payload.socialPostActivityHistoryDeleted ?? 0}, permission: ${
+        payload.permissionAuditLogsDeleted ?? 0
+      }${commentsSummary}).`
+    );
+  };
+
   const filteredUsers = useMemo(() => {
     return users.filter((nextUser) => {
       const nextUserRoles = getUserRoles(nextUser);
@@ -408,6 +614,42 @@ export default function SettingsPage() {
     () => getTablePageRows(sortedUsers, currentPage, rowLimit),
     [currentPage, rowLimit, sortedUsers]
   );
+  const isAdminUser = useMemo(
+    () => (profile ? getUserRoles(profile).includes("admin") : false),
+    [profile]
+  );
+  const isQuickViewActive = useMemo(
+    () =>
+      Boolean(
+        quickViewSnapshot &&
+          user?.id &&
+          quickViewSnapshot.adminUserId &&
+          user.id !== quickViewSnapshot.adminUserId
+      ),
+    [quickViewSnapshot, user?.id]
+  );
+  const activityCleanupUserOptions = useMemo(
+    () =>
+      users.map((nextUser) => ({
+        value: nextUser.id,
+        label: `${nextUser.full_name} (${nextUser.email})`,
+      })),
+    [users]
+  );
+  const quickViewTargetUsers = useMemo(
+    () =>
+      users.filter(
+        (nextUser) => nextUser.is_active && !getUserRoles(nextUser).includes("admin")
+      ),
+    [users]
+  );
+  const isTargetedCleanupWithoutUsers =
+    activityHistoryDeleteScope === "users" &&
+    activityHistoryDeleteUserIds.length === 0;
+  const myRoles = useMemo(
+    () => (profile ? getUserRoles(profile) : []),
+    [profile]
+  );
 
   return (
     <ProtectedPage>
@@ -450,6 +692,16 @@ export default function SettingsPage() {
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                     My Profile
                   </h3>
+                  <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Roles
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700">
+                      {myRoles.length > 0
+                        ? myRoles.join(", ")
+                        : "No explicit role assigned"}
+                    </p>
+                  </div>
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
                     <label className="block">
                       <span className="mb-1 block text-sm font-medium text-slate-700">
@@ -620,6 +872,160 @@ export default function SettingsPage() {
                   ) : null}
                 </form>
               </section>
+              {isAdminUser ? (
+                <section className="rounded-lg border border-rose-200 bg-rose-50/40 p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-rose-700">
+                    Activity History Cleanup
+                  </h3>
+                  <p className="mt-1 text-sm text-rose-700/90">
+                    Admin-only maintenance tool. This permanently deletes audit trail records.
+                  </p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
+                      <input
+                        type="radio"
+                        name="activity-history-delete-scope"
+                        value="all"
+                        checked={activityHistoryDeleteScope === "all"}
+                        onChange={() => {
+                          setActivityHistoryDeleteScope("all");
+                        }}
+                      />
+                      <span>
+                        <span className="font-medium text-slate-900">Delete all history</span>
+                        <span className="mt-0.5 block text-xs text-slate-500">
+                          Clears activity records for all users.
+                        </span>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
+                      <input
+                        type="radio"
+                        name="activity-history-delete-scope"
+                        value="users"
+                        checked={activityHistoryDeleteScope === "users"}
+                        onChange={() => {
+                          setActivityHistoryDeleteScope("users");
+                        }}
+                      />
+                      <span>
+                        <span className="font-medium text-slate-900">
+                          Delete selected users only
+                        </span>
+                        <span className="mt-0.5 block text-xs text-slate-500">
+                          Removes records where selected users are the actor.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                  {activityHistoryDeleteScope === "users" ? (
+                    <div className="mt-3 max-w-xl">
+                      <CheckboxMultiSelect
+                        label="Users"
+                        options={activityCleanupUserOptions}
+                        selectedValues={activityHistoryDeleteUserIds}
+                        onChange={setActivityHistoryDeleteUserIds}
+                      />
+                    </div>
+                  ) : null}
+                  <p className="mt-3 text-xs text-rose-700/90">
+                    Deletes from blog assignment history, social post activity history, and
+                    permission audit logs. This action cannot be undone.
+                  </p>
+                  <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={activityCleanupIncludeComments}
+                      onChange={(event) => {
+                        setActivityCleanupIncludeComments(event.target.checked);
+                      }}
+                    />
+                    Also delete comments activity (blog + social comments)
+                  </label>
+                  {isTargetedCleanupWithoutUsers ? (
+                    <p className="mt-2 text-xs text-rose-700">
+                      Select at least one user before running targeted cleanup.
+                    </p>
+                  ) : null}
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      disabled={isDeletingActivityHistory || isTargetedCleanupWithoutUsers}
+                      className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        setIsDeleteHistoryModalOpen(true);
+                      }}
+                    >
+                      Delete Activity History
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+              {isAdminUser || isQuickViewActive ? (
+                <section className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">
+                    Quick View As User
+                  </h3>
+                  {isQuickViewActive && quickViewSnapshot ? (
+                    <div className="mt-2 rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-700">
+                      <p>
+                        Active quick-view: acting as{" "}
+                        <span className="font-semibold">
+                          {quickViewSnapshot.targetDisplayName}
+                        </span>
+                        . Actions are recorded under this user.
+                      </p>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          disabled={isRestoringAdminFromQuickView}
+                          className="rounded-md border border-indigo-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => {
+                            void restoreAdminFromQuickView();
+                          }}
+                        >
+                          {isRestoringAdminFromQuickView
+                            ? "Returning..."
+                            : "Return to Admin"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  {isAdminUser ? (
+                    <form className="mt-3 grid gap-3 md:grid-cols-3" onSubmit={startQuickViewAsUser}>
+                      <label className="block md:col-span-2">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Choose user
+                        </span>
+                        <select
+                          className="w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm"
+                          value={quickViewTargetUserId}
+                          onChange={(event) => {
+                            setQuickViewTargetUserId(event.target.value);
+                          }}
+                          required
+                        >
+                          <option value="">Select non-admin user</option>
+                          {quickViewTargetUsers.map((nextUser) => (
+                            <option key={nextUser.id} value={nextUser.id}>
+                              {nextUser.full_name} ({nextUser.email})
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="md:self-end">
+                        <button
+                          type="submit"
+                          disabled={isSwitchingQuickViewUser}
+                          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isSwitchingQuickViewUser ? "Switching..." : "Switch View"}
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+                </section>
+              ) : null}
 
               {canManageUserDirectory || canReassignAssignments ? (
                 <>
@@ -1016,6 +1422,36 @@ export default function SettingsPage() {
                   ) : null}
                 </>
               ) : null}
+              <ConfirmationModal
+                isOpen={isDeleteHistoryModalOpen}
+                title="Delete activity history?"
+                description={
+                  activityHistoryDeleteScope === "all"
+                    ? `This permanently deletes all activity records across the app${
+                        activityCleanupIncludeComments
+                          ? ", including comments activity"
+                          : ""
+                      }. This action cannot be undone.`
+                    : `This permanently deletes activity records for ${
+                        activityHistoryDeleteUserIds.length
+                      } selected user(s)${
+                        activityCleanupIncludeComments
+                          ? ", including their comments activity"
+                          : ""
+                      }. This action cannot be undone.`
+                }
+                confirmLabel="Delete permanently"
+                tone="danger"
+                isConfirming={isDeletingActivityHistory}
+                onCancel={() => {
+                  if (!isDeletingActivityHistory) {
+                    setIsDeleteHistoryModalOpen(false);
+                  }
+                }}
+                onConfirm={() => {
+                  void deleteActivityHistory();
+                }}
+              />
             </>
           )}
         </div>

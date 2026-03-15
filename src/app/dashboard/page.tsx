@@ -6,7 +6,14 @@ import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow, isBefore, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { Button } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
+import {
+  DataPageFilterPills,
+  DataPageHeader,
+  DataPageToolbar,
+} from "@/components/data-page";
+import { KbdShortcut } from "@/components/kbd-shortcut";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   PublisherStatusBadge,
@@ -514,6 +521,11 @@ export default function DashboardPage() {
     () => buildUserScopedStorageKey(DASHBOARD_COLUMN_VIEW_STORAGE_KEY, profile?.id),
     [profile?.id]
   );
+  const closeOpenDashboardMenus = useCallback(() => {
+    document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
+      menu.open = false;
+    });
+  }, []);
 
   const applyFilterState = useCallback((nextState: DashboardFilterState) => {
     setSearch(nextState.search);
@@ -880,6 +892,30 @@ export default function DashboardPage() {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, [isEditColumnsOpen]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const targetNode = event.target as Node;
+      document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
+        if (!menu.contains(targetNode)) {
+          menu.open = false;
+        }
+      });
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeOpenDashboardMenus();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [closeOpenDashboardMenus]);
 
   const writerOptions = useMemo(
     () =>
@@ -1389,16 +1425,104 @@ export default function DashboardPage() {
     resetDashboardFilters();
     setSuccessMessage("All filters cleared.");
   }, [resetDashboardFilters]);
-  const activeFilterChipCount =
-    siteFilters.length +
-    writerFilters.length +
-    publisherFilters.length +
-    writerStatusFilters.length +
-    publisherStatusFilters.length +
-    statusFilters.length +
-    (search.trim().length > 0 ? 1 : 0) +
-    (activeQuickQueue ? 1 : 0) +
-    (activeMetricFilter ? 1 : 0);
+  const activeFilterPills = useMemo(
+    () =>
+      [
+        search.trim()
+          ? {
+              id: "search",
+              label: `Search: ${search.trim()}`,
+              onRemove: () => {
+                setSearch("");
+              },
+            }
+          : null,
+        ...siteFilters.map((site) => ({
+          id: `site-${site}`,
+          label: `Site: ${site}`,
+          onRemove: () => {
+            setSiteFilters((previous) => previous.filter((value) => value !== site));
+          },
+        })),
+        ...writerFilters.map((writerId) => ({
+          id: `writer-${writerId}`,
+          label: `Writer: ${
+            writerOptions.find((writer) => writer.id === writerId)?.full_name ?? writerId
+          }`,
+          onRemove: () => {
+            setWriterFilters((previous) => previous.filter((value) => value !== writerId));
+          },
+        })),
+        ...publisherFilters.map((publisherId) => ({
+          id: `publisher-${publisherId}`,
+          label: `Publisher: ${
+            publisherOptions.find((publisher) => publisher.id === publisherId)?.full_name ??
+            publisherId
+          }`,
+          onRemove: () => {
+            setPublisherFilters((previous) => previous.filter((value) => value !== publisherId));
+          },
+        })),
+        ...writerStatusFilters.map((status) => ({
+          id: `writer-status-${status}`,
+          label: `Writer: ${WRITER_STATUS_LABELS[status]}`,
+          onRemove: () => {
+            setWriterStatusFilters((previous) => previous.filter((value) => value !== status));
+          },
+        })),
+        ...publisherStatusFilters.map((status) => ({
+          id: `publisher-status-${status}`,
+          label: `Publisher: ${PUBLISHER_STATUS_LABELS[status]}`,
+          onRemove: () => {
+            setPublisherStatusFilters((previous) => previous.filter((value) => value !== status));
+          },
+        })),
+        ...statusFilters.map((status) => ({
+          id: `overall-status-${status}`,
+          label: `Stage: ${STATUS_LABELS[status]}`,
+          onRemove: () => {
+            setStatusFilters((previous) => previous.filter((value) => value !== status));
+          },
+        })),
+        activeMetricFilter
+          ? {
+              id: "metric",
+              label: `Metric: ${
+                activeMetricFilter === "scheduled_this_week"
+                  ? "Scheduled This Week"
+                  : activeMetricFilter === "ready_to_publish"
+                    ? "Ready to Publish"
+                    : "Delayed"
+              }`,
+              onRemove: () => {
+                setActiveMetricFilter(null);
+              },
+            }
+          : null,
+        activeQuickQueue
+          ? {
+              id: "queue",
+              label: "Pipeline filter active",
+              onRemove: () => {
+                setActiveQuickQueue(null);
+              },
+            }
+          : null,
+      ].filter((pill) => pill !== null),
+    [
+      activeMetricFilter,
+      activeQuickQueue,
+      publisherFilters,
+      publisherOptions,
+      publisherStatusFilters,
+      search,
+      siteFilters,
+      statusFilters,
+      writerFilters,
+      writerOptions,
+      writerStatusFilters,
+    ]
+  );
 
   const saveCurrentFiltersAsView = useCallback(() => {
     const rawName = prompt("Saved view name");
@@ -2148,144 +2272,11 @@ export default function DashboardPage() {
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
       <AppShell commandPaletteCommands={dashboardCommandPaletteCommands}>
         <div className="space-y-5 transition-opacity duration-200">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900">Dashboard</h2>
-              <p className="text-sm text-slate-600">
-                Track assignments, writing progress, and publishing readiness.
-              </p>
-            </div>
-            {activeFilterChipCount > 0 ? (
+          <DataPageHeader
+            title="Dashboard"
+            description="Track assignments, writing progress, and publishing readiness."
+            primaryAction={
               <div className="flex flex-wrap items-center gap-2">
-                {search.trim() ? (
-                  <button
-                    type="button"
-                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
-                    onClick={() => setSearch("")}
-                  >
-                    Search: {search.trim()} ×
-                  </button>
-                ) : null}
-                {siteFilters.map((site) => (
-                  <button
-                    key={site}
-                    type="button"
-                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
-                    onClick={() => setSiteFilters((previous) => previous.filter((value) => value !== site))}
-                  >
-                    Site: {site} ×
-                  </button>
-                ))}
-                {writerFilters.map((writerId) => {
-                  const writerName =
-                    writerOptions.find((writer) => writer.id === writerId)?.full_name ?? writerId;
-                  return (
-                    <button
-                      key={writerId}
-                      type="button"
-                      className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
-                      onClick={() =>
-                        setWriterFilters((previous) => previous.filter((value) => value !== writerId))
-                      }
-                    >
-                      Writer: {writerName} ×
-                    </button>
-                  );
-                })}
-                {publisherFilters.map((publisherId) => {
-                  const publisherName =
-                    publisherOptions.find((publisher) => publisher.id === publisherId)?.full_name ??
-                    publisherId;
-                  return (
-                    <button
-                      key={publisherId}
-                      type="button"
-                      className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
-                      onClick={() =>
-                        setPublisherFilters((previous) =>
-                          previous.filter((value) => value !== publisherId)
-                        )
-                      }
-                    >
-                      Publisher: {publisherName} ×
-                    </button>
-                  );
-                })}
-                {writerStatusFilters.map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
-                    onClick={() =>
-                      setWriterStatusFilters((previous) =>
-                        previous.filter((value) => value !== status)
-                      )
-                    }
-                  >
-                    Writer: {WRITER_STATUS_LABELS[status]} ×
-                  </button>
-                ))}
-                {publisherStatusFilters.map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
-                    onClick={() =>
-                      setPublisherStatusFilters((previous) =>
-                        previous.filter((value) => value !== status)
-                      )
-                    }
-                  >
-                    Publisher: {PUBLISHER_STATUS_LABELS[status]} ×
-                  </button>
-                ))}
-                {statusFilters.map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200"
-                    onClick={() =>
-                      setStatusFilters((previous) => previous.filter((value) => value !== status))
-                    }
-                  >
-                    Stage: {STATUS_LABELS[status]} ×
-                  </button>
-                ))}
-                {activeMetricFilter ? (
-                  <button
-                    type="button"
-                    className="rounded-full border border-slate-300 bg-blue-50 px-2.5 py-1 text-xs text-blue-700 hover:bg-blue-100"
-                    onClick={() => setActiveMetricFilter(null)}
-                  >
-                    Metric:{" "}
-                    {activeMetricFilter === "scheduled_this_week"
-                      ? "Scheduled This Week"
-                      : activeMetricFilter === "ready_to_publish"
-                        ? "Ready to Publish"
-                        : "Delayed"}{" "}
-                    ×
-                  </button>
-                ) : null}
-                {activeQuickQueue ? (
-                  <button
-                    type="button"
-                    className="rounded-full border border-slate-300 bg-blue-50 px-2.5 py-1 text-xs text-blue-700 hover:bg-blue-100"
-                    onClick={() => setActiveQuickQueue(null)}
-                  >
-                    Pipeline filter active ×
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  onClick={clearAllFilters}
-                >
-                  Clear all filters
-                </button>
-              </div>
-            ) : null}
-
-            <div className="flex flex-wrap items-center gap-2">
               <details className="relative">
                 <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
                   Actions ▼
@@ -2294,14 +2285,20 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                    onClick={saveCurrentFiltersAsView}
+                    onClick={() => {
+                      closeOpenDashboardMenus();
+                      saveCurrentFiltersAsView();
+                    }}
                   >
                     Save view
                   </button>
                   <button
                     type="button"
                     className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                    onClick={resetDashboardFilters}
+                    onClick={() => {
+                      closeOpenDashboardMenus();
+                      resetDashboardFilters();
+                    }}
                   >
                     Reset filters
                   </button>
@@ -2309,6 +2306,7 @@ export default function DashboardPage() {
                     type="button"
                     className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
                     onClick={() => {
+                      closeOpenDashboardMenus();
                       setIsEditColumnsOpen((previous) => !previous);
                     }}
                   >
@@ -2324,17 +2322,20 @@ export default function DashboardPage() {
                   <div className="absolute right-0 z-30 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
                     <button
                       type="button"
-                      className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                      className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
                       onClick={() => {
+                        closeOpenDashboardMenus();
                         router.push("/blogs/new");
                       }}
                     >
-                      + Add Blog
+                      <span>+ Add Blog</span>
+                      <KbdShortcut className="bg-slate-50">N</KbdShortcut>
                     </button>
                     <button
                       type="button"
                       className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
                       onClick={() => {
+                        closeOpenDashboardMenus();
                         router.push("/ideas");
                       }}
                     >
@@ -2351,96 +2352,105 @@ export default function DashboardPage() {
                 </details>
               ) : null}
             </div>
-          </div>
-
-          <section className="space-y-3">
-            <input
-              type="search"
-              placeholder="Search title, URL, writer, publisher, or site"
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-              }}
-            />
-            <p className="text-xs text-slate-500">
-              Case-insensitive partial match across title, URL, writer, publisher, and site.
-            </p>
-            <div className="grid gap-3 md:grid-cols-3">
-              <CheckboxMultiSelect
-                label="Sites"
-                options={siteFilterOptions}
-                selectedValues={siteFilters}
-                onChange={(nextValues) => {
-                  setSiteFilters(nextValues as BlogSite[]);
-                }}
-              />
-              <CheckboxMultiSelect
-                label="Writers"
-                options={writerFilterOptions}
-                selectedValues={writerFilters}
-                onChange={setWriterFilters}
-              />
-              <CheckboxMultiSelect
-                label="Publishers"
-                options={publisherFilterOptions}
-                selectedValues={publisherFilters}
-                onChange={setPublisherFilters}
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              <CheckboxMultiSelect
-                label="Writer Status"
-                options={writerStatusFilterOptions}
-                selectedValues={writerStatusFilters}
-                onChange={(nextValues) => {
-                  setWriterStatusFilters(nextValues as WriterStageStatus[]);
-                }}
-              />
-              <CheckboxMultiSelect
-                label="Publisher Status"
-                options={publisherStatusFilterOptions}
-                selectedValues={publisherStatusFilters}
-                onChange={(nextValues) => {
-                  setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-                }}
-              />
-              <CheckboxMultiSelect
-                label="Overall Status"
-                options={overallStatusFilterOptions}
-                selectedValues={statusFilters}
-                onChange={(nextValues) => {
-                  setStatusFilters(nextValues as OverallBlogStatus[]);
-                }}
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <select
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                value={sortField}
-                onChange={(event) => {
-                  setSortField(event.target.value as DashboardSortField);
-                }}
-              >
-                {DASHBOARD_SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <button
+            }
+          />
+          <DataPageToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search title, URL, writer, publisher, or site"
+            actions={
+              <Button
                 type="button"
-                className="rounded-md border border-slate-300 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                onClick={() => {
-                  setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
-                }}
+                variant="secondary"
+                size="sm"
+                onClick={clearAllFilters}
               >
-                {DASHBOARD_SORT_OPTIONS.find((option) => option.value === sortField)?.label}{" "}
-                {sortDirection === "asc" ? "↑" : "↓"}
-              </button>
-            </div>
-
-          </section>
+                Clear all filters
+              </Button>
+            }
+            filters={
+              <>
+                <CheckboxMultiSelect
+                  label="Sites"
+                  options={siteFilterOptions}
+                  selectedValues={siteFilters}
+                  onChange={(nextValues) => {
+                    setSiteFilters(nextValues as BlogSite[]);
+                  }}
+                />
+                <CheckboxMultiSelect
+                  label="Writers"
+                  options={writerFilterOptions}
+                  selectedValues={writerFilters}
+                  onChange={setWriterFilters}
+                />
+                <CheckboxMultiSelect
+                  label="Publishers"
+                  options={publisherFilterOptions}
+                  selectedValues={publisherFilters}
+                  onChange={setPublisherFilters}
+                />
+                <CheckboxMultiSelect
+                  label="Writer Status"
+                  options={writerStatusFilterOptions}
+                  selectedValues={writerStatusFilters}
+                  onChange={(nextValues) => {
+                    setWriterStatusFilters(nextValues as WriterStageStatus[]);
+                  }}
+                />
+                <CheckboxMultiSelect
+                  label="Publisher Status"
+                  options={publisherStatusFilterOptions}
+                  selectedValues={publisherStatusFilters}
+                  onChange={(nextValues) => {
+                    setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
+                  }}
+                />
+                <CheckboxMultiSelect
+                  label="Overall Status"
+                  options={overallStatusFilterOptions}
+                  selectedValues={statusFilters}
+                  onChange={(nextValues) => {
+                    setStatusFilters(nextValues as OverallBlogStatus[]);
+                  }}
+                />
+                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Sort By
+                  <select
+                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                    value={sortField}
+                    onChange={(event) => {
+                      setSortField(event.target.value as DashboardSortField);
+                    }}
+                  >
+                    {DASHBOARD_SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-300 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
+                  }}
+                >
+                  {DASHBOARD_SORT_OPTIONS.find((option) => option.value === sortField)?.label}{" "}
+                  {sortDirection === "asc" ? "↑" : "↓"}
+                </button>
+              </>
+            }
+          />
+          <p className="text-xs text-slate-500">
+            Case-insensitive partial match across title, URL, writer, publisher, and site.
+            <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-slate-600">
+              <KbdShortcut className="bg-slate-50">/</KbdShortcut>
+              focus search
+            </span>
+          </p>
+          <DataPageFilterPills pills={activeFilterPills} />
           <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Today</p>
             <div className="mt-2 grid gap-2 text-sm md:grid-cols-3">
@@ -3250,6 +3260,9 @@ export default function DashboardPage() {
                         <Link
                           href={`/blogs/${activeBlog.id}`}
                           className="block rounded px-3 py-2 text-xs text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            closeOpenDashboardMenus();
+                          }}
                         >
                           Open blog page
                         </Link>
@@ -3257,6 +3270,7 @@ export default function DashboardPage() {
                           type="button"
                           className="block w-full rounded px-3 py-2 text-left text-xs text-slate-700 hover:bg-slate-100"
                           onClick={() => {
+                            closeOpenDashboardMenus();
                             void loadPanelData(activeBlog.id);
                           }}
                         >

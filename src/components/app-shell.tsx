@@ -9,7 +9,15 @@ import {
   CommandPalette,
   type CommandPaletteCommand,
 } from "@/components/command-palette";
+import { Button } from "@/components/button";
+import { KbdShortcut } from "@/components/kbd-shortcut";
 import { hasWorkflowOverridePermission } from "@/lib/permissions";
+import {
+  clearQuickViewSnapshot,
+  readQuickViewSnapshot,
+  type QuickViewSnapshot,
+} from "@/lib/quick-view";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
@@ -22,6 +30,7 @@ const WORK_NAV_ITEMS = [
 
 const CONTENT_NAV_ITEMS = [
   { href: "/blogs", label: "Blogs" },
+  { href: "/blogs/cardboard", label: "CardBoard" },
   { href: "/ideas", label: "Ideas" },
   { href: "/social-posts", label: "Social Posts" },
 ];
@@ -55,7 +64,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { hasPermission, profile, signOut } = useAuth();
+  const { hasPermission, profile, signOut, user } = useAuth();
   const {
     notifications,
     unreadCount,
@@ -63,6 +72,10 @@ export function AppShell({
     clearNotifications,
   } = useSystemFeedback();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [quickViewSnapshot, setQuickViewSnapshot] = useState<QuickViewSnapshot | null>(
+    null
+  );
+  const [quickViewError, setQuickViewError] = useState<string | null>(null);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
   const canCreateBlogs = hasPermission("create_blog");
   const userRoles = getUserRoles(profile);
@@ -70,6 +83,12 @@ export function AppShell({
   const canManagePermissions = isAdmin;
   const canManageSocialPosts =
     hasPermission("view_dashboard") || hasWorkflowOverridePermission(hasPermission);
+  const isQuickViewActive = Boolean(
+    quickViewSnapshot &&
+      user?.id &&
+      quickViewSnapshot.adminUserId &&
+      user.id !== quickViewSnapshot.adminUserId
+  );
 
   const builtInCommandPaletteCommands = useMemo(() => {
     const navigationCommands: CommandPaletteCommand[] = NAV_ITEMS.map((item) => ({
@@ -135,9 +154,6 @@ export function AppShell({
     () => [...builtInCommandPaletteCommands, ...commandPaletteCommands],
     [builtInCommandPaletteCommands, commandPaletteCommands]
   );
-  const activeRoleLabel = profile?.role
-    ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
-    : "Unknown";
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
@@ -206,6 +222,34 @@ export function AppShell({
     };
   }, [isNotificationPanelOpen]);
 
+  useEffect(() => {
+    setQuickViewSnapshot(readQuickViewSnapshot());
+    setQuickViewError(null);
+  }, [user?.id]);
+
+  const returnToAdminFromQuickView = async () => {
+    const snapshot = readQuickViewSnapshot();
+    if (!snapshot) {
+      setQuickViewError("No saved admin session found.");
+      return;
+    }
+
+    setQuickViewError(null);
+    const supabase = getSupabaseBrowserClient();
+    const { error: setSessionError } = await supabase.auth.setSession({
+      access_token: snapshot.adminAccessToken,
+      refresh_token: snapshot.adminRefreshToken,
+    });
+    if (setSessionError) {
+      setQuickViewError(setSessionError.message);
+      return;
+    }
+
+    clearQuickViewSnapshot();
+    setQuickViewSnapshot(null);
+    router.push("/settings");
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <CommandPalette commands={allCommandPaletteCommands} />
@@ -221,14 +265,26 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-4">
-            <p className="hidden rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500 md:block">
-              ⌘K / Ctrl+K
-            </p>
+            <div className="hidden rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 md:block">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                Shortcuts
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+                <KbdShortcut>⌘K</KbdShortcut>
+                <KbdShortcut>Ctrl+K</KbdShortcut>
+                <KbdShortcut>/</KbdShortcut>
+                {canCreateBlogs ? <KbdShortcut>N</KbdShortcut> : null}
+                <KbdShortcut>D</KbdShortcut>
+                <KbdShortcut>C</KbdShortcut>
+              </div>
+            </div>
             <div className="relative" ref={notificationPanelRef}>
-              <button
+              <Button
                 type="button"
                 aria-label="Notifications"
-                className="relative rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                variant="secondary"
+                size="md"
+                className="relative"
                 onClick={() => {
                   setIsNotificationPanelOpen((previous) => !previous);
                 }}
@@ -239,20 +295,21 @@ export function AppShell({
                     {unreadCount}
                   </span>
                 ) : null}
-              </button>
+              </Button>
               {isNotificationPanelOpen ? (
                 <div className="absolute right-0 z-40 mt-2 w-[360px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
-                    <button
+                    <Button
                       type="button"
-                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      variant="secondary"
+                      size="xs"
                       onClick={() => {
                         clearNotifications();
                       }}
                     >
                       Mark all as read
-                    </button>
+                    </Button>
                   </div>
                   {notifications.length === 0 ? (
                     <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
@@ -297,21 +354,49 @@ export function AppShell({
               <p className="font-medium text-slate-900">
                 {profile?.display_name || profile?.full_name}
               </p>
-              <p className="text-slate-500">Active role: {activeRoleLabel}</p>
             </div>
-            <button
+            <Button
               type="button"
-              className="rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              variant="secondary"
+              size="md"
               onClick={async () => {
+                clearQuickViewSnapshot();
+                setQuickViewSnapshot(null);
                 await signOut();
                 router.replace("/login");
               }}
             >
               Sign out
-            </button>
+            </Button>
           </div>
         </div>
       </header>
+      {isQuickViewActive || quickViewError ? (
+        <div className="border-b border-indigo-200 bg-indigo-50">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2 text-sm">
+            <p className="text-indigo-800">
+              {isQuickViewActive && quickViewSnapshot
+                ? `Quick-view active: actions are being performed as ${quickViewSnapshot.targetDisplayName}.`
+                : null}
+              {quickViewError ? (
+                <span className="ml-2 text-rose-700">{quickViewError}</span>
+              ) : null}
+            </p>
+            {isQuickViewActive ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  void returnToAdminFromQuickView();
+                }}
+              >
+                Return to Admin
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-6 py-6">
         <aside className="w-full max-w-56 shrink-0 rounded-lg border border-slate-200 bg-white p-3">

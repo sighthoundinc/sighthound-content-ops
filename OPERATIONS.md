@@ -18,6 +18,9 @@ Durable state and authorization decisions are DB-authoritative. UI checks are UX
 - `src/app/settings/permissions/` — permission management UI
 - `src/app/api/admin/permissions/` — permission CRUD/reset APIs
 - `src/app/api/admin/reassign-assignments/` — assignment transfer API
+- `src/app/api/admin/activity-history/` — admin audit/history cleanup API
+- `src/app/api/admin/quick-view/` — admin quick-view user session switch API
+- `src/lib/quick-view.ts` — quick-view snapshot storage helpers
 - `supabase/migrations/` — schema/history migrations
 - `supabase/functions/` — edge functions
 - `scripts/` — operational scripts (legacy import)
@@ -116,7 +119,35 @@ API:
 
 Use this to move writer/publisher assignments safely between users, instead of manual SQL updates.
 
-## 8) Slack operations
+## 8) Admin maintenance operations
+Activity history cleanup API:
+- `/api/admin/activity-history` (`DELETE`)
+
+Capabilities:
+- delete all activity history (global)
+- delete history scoped to selected users
+- optional comments cleanup (`blog_comments`, `social_post_comments`) with same scope rules
+
+Operational notes:
+- endpoint is hard-gated to admin role
+- destructive operation; no restore path
+- intended for test-data cleanup and environment hygiene
+
+## 9) Quick-view as user operations
+Quick-view session switch API:
+- `/api/admin/quick-view` (`POST`)
+
+Behavior:
+- admin chooses active non-admin target user
+- system generates one-time auth flow and switches browser session
+- while quick-view is active, all reads/writes run as selected user
+- audit trail and action attribution follow the selected user context
+
+Return flow:
+- quick-view snapshot is stored in browser local storage
+- “Return to Admin” restores original admin session
+- sign-out clears quick-view snapshot state
+## 10) Slack operations
 Function:
 - `supabase/functions/slack-notify/index.ts`
 
@@ -130,7 +161,7 @@ Deploy/update:
 supabase functions deploy slack-notify --project-ref <PROJECT_REF>
 ```
 
-## 9) Legacy import operations
+## 11) Legacy import operations
 Dry run:
 ```bash
 npm run import:legacy -- --dry-run
@@ -143,7 +174,7 @@ npm run import:legacy
 
 Canonical source is the cleaned workbook (`Calendar View` sheet).
 
-## 10) Troubleshooting quick map
+## 12) Troubleshooting quick map
 ### “Comments table is missing from schema cache”
 1. run latest migrations
 2. confirm `blog_comments` exists
@@ -165,6 +196,11 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 2. verify current queue filter and stage state
 3. confirm `view_writing_queue` / `view_publishing_queue` permission
 
+### “Actions are being logged under unexpected user”
+1. check whether quick-view mode is active in UI banner
+2. run Return to Admin flow
+3. if restore fails, re-authenticate admin user and verify local snapshot clear
+
 ### “Enum/status mismatch during writes”
 1. verify latest status compatibility migrations are applied
 2. verify local/remote migration alignment
@@ -173,8 +209,7 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 1. run `npm run check`
 2. verify env vars
 3. check Supabase logs + Next runtime logs
-
-## 11) Deployment baseline
+## 13) Deployment baseline
 - deploy frontend on Vercel
 - set env vars in deployment target
 - ensure migrations are fully applied before release

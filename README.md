@@ -42,6 +42,12 @@ Internal content operations platform for Sighthound marketing workflows across `
   - view/selected CSV
   - view/selected PDF
 
+### CardBoard (`/blogs/cardboard`)
+- Kanban-style pipeline board (`Idea`, `Writing`, `Reviewing`, `Publishing`, `Published`)
+- Drag-and-drop stage movement with permission and field validation
+- Quick-add from idea lane
+- Stage columns deep-link back to table view filters
+
 ### Tasks
 - Top-3 priority summary + expandable full list
 - Overdue/Soon indicators
@@ -58,6 +64,14 @@ Internal content operations platform for Sighthound marketing workflows across `
 - User role management
 - Permission matrix management (`/settings/permissions`)
 - Permission audit history
+- Admin-only activity history cleanup (global or user-scoped)
+- Optional comments cleanup during history purge
+- Admin quick-view as non-admin user with return-to-admin workflow
+
+### Social Post Editor (`/social-posts/[id]`)
+- Focused single-post workspace
+- Autosave + manual save
+- Caption formatting/copy utilities and linked-blog lookup
 
 ## Tech stack
 - Next.js (App Router) + TypeScript + Tailwind
@@ -96,6 +110,8 @@ npm run dev
 ## API highlights
 - `/api/admin/permissions` — role permission read/update/reset
 - `/api/admin/reassign-assignments` — controlled assignment transfer
+- `/api/admin/activity-history` — admin activity/audit cleanup
+- `/api/admin/quick-view` — admin quick-view session switch
 - `/api/admin/users` — admin user operations
 - `/api/users/profile` — current user profile operations
 

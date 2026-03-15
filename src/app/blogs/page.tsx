@@ -1,10 +1,17 @@
 "use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { Button, buttonClass } from "@/components/button";
+import {
+  DataPageFilterPills,
+  DataPageHeader,
+  DataPageToolbar,
+} from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import { TablePaginationControls } from "@/components/table-controls";
 import {
@@ -33,6 +40,7 @@ type LibraryPublisherStatusFilter = "all" | PublisherStageStatus;
 type LibrarySortField = "published_date" | "title" | "site";
 type LibrarySortDirection = "asc" | "desc";
 type LibraryRowLimit = 10 | 20 | 50 | 100 | "all";
+type BoardStageQueryFilter = "idea" | "writing" | "reviewing" | "publishing" | "published";
 
 const ROW_LIMIT_OPTIONS: LibraryRowLimit[] = [10, 20, 50, 100, "all"];
 const DEFAULT_ROW_LIMIT: LibraryRowLimit = 20;
@@ -79,6 +87,7 @@ const SORT_DIRECTION_OPTIONS: Array<{ value: LibrarySortDirection; label: string
   { value: "asc", label: "Ascending" },
 ];
 
+
 const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
 const escapeHtmlValue = (value: string) =>
   value
@@ -87,6 +96,8 @@ const escapeHtmlValue = (value: string) =>
     .replaceAll(">", "&gt;")
     .replaceAll("\"", "&quot;")
     .replaceAll("'", "&#39;");
+const escapeRegexValue = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function getPublishedDateKey(blog: BlogRecord) {
   return blog.display_published_date ?? getBlogPublishDate(blog);
@@ -189,10 +200,36 @@ function getAssigneeLabel(name: string | null | undefined) {
   return name && name.trim().length > 0 ? name : "Unassigned";
 }
 
+function renderHighlightedText(value: string, query: string) {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) {
+    return value;
+  }
+  const matcher = new RegExp(`(${escapeRegexValue(normalizedQuery)})`, "ig");
+  return value.split(matcher).map((part, index) =>
+    part.toLowerCase() === normalizedQuery.toLowerCase() ? (
+      <mark
+        key={`${part}-${index}`}
+        className="rounded bg-amber-100 px-0.5 text-slate-900"
+      >
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+}
+
+function isBoardStageQueryFilter(value: string | null): value is BoardStageQueryFilter {
+  return value === "idea" || value === "writing" || value === "reviewing" || value === "publishing" || value === "published";
+}
+
 export default function BlogLibraryPage() {
+  const searchParams = useSearchParams();
   const { hasPermission } = useAuth();
   const { showSaving, showSuccess, showError, updateStatus, pushNotification } =
     useSystemFeedback();
+  const canCreateBlogs = hasPermission("create_blog");
   const canExportCsv = hasPermission("export_csv");
   const canExportSelectedCsv = hasPermission("export_selected_csv") || canExportCsv;
   const canSelectRows = canExportSelectedCsv;
@@ -214,45 +251,77 @@ export default function BlogLibraryPage() {
     blogId: string;
     field: "title" | "url";
   } | null>(null);
+  const boardStageQuery = searchParams.get("boardStage");
+
+  const loadBlogs = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    setIsLoading(true);
+    setError(null);
+
+    let { data, error: blogsError } = await supabase
+      .from("blogs")
+      .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
+      .eq("is_archived", false)
+      .order("display_published_date", { ascending: false, nullsFirst: false })
+      .order("updated_at", { ascending: false });
+
+    if (isMissingBlogDateColumnsError(blogsError)) {
+      const fallback = await supabase
+        .from("blogs")
+        .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
+        .eq("is_archived", false)
+        .order("target_publish_date", { ascending: false, nullsFirst: false })
+        .order("updated_at", { ascending: false });
+      data = fallback.data as typeof data;
+      blogsError = fallback.error;
+    }
+
+    if (blogsError) {
+      setError(blogsError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    setBlogs(normalizeBlogRows((data ?? []) as Array<Record<string, unknown>>) as BlogRecord[]);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
-    const loadBlogs = async () => {
-      const supabase = getSupabaseBrowserClient();
-      setIsLoading(true);
-      setError(null);
-
-      let { data, error: blogsError } = await supabase
-        .from("blogs")
-        .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
-        .eq("is_archived", false)
-        .order("display_published_date", { ascending: false, nullsFirst: false })
-        .order("updated_at", { ascending: false });
-
-      if (isMissingBlogDateColumnsError(blogsError)) {
-        const fallback = await supabase
-          .from("blogs")
-          .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
-          .eq("is_archived", false)
-          .order("target_publish_date", { ascending: false, nullsFirst: false })
-          .order("updated_at", { ascending: false });
-        data = fallback.data as typeof data;
-        blogsError = fallback.error;
-      }
-
-      if (blogsError) {
-        setError(blogsError.message);
-        setIsLoading(false);
-        return;
-      }
-
-      setBlogs(
-        normalizeBlogRows((data ?? []) as Array<Record<string, unknown>>) as BlogRecord[]
-      );
-      setIsLoading(false);
-    };
-
     void loadBlogs();
-  }, []);
+  }, [loadBlogs]);
+
+  useEffect(() => {
+    if (!isBoardStageQueryFilter(boardStageQuery)) {
+      return;
+    }
+    if (boardStageQuery === "idea") {
+      setStatusFilter("unpublished");
+      setWriterStatusFilter("not_started");
+      setPublisherStatusFilter("not_started");
+      return;
+    }
+    if (boardStageQuery === "writing") {
+      setStatusFilter("unpublished");
+      setWriterStatusFilter("in_progress");
+      setPublisherStatusFilter("all");
+      return;
+    }
+    if (boardStageQuery === "reviewing") {
+      setStatusFilter("unpublished");
+      setWriterStatusFilter("needs_revision");
+      setPublisherStatusFilter("all");
+      return;
+    }
+    if (boardStageQuery === "publishing") {
+      setStatusFilter("unpublished");
+      setWriterStatusFilter("completed");
+      setPublisherStatusFilter("all");
+      return;
+    }
+    setStatusFilter("published");
+    setWriterStatusFilter("all");
+    setPublisherStatusFilter("completed");
+  }, [boardStageQuery]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -289,6 +358,35 @@ export default function BlogLibraryPage() {
       window.clearTimeout(timeout);
     };
   }, [copiedCell]);
+  const closeOpenDetailsMenus = useCallback(() => {
+    document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
+      menu.open = false;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const targetNode = event.target as Node;
+      document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
+        if (!menu.contains(targetNode)) {
+          menu.open = false;
+        }
+      });
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeOpenDetailsMenus();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [closeOpenDetailsMenus]);
 
   const filteredBlogs = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -385,9 +483,79 @@ export default function BlogLibraryPage() {
     siteFilter !== "all" ||
     writerStatusFilter !== "all" ||
     publisherStatusFilter !== "all";
+  const hasNoResults = !isLoading && sortedBlogs.length === 0;
   const tableColumnCount = 7 + (canSelectRows ? 1 : 0) + (shouldShowStageColumn ? 1 : 0);
   const allVisibleSelected =
     pagedBlogs.length > 0 && pagedBlogs.every((blog) => selectedIdSet.has(blog.id));
+  const activeFilterPills = useMemo(
+    () => [
+      searchQuery.trim().length > 0
+        ? {
+            id: "search",
+            label: `Search: ${searchQuery.trim()}`,
+            onRemove: () => {
+              setSearchQuery("");
+            },
+          }
+        : null,
+      statusFilter !== "published"
+        ? {
+            id: "status",
+            label: `Status: ${
+              STATUS_FILTER_OPTIONS.find((option) => option.value === statusFilter)?.label ??
+              statusFilter
+            }`,
+            onRemove: () => {
+              setStatusFilter("published");
+            },
+          }
+        : null,
+      siteFilter !== "all"
+        ? {
+            id: "site",
+            label: `Site: ${
+              SITE_FILTER_OPTIONS.find((option) => option.value === siteFilter)?.label ?? siteFilter
+            }`,
+            onRemove: () => {
+              setSiteFilter("all");
+            },
+          }
+        : null,
+      writerStatusFilter !== "all"
+        ? {
+            id: "writer",
+            label: `Writer: ${
+              WRITER_STATUS_FILTER_OPTIONS.find(
+                (option) => option.value === writerStatusFilter
+              )?.label ?? writerStatusFilter
+            }`,
+            onRemove: () => {
+              setWriterStatusFilter("all");
+            },
+          }
+        : null,
+      publisherStatusFilter !== "all"
+        ? {
+            id: "publisher",
+            label: `Publisher: ${
+              PUBLISHER_STATUS_FILTER_OPTIONS.find(
+                (option) => option.value === publisherStatusFilter
+              )?.label ?? publisherStatusFilter
+            }`,
+            onRemove: () => {
+              setPublisherStatusFilter("all");
+            },
+          }
+        : null,
+    ].filter((pill) => pill !== null),
+    [
+      publisherStatusFilter,
+      searchQuery,
+      siteFilter,
+      statusFilter,
+      writerStatusFilter,
+    ]
+  );
 
   const resetFilters = () => {
     setSearchQuery("");
@@ -659,24 +827,100 @@ export default function BlogLibraryPage() {
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
       <AppShell>
         <div className="space-y-5">
-          <header className="space-y-1">
-            <h2 className="text-xl font-semibold text-slate-900">Blogs</h2>
-            <p className="text-sm text-slate-600">
-              Searchable reference library for blog titles, URLs, and published history.
-            </p>
-          </header>
+          <DataPageHeader
+            title="Blogs"
+            description="Searchable reference library for blog titles, URLs, and published history."
+            primaryAction={
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-sm">
+                  <span className="rounded bg-slate-900 px-3 py-1.5 font-medium text-white">
+                    Table View
+                  </span>
+                  <Link
+                    href="/blogs/cardboard"
+                    className="pressable rounded px-3 py-1.5 text-slate-700 hover:bg-slate-100"
+                  >
+                    Pipeline View
+                  </Link>
+                </div>
+                {canCreateBlogs ? (
+                  <Link
+                    href="/blogs/new"
+                  className={buttonClass({ variant: "primary", size: "md" })}
+                  >
+                    Create Blog
+                  </Link>
+                ) : null}
+              </div>
+            }
+          />
 
-          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => {
-                setSearchQuery(event.target.value);
-              }}
-              placeholder="Search blog title or URL"
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-            />
-            <div className="grid gap-3 md:grid-cols-2">
+          <DataPageToolbar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search blog title or URL"
+            actions={
+              <>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void copyAll("title");
+                  }}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Copy Titles
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void copyAll("url");
+                  }}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Copy URLs
+                </Button>
+                {canExportCsv ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      exportCsv("view");
+                    }}
+                  >
+                    Export CSV
+                  </Button>
+                ) : null}
+                {canExportCsv ? (
+                  <Button
+                    type="button"
+                    className="pressable rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+                    onClick={() => {
+                      exportPdf("view");
+                    }}
+                  >
+                    Export PDF
+                  </Button>
+                ) : null}
+                {canExportSelectedCsv ? (
+                  <Button
+                    type="button"
+                    disabled={selectedBlogs.length === 0}
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      exportCsv("selected");
+                    }}
+                  >
+                    Export Selection
+                  </Button>
+                ) : null}
+              </>
+            }
+            filters={
+              <>
               <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
                 Publish State
                 <select
@@ -684,7 +928,7 @@ export default function BlogLibraryPage() {
                   onChange={(event) => {
                     setStatusFilter(event.target.value as LibraryStatusFilter);
                   }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                 >
                   {STATUS_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -693,14 +937,14 @@ export default function BlogLibraryPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500 md:col-span-2 xl:col-span-1">
                 Website
                 <select
                   value={siteFilter}
                   onChange={(event) => {
                     setSiteFilter(event.target.value as LibrarySiteFilter);
                   }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                 >
                   {SITE_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -709,8 +953,6 @@ export default function BlogLibraryPage() {
                   ))}
                 </select>
               </label>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
               <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
                 Writer Status
                 <select
@@ -718,7 +960,7 @@ export default function BlogLibraryPage() {
                   onChange={(event) => {
                     setWriterStatusFilter(event.target.value as LibraryWriterStatusFilter);
                   }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                 >
                   {WRITER_STATUS_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -727,14 +969,14 @@ export default function BlogLibraryPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500 md:col-span-2 xl:col-span-1">
                 Publisher Status
                 <select
                   value={publisherStatusFilter}
                   onChange={(event) => {
                     setPublisherStatusFilter(event.target.value as LibraryPublisherStatusFilter);
                   }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                 >
                   {PUBLISHER_STATUS_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -743,8 +985,6 @@ export default function BlogLibraryPage() {
                   ))}
                 </select>
               </label>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
               <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
                 Sort By
                 <select
@@ -752,7 +992,7 @@ export default function BlogLibraryPage() {
                   onChange={(event) => {
                     setSortField(event.target.value as LibrarySortField);
                   }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                 >
                   {SORT_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -761,14 +1001,14 @@ export default function BlogLibraryPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500 md:col-span-2 xl:col-span-1">
                 Direction
                 <select
                   value={sortDirection}
                   onChange={(event) => {
                     setSortDirection(event.target.value as LibrarySortDirection);
                   }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                 >
                   {SORT_DIRECTION_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -777,22 +1017,35 @@ export default function BlogLibraryPage() {
                   ))}
                 </select>
               </label>
-              <div className="flex items-end justify-end">
-                <button
+              <div className="flex items-end justify-end md:col-span-2 xl:col-span-1">
+                <Button
                   type="button"
                   onClick={resetFilters}
-                  className="rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                  variant="secondary"
+                  size="sm"
                 >
                   Reset Filters
-                </button>
+                </Button>
               </div>
-            </div>
-          </section>
+            </>
+            }
+          />
+          <DataPageFilterPills pills={activeFilterPills} />
 
           {error ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-sm text-rose-700">{error}</p>
+              <Button
+                type="button"
+                onClick={() => {
+                  void loadBlogs();
+                }}
+                variant="secondary"
+                size="xs"
+              >
+                Retry
+              </Button>
+            </div>
           ) : null}
 
           <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
@@ -802,100 +1055,66 @@ export default function BlogLibraryPage() {
                 <span className="font-medium text-slate-900">{visibleRange.end}</span> of{" "}
                 <span className="font-medium text-slate-900">{sortedBlogs.length}</span> blogs
               </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Utilities
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void copyAll("title");
-                  }}
-                  className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
-                >
-                  Copy All Titles
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void copyAll("url");
-                  }}
-                  className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
-                >
-                  Copy All URLs
-                </button>
-              </div>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Exports
-              </span>
-              {canExportCsv ? (
-                <>
-                  <button
-                    type="button"
-                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      exportCsv("view");
-                    }}
-                  >
-                    Export View CSV
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      exportPdf("view");
-                    }}
-                  >
-                    Export View PDF
-                  </button>
-                </>
-              ) : null}
-              {canExportSelectedCsv ? (
-                <>
-                  <button
-                    type="button"
-                    disabled={selectedBlogs.length === 0}
-                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => {
-                      exportCsv("selected");
-                    }}
-                  >
-                    Export Selected CSV
-                  </button>
-                  <button
-                    type="button"
-                    disabled={selectedBlogs.length === 0}
-                    className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => {
-                      exportPdf("selected");
-                    }}
-                  >
-                    Export Selected PDF
-                  </button>
-                </>
-              ) : null}
-            </div>
-            {!isLoading && sortedBlogs.length === 0 && hasActiveFilters ? (
+            {hasNoResults && hasActiveFilters ? (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                <span>No results match the current filters.</span>
+                <span>No blogs match your filters. Try clearing filters or create a new blog.</span>
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                  className="pressable rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
                 >
                   Reset filters
                 </button>
               </div>
             ) : null}
+            {hasNoResults && !hasActiveFilters ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">No blogs yet.</p>
+                  <p className="text-sm text-slate-600">
+                    Create your first blog to start building the content library.
+                  </p>
+                </div>
+                {canCreateBlogs ? (
+                  <Link
+                    href="/blogs/new"
+                    className="pressable inline-flex items-center rounded border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    + Create Blog
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
 
             {isLoading ? (
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                Loading blog library…
-              </p>
-            ) : (
+              <div className="overflow-auto rounded-lg border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+                    <tr>
+                      {canSelectRows ? <th className="px-3 py-2" /> : null}
+                      <th className="px-3 py-2">Sr #</th>
+                      <th className="px-3 py-2">Blog Title</th>
+                      <th className="px-3 py-2">Live URL</th>
+                      <th className="px-3 py-2">Writer Status</th>
+                      <th className="px-3 py-2">Publisher Status</th>
+                      <th className="px-3 py-2">Published Date</th>
+                      {shouldShowStageColumn ? <th className="px-3 py-2">Stage</th> : null}
+                      <th className="px-3 py-2">Site</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {Array.from({ length: 5 }).map((_, rowIndex) => (
+                      <tr key={`skeleton-row-${rowIndex}`}>
+                        <td className="px-3 py-3" colSpan={tableColumnCount}>
+                          <div className="skeleton h-4 w-full" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : hasNoResults ? null : (
               <div className="overflow-auto rounded-lg border border-slate-200">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                   <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
@@ -922,50 +1141,43 @@ export default function BlogLibraryPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {pagedBlogs.length === 0 ? (
-                      <tr>
-                        <td className="px-3 py-5 text-center text-slate-500" colSpan={tableColumnCount}>
-                          No blogs found with current filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      pagedBlogs.map((blog, index) => {
-                        const globalIndex =
-                          rowLimit === "all"
-                            ? index + 1
-                            : (currentPage - 1) * rowLimit + index + 1;
-                        const copiedTitle =
-                          copiedCell?.blogId === blog.id && copiedCell.field === "title";
-                        const copiedUrl =
-                          copiedCell?.blogId === blog.id && copiedCell.field === "url";
-                        const stage = getStageForBadge(blog);
-                        return (
-                          <tr key={blog.id} className="group hover:bg-slate-50">
-                            {canSelectRows ? (
-                              <td className="px-3 py-2 align-top">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedIdSet.has(blog.id)}
-                                  onChange={(event) => {
-                                    toggleRowSelection(blog.id, event.target.checked);
-                                  }}
-                                />
-                              </td>
-                            ) : null}
-                            <td className="px-3 py-2 align-top text-slate-600">{globalIndex}</td>
-                            <td className="px-3 py-2 align-top text-slate-900">
-                              <div className="max-w-[34rem] space-y-1">
-                                <div className="group/title inline-flex max-w-full items-start gap-2">
-                                  <Link
-                                    href={`/blogs/${blog.id}`}
-                                    className="line-clamp-2 font-medium text-slate-900 hover:underline"
-                                  >
-                                    {blog.title}
-                                  </Link>
+                    {pagedBlogs.map((blog, index) => {
+                      const globalIndex =
+                        rowLimit === "all"
+                          ? index + 1
+                          : (currentPage - 1) * rowLimit + index + 1;
+                      const copiedTitle =
+                        copiedCell?.blogId === blog.id && copiedCell.field === "title";
+                      const copiedUrl = copiedCell?.blogId === blog.id && copiedCell.field === "url";
+                      const stage = getStageForBadge(blog);
+                      return (
+                        <tr key={blog.id} className="group hover:bg-slate-50">
+                          {canSelectRows ? (
+                            <td className="px-3 py-2 align-top">
+                              <input
+                                type="checkbox"
+                                checked={selectedIdSet.has(blog.id)}
+                                onChange={(event) => {
+                                  toggleRowSelection(blog.id, event.target.checked);
+                                }}
+                              />
+                            </td>
+                          ) : null}
+                          <td className="px-3 py-2 align-top text-slate-600">{globalIndex}</td>
+                          <td className="px-3 py-2 align-top text-slate-900">
+                            <div className="max-w-[34rem] space-y-1">
+                              <div className="group/title inline-flex max-w-full items-start gap-2">
+                                <Link
+                                  href={`/blogs/${blog.id}`}
+                                  className="interactive-link line-clamp-2 font-medium text-slate-800"
+                                >
+                                  {renderHighlightedText(blog.title, searchQuery)}
+                                </Link>
+                                <span className="tooltip-container">
                                   <button
                                     type="button"
-                                    title="Copy title"
-                                    className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 opacity-0 transition group-hover/title:opacity-100 hover:bg-slate-100"
+                                    aria-label="Copy blog title"
+                                    className="pressable reveal-on-row-hover rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
                                     onClick={() => {
                                       void copyToClipboard(
                                         blog.title,
@@ -975,73 +1187,81 @@ export default function BlogLibraryPage() {
                                       );
                                     }}
                                   >
-                                    {copiedTitle ? "Copied ✓" : "📋"}
+                                    {copiedTitle ? "✓" : "📋"}
                                   </button>
-                                  <details className="relative">
-                                    <summary className="cursor-pointer list-none rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100">
-                                      ⋯
-                                    </summary>
-                                    <div className="absolute right-0 z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white p-1 shadow-md">
-                                      <Link
-                                        href={`/blogs/${blog.id}`}
-                                        className="block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-                                      >
-                                        Open details
-                                      </Link>
-                                      <button
-                                        type="button"
-                                        className="block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
-                                        onClick={() => {
-                                          void copyToClipboard(
-                                            blog.title,
-                                            blog.id,
-                                            "title",
-                                            "Copied title."
-                                          );
-                                        }}
-                                      >
-                                        Copy title
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
-                                        onClick={() => {
-                                          void copyToClipboard(
-                                            blog.live_url ?? "",
-                                            blog.id,
-                                            "url",
-                                            "Copied URL."
-                                          );
-                                        }}
-                                      >
-                                        Copy URL
-                                      </button>
-                                    </div>
-                                  </details>
-                                </div>
-                                <p className="line-clamp-1 text-xs text-slate-500">
-                                  {blog.site === "sighthound.com" ? "SH" : "RED"} • Writer:{" "}
-                                  {getAssigneeLabel(blog.writer?.full_name)} • Publisher:{" "}
-                                  {getAssigneeLabel(blog.publisher?.full_name)}
-                                </p>
+                                  <span className="tooltip-bubble">Copy blog title</span>
+                                </span>
+                                <details className="relative">
+                                  <summary className="pressable reveal-on-row-hover cursor-pointer list-none rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100">
+                                    ⋯
+                                  </summary>
+                                  <div className="absolute right-0 z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                                    <Link
+                                      href={`/blogs/${blog.id}`}
+                                      className="interactive-link block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                                      onClick={() => {
+                                        closeOpenDetailsMenus();
+                                      }}
+                                    >
+                                      Open details
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      className="pressable block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
+                                      onClick={() => {
+                                        closeOpenDetailsMenus();
+                                        void copyToClipboard(
+                                          blog.title,
+                                          blog.id,
+                                          "title",
+                                          "Copied title."
+                                        );
+                                      }}
+                                    >
+                                      Copy title
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="pressable block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
+                                      onClick={() => {
+                                        closeOpenDetailsMenus();
+                                        void copyToClipboard(
+                                          blog.live_url ?? "",
+                                          blog.id,
+                                          "url",
+                                          "Copied URL."
+                                        );
+                                      }}
+                                    >
+                                      Copy URL
+                                    </button>
+                                  </div>
+                                </details>
                               </div>
-                            </td>
-                            <td className="px-3 py-2 align-top text-slate-700">
-                              {blog.live_url ? (
-                                <div className="group/url inline-flex max-w-[24rem] items-center gap-2">
-                                  <a
-                                    href={blog.live_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="truncate text-left hover:text-slate-900 hover:underline"
-                                    title={blog.live_url}
-                                  >
-                                    {blog.live_url} ↗
-                                  </a>
+                              <p className="line-clamp-1 text-xs text-slate-500">
+                                {blog.site === "sighthound.com" ? "SH" : "RED"} • Writer:{" "}
+                                {getAssigneeLabel(blog.writer?.full_name)} • Publisher:{" "}
+                                {getAssigneeLabel(blog.publisher?.full_name)}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 align-top text-slate-700">
+                            {blog.live_url ? (
+                              <div className="group/url inline-flex max-w-[24rem] items-center gap-2">
+                                <a
+                                  href={blog.live_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="interactive-link truncate text-left text-slate-700"
+                                  title={blog.live_url}
+                                >
+                                  {renderHighlightedText(blog.live_url, searchQuery)} ↗
+                                </a>
+                                <span className="tooltip-container">
                                   <button
                                     type="button"
-                                    title="Copy URL"
-                                    className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 opacity-0 transition group-hover/url:opacity-100 hover:bg-slate-100"
+                                    aria-label="Copy blog URL"
+                                    className="pressable reveal-on-row-hover rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
                                     onClick={() => {
                                       void copyToClipboard(
                                         blog.live_url ?? "",
@@ -1051,46 +1271,47 @@ export default function BlogLibraryPage() {
                                       );
                                     }}
                                   >
-                                    {copiedUrl ? "Copied ✓" : "🔗"}
+                                    {copiedUrl ? "✓" : "🔗"}
                                   </button>
-                                </div>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                            <td className="px-3 py-2 align-top text-xs text-slate-700">
-                              {WRITER_STATUS_LABELS[blog.writer_status]}
-                            </td>
-                            <td className="px-3 py-2 align-top text-xs text-slate-700">
-                              {PUBLISHER_STATUS_LABELS[blog.publisher_status]}
-                            </td>
-                            <td className="px-3 py-2 align-top text-slate-600">
-                              {formatPublishedDate(blog)}
-                            </td>
-                            {shouldShowStageColumn ? (
-                              <td className="px-3 py-2 align-top">
-                                <span
-                                  className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getStageBadgeClasses(
-                                    stage
-                                  )}`}
-                                >
-                                  {getStageLabel(stage)}
+                                  <span className="tooltip-bubble">Copy blog URL</span>
                                 </span>
-                              </td>
-                            ) : null}
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-3 py-2 align-top text-xs text-slate-700">
+                            {WRITER_STATUS_LABELS[blog.writer_status]}
+                          </td>
+                          <td className="px-3 py-2 align-top text-xs text-slate-700">
+                            {PUBLISHER_STATUS_LABELS[blog.publisher_status]}
+                          </td>
+                          <td className="px-3 py-2 align-top text-slate-600">
+                            {formatPublishedDate(blog)}
+                          </td>
+                          {shouldShowStageColumn ? (
                             <td className="px-3 py-2 align-top">
                               <span
-                                className={`inline-flex min-w-10 items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getSiteBadgeClasses(
-                                  blog.site
+                                className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getStageBadgeClasses(
+                                  stage
                                 )}`}
                               >
-                                {blog.site === "sighthound.com" ? "SH" : "RED"}
+                                {getStageLabel(stage)}
                               </span>
                             </td>
-                          </tr>
-                        );
-                      })
-                    )}
+                          ) : null}
+                          <td className="px-3 py-2 align-top">
+                            <span
+                              className={`inline-flex min-w-10 items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getSiteBadgeClasses(
+                                blog.site
+                              )}`}
+                            >
+                              {blog.site === "sighthound.com" ? "SH" : "RED"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1099,7 +1320,7 @@ export default function BlogLibraryPage() {
               <label className="flex items-center gap-2 text-sm text-slate-600">
                 <span className="font-medium text-slate-700">Rows per page</span>
                 <select
-                  className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  className="focus-field rounded-md border border-slate-300 px-2 py-1 text-sm"
                   value={String(rowLimit)}
                   onChange={(event) => {
                     const nextValue =

@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import {
@@ -137,6 +138,9 @@ export default function BlogDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [pendingCompletionAction, setPendingCompletionAction] = useState<
+    "writer" | "publisher" | null
+  >(null);
 
   useEffect(() => {
     if (!blogId) {
@@ -443,6 +447,16 @@ export default function BlogDetailPage() {
           }
         : undefined
     );
+  };
+
+  const handleConfirmCompletion = async () => {
+    if (pendingCompletionAction === "writer") {
+      await handleMarkWritingComplete();
+    }
+    if (pendingCompletionAction === "publisher") {
+      await handleMarkPublishingComplete();
+    }
+    setPendingCompletionAction(null);
   };
 
   const handleAddComment = async (event: FormEvent<HTMLFormElement>) => {
@@ -1069,9 +1083,7 @@ export default function BlogDetailPage() {
                       disabled={!canWriterEdit || !canMarkWritingComplete || isSaving}
                       className="rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
-                        if (confirm("Mark writing as complete?")) {
-                          void handleMarkWritingComplete();
-                        }
+                        setPendingCompletionAction("writer");
                       }}
                     >
                       Mark Writing Complete
@@ -1164,9 +1176,7 @@ export default function BlogDetailPage() {
                       disabled={!canPublisherEdit || !canMarkPublishingComplete || isSaving}
                       className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
-                        if (confirm("Mark publishing as complete?")) {
-                          void handleMarkPublishingComplete();
-                        }
+                        setPendingCompletionAction("publisher");
                       }}
                     >
                       Mark Publishing Complete
@@ -1303,6 +1313,32 @@ export default function BlogDetailPage() {
             </section>
           ) : null}
         </div>
+        <ConfirmationModal
+          isOpen={pendingCompletionAction !== null}
+          title={
+            pendingCompletionAction === "writer"
+              ? "Mark writing complete?"
+              : "Mark publishing complete?"
+          }
+          description={
+            pendingCompletionAction === "writer"
+              ? "This will move the blog to the next stage in the workflow."
+              : "This will mark the publishing workflow as completed."
+          }
+          confirmLabel={
+            pendingCompletionAction === "writer"
+              ? "Confirm writing complete"
+              : "Confirm publishing complete"
+          }
+          tone="danger"
+          isConfirming={isSaving}
+          onCancel={() => {
+            setPendingCompletionAction(null);
+          }}
+          onConfirm={() => {
+            void handleConfirmCompletion();
+          }}
+        />
       </AppShell>
     </ProtectedPage>
   );

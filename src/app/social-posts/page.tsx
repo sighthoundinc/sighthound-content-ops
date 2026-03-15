@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   PointerSensor,
@@ -25,6 +26,12 @@ import {
 } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { Button } from "@/components/button";
+import {
+  DataPageFilterPills,
+  DataPageHeader,
+  DataPageToolbar,
+} from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import {
@@ -63,6 +70,7 @@ import type {
 } from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type SocialPostsView = "board" | "list" | "calendar";
 
@@ -317,12 +325,13 @@ function SocialStatusColumn({
 }
 
 export default function SocialPostsPage() {
+  const router = useRouter();
   const { user } = useAuth();
+  const { showSuccess } = useSystemFeedback();
   const [posts, setPosts] = useState<SocialPostWithRelations[]>([]);
   const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [view, setView] = useState<SocialPostsView>("board");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<SocialPostStatus | "all">("all");
@@ -649,6 +658,30 @@ export default function SocialPostsPage() {
     () => filteredPosts.filter((post) => !post.scheduled_date),
     [filteredPosts]
   );
+  const activeFilterPills = useMemo(
+    () =>
+      [
+        search.trim().length > 0
+          ? {
+              id: "search",
+              label: `Search: ${search.trim()}`,
+              onRemove: () => {
+                setSearch("");
+              },
+            }
+          : null,
+        statusFilter !== "all"
+          ? {
+              id: "status",
+              label: `Status: ${SOCIAL_POST_STATUS_LABELS[statusFilter]}`,
+              onRemove: () => {
+                setStatusFilter("all");
+              },
+            }
+          : null,
+      ].filter((pill) => pill !== null),
+    [search, statusFilter]
+  );
 
   const activePostLinks = useMemo(
     () => (activePost ? linksByPost[activePost.id] ?? [] : []),
@@ -709,13 +742,13 @@ export default function SocialPostsPage() {
     ]);
     if (createdPost) {
       setPosts((previous) => [createdPost, ...previous]);
-      setActivePostId(createdPost.id);
+      router.push(`/social-posts/${createdPost.id}`);
     }
     setNewTitle("");
     setNewProduct("general_company");
     setNewType("image");
     setIsCreateModalOpen(false);
-    setSuccessMessage("Social post created.");
+    showSuccess("Social post created.");
     setIsCreating(false);
   };
 
@@ -753,9 +786,7 @@ export default function SocialPostsPage() {
     setPanelForm((previous) =>
       previous ? { ...previous, status: nextStatus } : previous
     );
-    setSuccessMessage(
-      `Moved post to ${SOCIAL_POST_STATUS_LABELS[nextStatus]}.`
-    );
+    showSuccess(`Moved post to ${SOCIAL_POST_STATUS_LABELS[nextStatus]}.`);
     if (activePostId === post.id) {
       void loadPanelDetails(post.id);
     }
@@ -817,7 +848,7 @@ export default function SocialPostsPage() {
         previous.map((entry) => (entry.id === updatedPost.id ? updatedPost : entry))
       );
     }
-    setSuccessMessage("Social post details saved.");
+    showSuccess("Social post details saved.");
     await loadPanelDetails(activePost.id);
     setIsPanelSaving(false);
   };
@@ -887,7 +918,7 @@ export default function SocialPostsPage() {
         ...normalizedLinks,
       ]);
       await loadPanelDetails(activePost.id);
-      setSuccessMessage("Published links saved.");
+      showSuccess("Published links saved.");
     } catch (saveError) {
       setPanelError(
         saveError instanceof Error ? saveError.message : "Failed to save links."
@@ -928,14 +959,13 @@ export default function SocialPostsPage() {
     setPanelCommentDraft("");
     setReplyToComment(null);
     await loadPanelDetails(activePost.id);
-    setSuccessMessage("Comment added.");
+    showSuccess("Comment added.");
     setIsCommentSaving(false);
   };
 
   const openPostPanel = (postId: string) => {
     setActivePostId(postId);
     setPanelError(null);
-    setSuccessMessage(null);
   };
 
   const renderCommentTree = (parentId: string | null, depth: number) => {
@@ -959,15 +989,16 @@ export default function SocialPostsPage() {
               {comment.comment}
             </p>
             <div className="mt-2">
-              <button
+              <Button
                 type="button"
-                className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                variant="secondary"
+                size="xs"
                 onClick={() => {
                   setReplyToComment(comment);
                 }}
               >
                 Reply
-              </button>
+              </Button>
             </div>
             {renderCommentTree(comment.id, depth + 1)}
           </li>
@@ -980,78 +1011,72 @@ export default function SocialPostsPage() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-5">
-          <header className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900">Social Posts</h2>
-              <p className="text-sm text-slate-600">
-                Keep each social post in one card from idea to published links.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-              onClick={() => {
-                setIsCreateModalOpen(true);
-              }}
-            >
-              New Social Post
-            </button>
-          </header>
+          <DataPageHeader
+            title="Social Posts"
+            description="Keep each social post in one card from idea to published links."
+            primaryAction={
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={() => {
+                  setIsCreateModalOpen(true);
+                }}
+              >
+                New Social Post
+              </Button>
+            }
+          />
 
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-              }}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Search title, caption, blog..."
-            />
-
-            <select
-              value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value as SocialPostStatus | "all");
-              }}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value="all">All Statuses</option>
-              {SOCIAL_POST_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {SOCIAL_POST_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-
-            <div className="inline-flex items-center rounded-md border border-slate-300 bg-white p-0.5">
-              {(["board", "list", "calendar"] as SocialPostsView[]).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={`rounded px-3 py-1.5 text-sm font-medium ${
-                    view === mode
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    setView(mode);
+          <DataPageToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search title, caption, blog..."
+            actions={
+              <div className="inline-flex items-center rounded-md border border-slate-300 bg-white p-0.5">
+                {(["board", "list", "calendar"] as SocialPostsView[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={`rounded px-3 py-1.5 text-sm font-medium ${
+                      view === mode
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                    onClick={() => {
+                      setView(mode);
+                    }}
+                  >
+                    {toTitleCase(mode)}
+                  </button>
+                ))}
+              </div>
+            }
+            filters={
+              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                Status
+                <select
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value as SocialPostStatus | "all");
                   }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
                 >
-                  {toTitleCase(mode)}
-                </button>
-              ))}
-            </div>
-          </section>
+                  <option value="all">All Statuses</option>
+                  {SOCIAL_POST_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {SOCIAL_POST_STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
+          />
+          <DataPageFilterPills pills={activeFilterPills} />
 
           {error ? (
             <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
               {error}
-            </p>
-          ) : null}
-          {successMessage ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {successMessage}
             </p>
           ) : null}
 
@@ -1168,33 +1193,36 @@ export default function SocialPostsPage() {
                   {format(activeMonth, "MMMM yyyy")}
                 </p>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    variant="secondary"
+                    size="md"
                     onClick={() => {
                       setActiveMonth((previous) => subMonths(previous, 1));
                     }}
                   >
                     Prev
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    variant="secondary"
+                    size="md"
                     onClick={() => {
                       setActiveMonth(new Date());
                     }}
                   >
                     Today
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    variant="secondary"
+                    size="md"
                     onClick={() => {
                       setActiveMonth((previous) => addMonths(previous, 1));
                     }}
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-2">
@@ -1306,15 +1334,28 @@ export default function SocialPostsPage() {
                     Created {format(new Date(activePost.created_at), "PPp")}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                  onClick={() => {
-                    setActivePostId(null);
-                  }}
-                >
-                  Close
-                </button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      router.push(`/social-posts/${activePost.id}`);
+                    }}
+                  >
+                    Open dedicated page
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setActivePostId(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
 
               {panelError ? (

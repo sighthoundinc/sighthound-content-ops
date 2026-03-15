@@ -1,0 +1,100 @@
+"use client";
+
+import { useEffect } from "react";
+import { Button } from "@/components/button";
+
+type ConfirmationTone = "danger" | "default";
+
+export function ConfirmationModal({
+  isOpen,
+  title,
+  description,
+  confirmLabel,
+  cancelLabel = "Cancel",
+  tone = "default",
+  isConfirming = false,
+  onCancel,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  tone?: ConfirmationTone;
+  isConfirming?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, onCancel]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close confirmation dialog"
+        className="absolute inset-0 bg-slate-900/40"
+        onClick={onCancel}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="relative w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-2xl"
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={`mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm ${
+              tone === "danger"
+                ? "bg-rose-100 text-rose-700"
+                : "bg-blue-100 text-blue-700"
+            }`}
+          >
+            {tone === "danger" ? "!" : "?"}
+          </span>
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+            <p className="mt-1 text-sm text-slate-600">{description}</p>
+          </div>
+        </div>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={onCancel}
+            disabled={isConfirming}
+          >
+            {cancelLabel}
+          </Button>
+          <Button
+            type="button"
+            variant={tone === "danger" ? "destructive" : "primary"}
+            size="md"
+            onClick={onConfirm}
+            disabled={isConfirming}
+          >
+            {isConfirming ? "Working..." : confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

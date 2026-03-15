@@ -33,6 +33,7 @@ const CONTENT_NAV_ITEMS = [
   { href: "/blogs/cardboard", label: "CardBoard" },
   { href: "/ideas", label: "Ideas" },
   { href: "/social-posts", label: "Social Posts" },
+  { href: "/resources", label: "Resources" },
 ];
 const NAV_ITEMS = [...WORK_NAV_ITEMS, ...CONTENT_NAV_ITEMS];
 

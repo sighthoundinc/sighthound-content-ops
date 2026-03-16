@@ -7,6 +7,7 @@ import { format, formatDistanceToNow, isBefore, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import {
   DataPageFilterPills,
@@ -197,6 +198,18 @@ const DEFAULT_DASHBOARD_COLUMN_ORDER: DashboardColumnKey[] = [
   "publish_date",
   "overall_status",
 ];
+const REQUIRED_DASHBOARD_COLUMNS: DashboardColumnKey[] = [
+  "site",
+  "title",
+  "writer",
+  "writer_status",
+  "publisher",
+  "publisher_status",
+  "publish_date",
+];
+const REQUIRED_DASHBOARD_COLUMN_SET = new Set<DashboardColumnKey>(
+  REQUIRED_DASHBOARD_COLUMNS
+);
 
 const DASHBOARD_COLUMN_VIEW_STORAGE_KEY = "dashboard-column-view:v1";
 const DASHBOARD_COLUMN_HIDDEN_STORAGE_KEY = "dashboard-column-hidden:v1";
@@ -239,7 +252,12 @@ const normalizeDashboardHiddenColumns = (value: unknown): DashboardColumnKey[] =
   const hiddenColumns: DashboardColumnKey[] = [];
   const seen = new Set<DashboardColumnKey>();
   for (const item of value) {
-    if (typeof item !== "string" || !isDashboardColumnKey(item) || seen.has(item)) {
+    if (
+      typeof item !== "string" ||
+      !isDashboardColumnKey(item) ||
+      seen.has(item) ||
+      REQUIRED_DASHBOARD_COLUMN_SET.has(item)
+    ) {
       continue;
     }
     hiddenColumns.push(item);
@@ -259,9 +277,9 @@ const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }
 ];
 const WRITER_STAGE_DISPLAY_LABELS: Record<WriterStageStatus, string> = {
   not_started: "Draft",
-  in_progress: "Draft",
+  in_progress: "Writing",
   needs_revision: "Needs Revision",
-  completed: "Approved",
+  completed: "Ready for Publishing",
 };
 const PUBLISHER_STAGE_DISPLAY_LABELS: Record<PublisherStageStatus, string> = {
   not_started: "Scheduled",
@@ -291,7 +309,7 @@ type SavedDashboardView = {
   createdAt: string;
   updatedAt: string;
 };
-type QuickQueueKey =
+export type QuickQueueKey =
   | "writer_not_started"
   | "writer_in_progress"
   | "writer_needs_revision"
@@ -458,8 +476,6 @@ export default function DashboardPage() {
   const canEditPublishingStage = permissionContract.canEditPublisherWorkflow;
   const canDeleteBlog = permissionContract.canDeleteBlog;
   const canCreateComments = permissionContract.canCreateComment;
-  const canShowWriterQueue = permissionContract.canViewWritingQueue;
-  const canShowPublisherQueue = permissionContract.canViewPublishingQueue;
   const canRunBulkActions =
     canChangeWriterAssignment ||
     canChangePublisherAssignment ||
@@ -513,6 +529,7 @@ export default function DashboardPage() {
   const [isPanelCommentSaving, setIsPanelCommentSaving] = useState(false);
   const [activeQuickQueue, setActiveQuickQueue] = useState<QuickQueueKey | null>(null);
   const [activeMetricFilter, setActiveMetricFilter] = useState<MetricFilterKey | null>(null);
+  const [isApplyingFilterFeedback, setIsApplyingFilterFeedback] = useState(false);
   const [isEditColumnsOpen, setIsEditColumnsOpen] = useState(false);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const [, setCompletionTimingsByBlog] = useState<
@@ -860,68 +877,29 @@ export default function DashboardPage() {
   const quickQueueCounts = useMemo(() => {
     const countBy = (predicate: (blog: BlogRecord) => boolean) =>
       blogs.filter(predicate).length;
-    const currentUserId = profile?.id;
 
     return {
-      writerNotStarted: currentUserId
-        ? countBy(
-            (blog) =>
-              blog.writer_id === currentUserId && blog.writer_status === "not_started"
-          )
-        : 0,
-      writerInProgress: currentUserId
-        ? countBy(
-            (blog) =>
-              blog.writer_id === currentUserId && blog.writer_status === "in_progress"
-          )
-        : 0,
-      writerNeedsRevision: currentUserId
-        ? countBy(
-            (blog) =>
-              blog.writer_id === currentUserId && blog.writer_status === "needs_revision"
-          )
-        : 0,
-      writerCompletedWaitingPublishing: currentUserId
-        ? countBy(
-            (blog) =>
-              blog.writer_id === currentUserId &&
-              blog.writer_status === "completed" &&
-              blog.publisher_status === "not_started"
-          )
-        : 0,
+      writerNotStarted: countBy((blog) => blog.writer_status === "not_started"),
+      writerInProgress: countBy((blog) => blog.writer_status === "in_progress"),
+      writerNeedsRevision: countBy((blog) => blog.writer_status === "needs_revision"),
+      writerCompletedWaitingPublishing: countBy(
+        (blog) =>
+          blog.writer_status === "completed" && blog.publisher_status === "not_started"
+      ),
       backlogUnscheduledIdeas: countBy(
         (blog) =>
           blog.writer_status === "not_started" &&
           getBlogScheduledDate(blog) === null
       ),
-      publisherNotStarted: currentUserId
-        ? countBy(
-            (blog) =>
-              blog.publisher_id === currentUserId && blog.publisher_status === "not_started"
-          )
-        : 0,
-      publisherInProgress: currentUserId
-        ? countBy(
-            (blog) =>
-              blog.publisher_id === currentUserId && blog.publisher_status === "in_progress"
-          )
-        : 0,
-      publisherFinalReview: currentUserId
-        ? countBy(
-            (blog) =>
-              blog.publisher_id === currentUserId &&
-              blog.writer_status === "completed" &&
-              blog.publisher_status === "in_progress"
-          )
-        : 0,
-      publisherPublished: currentUserId
-        ? countBy(
-            (blog) =>
-              blog.publisher_id === currentUserId && blog.publisher_status === "completed"
-          )
-        : 0,
+      publisherNotStarted: countBy((blog) => blog.publisher_status === "not_started"),
+      publisherInProgress: countBy((blog) => blog.publisher_status === "in_progress"),
+      publisherFinalReview: countBy(
+        (blog) =>
+          blog.writer_status === "completed" && blog.publisher_status === "in_progress"
+      ),
+      publisherPublished: countBy((blog) => blog.publisher_status === "completed"),
     };
-  }, [blogs, profile?.id]);
+  }, [blogs]);
 
 
   useEffect(() => {
@@ -990,7 +968,6 @@ export default function DashboardPage() {
       ),
     [blogs]
   );
-
   const publisherOptions = useMemo(
     () =>
       Array.from(
@@ -1058,22 +1035,17 @@ export default function DashboardPage() {
       if (!activeQuickQueue) {
         return true;
       }
-      const currentUserId = profile?.id;
-      if (!currentUserId) {
-        return false;
-      }
       if (activeQuickQueue === "writer_not_started") {
-        return blog.writer_id === currentUserId && blog.writer_status === "not_started";
+        return blog.writer_status === "not_started";
       }
       if (activeQuickQueue === "writer_in_progress") {
-        return blog.writer_id === currentUserId && blog.writer_status === "in_progress";
+        return blog.writer_status === "in_progress";
       }
       if (activeQuickQueue === "writer_needs_revision") {
-        return blog.writer_id === currentUserId && blog.writer_status === "needs_revision";
+        return blog.writer_status === "needs_revision";
       }
       if (activeQuickQueue === "writer_completed_waiting_publish") {
         return (
-          blog.writer_id === currentUserId &&
           blog.writer_status === "completed" &&
           blog.publisher_status === "not_started"
         );
@@ -1085,19 +1057,18 @@ export default function DashboardPage() {
         );
       }
       if (activeQuickQueue === "publisher_not_started") {
-        return blog.publisher_id === currentUserId && blog.publisher_status === "not_started";
+        return blog.publisher_status === "not_started";
       }
       if (activeQuickQueue === "publisher_in_progress") {
-        return blog.publisher_id === currentUserId && blog.publisher_status === "in_progress";
+        return blog.publisher_status === "in_progress";
       }
       if (activeQuickQueue === "publisher_final_review") {
         return (
-          blog.publisher_id === currentUserId &&
           blog.writer_status === "completed" &&
           blog.publisher_status === "in_progress"
         );
       }
-      return blog.publisher_id === currentUserId && blog.publisher_status === "completed";
+      return blog.publisher_status === "completed";
     };
     const matchesMetricFilter = (blog: BlogRecord) => {
       if (!activeMetricFilter) {
@@ -1180,7 +1151,6 @@ export default function DashboardPage() {
     search,
     siteFilters,
     statusFilters,
-    profile?.id,
     activeQuickQueue,
     activeMetricFilter,
     writerFilters,
@@ -1262,6 +1232,54 @@ export default function DashboardPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [
+    activeMetricFilter,
+    activeQuickQueue,
+    publisherFilters,
+    publisherStatusFilters,
+    rowLimit,
+    search,
+    siteFilters,
+    sortDirection,
+    sortField,
+    statusFilters,
+    writerFilters,
+    writerStatusFilters,
+  ]);
+  useEffect(() => {
+    if (!tableContainerRef.current) {
+      return;
+    }
+    tableContainerRef.current.scrollTop = 0;
+  }, [
+    activeMetricFilter,
+    activeQuickQueue,
+    publisherFilters,
+    publisherStatusFilters,
+    rowLimit,
+    search,
+    siteFilters,
+    sortDirection,
+    sortField,
+    statusFilters,
+    writerFilters,
+    writerStatusFilters,
+  ]);
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+    setIsApplyingFilterFeedback(true);
+    const timeoutId = window.setTimeout(() => {
+      setIsApplyingFilterFeedback(false);
+    }, 180);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    activeMetricFilter,
+    activeQuickQueue,
+    currentPage,
+    isLoading,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
@@ -1351,6 +1369,8 @@ export default function DashboardPage() {
     [blogs]
   );
 
+  const mostRecentPublishedBlog = recentPublishedBlogs[0] ?? null;
+
   const visibleBlogIds = useMemo(() => pagedBlogs.map((blog) => blog.id), [pagedBlogs]);
   const activeBlogIndex = useMemo(
     () => sortedBlogs.findIndex((blog) => blog.id === activeBlogId),
@@ -1362,7 +1382,13 @@ export default function DashboardPage() {
   const visibleColumnOrder = useMemo(
     () => {
       const visibleColumns = columnOrder.filter((column) => !hiddenColumnSet.has(column));
-      return visibleColumns.length > 0 ? visibleColumns : [DEFAULT_DASHBOARD_COLUMN_ORDER[0]];
+      const missingRequiredColumns = REQUIRED_DASHBOARD_COLUMNS.filter(
+        (column) => !visibleColumns.includes(column)
+      );
+      const nextVisibleColumns = [...visibleColumns, ...missingRequiredColumns];
+      return nextVisibleColumns.length > 0
+        ? nextVisibleColumns
+        : [...REQUIRED_DASHBOARD_COLUMNS];
     },
     [columnOrder, hiddenColumnSet]
   );
@@ -1435,6 +1461,9 @@ export default function DashboardPage() {
     });
   };
   const toggleColumnVisibility = (column: DashboardColumnKey) => {
+    if (REQUIRED_DASHBOARD_COLUMN_SET.has(column)) {
+      return;
+    }
     setHiddenColumns((previous) => {
       if (previous.includes(column)) {
         return previous.filter((hiddenColumn) => hiddenColumn !== column);
@@ -1515,6 +1544,42 @@ export default function DashboardPage() {
     resetDashboardFilters();
     setSuccessMessage("All filters cleared.");
   }, [resetDashboardFilters]);
+  const copyQuickActionValue = useCallback(
+    async (value: string | null | undefined, label: "title" | "url") => {
+      const normalizedValue = value?.trim() ?? "";
+      if (normalizedValue.length === 0) {
+        setError(label === "url" ? "This blog does not have a URL yet." : "Nothing to copy.");
+        setSuccessMessage(null);
+        return;
+      }
+
+      try {
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.clipboard &&
+          typeof navigator.clipboard.writeText === "function"
+        ) {
+          await navigator.clipboard.writeText(normalizedValue);
+        } else {
+          const textArea = document.createElement("textarea");
+          textArea.value = normalizedValue;
+          textArea.style.position = "fixed";
+          textArea.style.opacity = "0";
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+        }
+        setError(null);
+        setSuccessMessage(label === "url" ? "Copied URL." : "Copied title.");
+      } catch {
+        setError("Could not copy to clipboard.");
+        setSuccessMessage(null);
+      }
+    },
+    []
+  );
   const activeFilterPills = useMemo(
     () =>
       [
@@ -2335,7 +2400,18 @@ export default function DashboardPage() {
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
-      <AppShell commandPaletteCommands={dashboardCommandPaletteCommands}>
+      <AppShell
+        commandPaletteCommands={dashboardCommandPaletteCommands}
+        sidebarContent={
+          <DashboardSidebar
+            quickQueueCounts={quickQueueCounts}
+            activeQuickQueue={activeQuickQueue}
+            recentlyPublished={mostRecentPublishedBlog}
+            onApplyQuickQueueFilter={applyQuickQueuePreset}
+            onOpenBlog={openPanel}
+          />
+        }
+      >
         <div className="space-y-5 transition-opacity duration-200">
           <DataPageHeader
             title="Dashboard"
@@ -2449,36 +2525,50 @@ export default function DashboardPage() {
                   selectedValues={writerFilters}
                   onChange={setWriterFilters}
                 />
-                <CheckboxMultiSelect
-                  label="Publishers"
-                  options={publisherFilterOptions}
-                  selectedValues={publisherFilters}
-                  onChange={setPublisherFilters}
-                />
-                <CheckboxMultiSelect
-                  label="Writer Status"
-                  options={writerStatusFilterOptions}
-                  selectedValues={writerStatusFilters}
-                  onChange={(nextValues) => {
-                    setWriterStatusFilters(nextValues as WriterStageStatus[]);
-                  }}
-                />
-                <CheckboxMultiSelect
-                  label="Publisher Status"
-                  options={publisherStatusFilterOptions}
-                  selectedValues={publisherStatusFilters}
-                  onChange={(nextValues) => {
-                    setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-                  }}
-                />
-                <CheckboxMultiSelect
-                  label="Overall Status"
-                  options={overallStatusFilterOptions}
-                  selectedValues={statusFilters}
-                  onChange={(nextValues) => {
-                    setStatusFilters(nextValues as OverallBlogStatus[]);
-                  }}
-                />
+                <details className="rounded-md border border-slate-200 bg-white px-3 py-2 md:col-span-2 xl:col-span-2">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-slate-700">
+                    Status
+                  </summary>
+                  <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    <CheckboxMultiSelect
+                      label="Writer Status"
+                      options={writerStatusFilterOptions}
+                      selectedValues={writerStatusFilters}
+                      onChange={(nextValues) => {
+                        setWriterStatusFilters(nextValues as WriterStageStatus[]);
+                      }}
+                    />
+                    <CheckboxMultiSelect
+                      label="Publisher Status"
+                      options={publisherStatusFilterOptions}
+                      selectedValues={publisherStatusFilters}
+                      onChange={(nextValues) => {
+                        setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
+                      }}
+                    />
+                    <CheckboxMultiSelect
+                      label="Overall Status"
+                      options={overallStatusFilterOptions}
+                      selectedValues={statusFilters}
+                      onChange={(nextValues) => {
+                        setStatusFilters(nextValues as OverallBlogStatus[]);
+                      }}
+                    />
+                  </div>
+                </details>
+                <details className="relative">
+                  <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                    + Add Filter
+                  </summary>
+                  <div className="absolute left-0 z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
+                    <CheckboxMultiSelect
+                      label="Publishers"
+                      options={publisherFilterOptions}
+                      selectedValues={publisherFilters}
+                      onChange={setPublisherFilters}
+                    />
+                  </div>
+                </details>
                 <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
                   Sort By
                   <select
@@ -2516,15 +2606,26 @@ export default function DashboardPage() {
             </span>
           </p>
           <DataPageFilterPills pills={activeFilterPills} />
+          {isApplyingFilterFeedback ? (
+            <div aria-live="polite" className="inline-flex items-center gap-2 text-xs text-slate-500">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
+              Updating results…
+            </div>
+          ) : null}
           <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Today</p>
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Metrics (click to filter)
+              </p>
+              <p className="text-[11px] text-slate-500">Counts reflect the full dataset</p>
+            </div>
             <div className="mt-2 grid gap-2 text-sm md:grid-cols-3">
               <button
                 type="button"
-                className={`rounded border px-2 py-1 text-left text-slate-700 ${
+                className={`rounded-lg border px-3 py-2 text-left transition ${
                   activeMetricFilter === "scheduled_this_week"
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white hover:bg-slate-50"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
                 onClick={() => {
                   setActiveMetricFilter((previous) =>
@@ -2533,15 +2634,19 @@ export default function DashboardPage() {
                   setActiveQuickQueue(null);
                 }}
               >
-                Scheduled This Week:{" "}
-                <span className="font-semibold">{focusStripMetrics.scheduledThisWeek}</span>
+                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                  Scheduled This Week
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.scheduledThisWeek}
+                </p>
               </button>
               <button
                 type="button"
-                className={`rounded border px-2 py-1 text-left text-slate-700 ${
+                className={`rounded-lg border px-3 py-2 text-left transition ${
                   activeMetricFilter === "ready_to_publish"
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white hover:bg-slate-50"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
                 onClick={() => {
                   setActiveMetricFilter((previous) =>
@@ -2550,188 +2655,33 @@ export default function DashboardPage() {
                   setActiveQuickQueue(null);
                 }}
               >
-                Ready to Publish:{" "}
-                <span className="font-semibold">{focusStripMetrics.readyToPublish}</span>
+                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                  Ready to Publish
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.readyToPublish}
+                </p>
               </button>
               <button
                 type="button"
                 title="Blogs whose scheduled publish date has passed and overall status is not published."
-                className={`rounded border px-2 py-1 text-left text-slate-700 ${
+                className={`rounded-lg border px-3 py-2 text-left transition ${
                   activeMetricFilter === "delayed"
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white hover:bg-slate-50"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
                 onClick={() => {
                   setActiveMetricFilter((previous) => (previous === "delayed" ? null : "delayed"));
                   setActiveQuickQueue(null);
                 }}
               >
-                Delayed: <span className="font-semibold">{focusStripMetrics.delayed}</span>
+                <p className="text-[11px] font-semibold uppercase tracking-wide">Delayed</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.delayed}
+                </p>
               </button>
             </div>
           </section>
-          <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Recently Published
-            </p>
-            {recentPublishedBlogs.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">
-                No blogs published recently. Next step: review blogs ready to publish.
-              </p>
-            ) : (
-              <ul className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {recentPublishedBlogs.map((blog) => {
-                  const publishedAt = blog.actual_published_at ?? blog.published_at;
-                  const shortSite = blog.site === "sighthound.com" ? "SH" : "RED";
-                  return (
-                    <li key={blog.id} className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
-                      <p className="text-[11px] text-slate-500">
-                        {publishedAt ? format(new Date(publishedAt), "MMM d") : "—"} · {shortSite}
-                      </p>
-                      <p className="overflow-hidden text-xs font-medium text-slate-700 text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                        {blog.title}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-          {canShowWriterQueue ? (
-            <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Writing Pipeline (filter only)
-                </p>
-                {activeQuickQueue ? (
-                  <button
-                    type="button"
-                    className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      setActiveQuickQueue(null);
-                    }}
-                  >
-                    Clear Queue Filter
-                  </button>
-                ) : null}
-              </div>
-              <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                <button
-                  type="button"
-                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
-                    activeQuickQueue === "writer_in_progress"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    applyQuickQueuePreset("writer_in_progress");
-                  }}
-                >
-                  Drafting ({quickQueueCounts.writerInProgress})
-                </button>
-                <button
-                  type="button"
-                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
-                    activeQuickQueue === "writer_needs_revision"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    applyQuickQueuePreset("writer_needs_revision");
-                  }}
-                >
-                  Needs Revision ({quickQueueCounts.writerNeedsRevision})
-                </button>
-                <button
-                  type="button"
-                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
-                    activeQuickQueue === "writer_completed_waiting_publish"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    applyQuickQueuePreset("writer_completed_waiting_publish");
-                  }}
-                >
-                  Ready for Publishing ({quickQueueCounts.writerCompletedWaitingPublishing})
-                </button>
-                <button
-                  type="button"
-                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
-                    activeQuickQueue === "backlog_unscheduled"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    applyQuickQueuePreset("backlog_unscheduled");
-                  }}
-                >
-                  Backlog ({quickQueueCounts.backlogUnscheduledIdeas})
-                </button>
-              </div>
-            </section>
-          ) : null}
-          {canShowPublisherQueue ? (
-            <section className="rounded-md border border-slate-200 bg-white px-3 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Publishing Pipeline (filter only)
-              </p>
-              <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                <button
-                  type="button"
-                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
-                    activeQuickQueue === "publisher_not_started"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    applyQuickQueuePreset("publisher_not_started");
-                  }}
-                >
-                  Not Started ({quickQueueCounts.publisherNotStarted})
-                </button>
-                <button
-                  type="button"
-                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
-                    activeQuickQueue === "publisher_in_progress"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    applyQuickQueuePreset("publisher_in_progress");
-                  }}
-                >
-                  In Progress ({quickQueueCounts.publisherInProgress})
-                </button>
-                <button
-                  type="button"
-                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
-                    activeQuickQueue === "publisher_final_review"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    applyQuickQueuePreset("publisher_final_review");
-                  }}
-                >
-                  Final Review ({quickQueueCounts.publisherFinalReview})
-                </button>
-                <button
-                  type="button"
-                  className={`rounded border px-2 py-2 text-left text-xs font-medium ${
-                    activeQuickQueue === "publisher_published"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  onClick={() => {
-                    applyQuickQueuePreset("publisher_published");
-                  }}
-                >
-                  Published ({quickQueueCounts.publisherPublished})
-                </button>
-              </div>
-            </section>
-          ) : null}
 
           {canRunBulkActions && selectedBlogIds.length > 0 ? (
             <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -2961,14 +2911,18 @@ export default function DashboardPage() {
                               type="checkbox"
                               checked={!hiddenColumnSet.has(column)}
                               disabled={
-                                !hiddenColumnSet.has(column) &&
-                                visibleColumnOrder.length <= 1
+                                REQUIRED_DASHBOARD_COLUMN_SET.has(column) ||
+                                (!hiddenColumnSet.has(column) &&
+                                  visibleColumnOrder.length <= 1)
                               }
                               onChange={() => {
                                 toggleColumnVisibility(column);
                               }}
                             />
-                            <span className="font-medium">{DASHBOARD_COLUMN_LABELS[column]}</span>
+                            <span className="font-medium">
+                              {DASHBOARD_COLUMN_LABELS[column]}
+                              {REQUIRED_DASHBOARD_COLUMN_SET.has(column) ? " (required)" : ""}
+                            </span>
                           </label>
                           <div className="inline-flex items-center gap-1">
                             <button
@@ -2998,7 +2952,7 @@ export default function DashboardPage() {
                       ))}
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
-                      Show or hide columns, then save to keep this layout.
+                      Core workflow columns are required and always visible.
                     </p>
                   </div>
                 ) : null}
@@ -3123,9 +3077,54 @@ export default function DashboardPage() {
                                     key={column}
                                     className={`${bodyCellClass} font-medium text-slate-900`}
                                   >
-                                    <span className="block max-w-[28rem] overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                                      {blog.title}
-                                    </span>
+                                    <div className="max-w-[28rem] space-y-1">
+                                      <span className="block overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                        {blog.title}
+                                      </span>
+                                      <div className="hidden flex-wrap items-center gap-1 group-hover:inline-flex group-focus-within:inline-flex">
+                                        <button
+                                          type="button"
+                                          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            openPanel(blog.id);
+                                          }}
+                                        >
+                                          Open
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            void copyQuickActionValue(blog.title, "title");
+                                          }}
+                                        >
+                                          Copy Title
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={!blog.live_url}
+                                          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            void copyQuickActionValue(blog.live_url, "url");
+                                          }}
+                                        >
+                                          Copy URL
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            openPanel(blog.id);
+                                          }}
+                                        >
+                                          View History
+                                        </button>
+                                      </div>
+                                    </div>
                                   </td>
                                 );
                               }

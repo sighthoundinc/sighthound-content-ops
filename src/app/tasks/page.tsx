@@ -26,7 +26,7 @@ import {
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
-import { PUBLISHER_STATUSES, WRITER_STATUSES } from "@/lib/status";
+import { PUBLISHER_STATUSES, PUBLISHER_STATUS_LABELS, WRITER_STATUSES, WRITER_STATUS_LABELS } from "@/lib/status";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getSiteBadgeClasses, getSiteLabel } from "@/lib/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -151,7 +151,10 @@ function getTaskStatusPriority(
   if (statusValue === "not_started" && isFutureScheduled) {
     return 2;
   }
-  return 3;
+  if (statusValue === "pending_review" || statusValue === "publisher_approved") {
+    return 3;
+  }
+  return 4;
 }
 
 function comparePublishDatesAsc(leftDate: string | null, rightDate: string | null) {
@@ -201,7 +204,7 @@ export default function MyTasksPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [kindFilter, setKindFilter] = useState<TaskKind | "all">("all");
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "in_progress" | "not_started" | "needs_revision"
+    "all" | WriterStageStatus | PublisherStageStatus
   >("all");
   const [siteFilter, setSiteFilter] = useState<"all" | "sighthound.com" | "redactor.com">("all");
   const [taskSortField, setTaskSortField] = useState<string>("publish_date");
@@ -378,7 +381,7 @@ export default function MyTasksPage() {
           createdAt: blog.created_at,
           scheduledDate,
           isDelayed,
-          statusLabel: toTitleCase(blog.writer_status),
+          statusLabel: WRITER_STATUS_LABELS[blog.writer_status],
           statusValue: blog.writer_status,
           statusPriority,
           liveUrl: blog.live_url,
@@ -409,7 +412,7 @@ export default function MyTasksPage() {
           statusLabel:
             blog.writer_status === "completed" && blog.publisher_status === "not_started"
               ? "Ready to publish"
-              : toTitleCase(blog.publisher_status),
+              : PUBLISHER_STATUS_LABELS[blog.publisher_status],
           statusValue: blog.publisher_status,
           statusPriority,
           liveUrl: blog.live_url,
@@ -537,10 +540,10 @@ export default function MyTasksPage() {
       return task.title;
     }
     if (column === "writer_status") {
-      return toTitleCase(task.writerStatus);
+      return WRITER_STATUS_LABELS[task.writerStatus];
     }
     if (column === "publisher_status") {
-      return toTitleCase(task.publisherStatus);
+      return PUBLISHER_STATUS_LABELS[task.publisherStatus];
     }
     if (column === "publish_date") {
       return formatDisplayDate(task.scheduledDate) || "Not scheduled";
@@ -618,7 +621,7 @@ export default function MyTasksPage() {
         statusFilter !== "all"
           ? {
               id: "status",
-              label: `Status: ${toTitleCase(statusFilter)}`,
+              label: `Status: ${WRITER_STATUS_LABELS[statusFilter as WriterStageStatus] || PUBLISHER_STATUS_LABELS[statusFilter as PublisherStageStatus]}`,
               onRemove: () => {
                 setStatusFilter("all");
               },
@@ -781,7 +784,7 @@ export default function MyTasksPage() {
           >
             {WRITER_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {toTitleCase(status)}
+                {WRITER_STATUS_LABELS[status]}
               </option>
             ))}
           </select>
@@ -808,7 +811,7 @@ export default function MyTasksPage() {
           >
             {PUBLISHER_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {toTitleCase(status)}
+                {PUBLISHER_STATUS_LABELS[status]}
               </option>
             ))}
           </select>

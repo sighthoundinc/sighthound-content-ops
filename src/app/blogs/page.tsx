@@ -168,6 +168,8 @@ const PUBLISHER_STATUS_FILTER_OPTIONS: Array<{
   { value: "all", label: "All Publisher Statuses" },
   { value: "not_started", label: PUBLISHER_STATUS_LABELS.not_started },
   { value: "in_progress", label: PUBLISHER_STATUS_LABELS.in_progress },
+  { value: "pending_review", label: PUBLISHER_STATUS_LABELS.pending_review },
+  { value: "publisher_approved", label: PUBLISHER_STATUS_LABELS.publisher_approved },
   { value: "completed", label: PUBLISHER_STATUS_LABELS.completed },
 ];
 

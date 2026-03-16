@@ -21,7 +21,6 @@ import {
   endOfMonth,
   endOfWeek,
   format,
-  isSameDay,
   isWithinInterval,
   startOfMonth,
   startOfWeek,
@@ -59,7 +58,7 @@ import {
   SOCIAL_POST_TYPE_LABELS,
   getWorkflowStage,
 } from "@/lib/status";
-import { getSiteLabel, getSiteShortLabel } from "@/lib/site";
+import { getSiteLabel } from "@/lib/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -69,7 +68,6 @@ import {
 } from "@/lib/table";
 import type {
   BlogRecord,
-  BlogSite,
   ProfileRecord,
   SocialPostRecord,
   SocialPostStatus,
@@ -139,9 +137,6 @@ function truncateWithEllipsis(value: string, maxLength: number) {
   return `${value.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`;
 }
 
-function getBlogBarClass(site: BlogSite) {
-  return site === "sighthound.com" ? "bg-blue-500" : "bg-purple-500";
-}
 
 function getBlogStageDotClass({
   stage,
@@ -226,7 +221,6 @@ function CalendarBlogEventCard({
   const scheduledDate = getBlogScheduledDate(blog);
   const isOverdue =
     scheduledDate !== null && scheduledDate < todayDateKey && blog.publisher_status !== "completed";
-  const maxTitleLength = compact ? 34 : 80;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `blog-${blog.id}`,
     disabled: !canDrag,
@@ -242,40 +236,34 @@ function CalendarBlogEventCard({
       style={dragStyle}
       type="button"
       onClick={onOpen}
-      className={`group relative flex w-full items-start gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-left transition-colors duration-150 ${
-        canDrag ? "cursor-grab hover:bg-slate-50 active:cursor-grabbing" : "cursor-default"
+      className={`group relative inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/30 bg-white/45 px-2 py-1 text-left text-xs backdrop-blur-sm transition-all duration-200 ${
+        canDrag ? "cursor-grab hover:bg-white/65 active:cursor-grabbing" : "cursor-default hover:bg-white/55"
       } ${isDragging ? "opacity-60" : ""}`}
-      title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nPublisher · ${
-        blog.publisher?.full_name ?? "Unassigned"
-      }\nPublish Date · ${scheduledDate ?? "Unscheduled"}\nStatus · ${toTitleCase(stage)}`}
       {...(canDrag ? attributes : {})}
       {...(canDrag ? listeners : {})}
     >
-      <span className={`self-stretch w-1 rounded-full ${getBlogBarClass(blog.site)}`} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1 text-[11px] text-slate-600">
-          <span aria-hidden>📝</span>
-          <span className="font-semibold">{getSiteShortLabel(blog.site)} Blog</span>
-        </div>
-        <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
-          {truncateWithEllipsis(blog.title, maxTitleLength)}
-        </p>
-        <p className="mt-0.5 truncate text-[11px] text-slate-500">
-          {blog.writer?.full_name ?? "Unassigned"}
-        </p>
-      </div>
       <span
-        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getBlogStageDotClass({
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${getBlogStageDotClass({
           stage,
           isOverdue,
         })}`}
       />
-      <div className="pointer-events-none absolute left-3 top-full z-20 mt-1 hidden w-72 rounded-md border border-slate-200 bg-white p-2 text-left text-xs text-slate-600 shadow-lg group-hover:block">
-        <p className="font-semibold text-slate-900">{blog.title}</p>
-        <p className="mt-1">Writer: {blog.writer?.full_name ?? "Unassigned"}</p>
-        <p>Site: {getSiteLabel(blog.site)}</p>
-        <p>Status: {toTitleCase(stage)}</p>
-        <p>Publish Date: {scheduledDate ?? "Unscheduled"}</p>
+      <span className="text-[11px] leading-none" aria-hidden>
+        📝
+      </span>
+      <span className="max-w-[6.5rem] truncate font-medium text-slate-800">
+        {truncateWithEllipsis(blog.title, compact ? 14 : 24)}
+      </span>
+      <div className="pointer-events-none absolute left-0 bottom-full z-30 mb-2 hidden w-80 rounded-xl border border-white/40 bg-slate-950/85 p-3 text-left text-xs text-slate-100 shadow-2xl backdrop-blur-md group-hover:block">
+        <p className="font-semibold text-white">{blog.title}</p>
+        <div className="mt-2 space-y-1 text-slate-300">
+          <p><span className="font-medium text-slate-200">Site:</span> {getSiteLabel(blog.site)}</p>
+          <p><span className="font-medium text-slate-200">Writer:</span> {blog.writer?.full_name ?? "Unassigned"}</p>
+          <p><span className="font-medium text-slate-200">Publisher:</span> {blog.publisher?.full_name ?? "Unassigned"}</p>
+          <p><span className="font-medium text-slate-200">Publish Date:</span> {scheduledDate ?? "Unscheduled"}</p>
+          <p><span className="font-medium text-slate-200">Status:</span> {toTitleCase(stage)}</p>
+          {isOverdue ? <p className="font-medium text-rose-400">⚠ Overdue</p> : null}
+        </div>
       </div>
     </button>
   );
@@ -290,36 +278,30 @@ function CalendarSocialEventCard({
   compact: boolean;
   onOpen: () => void;
 }) {
-  const maxTitleLength = compact ? 24 : 64;
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="group relative flex w-full items-start gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-left transition-colors duration-150 hover:bg-slate-50"
-      title={`${post.title}\nType · ${SOCIAL_POST_TYPE_LABELS[post.type]}\nStatus · ${SOCIAL_POST_STATUS_LABELS[post.status]}\nScheduled · ${post.scheduled_date ?? "Unscheduled"}`}
+      className="group relative inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/30 bg-white/45 px-2 py-1 text-left text-xs backdrop-blur-sm transition-all duration-200 hover:bg-white/55"
     >
-      <span className="self-stretch w-1 rounded-full bg-orange-500" />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1 text-[11px] text-slate-600">
-          <span aria-hidden>📣</span>
-          <span className="font-semibold">Social</span>
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${getSocialStatusDotClass(post.status)}`} />
+      <span className="text-[11px] leading-none" aria-hidden>
+        📣
+      </span>
+      <span className="max-w-[6.5rem] truncate font-medium text-slate-800">
+        {truncateWithEllipsis(post.title, compact ? 14 : 24)}
+      </span>
+      <div className="pointer-events-none absolute left-0 bottom-full z-30 mb-2 hidden w-80 rounded-xl border border-white/40 bg-slate-950/85 p-3 text-left text-xs text-slate-100 shadow-2xl backdrop-blur-md group-hover:block">
+        <p className="font-semibold text-white">{post.title}</p>
+        <div className="mt-2 space-y-1 text-slate-300">
+          <p><span className="font-medium text-slate-200">Type:</span> {SOCIAL_POST_TYPE_LABELS[post.type]}</p>
+          <p><span className="font-medium text-slate-200">Status:</span> {SOCIAL_POST_STATUS_LABELS[post.status]}</p>
+          <p><span className="font-medium text-slate-200">Creator:</span> {post.creator?.full_name ?? "Unassigned"}</p>
+          <p><span className="font-medium text-slate-200">Scheduled:</span> {post.scheduled_date ?? "Unscheduled"}</p>
+          {post.associated_blog ? (
+            <p><span className="font-medium text-slate-200">Linked Blog:</span> {post.associated_blog.title}</p>
+          ) : null}
         </div>
-        <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
-          {SOCIAL_POST_TYPE_LABELS[post.type]}: {truncateWithEllipsis(post.title, maxTitleLength)}
-        </p>
-        <p className="mt-0.5 truncate text-[11px] text-slate-500">
-          {post.creator?.full_name ?? "Unassigned"}
-        </p>
-      </div>
-      <span
-        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getSocialStatusDotClass(post.status)}`}
-      />
-      <div className="pointer-events-none absolute left-3 top-full z-20 mt-1 hidden w-72 rounded-md border border-slate-200 bg-white p-2 text-left text-xs text-slate-600 shadow-lg group-hover:block">
-        <p className="font-semibold text-slate-900">{post.title}</p>
-        <p className="mt-1">Format: {SOCIAL_POST_TYPE_LABELS[post.type]}</p>
-        <p>Status: {SOCIAL_POST_STATUS_LABELS[post.status]}</p>
-        <p>Scheduled: {post.scheduled_date ?? "Unscheduled"}</p>
-        {post.associated_blog ? <p>Linked Blog: {post.associated_blog.title}</p> : null}
       </div>
     </button>
   );
@@ -1275,7 +1257,7 @@ export default function CalendarPage() {
                     {days.map((day) => {
                       const key = format(day, "yyyy-MM-dd");
                       const items = calendarItemsByDate[key] ?? [];
-                      const isToday = isSameDay(day, new Date());
+                      const isToday = key === todayDateKey;
                       const isCurrentMonth = day.getMonth() === cursorDate.getMonth();
                       const compact = mode === "month";
 

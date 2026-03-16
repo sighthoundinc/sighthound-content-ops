@@ -252,13 +252,13 @@ const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => 
 };
 
 const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }> = [
-  { value: "publish_date", label: "Publish Date" },
-  { value: "title", label: "Title" },
-  { value: "writer", label: "Writer" },
-  { value: "publisher", label: "Publisher" },
-  { value: "overall_status", label: "Stage" },
-  { value: "writer_status", label: "Writer Status" },
-  { value: "publisher_status", label: "Publisher Status" },
+  { value: "publish_date", label: "Sort by: Publish Date" },
+  { value: "title", label: "Sort by: Title" },
+  { value: "writer", label: "Sort by: Writer" },
+  { value: "publisher", label: "Sort by: Publisher" },
+  { value: "overall_status", label: "Sort by: Stage" },
+  { value: "writer_status", label: "Sort by: Writer Status" },
+  { value: "publisher_status", label: "Sort by: Publisher Status" },
 ];
 type MetricFilterKey = "scheduled_this_week" | "ready_to_publish" | "delayed";
 
@@ -2401,7 +2401,7 @@ export default function DashboardPage() {
             filters={
               <>
                 <CheckboxMultiSelect
-                  label="Sites"
+                  label="All Sites"
                   options={siteFilterOptions}
                   selectedValues={siteFilters}
                   onChange={(nextValues) => {
@@ -2409,13 +2409,19 @@ export default function DashboardPage() {
                   }}
                 />
                 <CheckboxMultiSelect
-                  label="Writers"
+                  label="All Writers"
                   options={writerFilterOptions}
                   selectedValues={writerFilters}
                   onChange={setWriterFilters}
                 />
                 <CheckboxMultiSelect
-                  label="Writer Status"
+                  label="All Publishers"
+                  options={publisherFilterOptions}
+                  selectedValues={publisherFilters}
+                  onChange={setPublisherFilters}
+                />
+                <CheckboxMultiSelect
+                  label="All Writer Status"
                   options={writerStatusFilterOptions}
                   selectedValues={writerStatusFilters}
                   onChange={(nextValues) => {
@@ -2423,19 +2429,11 @@ export default function DashboardPage() {
                   }}
                 />
                 <CheckboxMultiSelect
-                  label="Publisher Status"
+                  label="All Publisher Status"
                   options={publisherStatusFilterOptions}
                   selectedValues={publisherStatusFilters}
                   onChange={(nextValues) => {
                     setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-                  }}
-                />
-                <CheckboxMultiSelect
-                  label="Overall Status"
-                  options={overallStatusFilterOptions}
-                  selectedValues={statusFilters}
-                  onChange={(nextValues) => {
-                    setStatusFilters(nextValues as OverallBlogStatus[]);
                   }}
                 />
                 <details className="relative">
@@ -2444,10 +2442,12 @@ export default function DashboardPage() {
                   </summary>
                   <div className="absolute left-0 z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
                     <CheckboxMultiSelect
-                      label="Publishers"
-                      options={publisherFilterOptions}
-                      selectedValues={publisherFilters}
-                      onChange={setPublisherFilters}
+                      label="All Overall Status"
+                      options={overallStatusFilterOptions}
+                      selectedValues={statusFilters}
+                      onChange={(nextValues) => {
+                        setStatusFilters(nextValues as OverallBlogStatus[]);
+                      }}
                     />
                   </div>
                 </details>

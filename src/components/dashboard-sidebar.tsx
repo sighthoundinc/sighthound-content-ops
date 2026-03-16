@@ -95,7 +95,7 @@ export function DashboardSidebar({
 
   return (
     <div className="space-y-3">
-      <details open className="rounded-md border border-slate-200 bg-slate-50">
+      <details className="rounded-md border border-slate-200 bg-slate-50">
         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
           Writing Filters
         </summary>
@@ -120,7 +120,7 @@ export function DashboardSidebar({
         </div>
       </details>
 
-      <details open className="rounded-md border border-slate-200 bg-slate-50">
+      <details className="rounded-md border border-slate-200 bg-slate-50">
         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
           Publishing Filters
         </summary>

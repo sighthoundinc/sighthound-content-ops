@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -350,6 +350,8 @@ export default function CalendarPage() {
   const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
   const [activeSocialPostId, setActiveSocialPostId] = useState<string | null>(null);
   const [panelRescheduleDate, setPanelRescheduleDate] = useState("");
+  const [focusedDateKey, setFocusedDateKey] = useState<string | null>(null);
+  const calendarGridRef = useRef<HTMLDivElement | null>(null);
   const [pendingReschedule, setPendingReschedule] = useState<{
     blogId: string;
     blogTitle: string;
@@ -370,6 +372,19 @@ export default function CalendarPage() {
   useEffect(() => {
     setViewScope(canViewAllTasks ? "all" : "mine");
   }, [canViewAllTasks]);
+  // Initialize calendar to current week on page load
+  useEffect(() => {
+    setCursorDate((prev) => {
+      const currentWeekStart = startOfWeek(new Date(), {
+        weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+      });
+      // Only update if we haven't loaded yet or if cursor is in the future
+      if (prev < currentWeekStart) {
+        return currentWeekStart;
+      }
+      return prev;
+    });
+  }, [weekStart]);
   const loadData = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     setIsLoading(true);
@@ -526,6 +541,19 @@ export default function CalendarPage() {
       }),
     [range.end, range.start]
   );
+  useEffect(() => {
+    if (days.length === 0) {
+      return;
+    }
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const isTodayVisible = days.some((day) => format(day, "yyyy-MM-dd") === todayKey);
+    setFocusedDateKey((previous) => {
+      if (previous && days.some((day) => format(day, "yyyy-MM-dd") === previous)) {
+        return previous;
+      }
+      return isTodayVisible ? todayKey : format(days[0], "yyyy-MM-dd");
+    });
+  }, [days]);
   const weekdayLabels = useMemo(() => {
     const baseStart = startOfWeek(new Date(), {
       weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
@@ -581,6 +609,107 @@ export default function CalendarPage() {
     }
     return byDate;
   }, [filteredBlogs, filteredSocialPosts]);
+  const weeklySummary = useMemo(() => {
+    let blogCount = 0;
+    let socialCount = 0;
+    let busyDays = 0;
+    for (const day of eachDayOfInterval(currentWeekRange)) {
+      const key = format(day, "yyyy-MM-dd");
+      const items = calendarItemsByDate[key] ?? [];
+      if (items.length > 1) {
+        busyDays += 1;
+      }
+      for (const item of items) {
+        if (item.type === "blog") {
+          blogCount += 1;
+        } else {
+          socialCount += 1;
+        }
+      }
+    }
+    return { blogCount, socialCount, busyDays };
+  }, [calendarItemsByDate, currentWeekRange]);
+  // Keyboard navigation handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveBlogId(null);
+        setActiveSocialPostId(null);
+        return;
+      }
+      if (!focusedDateKey || calendarGridRef.current === null) {
+        return;
+      }
+      const isNavigationKey =
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight" ||
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown" ||
+        event.key === "j" ||
+        event.key === "J" ||
+        event.key === "k" ||
+        event.key === "K" ||
+        event.key === "Enter";
+      if (!isNavigationKey) {
+        return;
+      }
+      event.preventDefault();
+      const currentDate = new Date(`${focusedDateKey}T00:00:00`);
+      let nextDate: Date;
+      if (event.key === "ArrowLeft") {
+        nextDate = addDays(currentDate, -1);
+      } else if (event.key === "ArrowRight") {
+        nextDate = addDays(currentDate, 1);
+      } else if (event.key === "ArrowUp") {
+        nextDate = addDays(currentDate, -7);
+      } else if (event.key === "ArrowDown") {
+        nextDate = addDays(currentDate, 7);
+      } else if (event.key === "k" || event.key === "K") {
+        nextDate = addDays(currentDate, -1);
+      } else if (event.key === "j" || event.key === "J") {
+        nextDate = addDays(currentDate, 1);
+      } else if (event.key === "Enter") {
+        const dayItems = calendarItemsByDate[focusedDateKey] ?? [];
+        if (dayItems.length > 0) {
+          const firstItem = dayItems[0];
+          if (firstItem.type === "blog") {
+            setActiveBlogId(firstItem.blog.id);
+            setActiveSocialPostId(null);
+          } else {
+            setActiveSocialPostId(firstItem.social.id);
+            setActiveBlogId(null);
+          }
+        }
+        return;
+      } else {
+        return;
+      }
+      const nextKey = format(nextDate, "yyyy-MM-dd");
+      setFocusedDateKey(nextKey);
+      setCursorDate((prev) => {
+        if (mode === "month") {
+          if (nextDate.getMonth() !== prev.getMonth()) {
+            return nextDate;
+          }
+        } else {
+          const weekStart_ = startOfWeek(prev, {
+            weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+          });
+          const weekEnd_ = endOfWeek(weekStart_, {
+            weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+          });
+          if (!isWithinInterval(nextDate, { start: weekStart_, end: weekEnd_ })) {
+            return nextDate;
+          }
+        }
+        return prev;
+      });
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [focusedDateKey, mode, weekStart, calendarItemsByDate]);
   const noPublishDateBlogs = useMemo(
     () => filteredBlogs.filter((blog) => !getBlogScheduledDate(blog)),
     [filteredBlogs]
@@ -819,24 +948,6 @@ export default function CalendarPage() {
   const activeFilterPills = useMemo(
     () =>
       [
-        mode !== "month"
-          ? {
-              id: "mode",
-              label: `Mode: ${toTitleCase(mode)}`,
-              onRemove: () => {
-                setMode("month");
-              },
-            }
-          : null,
-        viewScope !== "mine"
-          ? {
-              id: "scope",
-              label: "View: All tasks",
-              onRemove: () => {
-                setViewScope("mine");
-              },
-            }
-          : null,
         !hasBlogsEnabled
           ? {
               id: "blogs-hidden",
@@ -851,7 +962,7 @@ export default function CalendarPage() {
         !hasSocialPostsEnabled
           ? {
               id: "social-hidden",
-              label: "Social: Hidden",
+              label: "Social Posts: Hidden",
               onRemove: () => {
                 setContentFilters((previous) =>
                   previous.includes("social_posts")
@@ -872,12 +983,14 @@ export default function CalendarPage() {
               },
             }
           : null,
-      ].filter((pill) => pill !== null),
+      ].filter((pill) => pill !== null) as Array<{
+        id: string;
+        label: string;
+        onRemove: () => void;
+      }>,
     [
       hasBlogsEnabled,
       hasSocialPostsEnabled,
-      mode,
-      viewScope,
       writerFilter,
       writerOptions,
     ]
@@ -916,7 +1029,20 @@ export default function CalendarPage() {
                   type="button"
                   className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm"
                   onClick={() => {
-                    setCursorDate(new Date());
+                    // Navigate to current week (not just today's date)
+                    const currentWeekStart = startOfWeek(new Date(), {
+                      weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+                    });
+                    setCursorDate(currentWeekStart);
+                    // Schedule scroll after render
+                    setTimeout(() => {
+                      const todayTile = calendarGridRef.current?.querySelector(
+                        '[data-is-today="true"]'
+                      );
+                      if (todayTile) {
+                        todayTile.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                      }
+                    }, 0);
                   }}
                 >
                   Today
@@ -1090,6 +1216,23 @@ export default function CalendarPage() {
                     Social Post
                   </span>
                 </div>
+                <div className="rounded-md border border-slate-200 bg-white p-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">This Week</h3>
+                  <div className="mt-2 flex items-center gap-6 text-sm text-slate-700">
+                    <div>
+                      <span className="font-semibold">{weeklySummary.blogCount}</span>{" "}
+                      <span className="text-slate-500">Blog{weeklySummary.blogCount !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold">{weeklySummary.socialCount}</span>{" "}
+                      <span className="text-slate-500">Social{weeklySummary.socialCount !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold">{weeklySummary.busyDays}</span>{" "}
+                      <span className="text-slate-500">Busy Day{weeklySummary.busyDays !== 1 ? "s" : ""}</span>
+                    </div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-7 gap-2">
                   {weekdayLabels.map((label, index) => (
                     <div
@@ -1125,7 +1268,7 @@ export default function CalendarPage() {
                       setDragOverDateKey(null);
                     }}
                   >
-                  <div className="grid grid-cols-7 gap-2">
+                  <div className="grid grid-cols-7 gap-2" ref={calendarGridRef}>
                     {days.map((day) => {
                       const key = format(day, "yyyy-MM-dd");
                       const items = calendarItemsByDate[key] ?? [];
@@ -1139,16 +1282,19 @@ export default function CalendarPage() {
                           key={key}
                           dateKey={key}
                           className="relative overflow-visible rounded-md"
+                          data-is-today={isToday}
                         >
                           <CalendarTile
                             dayLabel={format(day, "d")}
                             isToday={isToday}
                             isCurrentMonth={isCurrentMonth}
+                            hasEvents={items.length > 0}
+                            isFocused={focusedDateKey === key}
                             className={`overflow-visible ${
                               compact ? "min-h-36" : "min-h-[18rem]"
                             } ${!isToday && isCurrentWeek ? "bg-neutral-50" : ""}`}
-                            todayContainerClassName="border-indigo-400 bg-indigo-50 shadow-sm"
-                            todayDayLabelClassName="font-medium text-indigo-700"
+                            todayContainerClassName="border-indigo-400 bg-indigo-50 shadow-sm ring-2 ring-indigo-300"
+                            todayDayLabelClassName="font-bold text-indigo-700"
                             currentMonthDayLabelClassName="font-normal text-slate-900"
                             outOfMonthDayLabelClassName="font-normal text-slate-400"
                             headerAction={
@@ -1191,7 +1337,8 @@ export default function CalendarPage() {
                           ) : null}
                           <div className="space-y-1.5">
                             {items.length === 0 ? (
-                              <p className="text-xs text-slate-400">No items</p>
+                              // Hide "No items" text for cleaner UI
+                              null
                             ) : (
                               items.map((item) =>
                                 item.type === "blog" ? (

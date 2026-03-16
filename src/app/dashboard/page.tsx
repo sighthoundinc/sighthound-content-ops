@@ -2541,13 +2541,6 @@ export default function DashboardPage() {
               </>
             }
           />
-          <p className="text-xs text-slate-500">
-            Case-insensitive partial match across title, URL, writer, publisher, and site.
-            <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-slate-600">
-              <KbdShortcut className="bg-slate-50">/</KbdShortcut>
-              focus search
-            </span>
-          </p>
           <DataPageFilterPills pills={activeFilterPills} />
           {isApplyingFilterFeedback ? (
             <div aria-live="polite" className="inline-flex items-center gap-2 text-xs text-slate-500">
@@ -2558,7 +2551,7 @@ export default function DashboardPage() {
           <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
             <div className="flex items-baseline justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Metrics (click to filter)
+                Highlights (click to view)
               </p>
               <p className="text-[11px] text-slate-500">Counts reflect the full dataset</p>
             </div>

@@ -16,6 +16,8 @@ type CalendarTileProps = {
   todayDayLabelClassName?: string;
   currentMonthDayLabelClassName?: string;
   outOfMonthDayLabelClassName?: string;
+  hasEvents?: boolean;
+  isFocused?: boolean;
 };
 
 export function CalendarTile({
@@ -32,6 +34,8 @@ export function CalendarTile({
   todayDayLabelClassName,
   currentMonthDayLabelClassName,
   outOfMonthDayLabelClassName,
+  hasEvents,
+  isFocused,
 }: CalendarTileProps) {
   return (
     <article
@@ -39,6 +43,7 @@ export function CalendarTile({
         "min-h-28 rounded-md border border-neutral-200 bg-white p-2",
         !isCurrentMonth && "bg-neutral-50",
         isToday && "border-brand-400 bg-brand-50 shadow-sm",
+        isFocused && "ring-2 ring-indigo-400 ring-offset-2",
         todayContainerClassName && isToday && todayContainerClassName,
         className,
       )}
@@ -49,24 +54,32 @@ export function CalendarTile({
           headerClassName,
         )}
       >
-        <p
-          className={cn(
-            "text-sm font-medium text-neutral-900",
-            !isCurrentMonth && "text-neutral-500",
-            !isToday && isCurrentMonth && "text-neutral-900",
-            isToday && "text-brand-700",
-            isToday && todayDayLabelClassName,
-            isCurrentMonth &&
-              !isToday &&
-              currentMonthDayLabelClassName,
-            !isCurrentMonth &&
-              !isToday &&
-              outOfMonthDayLabelClassName,
-            dayLabelClassName,
-          )}
-        >
-          {dayLabel}
-        </p>
+        <div className="inline-flex items-center gap-1.5">
+          <p
+            className={cn(
+              "text-sm font-medium text-neutral-900",
+              !isCurrentMonth && "text-neutral-500",
+              !isToday && isCurrentMonth && "text-neutral-900",
+              isToday && "text-brand-700",
+              isToday && todayDayLabelClassName,
+              isCurrentMonth &&
+                !isToday &&
+                currentMonthDayLabelClassName,
+              !isCurrentMonth &&
+                !isToday &&
+                outOfMonthDayLabelClassName,
+              dayLabelClassName,
+            )}
+          >
+            {dayLabel}
+          </p>
+          {hasEvents ? (
+            <span
+              aria-hidden
+              className="h-1.5 w-1.5 rounded-full bg-indigo-500"
+            />
+          ) : null}
+        </div>
         {headerAction}
       </div>
       <div className={cn("space-y-1", bodyClassName)}>{children}</div>

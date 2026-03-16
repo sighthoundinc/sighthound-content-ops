@@ -1196,23 +1196,21 @@ function SocialPostsPageContent() {
               </div>
             }
             filters={
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Status
-                <select
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value as SocialPostStatus | "all");
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                >
-                  <option value="all">All Statuses</option>
-                  {SOCIAL_POST_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {SOCIAL_POST_STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <select
+                aria-label="Status"
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as SocialPostStatus | "all");
+                }}
+                className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+              >
+                <option value="all">All Statuses</option>
+                {SOCIAL_POST_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {SOCIAL_POST_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
             }
           />
           <DataPageFilterPills pills={activeFilterPills} />

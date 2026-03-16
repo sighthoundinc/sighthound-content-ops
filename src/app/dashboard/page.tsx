@@ -440,6 +440,7 @@ export default function DashboardPage() {
     [hasPermission]
   );
   const canCreateBlog = permissionContract.canCreateBlog;
+  const canRunDataImport = hasPermission("run_data_import");
   const canExportCsv = permissionContract.canExportCsv;
   const canExportSelectedCsv = permissionContract.canExportSelectedCsv;
   const canChangeWriterAssignment = permissionContract.canChangeWriterAssignment;
@@ -2328,40 +2329,49 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </details>
-              {canCreateBlog ? (
+              {canCreateBlog || canRunDataImport ? (
                 <details className="relative">
                   <summary className="cursor-pointer list-none rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
                     + Add
                   </summary>
                   <div className="absolute right-0 z-30 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                      onClick={() => {
-                        closeOpenDashboardMenus();
-                        router.push("/blogs/new");
-                      }}
-                    >
-                      <span>+ Add Blog</span>
-                      <KbdShortcut className="bg-slate-50">N</KbdShortcut>
-                    </button>
-                    <button
-                      type="button"
-                      className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                      onClick={() => {
-                        closeOpenDashboardMenus();
-                        router.push("/ideas");
-                      }}
-                    >
-                      + Add Idea
-                    </button>
-                    <button
-                      type="button"
-                      disabled
-                      className="block w-full cursor-not-allowed rounded px-3 py-2 text-left text-sm text-slate-400"
-                    >
-                      + Import Blog (soon)
-                    </button>
+                    {canCreateBlog ? (
+                      <>
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            closeOpenDashboardMenus();
+                            router.push("/blogs/new");
+                          }}
+                        >
+                          <span>+ Add Blog</span>
+                          <KbdShortcut className="bg-slate-50">N</KbdShortcut>
+                        </button>
+                        <button
+                          type="button"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            closeOpenDashboardMenus();
+                            router.push("/ideas");
+                          }}
+                        >
+                          + Add Idea
+                        </button>
+                      </>
+                    ) : null}
+                    {canRunDataImport ? (
+                      <button
+                        type="button"
+                        className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                        onClick={() => {
+                          closeOpenDashboardMenus();
+                          router.push("/blogs");
+                        }}
+                      >
+                        + Import Blogs
+                      </button>
+                    ) : null}
                   </div>
                 </details>
               ) : null}
@@ -2435,22 +2445,20 @@ export default function DashboardPage() {
                     />
                   </div>
                 </details>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Sort By
-                  <select
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                    value={sortField}
-                    onChange={(event) => {
-                      setSortField(event.target.value as DashboardSortField);
-                    }}
-                  >
-                    {DASHBOARD_SORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <select
+                  aria-label="Sort By"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  value={sortField}
+                  onChange={(event) => {
+                    setSortField(event.target.value as DashboardSortField);
+                  }}
+                >
+                  {DASHBOARD_SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="button"
                   className="rounded-md border border-slate-300 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"

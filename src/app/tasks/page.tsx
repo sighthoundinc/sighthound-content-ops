@@ -924,54 +924,48 @@ export default function MyTasksPage() {
             }
             filters={
               <>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Status
-                  <select
-                    value={statusFilter}
-                    onChange={(event) => {
-                      setStatusFilter(
-                        event.target.value as "all" | "in_progress" | "not_started" | "needs_revision"
-                      );
-                      setCurrentPage(1);
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="not_started">Not Started</option>
-                    <option value="needs_revision">Needs Revision</option>
-                  </select>
-                </label>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Type
-                  <select
-                    value={kindFilter}
-                    onChange={(event) => {
-                      setKindFilter(event.target.value as TaskKind | "all");
-                      setCurrentPage(1);
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                  >
-                    <option value="all">All Task Types</option>
-                    <option value="writer">Writer</option>
-                    <option value="publisher">Publisher</option>
-                  </select>
-                </label>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Site
-                  <select
-                    value={siteFilter}
-                    onChange={(event) => {
-                      setSiteFilter(event.target.value as "all" | "sighthound.com" | "redactor.com");
-                      setCurrentPage(1);
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                  >
-                    <option value="all">All Sites</option>
-                    <option value="sighthound.com">Sighthound</option>
-                    <option value="redactor.com">Redactor</option>
-                  </select>
-                </label>
+                <select
+                  aria-label="Task Status"
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(
+                      event.target.value as "all" | "in_progress" | "not_started" | "needs_revision"
+                    );
+                    setCurrentPage(1);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="not_started">Not Started</option>
+                  <option value="needs_revision">Needs Revision</option>
+                </select>
+                <select
+                  aria-label="Task Type"
+                  value={kindFilter}
+                  onChange={(event) => {
+                    setKindFilter(event.target.value as TaskKind | "all");
+                    setCurrentPage(1);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Task Types</option>
+                  <option value="writer">Writer</option>
+                  <option value="publisher">Publisher</option>
+                </select>
+                <select
+                  aria-label="Task Site"
+                  value={siteFilter}
+                  onChange={(event) => {
+                    setSiteFilter(event.target.value as "all" | "sighthound.com" | "redactor.com");
+                    setCurrentPage(1);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Sites</option>
+                  <option value="sighthound.com">Sighthound</option>
+                  <option value="redactor.com">Redactor</option>
+                </select>
               </>
             }
           />

@@ -1,19 +1,19 @@
 "use client";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
-  type MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { BlogImportModal } from "@/components/blog-import-modal";
 import { Button, buttonClass } from "@/components/button";
+import { DataTable, type DataTableColumn, type DataTableRowAction } from "@/components/data-table";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DataPageFilterPills,
@@ -71,7 +71,6 @@ type BoardStageQueryFilter = "idea" | "writing" | "reviewing" | "publishing" | "
 const ROW_LIMIT_OPTIONS: LibraryRowLimit[] = [10, 20, 50, 100, "all"];
 const DEFAULT_ROW_LIMIT: LibraryRowLimit = 20;
 const BLOG_LIBRARY_COLUMN_VIEW_STORAGE_KEY = "blog-library-column-view:v1";
-const BLOG_LIBRARY_COLUMN_WIDTH_STORAGE_KEY = "blog-library-column-width:v1";
 const BLOG_LIBRARY_ROW_DENSITY_STORAGE_KEY = "blog-library-row-density:v1";
 const DEFAULT_LIBRARY_COLUMN_ORDER: LibraryColumnKey[] = [
   "site",
@@ -301,6 +300,7 @@ function isBoardStageQueryFilter(value: string | null): value is BoardStageQuery
 }
 
 function BlogLibraryPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { hasPermission } = useAuth();
   const { showSaving, showSuccess, showError, updateStatus, pushNotification } =
@@ -312,6 +312,7 @@ function BlogLibraryPageContent() {
   const canCreateBlogs = permissionContract.canCreateBlog;
   const canExportCsv = permissionContract.canExportCsv;
   const canExportSelectedCsv = permissionContract.canExportSelectedCsv;
+  const canRunDataImport = hasPermission("run_data_import");
   const canSelectRows = canExportSelectedCsv;
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -340,8 +341,6 @@ function BlogLibraryPageContent() {
   const [hiddenColumns, setHiddenColumns] = useState<LibraryColumnKey[]>(
     DEFAULT_LIBRARY_HIDDEN_COLUMNS
   );
-  const [columnWidths, setColumnWidths] = useState<Partial<Record<LibraryColumnKey, number>>>({});
-  const blogRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const boardStageQuery = searchParams.get("boardStage");
 
   const loadBlogs = useCallback(async () => {
@@ -500,30 +499,6 @@ function BlogLibraryPageContent() {
     }
     window.localStorage.setItem(BLOG_LIBRARY_ROW_DENSITY_STORAGE_KEY, rowDensity);
   }, [rowDensity]);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const storedWidths = window.localStorage.getItem(BLOG_LIBRARY_COLUMN_WIDTH_STORAGE_KEY);
-    if (!storedWidths) {
-      return;
-    }
-    try {
-      const parsed = JSON.parse(storedWidths) as Partial<Record<LibraryColumnKey, number>>;
-      setColumnWidths(parsed ?? {});
-    } catch {
-      setColumnWidths({});
-    }
-  }, []);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(
-      BLOG_LIBRARY_COLUMN_WIDTH_STORAGE_KEY,
-      JSON.stringify(columnWidths)
-    );
-  }, [columnWidths]);
   const closeOpenDetailsMenus = useCallback(() => {
     document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
       menu.open = false;
@@ -682,25 +657,100 @@ function BlogLibraryPageContent() {
     () => blogs.find((blog) => blog.id === activeBlogId) ?? null,
     [activeBlogId, blogs]
   );
-  const headerCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
-  const tableColumnCount = visibleColumnOrder.length + (canSelectRows ? 1 : 0);
-  const getColumnSortDirection = (column: LibraryColumnKey) => {
-    const mappedSortField = SORTABLE_LIBRARY_COLUMNS[column];
-    if (!mappedSortField || mappedSortField === "none" || sortField !== mappedSortField) {
-      return null;
-    }
-    return sortDirection;
-  };
-  const getColumnSortIndicator = (column: LibraryColumnKey) => {
-    const direction = getColumnSortDirection(column);
-    if (direction === "asc") {
-      return "▲";
-    }
-    if (direction === "desc") {
-      return "▼";
-    }
-    return null;
-  };
+  const selectedPagedIndices = useMemo(() => {
+    const indices = new Set<number>();
+    pagedBlogs.forEach((blog, index) => {
+      if (selectedIdSet.has(blog.id)) {
+        indices.add(index);
+      }
+    });
+    return indices;
+  }, [pagedBlogs, selectedIdSet]);
+  const dataTableSortField = useMemo(() => {
+    const entry = Object.entries(SORTABLE_LIBRARY_COLUMNS).find(
+      ([, mappedField]) => mappedField === sortField
+    );
+    return (entry?.[0] as LibraryColumnKey | undefined) ?? undefined;
+  }, [sortField]);
+  const blogTableColumns = useMemo<DataTableColumn<BlogRecord>[]>(
+    () =>
+      visibleColumnOrder.map((column) => ({
+        id: column,
+        label: LIBRARY_COLUMN_LABELS[column],
+        sortable: Boolean(SORTABLE_LIBRARY_COLUMNS[column]),
+        className:
+          column === "title"
+            ? "max-w-[26rem]"
+            : column === "live_url"
+              ? "max-w-[15rem]"
+              : column === "writer" || column === "publisher"
+                ? "max-w-[10rem]"
+                : undefined,
+        render: (blog) => {
+          if (column === "title") {
+            return (
+              <Link
+                href={`/blogs/${blog.id}`}
+                className="interactive-link block truncate font-medium text-slate-800"
+                title={blog.title}
+              >
+                {blog.title}
+              </Link>
+            );
+          }
+          if (column === "site") {
+            return (
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium",
+                  getSiteBadgeClasses(blog.site)
+                )}
+              >
+                {getSiteLabel(blog.site)}
+              </span>
+            );
+          }
+          if (column === "live_url") {
+            return (
+              <span className="block max-w-[15rem] truncate text-slate-600" title={blog.live_url ?? ""}>
+                {blog.live_url || "—"}
+              </span>
+            );
+          }
+          if (column === "writer_status") {
+            return <WriterStatusBadge status={blog.writer_status} />;
+          }
+          if (column === "publisher_status") {
+            return <PublisherStatusBadge status={blog.publisher_status} />;
+          }
+          if (column === "published_date") {
+            return <span className="text-slate-600">{formatPublishedDate(blog)}</span>;
+          }
+          if (column === "writer") {
+            return (
+              <span
+                className="block max-w-[10rem] truncate text-slate-600"
+                title={blog.writer?.full_name ?? "Unassigned"}
+              >
+                {blog.writer?.full_name ?? "Unassigned"}
+              </span>
+            );
+          }
+          if (column === "publisher") {
+            return (
+              <span
+                className="block max-w-[10rem] truncate text-slate-600"
+                title={blog.publisher?.full_name ?? "Unassigned"}
+              >
+                {blog.publisher?.full_name ?? "Unassigned"}
+              </span>
+            );
+          }
+          return <span className="text-slate-600">{getStageLabel(getStageForBadge(blog))}</span>;
+        },
+      })),
+    [visibleColumnOrder]
+  );
   const activeFilterPills = useMemo(
     () => [
       searchQuery.trim().length > 0
@@ -798,51 +848,8 @@ function BlogLibraryPageContent() {
     setColumnOrder(DEFAULT_LIBRARY_COLUMN_ORDER);
     setHiddenColumns(DEFAULT_LIBRARY_HIDDEN_COLUMNS);
   };
-  const toggleSortByColumn = (column: LibraryColumnKey) => {
-    const mappedSortField = SORTABLE_LIBRARY_COLUMNS[column];
-    if (!mappedSortField || mappedSortField === "none") {
-      return;
-    }
-    if (sortField !== mappedSortField) {
-      setSortField(mappedSortField);
-      setSortDirection("asc");
-      return;
-    }
-    if (sortDirection === "asc") {
-      setSortDirection("desc");
-      return;
-    }
-    setSortField("none");
-    setSortDirection("asc");
-  };
   const handleOpenBlogPanel = (blogId: string) => {
     setActiveBlogId(blogId);
-  };
-  const handleColumnResizeStart = (
-    column: LibraryColumnKey,
-    event: ReactMouseEvent<HTMLButtonElement>
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const headerCell = event.currentTarget.parentElement;
-    const initialWidth = Math.round(headerCell?.getBoundingClientRect().width ?? 160);
-    const startX = event.clientX;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const delta = moveEvent.clientX - startX;
-      const nextWidth = Math.max(96, initialWidth + delta);
-      setColumnWidths((previous) => ({
-        ...previous,
-        [column]: nextWidth,
-      }));
-    };
-    const handleMouseUp = () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
   };
   const copyToClipboard = useCallback(
     async (
@@ -864,6 +871,38 @@ function BlogLibraryPageContent() {
       }
     },
     [showError, showSuccess]
+  );
+  const rowActions = useCallback(
+    (blog: BlogRecord): DataTableRowAction<BlogRecord>[] => [
+      {
+        id: "open",
+        label: "Open",
+        onClick: () => handleOpenBlogPanel(blog.id),
+      },
+      {
+        id: "copy-title",
+        label: "Copy title",
+        onClick: () => {
+          void copyToClipboard(blog.title, blog.id, "title", "Copied title.");
+        },
+      },
+      {
+        id: "copy-url",
+        label: "Copy URL",
+        onClick: () => {
+          void copyToClipboard(blog.live_url ?? "", blog.id, "url", "Copied URL.");
+        },
+        show: () => Boolean(blog.live_url),
+      },
+      {
+        id: "view-history",
+        label: "View history",
+        onClick: () => {
+          router.push(`/blogs/${blog.id}#history`);
+        },
+      },
+    ],
+    [copyToClipboard, router]
   );
   useEffect(() => {
     const isFormElement = (target: EventTarget | null) => {
@@ -893,10 +932,6 @@ function BlogLibraryPageContent() {
           return;
         }
         setFocusedBlogId(nextBlog.id);
-        blogRowRefs.current[nextBlog.id]?.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-        });
         return;
       }
       if (event.key === "Enter" && focusedBlogId) {
@@ -1146,58 +1181,11 @@ function BlogLibraryPageContent() {
       href: "/blogs",
     });
   };
-  const renderHeaderCell = (column: LibraryColumnKey) => {
-    const mappedSortField = SORTABLE_LIBRARY_COLUMNS[column];
-    const isSortable = Boolean(mappedSortField && mappedSortField !== "none");
-    const sortIndicator = getColumnSortIndicator(column);
-    const isSorted = getColumnSortDirection(column) !== null;
-    const width = columnWidths[column];
-    return (
-      <th
-        key={column}
-        className={`group/column relative ${headerCellClass} ${isSorted ? "bg-slate-200" : ""}`}
-        style={
-          width
-            ? {
-                width: `${width}px`,
-                minWidth: `${width}px`,
-              }
-            : undefined
-        }
-      >
-        {isSortable ? (
-          <button
-            type="button"
-            className={`inline-flex items-center gap-1 ${
-              isSorted ? "font-semibold text-slate-900" : "text-slate-600 hover:text-slate-900"
-            }`}
-            onClick={() => {
-              toggleSortByColumn(column);
-            }}
-          >
-            <span>{LIBRARY_COLUMN_LABELS[column]}</span>
-            <span className="w-3 text-[10px] text-slate-500">{sortIndicator ?? ""}</span>
-          </button>
-        ) : (
-          <span className="font-semibold text-slate-600">{LIBRARY_COLUMN_LABELS[column]}</span>
-        )}
-        <button
-          type="button"
-          aria-label={`Resize ${LIBRARY_COLUMN_LABELS[column]} column`}
-          className="absolute right-0 top-0 h-full w-2 cursor-col-resize rounded-sm border-l border-transparent transition-colors hover:border-slate-400 group-hover/column:border-slate-300"
-          onMouseDown={(event) => {
-            handleColumnResizeStart(column, event);
-          }}
-        />
-      </th>
-    );
-  };
-
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
       <AppShell>
-        <div className="space-y-5">
+        <div className="space-y-6 px-6">
           <DataPageHeader
             title="Blogs"
             description="Searchable reference library for blog titles, URLs, and published history."
@@ -1350,6 +1338,7 @@ function BlogLibraryPageContent() {
                     Export Selection
                   </Button>
                 </PermissionGate>
+                {canRunDataImport ? <BlogImportModal onImported={loadBlogs} /> : null}
                 <Button
                   type="button"
                   onClick={() => {
@@ -1374,14 +1363,14 @@ function BlogLibraryPageContent() {
             }
             filters={
               <>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Publish State
+              <div className="grid gap-4 sm:grid-cols-2 md:col-span-2 xl:col-span-4">
                 <select
+                  aria-label="Publish State"
                   value={statusFilter}
                   onChange={(event) => {
                     setStatusFilter(event.target.value as LibraryStatusFilter);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
                   {STATUS_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1389,15 +1378,13 @@ function BlogLibraryPageContent() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500 md:col-span-2 xl:col-span-1">
-                Website
                 <select
+                  aria-label="Website"
                   value={siteFilter}
                   onChange={(event) => {
                     setSiteFilter(event.target.value as LibrarySiteFilter);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
                   {SITE_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1405,15 +1392,13 @@ function BlogLibraryPageContent() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Writer Status
                 <select
+                  aria-label="Writer Status"
                   value={writerStatusFilter}
                   onChange={(event) => {
                     setWriterStatusFilter(event.target.value as LibraryWriterStatusFilter);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
                   {WRITER_STATUS_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1421,15 +1406,13 @@ function BlogLibraryPageContent() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500 md:col-span-2 xl:col-span-1">
-                Publisher Status
                 <select
+                  aria-label="Publisher Status"
                   value={publisherStatusFilter}
                   onChange={(event) => {
                     setPublisherStatusFilter(event.target.value as LibraryPublisherStatusFilter);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
                   {PUBLISHER_STATUS_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1437,15 +1420,13 @@ function BlogLibraryPageContent() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Sort By
                 <select
+                  aria-label="Sort Field"
                   value={sortField}
                   onChange={(event) => {
                     setSortField(event.target.value as LibrarySortField);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
                   {SORT_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1453,16 +1434,14 @@ function BlogLibraryPageContent() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500 md:col-span-2 xl:col-span-1">
-                Direction
                 <select
+                  aria-label="Sort Direction"
                   value={sortDirection}
                   disabled={sortField === "none"}
                   onChange={(event) => {
                     setSortDirection(event.target.value as LibrarySortDirection);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   {SORT_DIRECTION_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1470,33 +1449,31 @@ function BlogLibraryPageContent() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <div className="flex items-end justify-end md:col-span-2 xl:col-span-1">
-                <Button
-                  type="button"
-                  onClick={resetFilters}
-                  variant="secondary"
-                  size="sm"
-                >
-                  Reset Filters
-                </Button>
+                <div className="flex items-end justify-end sm:col-span-2">
+                  <Button
+                    type="button"
+                    onClick={resetFilters}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
               </div>
             </>
             }
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
-
-          <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-slate-600">
-                Showing <span className="font-medium text-slate-900">{visibleRange.start}</span>-
-                <span className="font-medium text-slate-900">{visibleRange.end}</span> of{" "}
-                <span className="font-medium text-slate-900">{sortedBlogs.length}</span> blogs
+          <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-wide text-slate-600">
+                Showing <span className="font-semibold text-slate-900">{visibleRange.start}</span>–<span className="font-semibold text-slate-900">{visibleRange.end}</span> of{" "}
+                <span className="font-semibold text-slate-900">{sortedBlogs.length}</span>
               </p>
             </div>
             {canSelectRows && selectedBlogs.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
                 <p className="text-sm text-slate-700">
                   <span className="font-semibold text-slate-900">{selectedBlogs.length}</span>{" "}
                   selected
@@ -1536,7 +1513,7 @@ function BlogLibraryPageContent() {
               </div>
             ) : null}
             {hasNoResults && hasActiveFilters ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 <span>No blogs match your filters. Try clearing filters or create a new blog.</span>
                 <button
                   type="button"
@@ -1548,12 +1525,10 @@ function BlogLibraryPageContent() {
               </div>
             ) : null}
             {hasNoResults && !hasActiveFilters ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">No blogs yet.</p>
-                  <p className="text-sm text-slate-600">
-                    Create your first blog to start building the content library.
-                  </p>
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-slate-900">No blogs yet.</p>
+                  <p className="text-sm text-slate-600">Create your first blog to start building the content library.</p>
                 </div>
                 {canCreateBlogs ? (
                   <Link
@@ -1567,199 +1542,65 @@ function BlogLibraryPageContent() {
             ) : null}
 
             {isLoading ? (
-              <div className="overflow-auto rounded-lg border border-slate-200">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                    <tr>
-                      {canSelectRows ? <th className={headerCellClass} /> : null}
-                      {visibleColumnOrder.map((column) => renderHeaderCell(column))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {Array.from({ length: 5 }).map((_, rowIndex) => (
-                      <tr key={`skeleton-row-${rowIndex}`}>
-                        <td className="px-3 py-3" colSpan={tableColumnCount}>
-                          <div className="skeleton h-4 w-full" />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-3 rounded-lg border border-slate-200 p-4 sm:p-5">
+                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                  <div key={`skeleton-row-${rowIndex}`} className="skeleton h-12 w-full" />
+                ))}
               </div>
             ) : hasNoResults ? null : (
-              <div className="overflow-auto rounded-lg border border-slate-200">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                    <tr>
-                      {canSelectRows && <th className={headerCellClass} />}
-                      {visibleColumnOrder.map((column) => renderHeaderCell(column))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {pagedBlogs.length === 0 ? (
-                      <tr>
-                        <td
-                          className={cn(
-                            rowDensity === "compact"
-                              ? "px-6 py-2 h-10 align-middle"
-                              : "px-6 py-3 h-12 align-middle",
-                            "text-center text-slate-500"
-                          )}
-                          colSpan={visibleColumnOrder.length + (canSelectRows ? 1 : 0)}
-                        >
-                          No blogs found.
-                        </td>
-                      </tr>
-                    ) : (
-                      pagedBlogs.map((blog) => {
-                        const isSelected = selectedBlogIds.includes(blog.id);
-                        const isActive = activeBlogId === blog.id;
-                        const bodyCellClass =
-                          rowDensity === "compact"
-                            ? "px-6 py-2 h-10 align-middle"
-                            : "px-6 py-3 h-12 align-middle";
-
-                        return (
-                          <tr
-                            key={blog.id}
-                            className={cn(
-                              "cursor-pointer transition-colors",
-                              isActive ? "bg-slate-100" : isSelected ? "bg-slate-50" : "hover:bg-slate-50"
-                            )}
-                            onClick={() => {
-                              handleOpenBlogPanel(blog.id);
-                            }}
-                          >
-                            {canSelectRows && (
-                              <td
-                                className={bodyCellClass}
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={(event) => {
-                                    if (event.target.checked) {
-                                      setSelectedBlogIds([...selectedBlogIds, blog.id]);
-                                    } else {
-                                      setSelectedBlogIds(selectedBlogIds.filter((id) => id !== blog.id));
-                                    }
-                                  }}
-                                  aria-label={`Select ${blog.title}`}
-                                />
-                              </td>
-                            )}
-                            {visibleColumnOrder.map((column) => {
-                              if (column === "title") {
-                                return (
-                                  <td
-                                    key={column}
-                                    className={cn(bodyCellClass, "max-w-[26rem] font-medium text-slate-900")}
-                                  >
-                                    <Link
-                                      href={`/blogs/${blog.id}`}
-                                      className="interactive-link block truncate text-slate-800"
-                                      title={blog.title}
-                                    >
-                                      {blog.title}
-                                    </Link>
-                                  </td>
-                                );
-                              }
-
-                              if (column === "site") {
-                                return (
-                                  <td key={column} className={bodyCellClass}>
-                                    <span
-                                      className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${
-                                        getSiteBadgeClasses(blog.site)
-                                      }`}
-                                    >
-                                      {getSiteLabel(blog.site)}
-                                    </span>
-                                  </td>
-                                );
-                              }
-
-                              if (column === "live_url") {
-                                return (
-                                  <td key={column} className={bodyCellClass}>
-                                    <span className="block max-w-[15rem] truncate text-slate-600" title={blog.live_url ?? ""}>
-                                      {blog.live_url || "—"}
-                                    </span>
-                                  </td>
-                                );
-                              }
-
-                              if (column === "writer_status") {
-                                return (
-                                  <td key={column} className={bodyCellClass}>
-                                    <WriterStatusBadge status={blog.writer_status} />
-                                  </td>
-                                );
-                              }
-
-                              if (column === "publisher_status") {
-                                return (
-                                  <td key={column} className={bodyCellClass}>
-                                    <PublisherStatusBadge status={blog.publisher_status} />
-                                  </td>
-                                );
-                              }
-
-                              if (column === "published_date") {
-                                return (
-                                  <td key={column} className={bodyCellClass}>
-                                    <span className="text-slate-600">{formatPublishedDate(blog)}</span>
-                                  </td>
-                                );
-                              }
-
-                              if (column === "writer") {
-                                return (
-                                  <td key={column} className={bodyCellClass}>
-                                    <span
-                                      className="block max-w-[10rem] truncate text-slate-600"
-                                      title={blog.writer?.full_name ?? "Unassigned"}
-                                    >
-                                      {blog.writer?.full_name ?? "Unassigned"}
-                                    </span>
-                                  </td>
-                                );
-                              }
-
-                              if (column === "publisher") {
-                                return (
-                                  <td key={column} className={bodyCellClass}>
-                                    <span
-                                      className="block max-w-[10rem] truncate text-slate-600"
-                                      title={blog.publisher?.full_name ?? "Unassigned"}
-                                    >
-                                      {blog.publisher?.full_name ?? "Unassigned"}
-                                    </span>
-                                  </td>
-                                );
-                              }
-
-                              if (column === "stage") {
-                                return (
-                                  <td key={column} className={bodyCellClass}>
-                                    <span className="text-slate-600">{getStageLabel(getStageForBadge(blog))}</span>
-                                  </td>
-                                );
-                              }
-
-                              return null;
-                            })}
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                data={pagedBlogs}
+                columns={blogTableColumns}
+                sortField={dataTableSortField}
+                sortDirection={sortField === "none" ? undefined : sortDirection}
+                onSort={(field, direction) => {
+                  const mapped = SORTABLE_LIBRARY_COLUMNS[field as LibraryColumnKey];
+                  if (!mapped || mapped === "none") {
+                    return;
+                  }
+                  setSortField(mapped);
+                  setSortDirection(direction);
+                }}
+                showSelection={canSelectRows}
+                selectedIndices={selectedPagedIndices}
+                onSelectionChange={(indices) => {
+                  const visibleIds = pagedBlogs.map((blog) => blog.id);
+                  const nextVisibleIds = new Set<string>();
+                  indices.forEach((index) => {
+                    const blog = pagedBlogs[index];
+                    if (blog) {
+                      nextVisibleIds.add(blog.id);
+                    }
+                  });
+                  setSelectedBlogIds((previous) => {
+                    const next = new Set(previous.filter((id) => !visibleIds.includes(id)));
+                    nextVisibleIds.forEach((id) => {
+                      next.add(id);
+                    });
+                    return Array.from(next);
+                  });
+                }}
+                onRowClick={(blog) => {
+                  handleOpenBlogPanel(blog.id);
+                }}
+                activeIndex={pagedBlogs.findIndex((blog) => blog.id === activeBlogId)}
+                density={rowDensity}
+                emptyMessage="No blogs found."
+                rowActions={rowActions}
+                enableColumnResizing
+                rowClassName={(_blog, _index, isActive, isSelected) =>
+                  cn(
+                    "transition-colors",
+                    isActive
+                      ? "bg-slate-100"
+                      : isSelected
+                        ? "bg-slate-50"
+                        : "hover:bg-slate-50"
+                  )
+                }
+              />
             )}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
               <label className="flex items-center gap-2 text-sm text-slate-600">
                 <span className="font-medium text-slate-700">Rows per page</span>
                 <select

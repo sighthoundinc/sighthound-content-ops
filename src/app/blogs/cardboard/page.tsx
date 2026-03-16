@@ -649,71 +649,63 @@ export default function BlogCardBoardPage() {
             searchPlaceholder="Search blog title, document URL, or live URL"
             filters={
               <>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Product
-                  <select
-                    value={productFilter}
-                    onChange={(event) => {
-                      setProductFilter(event.target.value as ProductFilter);
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                  >
-                    {PRODUCT_FILTER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Author
-                  <select
-                    value={authorFilter}
-                    onChange={(event) => {
-                      setAuthorFilter(event.target.value as AuthorFilter);
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                  >
-                    <option value="all">All Authors</option>
-                    {authors.map((author) => (
-                      <option key={author.id} value={author.id}>
-                        {author.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Website
-                  <select
-                    value={websiteFilter}
-                    onChange={(event) => {
-                      setWebsiteFilter(event.target.value as WebsiteFilter);
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                  >
-                    {WEBSITE_FILTER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Status
-                  <select
-                    value={statusFilter}
-                    onChange={(event) => {
-                      setStatusFilter(event.target.value as BoardStageFilter);
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                  >
-                    {STATUS_FILTER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <select
+                  aria-label="Product"
+                  value={productFilter}
+                  onChange={(event) => {
+                    setProductFilter(event.target.value as ProductFilter);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  {PRODUCT_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Author"
+                  value={authorFilter}
+                  onChange={(event) => {
+                    setAuthorFilter(event.target.value as AuthorFilter);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Authors</option>
+                  {authors.map((author) => (
+                    <option key={author.id} value={author.id}>
+                      {author.full_name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Website"
+                  value={websiteFilter}
+                  onChange={(event) => {
+                    setWebsiteFilter(event.target.value as WebsiteFilter);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  {WEBSITE_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Status"
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value as BoardStageFilter);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  {STATUS_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </>
             }
             actions={

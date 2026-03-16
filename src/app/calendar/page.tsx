@@ -1161,23 +1161,21 @@ export default function CalendarPage() {
               </>
             }
             filters={
-              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Writer
-                <select
-                  value={writerFilter}
-                  onChange={(event) => {
-                    setWriterFilter(event.target.value);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
-                >
-                  <option value="all">All Writers</option>
-                  {writerOptions.map(([writerId, writerName]) => (
-                    <option key={writerId} value={writerId}>
-                      {writerName}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <select
+                aria-label="Writer"
+                value={writerFilter}
+                onChange={(event) => {
+                  setWriterFilter(event.target.value);
+                }}
+                className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+              >
+                <option value="all">All Writers</option>
+                {writerOptions.map(([writerId, writerName]) => (
+                  <option key={writerId} value={writerId}>
+                    {writerName}
+                  </option>
+                ))}
+              </select>
             }
           />
           <DataPageFilterPills pills={activeFilterPills} />

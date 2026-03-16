@@ -62,8 +62,8 @@ export interface DashboardTableProps {
 
 const headerCellClass =
   "px-6 py-3 font-medium text-slate-900 whitespace-nowrap relative";
-const bodyCellClassCompact = "px-6 py-2 text-slate-900";
-const bodyCellClassComfortable = "px-6 py-3 text-slate-900";
+const bodyCellClassCompact = "px-6 py-2 h-11 align-middle text-slate-900";
+const bodyCellClassComfortable = "px-6 py-3 h-12 align-middle text-slate-900";
 
 const WRITER_STATUSES: WriterStageStatus[] = [
   "not_started",
@@ -265,10 +265,10 @@ export function DashboardTable({
                           key={column}
                           className={cn(
                             bodyCellClass,
-                            "font-medium text-slate-900"
+                            "max-w-[26rem] font-medium text-slate-900"
                           )}
                         >
-                          <span className="block overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                          <span className="block truncate" title={blog.title}>
                             {blog.title}
                           </span>
                         </td>
@@ -293,7 +293,10 @@ export function DashboardTable({
                     if (column === "writer") {
                       return (
                         <td key={column} className={bodyCellClass}>
-                          <span className="text-slate-600">
+                          <span
+                            className="block max-w-[10rem] truncate text-slate-600"
+                            title={blog.writer?.full_name ?? "Unassigned"}
+                          >
                             {blog.writer?.full_name ?? "Unassigned"}
                           </span>
                         </td>
@@ -342,7 +345,10 @@ export function DashboardTable({
                     if (column === "publisher") {
                       return (
                         <td key={column} className={bodyCellClass}>
-                          <span className="text-slate-600">
+                          <span
+                            className="block max-w-[10rem] truncate text-slate-600"
+                            title={blog.publisher?.full_name ?? "Unassigned"}
+                          >
                             {blog.publisher?.full_name ?? "Unassigned"}
                           </span>
                         </td>

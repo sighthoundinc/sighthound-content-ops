@@ -96,6 +96,7 @@ export type PublisherStageStatus =
   | "not_started"
   | "in_progress"
   | "pending_review"
+  | "publisher_approved"
   | "completed";
 
 export type OverallBlogStatus =

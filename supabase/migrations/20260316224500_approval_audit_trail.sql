@@ -7,9 +7,10 @@ add column if not exists publisher_submitted_at timestamptz,
 add column if not exists publisher_reviewed_by uuid references public.profiles(id) on delete set null,
 add column if not exists publisher_reviewed_at timestamptz;
 
--- Ensure pending_review exists in enums (idempotent)
+-- Ensure new status values exist in enums (idempotent)
 alter type public.writer_stage_status add value if not exists 'pending_review';
 alter type public.publisher_stage_status add value if not exists 'pending_review';
+alter type public.publisher_stage_status add value if not exists 'publisher_approved';
 
 -- Trigger to populate writer audit trail when moving to pending_review
 create or replace function public.audit_writer_submission()
@@ -97,7 +98,7 @@ as $$
     when writer_status_text = 'completed'
       and publisher_status_text = 'not_started'
       then 'ready_to_publish'::public.overall_blog_status
-    when publisher_status_text in ('in_progress', 'pending_review')
+    when publisher_status_text in ('in_progress', 'pending_review', 'publisher_approved')
       then 'publishing'::public.overall_blog_status
     else 'writing'::public.overall_blog_status
   end

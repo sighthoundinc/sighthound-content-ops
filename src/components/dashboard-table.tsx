@@ -81,6 +81,7 @@ const PUBLISHER_STATUSES: PublisherStageStatus[] = [
   "not_started",
   "in_progress",
   "pending_review",
+  "publisher_approved",
   "completed",
 ];
 const WRITER_STAGE_DISPLAY_LABELS: Record<WriterStageStatus, string> = {
@@ -94,6 +95,7 @@ const PUBLISHER_STAGE_DISPLAY_LABELS: Record<PublisherStageStatus, string> = {
   not_started: "Not Started",
   in_progress: "Publishing in Progress",
   pending_review: "Waiting for Approval",
+  publisher_approved: "Publishing Approved",
   completed: "Published",
 };
 

@@ -1285,7 +1285,7 @@ export default function SettingsPage() {
                         <tbody className="divide-y divide-slate-100">
                           {sortedUsers.length === 0 ? (
                             <tr>
-                              <td className="px-3 py-4 text-center text-slate-500" colSpan={7}>
+                              <td className="px-3 py-2 h-12 align-middle text-center text-slate-500" colSpan={7}>
                                 No users found with current filters.
                               </td>
                             </tr>
@@ -1297,8 +1297,12 @@ export default function SettingsPage() {
                               }
                               return (
                                 <tr key={nextUser.id}>
-                                  <td className="px-3 py-2 text-slate-600">{nextUser.email}</td>
-                                  <td className="px-3 py-2">
+                                  <td className="px-3 py-2 h-12 align-middle text-slate-600 overflow-hidden">
+                                    <span className="block truncate" title={nextUser.email}>
+                                      {nextUser.email}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 h-12 align-middle">
                                     <label className="inline-flex items-center gap-2 text-xs text-slate-700">
                                       <input
                                         type="checkbox"
@@ -1317,7 +1321,7 @@ export default function SettingsPage() {
                                       <span>{editable.isActive ? "Active" : "Inactive"}</span>
                                     </label>
                                   </td>
-                                  <td className="px-3 py-2">
+                                  <td className="px-3 py-2 h-12 align-middle">
                                     <input
                                       value={editable.firstName}
                                       onChange={(event) => {
@@ -1332,7 +1336,7 @@ export default function SettingsPage() {
                                       className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
                                     />
                                   </td>
-                                  <td className="px-3 py-2">
+                                  <td className="px-3 py-2 h-12 align-middle">
                                     <input
                                       value={editable.lastName}
                                       onChange={(event) => {
@@ -1347,7 +1351,7 @@ export default function SettingsPage() {
                                       className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
                                     />
                                   </td>
-                                  <td className="px-3 py-2">
+                                  <td className="px-3 py-2 h-12 align-middle">
                                     <input
                                       value={editable.displayName}
                                       onChange={(event) => {
@@ -1362,7 +1366,7 @@ export default function SettingsPage() {
                                       className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
                                     />
                                   </td>
-                                  <td className="px-3 py-2">
+                                  <td className="px-3 py-2 h-12 align-middle overflow-hidden">
                                     <div className="flex flex-wrap gap-2">
                                       {ALL_ROLES.map((role) => {
                                         const isChecked = editable.userRoles.includes(role);
@@ -1401,7 +1405,7 @@ export default function SettingsPage() {
                                       })}
                                     </div>
                                   </td>
-                                  <td className="px-3 py-2">
+                                  <td className="px-3 py-2 h-12 align-middle">
                                     <button
                                       type="button"
                                       className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"

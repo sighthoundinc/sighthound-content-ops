@@ -14,7 +14,6 @@ import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button, buttonClass } from "@/components/button";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DataPageFilterPills,
@@ -44,7 +43,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDisplayDate } from "@/lib/utils";
+import { cn, formatDisplayDate } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
@@ -342,8 +341,6 @@ function BlogLibraryPageContent() {
     DEFAULT_LIBRARY_HIDDEN_COLUMNS
   );
   const [columnWidths, setColumnWidths] = useState<Partial<Record<LibraryColumnKey, number>>>({});
-  const [blogDataTableSortField, setBlogDataTableSortField] = useState<string>("published_date");
-  const [blogDataTableSortDirection, setBlogDataTableSortDirection] = useState<"asc" | "desc">("desc");
   const blogRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const boardStageQuery = searchParams.get("boardStage");
 
@@ -687,8 +684,6 @@ function BlogLibraryPageContent() {
   );
   const headerCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
   const tableColumnCount = visibleColumnOrder.length + (canSelectRows ? 1 : 0);
-  const allVisibleSelected =
-    pagedBlogs.length > 0 && pagedBlogs.every((blog) => selectedIdSet.has(blog.id));
   const getColumnSortDirection = (column: LibraryColumnKey) => {
     const mappedSortField = SORTABLE_LIBRARY_COLUMNS[column];
     if (!mappedSortField || mappedSortField === "none" || sortField !== mappedSortField) {
@@ -945,25 +940,6 @@ function BlogLibraryPageContent() {
     }
   };
 
-  const toggleSelectAllVisible = (nextChecked: boolean) => {
-    if (!canSelectRows) {
-      return;
-    }
-    if (!nextChecked) {
-      const visibleIds = new Set(pagedBlogs.map((blog) => blog.id));
-      setSelectedBlogIds((previous) => previous.filter((id) => !visibleIds.has(id)));
-      return;
-    }
-    setSelectedBlogIds((previous) => {
-      const next = new Set(previous);
-      for (const blog of pagedBlogs) {
-        next.add(blog.id);
-      }
-      return Array.from(next);
-    });
-  };
-
-
   const getExportCellValue = (blog: BlogRecord, column: LibraryColumnKey) => {
     if (column === "site") {
       return getSiteLabel(blog.site);
@@ -1217,54 +1193,6 @@ function BlogLibraryPageContent() {
     );
   };
 
-  const blogTableColumns: DataTableColumn<BlogRecord>[] = [
-    {
-      id: "site",
-      label: "Site",
-      sortable: true,
-      render: (blog) => (
-        <span
-          className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${
-            getSiteBadgeClasses(blog.site)
-          }`}
-        >
-          {getSiteLabel(blog.site)}
-        </span>
-      ),
-    },
-    {
-      id: "title",
-      label: "Title",
-      sortable: true,
-      render: (blog) => (
-        <Link
-          href={`/blogs/${blog.id}`}
-          className="interactive-link block w-full truncate text-sm font-medium text-slate-800"
-          title={blog.title}
-        >
-          {blog.title}
-        </Link>
-      ),
-    },
-    {
-      id: "writer_status",
-      label: "Writer Status",
-      sortable: true,
-      render: (blog) => <WriterStatusBadge status={blog.writer_status} />,
-    },
-    {
-      id: "publisher_status",
-      label: "Publisher Status",
-      sortable: true,
-      render: (blog) => <PublisherStatusBadge status={blog.publisher_status} />,
-    },
-    {
-      id: "publish_date",
-      label: "Publish Date",
-      sortable: true,
-      render: (blog) => formatPublishedDate(blog),
-    },
-  ];
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
@@ -1660,36 +1588,175 @@ function BlogLibraryPageContent() {
               </div>
             ) : hasNoResults ? null : (
               <div className="overflow-auto rounded-lg border border-slate-200">
-                {canSelectRows ? (
-                  <div className="mb-3 flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      onChange={(event) => {
-                        toggleSelectAllVisible(event.target.checked);
-                      }}
-                    />
-                    <span className="text-sm text-slate-600">
-                      {selectedBlogIds.length > 0 ? `${selectedBlogIds.length} selected` : "Select rows"}
-                    </span>
-                  </div>
-                ) : null}
-                <DataTable
-                  data={pagedBlogs}
-                  columns={blogTableColumns}
-                  sortField={blogDataTableSortField}
-                  sortDirection={blogDataTableSortDirection}
-                  onSort={(field, direction) => {
-                    setBlogDataTableSortField(field);
-                    setBlogDataTableSortDirection(direction);
-                  }}
-                  onRowClick={(blog) => {
-                    handleOpenBlogPanel(blog.id);
-                  }}
-                  activeIndex={pagedBlogs.findIndex((b) => b.id === activeBlogId)}
-                  density={rowDensity}
-                  emptyMessage="No blogs found."
-                />
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+                    <tr>
+                      {canSelectRows && <th className={headerCellClass} />}
+                      {visibleColumnOrder.map((column) => renderHeaderCell(column))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {pagedBlogs.length === 0 ? (
+                      <tr>
+                        <td
+                          className={cn(
+                            rowDensity === "compact"
+                              ? "px-6 py-2 h-10 align-middle"
+                              : "px-6 py-3 h-12 align-middle",
+                            "text-center text-slate-500"
+                          )}
+                          colSpan={visibleColumnOrder.length + (canSelectRows ? 1 : 0)}
+                        >
+                          No blogs found.
+                        </td>
+                      </tr>
+                    ) : (
+                      pagedBlogs.map((blog) => {
+                        const isSelected = selectedBlogIds.includes(blog.id);
+                        const isActive = activeBlogId === blog.id;
+                        const bodyCellClass =
+                          rowDensity === "compact"
+                            ? "px-6 py-2 h-10 align-middle"
+                            : "px-6 py-3 h-12 align-middle";
+
+                        return (
+                          <tr
+                            key={blog.id}
+                            className={cn(
+                              "cursor-pointer transition-colors",
+                              isActive ? "bg-slate-100" : isSelected ? "bg-slate-50" : "hover:bg-slate-50"
+                            )}
+                            onClick={() => {
+                              handleOpenBlogPanel(blog.id);
+                            }}
+                          >
+                            {canSelectRows && (
+                              <td
+                                className={bodyCellClass}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(event) => {
+                                    if (event.target.checked) {
+                                      setSelectedBlogIds([...selectedBlogIds, blog.id]);
+                                    } else {
+                                      setSelectedBlogIds(selectedBlogIds.filter((id) => id !== blog.id));
+                                    }
+                                  }}
+                                  aria-label={`Select ${blog.title}`}
+                                />
+                              </td>
+                            )}
+                            {visibleColumnOrder.map((column) => {
+                              if (column === "title") {
+                                return (
+                                  <td
+                                    key={column}
+                                    className={cn(bodyCellClass, "max-w-[26rem] font-medium text-slate-900")}
+                                  >
+                                    <Link
+                                      href={`/blogs/${blog.id}`}
+                                      className="interactive-link block truncate text-slate-800"
+                                      title={blog.title}
+                                    >
+                                      {blog.title}
+                                    </Link>
+                                  </td>
+                                );
+                              }
+
+                              if (column === "site") {
+                                return (
+                                  <td key={column} className={bodyCellClass}>
+                                    <span
+                                      className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${
+                                        getSiteBadgeClasses(blog.site)
+                                      }`}
+                                    >
+                                      {getSiteLabel(blog.site)}
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              if (column === "live_url") {
+                                return (
+                                  <td key={column} className={bodyCellClass}>
+                                    <span className="block max-w-[15rem] truncate text-slate-600" title={blog.live_url ?? ""}>
+                                      {blog.live_url || "—"}
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              if (column === "writer_status") {
+                                return (
+                                  <td key={column} className={bodyCellClass}>
+                                    <WriterStatusBadge status={blog.writer_status} />
+                                  </td>
+                                );
+                              }
+
+                              if (column === "publisher_status") {
+                                return (
+                                  <td key={column} className={bodyCellClass}>
+                                    <PublisherStatusBadge status={blog.publisher_status} />
+                                  </td>
+                                );
+                              }
+
+                              if (column === "published_date") {
+                                return (
+                                  <td key={column} className={bodyCellClass}>
+                                    <span className="text-slate-600">{formatPublishedDate(blog)}</span>
+                                  </td>
+                                );
+                              }
+
+                              if (column === "writer") {
+                                return (
+                                  <td key={column} className={bodyCellClass}>
+                                    <span
+                                      className="block max-w-[10rem] truncate text-slate-600"
+                                      title={blog.writer?.full_name ?? "Unassigned"}
+                                    >
+                                      {blog.writer?.full_name ?? "Unassigned"}
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              if (column === "publisher") {
+                                return (
+                                  <td key={column} className={bodyCellClass}>
+                                    <span
+                                      className="block max-w-[10rem] truncate text-slate-600"
+                                      title={blog.publisher?.full_name ?? "Unassigned"}
+                                    >
+                                      {blog.publisher?.full_name ?? "Unassigned"}
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              if (column === "stage") {
+                                return (
+                                  <td key={column} className={bodyCellClass}>
+                                    <span className="text-slate-600">{getStageLabel(getStageForBadge(blog))}</span>
+                                  </td>
+                                );
+                              }
+
+                              return null;
+                            })}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">

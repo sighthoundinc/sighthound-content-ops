@@ -40,27 +40,34 @@ export function CalendarTile({
   return (
     <article
       className={cn(
-        "min-h-28 rounded-md border border-neutral-200 bg-white p-2",
-        !isCurrentMonth && "bg-neutral-50",
-        isToday && "border-brand-400 bg-brand-50 shadow-sm",
+        // Base glass-morphism styling
+        "relative flex h-40 flex-col rounded-xl border backdrop-blur-sm transition-all duration-200",
+        // Glass effect: subtle border and background
+        "border-white/30 bg-white/40",
+        // Out of month styling
+        !isCurrentMonth && "bg-slate-50/30 border-slate-200/20",
+        // Today styling with enhanced glass effect
+        isToday && "border-indigo-400/60 bg-indigo-50/50 shadow-lg shadow-indigo-200/30",
+        // Focus ring
         isFocused && "ring-2 ring-indigo-400 ring-offset-2",
+        // Custom today container class (for backwards compatibility)
         todayContainerClassName && isToday && todayContainerClassName,
         className,
       )}
     >
       <div
         className={cn(
-          "mb-2 flex items-center justify-between gap-2",
+          "flex items-center justify-between gap-2 border-b border-white/20 px-3 py-2",
           headerClassName,
         )}
       >
         <div className="inline-flex items-center gap-1.5">
           <p
             className={cn(
-              "text-sm font-medium text-neutral-900",
-              !isCurrentMonth && "text-neutral-500",
-              !isToday && isCurrentMonth && "text-neutral-900",
-              isToday && "text-brand-700",
+              "text-sm font-semibold text-slate-900",
+              !isCurrentMonth && "text-slate-400",
+              !isToday && isCurrentMonth && "text-slate-900",
+              isToday && "text-indigo-700",
               isToday && todayDayLabelClassName,
               isCurrentMonth &&
                 !isToday &&
@@ -82,7 +89,15 @@ export function CalendarTile({
         </div>
         {headerAction}
       </div>
-      <div className={cn("space-y-1", bodyClassName)}>{children}</div>
+      {/* Fixed-height scrollable content area */}
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto px-2 py-1.5",
+          bodyClassName,
+        )}
+      >
+        {children}
+      </div>
     </article>
   );
 }

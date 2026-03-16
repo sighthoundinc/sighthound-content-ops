@@ -43,7 +43,9 @@ import { WorkflowStageBadge } from "@/components/status-badge";
 import { TablePaginationControls, TableRowLimitSelect } from "@/components/table-controls";
 import {
   BLOG_SELECT_LEGACY,
+  BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES,
+  BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogScheduledDate,
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
@@ -360,7 +362,8 @@ export default function CalendarPage() {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  // Fixed: Capture today's date once at mount, don't recalculate each render
+  const todayDateKey = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -392,14 +395,14 @@ export default function CalendarPage() {
     const fetchBlogs = async () => {
       let { data, error } = await supabase
         .from("blogs")
-        .select(BLOG_SELECT_WITH_DATES)
+        .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
         .eq("is_archived", false)
         .order("scheduled_publish_date", { ascending: true, nullsFirst: false });
 
       if (isMissingBlogDateColumnsError(error)) {
         const fallback = await supabase
           .from("blogs")
-          .select(BLOG_SELECT_LEGACY)
+          .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
           .eq("is_archived", false)
           .order("target_publish_date", { ascending: true, nullsFirst: false });
         data = fallback.data as typeof data;
@@ -1268,20 +1271,19 @@ export default function CalendarPage() {
                       setDragOverDateKey(null);
                     }}
                   >
-                  <div className="grid grid-cols-7 gap-2" ref={calendarGridRef}>
+                <div className="grid grid-cols-7 gap-3" ref={calendarGridRef}>
                     {days.map((day) => {
                       const key = format(day, "yyyy-MM-dd");
                       const items = calendarItemsByDate[key] ?? [];
                       const isToday = isSameDay(day, new Date());
                       const isCurrentMonth = day.getMonth() === cursorDate.getMonth();
-                      const isCurrentWeek = isWithinInterval(day, currentWeekRange);
                       const compact = mode === "month";
 
                       return (
                         <DroppableDayCell
                           key={key}
                           dateKey={key}
-                          className="relative overflow-visible rounded-md"
+                          className="relative overflow-visible"
                           data-is-today={isToday}
                         >
                           <CalendarTile
@@ -1290,17 +1292,11 @@ export default function CalendarPage() {
                             isCurrentMonth={isCurrentMonth}
                             hasEvents={items.length > 0}
                             isFocused={focusedDateKey === key}
-                            className={`overflow-visible ${
-                              compact ? "min-h-36" : "min-h-[18rem]"
-                            } ${!isToday && isCurrentWeek ? "bg-neutral-50" : ""}`}
-                            todayContainerClassName="border-indigo-400 bg-indigo-50 shadow-sm ring-2 ring-indigo-300"
-                            todayDayLabelClassName="font-bold text-indigo-700"
-                            currentMonthDayLabelClassName="font-normal text-slate-900"
-                            outOfMonthDayLabelClassName="font-normal text-slate-400"
+                            className={compact ? "" : "min-h-[18rem]"}
                             headerAction={
                               <button
                                 type="button"
-                                className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+                                className="rounded-md border border-white/30 bg-white/50 px-1.5 py-0.5 text-[11px] text-slate-600 backdrop-blur-sm hover:bg-white/70 transition-colors"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   setQuickCreateDateKey((previous) =>
@@ -1311,7 +1307,7 @@ export default function CalendarPage() {
                                 +
                               </button>
                             }
-                            bodyClassName="space-y-1.5"
+                            bodyClassName="space-y-1"
                           >
                           {quickCreateDateKey === key ? (
                             <div className="absolute right-2 top-8 z-20 w-40 rounded-md border border-slate-200 bg-white p-2 shadow-lg">

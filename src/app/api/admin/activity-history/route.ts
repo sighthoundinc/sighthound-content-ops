@@ -85,10 +85,10 @@ export async function DELETE(request: NextRequest) {
         .from(table)
         .select("*", { count: "exact", head: true });
       if (targetUserIds && targetUserIds.length > 0) {
-        const actorFilter = `user_id.in.(${targetUserIds.join(
-          ","
-        )}),created_by.in.(${targetUserIds.join(",")})`;
-        countQuery = countQuery.or(actorFilter);
+        // Chain filters for user_id and created_by separately using or()
+        countQuery = countQuery
+          .or(`user_id.in.(${targetUserIds.join(",")})`)
+          .or(`created_by.in.(${targetUserIds.join(",")})`);
       }
       const { count, error: countError } = await countQuery;
       if (countError) {
@@ -97,10 +97,10 @@ export async function DELETE(request: NextRequest) {
 
       let deleteQuery = adminClient.from(table).delete();
       if (targetUserIds && targetUserIds.length > 0) {
-        const actorFilter = `user_id.in.(${targetUserIds.join(
-          ","
-        )}),created_by.in.(${targetUserIds.join(",")})`;
-        deleteQuery = deleteQuery.or(actorFilter);
+        // Chain filters for user_id and created_by separately using or()
+        deleteQuery = deleteQuery
+          .or(`user_id.in.(${targetUserIds.join(",")})`)
+          .or(`created_by.in.(${targetUserIds.join(",")})`);
       }
       const { error: deleteError } = await deleteQuery;
       if (deleteError) {

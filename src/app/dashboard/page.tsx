@@ -1529,42 +1529,7 @@ export default function DashboardPage() {
     resetDashboardFilters();
     setSuccessMessage("All filters cleared.");
   }, [resetDashboardFilters]);
-  const copyQuickActionValue = useCallback(
-    async (value: string | null | undefined, label: "title" | "url") => {
-      const normalizedValue = value?.trim() ?? "";
-      if (normalizedValue.length === 0) {
-        setError(label === "url" ? "This blog does not have a URL yet." : "Nothing to copy.");
-        setSuccessMessage(null);
-        return;
-      }
 
-      try {
-        if (
-          typeof navigator !== "undefined" &&
-          navigator.clipboard &&
-          typeof navigator.clipboard.writeText === "function"
-        ) {
-          await navigator.clipboard.writeText(normalizedValue);
-        } else {
-          const textArea = document.createElement("textarea");
-          textArea.value = normalizedValue;
-          textArea.style.position = "fixed";
-          textArea.style.opacity = "0";
-          document.body.appendChild(textArea);
-          textArea.focus();
-          textArea.select();
-          document.execCommand("copy");
-          document.body.removeChild(textArea);
-        }
-        setError(null);
-        setSuccessMessage(label === "url" ? "Copied URL." : "Copied title.");
-      } catch {
-        setError("Could not copy to clipboard.");
-        setSuccessMessage(null);
-      }
-    },
-    []
-  );
   const activeFilterPills = useMemo(
     () =>
       [
@@ -3027,7 +2992,7 @@ export default function DashboardPage() {
                         return (
                           <tr
                             key={blog.id}
-                            className={`group table-row-focus cursor-pointer ${
+                            className={`table-row-focus cursor-pointer ${
                               activeBlogId === blog.id ? "bg-slate-100" : `${rowToneClass} hover:bg-slate-100`
                             }`}
                             onClick={() => {
@@ -3057,54 +3022,9 @@ export default function DashboardPage() {
                                     key={column}
                                     className={`${bodyCellClass} font-medium text-slate-900`}
                                   >
-                                    <div className="max-w-[28rem] space-y-1">
-                                      <span className="block overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                                        {blog.title}
-                                      </span>
-                                      <div className="hidden flex-wrap items-center gap-1 group-hover:inline-flex group-focus-within:inline-flex">
-                                        <button
-                                          type="button"
-                                          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            openPanel(blog.id);
-                                          }}
-                                        >
-                                          Open
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            void copyQuickActionValue(blog.title, "title");
-                                          }}
-                                        >
-                                          Copy Title
-                                        </button>
-                                        <button
-                                          type="button"
-                                          disabled={!blog.live_url}
-                                          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            void copyQuickActionValue(blog.live_url, "url");
-                                          }}
-                                        >
-                                          Copy URL
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            openPanel(blog.id);
-                                          }}
-                                        >
-                                          View History
-                                        </button>
-                                      </div>
-                                    </div>
+                                    <span className="block overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                      {blog.title}
+                                    </span>
                                   </td>
                                 );
                               }

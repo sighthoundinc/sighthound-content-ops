@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/button";
+import { useAuth } from "@/providers/auth-provider";
 
 const MAX_IMPORT_ROWS = 500;
 
@@ -258,22 +259,40 @@ export function BlogImportModal({
     failed: number;
   }) => Promise<void> | void;
 }) {
+  const { session } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [fileName, setFileName] = useState("");
   const [rows, setRows] = useState<ImportRow[]>([]);
+  const [selectedRowNumbers, setSelectedRowNumbers] = useState<number[]>([]);
   const [parseErrors, setParseErrors] = useState<ParseError[]>([]);
   const [result, setResult] = useState<ImportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const autoOpenedRef = useRef(false);
-
-  const previewRows = useMemo(() => rows.slice(0, 10), [rows]);
-  const hasClientValidationErrors = parseErrors.length > 0;
-  const validRowCount = useMemo(() => {
-    const rowNumbersWithErrors = new Set(parseErrors.map((entry) => entry.rowNumber));
-    return rows.filter((row) => !rowNumbersWithErrors.has(row.rowNumber)).length;
-  }, [parseErrors, rows]);
+  const previewRows = useMemo(() => rows, [rows]);
+  const rowErrorMap = useMemo(() => {
+    const map = new Map<number, string[]>();
+    for (const rowError of parseErrors) {
+      const existing = map.get(rowError.rowNumber) ?? [];
+      existing.push(rowError.message);
+      map.set(rowError.rowNumber, existing);
+    }
+    return map;
+  }, [parseErrors]);
+  const selectedRowSet = useMemo(() => new Set(selectedRowNumbers), [selectedRowNumbers]);
+  const selectedRows = useMemo(
+    () => rows.filter((row) => selectedRowSet.has(row.rowNumber)),
+    [rows, selectedRowSet]
+  );
+  const selectedRowsWithErrors = useMemo(
+    () => selectedRows.filter((row) => rowErrorMap.has(row.rowNumber)),
+    [rowErrorMap, selectedRows]
+  );
+  const selectedInvalidCount = selectedRowsWithErrors.length;
+  const selectedValidCount = selectedRows.length - selectedInvalidCount;
+  const hasSelectedValidationErrors = selectedInvalidCount > 0;
+  const allSelected = rows.length > 0 && selectedRowNumbers.length === rows.length;
 
   useEffect(() => {
     if (!autoOpen || autoOpenedRef.current) {
@@ -303,6 +322,7 @@ export function BlogImportModal({
     setIsImporting(false);
     setFileName("");
     setRows([]);
+    setSelectedRowNumbers([]);
     setParseErrors([]);
     setResult(null);
     setError(null);
@@ -334,6 +354,7 @@ export function BlogImportModal({
       const buffer = await file.arrayBuffer();
       const parsedRows = parseRowsFromBuffer(buffer);
       setRows(parsedRows);
+      setSelectedRowNumbers(parsedRows.map((row) => row.rowNumber));
       setParseErrors(validateRows(parsedRows));
     } catch (parseError) {
       setError(parseError instanceof Error ? parseError.message : "Failed to parse file");
@@ -343,7 +364,11 @@ export function BlogImportModal({
   };
 
   const onImport = async () => {
-    if (rows.length === 0 || isImporting || hasClientValidationErrors) {
+    if (selectedRows.length === 0 || isImporting || hasSelectedValidationErrors) {
+      return;
+    }
+    if (!session?.access_token) {
+      setError("Missing access token");
       return;
     }
     setError(null);
@@ -353,10 +378,11 @@ export function BlogImportModal({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           fileName,
-          rows,
+          rows: selectedRows,
         }),
       });
       const payload = (await response.json()) as ImportResponse & { error?: string };
@@ -374,6 +400,14 @@ export function BlogImportModal({
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const toggleRowSelection = (rowNumber: number) => {
+    setSelectedRowNumbers((previous) =>
+      previous.includes(rowNumber)
+        ? previous.filter((value) => value !== rowNumber)
+        : [...previous, rowNumber]
+    );
   };
 
   const downloadFailedRows = () => {
@@ -497,12 +531,56 @@ export function BlogImportModal({
               <div className="mt-4 space-y-4">
                 <div className="rounded-lg border border-slate-200 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Step 2 · Preview ({Math.min(rows.length, 10)} of {rows.length} rows)
+                    Step 2 · Preview ({rows.length} rows)
                   </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      onClick={() => {
+                        setSelectedRowNumbers(rows.map((row) => row.rowNumber));
+                      }}
+                      disabled={rows.length === 0 || allSelected}
+                    >
+                      Select all
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      onClick={() => {
+                        setSelectedRowNumbers([]);
+                      }}
+                      disabled={selectedRowNumbers.length === 0}
+                    >
+                      Unselect all
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      onClick={() => {
+                        setSelectedRowNumbers(
+                          rows
+                            .filter((row) => !rowErrorMap.has(row.rowNumber))
+                            .map((row) => row.rowNumber)
+                        );
+                      }}
+                      disabled={rows.length === 0}
+                    >
+                      Select valid rows
+                    </Button>
+                    <span className="text-slate-600">
+                      Selected: <span className="font-semibold text-slate-900">{selectedRows.length}</span>
+                    </span>
+                  </div>
                   <div className="mt-2 overflow-x-auto">
                     <table className="min-w-full text-left text-xs">
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-600">
+                          <th className="w-10 px-2 py-2">Pick</th>
+                          <th className="w-14 px-2 py-2">Row</th>
                           <th className="px-2 py-2">Site</th>
                           <th className="px-2 py-2">Blog Title</th>
                           <th className="px-2 py-2">Live URL</th>
@@ -514,7 +592,22 @@ export function BlogImportModal({
                       </thead>
                       <tbody>
                         {previewRows.map((row) => (
-                          <tr key={row.rowNumber} className="border-b border-slate-100 align-top">
+                          <tr
+                            key={row.rowNumber}
+                            className={`border-b border-slate-100 align-top ${
+                              rowErrorMap.has(row.rowNumber) ? "bg-rose-50/60" : ""
+                            }`}
+                          >
+                            <td className="px-2 py-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedRowSet.has(row.rowNumber)}
+                                onChange={() => {
+                                  toggleRowSelection(row.rowNumber);
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-slate-500">{row.rowNumber}</td>
                             <td className="max-w-[90px] overflow-hidden truncate px-2 py-2" title={row.site}>
                               {row.site}
                             </td>
@@ -560,6 +653,17 @@ export function BlogImportModal({
                       ))}
                     </ul>
                   )}
+                  <p className="mt-2 text-xs text-slate-600">
+                    Selected rows ready to import:{" "}
+                    <span className="font-semibold text-slate-900">{selectedValidCount}</span>
+                    {selectedInvalidCount > 0 ? (
+                      <>
+                        {" "}
+                        · Selected rows with errors:{" "}
+                        <span className="font-semibold text-rose-700">{selectedInvalidCount}</span>
+                      </>
+                    ) : null}
+                  </p>
                 </div>
               </div>
             ) : null}
@@ -598,13 +702,13 @@ export function BlogImportModal({
                 size="sm"
                 onClick={onImport}
                 disabled={
-                  rows.length === 0 ||
-                  validRowCount === 0 ||
-                  hasClientValidationErrors ||
+                  selectedRows.length === 0 ||
+                  selectedValidCount === 0 ||
+                  hasSelectedValidationErrors ||
                   isImporting
                 }
               >
-                {isImporting ? "Importing..." : `Import ${validRowCount} Blogs`}
+                {isImporting ? "Importing..." : `Import ${selectedValidCount} Blogs`}
               </Button>
             </div>
           </div>

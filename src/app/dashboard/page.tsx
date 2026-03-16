@@ -511,6 +511,7 @@ export default function DashboardPage() {
   >({});
   const columnEditorRef = useRef<HTMLDivElement | null>(null);
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
+  const hydratedStorageKeysRef = useRef<string | null>(null);
   const filterStateStorageKey = useMemo(
     () => buildUserScopedStorageKey(DASHBOARD_FILTER_STATE_STORAGE_KEY, profile?.id),
     [profile?.id]
@@ -763,6 +764,11 @@ export default function DashboardPage() {
     if (typeof window === "undefined") {
       return;
     }
+    const storageKeySignature = `${filterStateStorageKey}|${savedViewsStorageKey}|${activeSavedViewStorageKey}`;
+    if (hydratedStorageKeysRef.current === storageKeySignature) {
+      return;
+    }
+    hydratedStorageKeysRef.current = storageKeySignature;
 
     const savedFilterState = window.localStorage.getItem(filterStateStorageKey);
     if (savedFilterState) {
@@ -2932,6 +2938,7 @@ export default function DashboardPage() {
                     value={rowLimit}
                     onChange={(value) => {
                       setRowLimit(value);
+                      setActiveSavedViewId(null);
                     }}
                   />
                   <TablePaginationControls

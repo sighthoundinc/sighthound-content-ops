@@ -4,6 +4,12 @@ import * as XLSX from "xlsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/button";
+import {
+  TABLE_BASE_CLASS,
+  TABLE_BODY_CLASS,
+  TABLE_HEAD_CLASS,
+  TABLE_TEXT_TRUNCATE_CLASS,
+} from "@/lib/table";
 import { useAuth } from "@/providers/auth-provider";
 
 const MAX_IMPORT_ROWS = 500;
@@ -575,30 +581,30 @@ export function BlogImportModal({
                       Selected: <span className="font-semibold text-slate-900">{selectedRows.length}</span>
                     </span>
                   </div>
-                  <div className="mt-2 overflow-x-auto">
-                    <table className="min-w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-600">
-                          <th className="w-10 px-2 py-2">Pick</th>
-                          <th className="w-14 px-2 py-2">Row</th>
-                          <th className="px-2 py-2">Site</th>
-                          <th className="px-2 py-2">Blog Title</th>
-                          <th className="px-2 py-2">Live URL</th>
-                          <th className="px-2 py-2">Writer</th>
-                          <th className="px-2 py-2">Publisher</th>
-                          <th className="px-2 py-2">Display Publish Date</th>
-                          <th className="px-2 py-2">Actual Publish Date</th>
+                  <div className="mt-2 overflow-auto rounded-md border border-slate-200">
+                    <table className={`${TABLE_BASE_CLASS} text-left text-xs`}>
+                      <thead className={`${TABLE_HEAD_CLASS} text-[11px]`}>
+                        <tr>
+                          <th className="h-10 w-10 px-2 py-2 font-medium whitespace-nowrap">Pick</th>
+                          <th className="h-10 w-14 px-2 py-2 font-medium whitespace-nowrap">Row</th>
+                          <th className="h-10 px-2 py-2 font-medium whitespace-nowrap">Site</th>
+                          <th className="h-10 px-2 py-2 font-medium whitespace-nowrap">Blog Title</th>
+                          <th className="h-10 px-2 py-2 font-medium whitespace-nowrap">Live URL</th>
+                          <th className="h-10 px-2 py-2 font-medium whitespace-nowrap">Writer</th>
+                          <th className="h-10 px-2 py-2 font-medium whitespace-nowrap">Publisher</th>
+                          <th className="h-10 px-2 py-2 font-medium whitespace-nowrap">Display Publish Date</th>
+                          <th className="h-10 px-2 py-2 font-medium whitespace-nowrap">Actual Publish Date</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className={TABLE_BODY_CLASS}>
                         {previewRows.map((row) => (
                           <tr
                             key={row.rowNumber}
-                            className={`border-b border-slate-100 align-top ${
+                            className={`${
                               rowErrorMap.has(row.rowNumber) ? "bg-rose-50/60" : ""
                             }`}
                           >
-                            <td className="px-2 py-2">
+                            <td className="h-10 px-2 py-2 align-middle">
                               <input
                                 type="checkbox"
                                 checked={selectedRowSet.has(row.rowNumber)}
@@ -607,30 +613,36 @@ export function BlogImportModal({
                                 }}
                               />
                             </td>
-                            <td className="px-2 py-2 text-slate-500">{row.rowNumber}</td>
-                            <td className="max-w-[90px] overflow-hidden truncate px-2 py-2" title={row.site}>
-                              {row.site}
+                            <td className="h-10 px-2 py-2 align-middle text-slate-500">
+                              {row.rowNumber}
                             </td>
-                            <td className="max-w-[240px] overflow-hidden truncate px-2 py-2" title={row.title}>
-                              {row.title}
+                            <td className="h-10 max-w-[90px] px-2 py-2 align-middle overflow-hidden">
+                              <span className={TABLE_TEXT_TRUNCATE_CLASS} title={row.site}>
+                                {row.site}
+                              </span>
                             </td>
-                            <td
-                              className="max-w-[260px] overflow-hidden truncate px-2 py-2"
-                              title={row.liveUrl}
-                            >
-                              {row.liveUrl}
+                            <td className="h-10 max-w-[240px] px-2 py-2 align-middle overflow-hidden">
+                              <span className={TABLE_TEXT_TRUNCATE_CLASS} title={row.title}>
+                                {row.title}
+                              </span>
                             </td>
-                            <td className="max-w-[140px] overflow-hidden truncate px-2 py-2" title={row.writer}>
-                              {row.writer}
+                            <td className="h-10 max-w-[260px] px-2 py-2 align-middle overflow-hidden">
+                              <span className={TABLE_TEXT_TRUNCATE_CLASS} title={row.liveUrl}>
+                                {row.liveUrl}
+                              </span>
                             </td>
-                            <td
-                              className="max-w-[140px] overflow-hidden truncate px-2 py-2"
-                              title={row.publisher}
-                            >
-                              {row.publisher}
+                            <td className="h-10 max-w-[140px] px-2 py-2 align-middle overflow-hidden">
+                              <span className={TABLE_TEXT_TRUNCATE_CLASS} title={row.writer}>
+                                {row.writer}
+                              </span>
                             </td>
-                            <td className="px-2 py-2">{row.displayPublishDate}</td>
-                            <td className="px-2 py-2">{row.actualPublishDate}</td>
+                            <td className="h-10 max-w-[140px] px-2 py-2 align-middle overflow-hidden">
+                              <span className={TABLE_TEXT_TRUNCATE_CLASS} title={row.publisher}>
+                                {row.publisher}
+                              </span>
+                            </td>
+                            <td className="h-10 px-2 py-2 align-middle">{row.displayPublishDate}</td>
+                            <td className="h-10 px-2 py-2 align-middle">{row.actualPublishDate}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -693,23 +705,43 @@ export function BlogImportModal({
             ) : null}
 
             <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-              <Button type="button" variant="secondary" size="sm" onClick={closeModal}>
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                onClick={onImport}
-                disabled={
-                  selectedRows.length === 0 ||
-                  selectedValidCount === 0 ||
-                  hasSelectedValidationErrors ||
-                  isImporting
-                }
-              >
-                {isImporting ? "Importing..." : `Import ${selectedValidCount} Blogs`}
-              </Button>
+              {result ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      resetState();
+                    }}
+                  >
+                    Import another file
+                  </Button>
+                  <Button type="button" variant="primary" size="sm" onClick={closeModal}>
+                    Close & go to all blogs
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button type="button" variant="secondary" size="sm" onClick={closeModal}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={onImport}
+                    disabled={
+                      selectedRows.length === 0 ||
+                      selectedValidCount === 0 ||
+                      hasSelectedValidationErrors ||
+                      isImporting
+                    }
+                  >
+                    {isImporting ? "Importing..." : `Import ${selectedValidCount} Blogs`}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

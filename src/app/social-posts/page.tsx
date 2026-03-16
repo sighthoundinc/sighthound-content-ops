@@ -1098,6 +1098,7 @@ function SocialPostsPageContent() {
       id: "title",
       label: "Title",
       sortable: true,
+      className: "max-w-[22rem]",
       render: (post) => post.title,
     },
     {
@@ -1111,12 +1112,14 @@ function SocialPostsPageContent() {
       id: "product",
       label: "Product",
       sortable: true,
+      className: "max-w-[10rem]",
       render: (post) => SOCIAL_POST_PRODUCT_LABELS[post.product],
     },
     {
       id: "type",
       label: "Type",
       sortable: true,
+      className: "max-w-[10rem]",
       render: (post) => SOCIAL_POST_TYPE_LABELS[post.type],
     },
     {
@@ -1129,6 +1132,7 @@ function SocialPostsPageContent() {
       id: "platforms",
       label: "Platforms",
       sortable: false,
+      className: "max-w-[16rem]",
       render: (post) =>
         post.platforms.length > 0
           ? post.platforms.map((p) => SOCIAL_PLATFORM_LABELS[p]).join(", ")
@@ -1138,6 +1142,7 @@ function SocialPostsPageContent() {
       id: "blog",
       label: "Associated Blog",
       sortable: false,
+      className: "max-w-[18rem]",
       render: (post) => post.associated_blog?.title ?? "—",
     },
     {

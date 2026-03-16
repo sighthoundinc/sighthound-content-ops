@@ -11,6 +11,9 @@ const createUserSchema = z.object({
   role: z.enum(["admin", "writer", "publisher", "editor"]),
   userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor"])).optional(),
 });
+const deleteUsersSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1),
+});
 
 
 export async function POST(request: NextRequest) {
@@ -83,6 +86,82 @@ export async function POST(request: NextRequest) {
       id: createdUserData.user.id,
       email,
       role,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await requirePermission(request, "delete_user");
+    if ("error" in auth) {
+      return NextResponse.json(
+        { error: auth.error },
+        { status: auth.status }
+      );
+    }
+
+    const body = await request.json();
+    const parsed = deleteUsersSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    const normalizedUserIds = Array.from(new Set(parsed.data.userIds));
+    if (normalizedUserIds.includes(auth.context.userId)) {
+      return NextResponse.json(
+        { error: "You cannot delete your own account." },
+        { status: 400 }
+      );
+    }
+
+    const adminClient = auth.context.adminClient;
+    const deletedUserIds: string[] = [];
+    const failed: Array<{ userId: string; error: string }> = [];
+
+    for (const userId of normalizedUserIds) {
+      const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
+      if (deleteAuthError) {
+        failed.push({ userId, error: deleteAuthError.message });
+        continue;
+      }
+
+      const { error: deactivateProfileError } = await adminClient
+        .from("profiles")
+        .update({ is_active: false })
+        .eq("id", userId);
+
+      if (deactivateProfileError) {
+        failed.push({ userId, error: deactivateProfileError.message });
+        continue;
+      }
+
+      deletedUserIds.push(userId);
+    }
+
+    if (deletedUserIds.length === 0) {
+      return NextResponse.json(
+        {
+          error: failed[0]?.error ?? "Failed to delete users.",
+          deletedUserIds,
+          failed,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      deletedUserIds,
+      deletedCount: deletedUserIds.length,
+      failed,
     });
   } catch (error) {
     console.error(error);

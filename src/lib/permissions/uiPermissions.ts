@@ -246,6 +246,12 @@ export function canManageUsers(hasPermission: PermissionLookup) {
     capabilityName: "canManageUsers",
   });
 }
+export function canDeleteUsers(hasPermission: PermissionLookup) {
+  return hasCapabilityByPermission(hasPermission, {
+    requiredPermission: "delete_user",
+    capabilityName: "canDeleteUsers",
+  });
+}
 
 export function canManageRoles(hasPermission: PermissionLookup) {
   return hasCapabilityByPermission(hasPermission, {
@@ -321,6 +327,7 @@ export function createUiPermissionContract(hasPermission: PermissionLookup) {
     canExportSelectedCsv: canExportSelectedCsv(hasPermission),
     canCalendarDragReschedule: canCalendarDragReschedule(hasPermission),
     canManageUsers: canManageUsers(hasPermission),
+    canDeleteUsers: canDeleteUsers(hasPermission),
     canManageRoles: canManageRoles(hasPermission),
     canManagePermissions: canManagePermissions(hasPermission),
     canEditAppSettings: canEditAppSettings(hasPermission),

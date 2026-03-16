@@ -15,6 +15,15 @@ import type {
   WriterStageStatus,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  getTableBodyCellClass,
+  TABLE_BASE_CLASS,
+  TABLE_BODY_CLASS,
+  TABLE_CONTAINER_CLASS,
+  TABLE_HEAD_CLASS,
+  TABLE_HEADER_CELL_CLASS,
+  TABLE_STICKY_HEADER_CELL_CLASS,
+} from "@/lib/table";
 
 export type DashboardTableColumnKey =
   | "title"
@@ -60,31 +69,31 @@ export interface DashboardTableProps {
   onPublisherStatusChange: (blog: BlogRecord, status: PublisherStageStatus) => void;
 }
 
-const headerCellClass =
-  "px-6 py-3 font-medium text-slate-900 whitespace-nowrap relative";
-const bodyCellClassCompact = "px-6 py-2 h-11 align-middle text-slate-900";
-const bodyCellClassComfortable = "px-6 py-3 h-12 align-middle text-slate-900";
 
 const WRITER_STATUSES: WriterStageStatus[] = [
   "not_started",
   "in_progress",
+  "pending_review",
   "needs_revision",
   "completed",
 ];
 const PUBLISHER_STATUSES: PublisherStageStatus[] = [
   "not_started",
   "in_progress",
+  "pending_review",
   "completed",
 ];
 const WRITER_STAGE_DISPLAY_LABELS: Record<WriterStageStatus, string> = {
   not_started: "Draft",
-  in_progress: "Writing",
+  in_progress: "Writing in Progress",
+  pending_review: "Waiting for Approval",
   needs_revision: "Needs Revision",
-  completed: "Ready for Publishing",
+  completed: "Writing Approved",
 };
 const PUBLISHER_STAGE_DISPLAY_LABELS: Record<PublisherStageStatus, string> = {
-  not_started: "Scheduled",
-  in_progress: "Publishing",
+  not_started: "Not Started",
+  in_progress: "Publishing in Progress",
+  pending_review: "Waiting for Approval",
   completed: "Published",
 };
 
@@ -108,8 +117,7 @@ export function DashboardTable({
   onWriterStatusChange,
   onPublisherStatusChange,
 }: DashboardTableProps) {
-  const bodyCellClass =
-    rowDensity === "compact" ? bodyCellClassCompact : bodyCellClassComfortable;
+  const bodyCellClass = getTableBodyCellClass(rowDensity);
 
   const allSelected = blogs.length > 0 && selectedIds.size === blogs.length;
   const someSelected = selectedIds.size > 0 && !allSelected;
@@ -127,15 +135,15 @@ export function DashboardTable({
   const now = new Date();
 
   return (
-    <div className="overflow-auto rounded-lg border border-slate-200">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+    <div className={TABLE_CONTAINER_CLASS}>
+      <table className={TABLE_BASE_CLASS}>
+        <thead className={TABLE_HEAD_CLASS}>
           <tr>
             {canSelectRows && (
               <th
                 className={cn(
-                  headerCellClass,
-                  "sticky top-0 z-10 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]"
+                  TABLE_HEADER_CELL_CLASS,
+                  TABLE_STICKY_HEADER_CELL_CLASS
                 )}
               >
                 <input
@@ -157,8 +165,8 @@ export function DashboardTable({
               <th
                 key={column}
                 className={cn(
-                  headerCellClass,
-                  "sticky top-0 z-10 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                  TABLE_HEADER_CELL_CLASS,
+                  TABLE_STICKY_HEADER_CELL_CLASS,
                   CENTER_ALIGNED_COLUMNS.includes(column) ? "text-center" : ""
                 )}
               >
@@ -167,7 +175,7 @@ export function DashboardTable({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className={TABLE_BODY_CLASS}>
           {blogs.length === 0 ? (
             <tr>
               <td

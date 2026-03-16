@@ -1,5 +1,15 @@
 import { cn } from "@/lib/utils";
-import type { SortDirection } from "@/lib/table";
+import {
+  getTableBodyCellClass,
+  TABLE_BASE_CLASS,
+  TABLE_BODY_CLASS,
+  TABLE_CONTAINER_CLASS,
+  TABLE_HEAD_CLASS,
+  TABLE_HEADER_CELL_CLASS,
+  TABLE_STICKY_HEADER_CELL_CLASS,
+  TABLE_TEXT_TRUNCATE_CLASS,
+  type SortDirection,
+} from "@/lib/table";
 
 export interface DataTableColumn<TData> {
   /** Unique identifier for the column */
@@ -12,6 +22,8 @@ export interface DataTableColumn<TData> {
   align?: "left" | "center" | "right";
   /** Custom renderer for cell content */
   render: (item: TData, index: number) => React.ReactNode;
+  /** Auto-truncate plain text cells and apply native tooltip */
+  autoTruncate?: boolean;
   /** Minimum width for the column */
   minWidth?: string;
   /** Whether the column is visible */
@@ -51,10 +63,6 @@ export interface DataTableProps<TData> {
   rowClassName?: (item: TData, index: number, isActive: boolean, isSelected: boolean) => string;
 }
 
-const headerCellClass =
-  "px-6 py-3 font-medium text-slate-900 whitespace-nowrap relative";
-const bodyCellClass = (density: "compact" | "comfortable") =>
-  density === "compact" ? "px-6 py-2 text-slate-900 h-10 align-middle" : "px-6 py-3 text-slate-900 h-12 align-middle";
 
 /**
  * Unified DataTable component for consistent table display and interactions across the application.
@@ -87,6 +95,7 @@ export function DataTable<TData>({
   className,
   rowClassName,
 }: DataTableProps<TData>) {
+  const bodyCellClass = getTableBodyCellClass(density);
   const visibleColumns = columns.filter((col) => col.visible !== false);
   const allVisibleSelected =
     visibleColumns.length > 0 &&
@@ -132,18 +141,19 @@ export function DataTable<TData>({
   return (
     <div
       className={cn(
-        "overflow-auto rounded-lg border border-slate-200",
+        TABLE_CONTAINER_CLASS,
         className
       )}
     >
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+      <table className={TABLE_BASE_CLASS}>
+        <thead className={TABLE_HEAD_CLASS}>
           <tr>
             {showSelection && (
               <th
                 className={cn(
-                  headerCellClass,
-                  "sticky top-0 z-10 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)] w-12"
+                  TABLE_HEADER_CELL_CLASS,
+                  TABLE_STICKY_HEADER_CELL_CLASS,
+                  "w-12"
                 )}
               >
                 <input
@@ -163,8 +173,8 @@ export function DataTable<TData>({
               <th
                 key={column.id}
                 className={cn(
-                  headerCellClass,
-                  "sticky top-0 z-10 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                  TABLE_HEADER_CELL_CLASS,
+                  TABLE_STICKY_HEADER_CELL_CLASS,
                   column.align === "center" ? "text-center" : "",
                   column.align === "right" ? "text-right" : "",
                   column.minWidth
@@ -191,12 +201,12 @@ export function DataTable<TData>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className={TABLE_BODY_CLASS}>
           {data.length === 0 ? (
             <tr>
               <td
                 className={cn(
-                  bodyCellClass(density),
+                  bodyCellClass,
                   "text-center text-slate-500"
                 )}
                 colSpan={visibleColumns.length + (showSelection ? 1 : 0)}
@@ -227,7 +237,7 @@ export function DataTable<TData>({
                 >
                   {showSelection && (
                     <td
-                      className={cn(bodyCellClass(density), "w-12")}
+                      className={cn(bodyCellClass, "w-12")}
                       onClick={(event) => event.stopPropagation()}
                     >
                       <input
@@ -240,20 +250,39 @@ export function DataTable<TData>({
                       />
                     </td>
                   )}
-                  {visibleColumns.map((column) => (
-                    <td
-                      key={column.id}
-                      className={cn(
-                        bodyCellClass(density),
-                        column.align === "center" ? "text-center" : "",
-                        column.align === "right" ? "text-right" : "",
-                        column.className,
-                        "overflow-hidden"
-                      )}
-                    >
-                      {column.render(item, index)}
-                    </td>
-                  ))}
+                  {visibleColumns.map((column) => {
+                    const renderedCell = column.render(item, index);
+                    const shouldAutoTruncate =
+                      column.autoTruncate !== false &&
+                      (typeof renderedCell === "string" ||
+                        typeof renderedCell === "number");
+                    const textValue = shouldAutoTruncate
+                      ? String(renderedCell)
+                      : null;
+
+                    return (
+                      <td
+                        key={column.id}
+                        className={cn(
+                          bodyCellClass,
+                          column.align === "center" ? "text-center" : "",
+                          column.align === "right" ? "text-right" : "",
+                          column.className
+                        )}
+                      >
+                        {textValue !== null ? (
+                          <span
+                            className={TABLE_TEXT_TRUNCATE_CLASS}
+                            title={textValue}
+                          >
+                            {textValue}
+                          </span>
+                        ) : (
+                          renderedCell
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })

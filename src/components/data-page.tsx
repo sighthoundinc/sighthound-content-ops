@@ -2,6 +2,12 @@
 
 import type { ReactNode } from "react";
 import { Button } from "@/components/button";
+import {
+  TABLE_BASE_CLASS,
+  TABLE_BODY_CLASS,
+  TABLE_CONTAINER_CLASS,
+  TABLE_STICKY_HEAD_CLASS,
+} from "@/lib/table";
 
 import { cn } from "@/lib/utils";
 
@@ -127,16 +133,16 @@ export function DataPageTableShell({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-auto rounded-lg border border-slate-200">
-      <table className={cn("min-w-full divide-y divide-slate-200 text-sm", tableClassName)}>
-        <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+    <div className={TABLE_CONTAINER_CLASS}>
+      <table className={cn(TABLE_BASE_CLASS, tableClassName)}>
+        <thead className={TABLE_STICKY_HEAD_CLASS}>
           {header}
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className={TABLE_BODY_CLASS}>
           {isLoading
             ? Array.from({ length: loadingRows }).map((_, rowIndex) => (
                 <tr key={`table-skeleton-row-${rowIndex}`}>
-                  <td className="px-3 py-3" colSpan={columnCount}>
+                  <td className="h-12 px-3 py-2 align-middle" colSpan={columnCount}>
                     <div className="skeleton h-4 w-full" />
                   </td>
                 </tr>

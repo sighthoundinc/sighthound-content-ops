@@ -55,6 +55,7 @@ export type CanonicalAppPermissionKey =
   | "view_unscheduled_blogs"
   | "reschedule_via_calendar"
   | "manage_users"
+  | "delete_user"
   | "edit_user_profile"
   | "assign_roles"
   | "manage_permissions"
@@ -87,12 +88,14 @@ export type BlogSite = "sighthound.com" | "redactor.com";
 export type WriterStageStatus =
   | "not_started"
   | "in_progress"
+  | "pending_review"
   | "needs_revision"
   | "completed";
 
 export type PublisherStageStatus =
   | "not_started"
   | "in_progress"
+  | "pending_review"
   | "completed";
 
 export type OverallBlogStatus =
@@ -144,6 +147,12 @@ export interface BlogRecord {
   published_at: string | null;
   target_publish_date: string | null;
   status_updated_at: string;
+  writer_submitted_at: string | null;
+  writer_reviewed_by: string | null;
+  writer_reviewed_at: string | null;
+  publisher_submitted_at: string | null;
+  publisher_reviewed_by: string | null;
+  publisher_reviewed_at: string | null;
   is_archived: boolean;
   created_by: string;
   created_at: string;

@@ -497,6 +497,13 @@ const USER_MANAGEMENT_PERMISSIONS: PermissionDefinition[] = [
     configurable: false,
   },
   {
+    key: "delete_user",
+    label: "Delete User",
+    description: "Permanently delete user accounts.",
+    group: "user_management",
+    configurable: false,
+  },
+  {
     key: "edit_user_profile",
     label: "Edit User Profile",
     description: "Modify user profile information.",
@@ -650,6 +657,7 @@ export const CONFIGURABLE_PERMISSION_KEYS: CanonicalAppPermissionKey[] =
 
 export const LOCKED_ADMIN_PERMISSION_KEYS: CanonicalAppPermissionKey[] = [
   "manage_users",
+  "delete_user",
   "assign_roles",
   "manage_permissions",
   "delete_blog",

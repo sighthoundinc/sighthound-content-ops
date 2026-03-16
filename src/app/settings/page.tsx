@@ -23,6 +23,10 @@ import { getUserRoles } from "@/lib/roles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
+  TABLE_BASE_CLASS,
+  TABLE_BODY_CLASS,
+  TABLE_HEAD_CLASS,
+  TABLE_TEXT_TRUNCATE_CLASS,
   getTablePageCount,
   getTablePageRows,
   type SortDirection,
@@ -94,12 +98,13 @@ export default function SettingsPage() {
   );
   const canEditAppSettings = permissionContract.canEditAppSettings;
   const canManageUsers = permissionContract.canManageUsers;
+  const canDeleteUsers = permissionContract.canDeleteUsers;
   const canManageRoles = permissionContract.canManageRoles;
   const canManagePermissions = permissionContract.canManagePermissions;
   const canReassignWriterAssignments = permissionContract.canReassignWriterAssignments;
   const canReassignPublisherAssignments =
     permissionContract.canReassignPublisherAssignments;
-  const canManageUserDirectory = canManageUsers || canManageRoles;
+  const canManageUserDirectory = canManageUsers || canManageRoles || canDeleteUsers;
   const canReassignAssignments =
     canReassignWriterAssignments || canReassignPublisherAssignments;
   const [settings, setSettings] = useState<AppSettingsRecord | null>(null);
@@ -133,6 +138,9 @@ export default function SettingsPage() {
     useState(false);
   const [isDeleteHistoryModalOpen, setIsDeleteHistoryModalOpen] = useState(false);
   const [isDeletingActivityHistory, setIsDeletingActivityHistory] = useState(false);
+  const [deleteTargetUserIds, setDeleteTargetUserIds] = useState<string[]>([]);
+  const [isDeleteUsersModalOpen, setIsDeleteUsersModalOpen] = useState(false);
+  const [isDeletingUsers, setIsDeletingUsers] = useState(false);
   const [quickViewTargetUserId, setQuickViewTargetUserId] = useState("");
   const [isSwitchingQuickViewUser, setIsSwitchingQuickViewUser] = useState(false);
   const [isRestoringAdminFromQuickView, setIsRestoringAdminFromQuickView] =
@@ -441,6 +449,53 @@ export default function SettingsPage() {
     setNewRole("writer");
     await loadUsers();
   };
+  const deleteUsers = async () => {
+    if (!session?.access_token || !canDeleteUsers) {
+      setError("User delete permission is required.");
+      return;
+    }
+    if (deleteTargetUserIds.length === 0) {
+      setError("Select at least one user to delete.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsDeletingUsers(true);
+
+    const response = await fetch("/api/admin/users", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        userIds: deleteTargetUserIds,
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      deletedCount?: number;
+      failed?: Array<{ userId: string; error: string }>;
+    };
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to delete users.");
+      setIsDeletingUsers(false);
+      return;
+    }
+
+    const failedCount = payload.failed?.length ?? 0;
+    setSuccess(
+      `Deleted ${payload.deletedCount ?? 0} user(s)${
+        failedCount > 0 ? `, failed ${failedCount}` : ""
+      }.`
+    );
+    setDeleteTargetUserIds([]);
+    setIsDeleteUsersModalOpen(false);
+    setIsDeletingUsers(false);
+    await loadUsers();
+  };
 
   const reassignEverythingFromUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -647,12 +702,24 @@ export default function SettingsPage() {
       })),
     [users]
   );
+  const roleOptions = useMemo(
+    () =>
+      ALL_ROLES.map((role) => ({
+        value: role,
+        label: role,
+      })),
+    []
+  );
   const quickViewTargetUsers = useMemo(
     () =>
       users.filter(
         (nextUser) => nextUser.is_active && !getUserRoles(nextUser).includes("admin")
       ),
     [users]
+  );
+  const deleteTargetUsers = useMemo(
+    () => users.filter((nextUser) => deleteTargetUserIds.includes(nextUser.id)),
+    [deleteTargetUserIds, users]
   );
   const isTargetedCleanupWithoutUsers =
     activityHistoryDeleteScope === "users" &&
@@ -1269,23 +1336,26 @@ export default function SettingsPage() {
                         onPageChange={setCurrentPage}
                       />
                     </div>
-                    <div className="mt-3 overflow-x-auto rounded-md border border-slate-200">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+                    <div className="mt-3 overflow-auto rounded-lg border border-slate-200">
+                      <table className={TABLE_BASE_CLASS}>
+                        <thead className={TABLE_HEAD_CLASS}>
                           <tr>
-                            <th className="px-3 py-2">Email</th>
-                            <th className="px-3 py-2">Active</th>
-                            <th className="px-3 py-2">First Name</th>
-                            <th className="px-3 py-2">Last Name</th>
-                            <th className="px-3 py-2">Display Name</th>
-                            <th className="px-3 py-2">Roles</th>
-                            <th className="px-3 py-2">Actions</th>
+                            <th className="px-3 py-2 font-medium whitespace-nowrap">Email</th>
+                            <th className="px-3 py-2 font-medium whitespace-nowrap">Active</th>
+                            <th className="px-3 py-2 font-medium whitespace-nowrap">First Name</th>
+                            <th className="px-3 py-2 font-medium whitespace-nowrap">Last Name</th>
+                            <th className="px-3 py-2 font-medium whitespace-nowrap">Display Name</th>
+                            <th className="px-3 py-2 font-medium whitespace-nowrap">Roles</th>
+                            <th className="px-3 py-2 font-medium whitespace-nowrap">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className={TABLE_BODY_CLASS}>
                           {sortedUsers.length === 0 ? (
                             <tr>
-                              <td className="px-3 py-2 h-12 align-middle text-center text-slate-500" colSpan={7}>
+                              <td
+                                className="h-12 px-3 py-2 align-middle text-center text-slate-500"
+                                colSpan={7}
+                              >
                                 No users found with current filters.
                               </td>
                             </tr>
@@ -1297,12 +1367,15 @@ export default function SettingsPage() {
                               }
                               return (
                                 <tr key={nextUser.id}>
-                                  <td className="px-3 py-2 h-12 align-middle text-slate-600 overflow-hidden">
-                                    <span className="block truncate" title={nextUser.email}>
+                                  <td className="h-12 max-w-[16rem] px-3 py-2 align-middle text-slate-600 overflow-hidden">
+                                    <span
+                                      className={TABLE_TEXT_TRUNCATE_CLASS}
+                                      title={nextUser.email}
+                                    >
                                       {nextUser.email}
                                     </span>
                                   </td>
-                                  <td className="px-3 py-2 h-12 align-middle">
+                                  <td className="h-12 px-3 py-2 align-middle">
                                     <label className="inline-flex items-center gap-2 text-xs text-slate-700">
                                       <input
                                         type="checkbox"
@@ -1321,7 +1394,7 @@ export default function SettingsPage() {
                                       <span>{editable.isActive ? "Active" : "Inactive"}</span>
                                     </label>
                                   </td>
-                                  <td className="px-3 py-2 h-12 align-middle">
+                                  <td className="h-12 px-3 py-2 align-middle">
                                     <input
                                       value={editable.firstName}
                                       onChange={(event) => {
@@ -1333,10 +1406,10 @@ export default function SettingsPage() {
                                           },
                                         }));
                                       }}
-                                      className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                      className="focus-field w-full rounded border border-slate-300 px-2 py-1 text-sm"
                                     />
                                   </td>
-                                  <td className="px-3 py-2 h-12 align-middle">
+                                  <td className="h-12 px-3 py-2 align-middle">
                                     <input
                                       value={editable.lastName}
                                       onChange={(event) => {
@@ -1348,10 +1421,10 @@ export default function SettingsPage() {
                                           },
                                         }));
                                       }}
-                                      className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                      className="focus-field w-full rounded border border-slate-300 px-2 py-1 text-sm"
                                     />
                                   </td>
-                                  <td className="px-3 py-2 h-12 align-middle">
+                                  <td className="h-12 px-3 py-2 align-middle">
                                     <input
                                       value={editable.displayName}
                                       onChange={(event) => {
@@ -1363,58 +1436,72 @@ export default function SettingsPage() {
                                           },
                                         }));
                                       }}
-                                      className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                      className="focus-field w-full rounded border border-slate-300 px-2 py-1 text-sm"
                                     />
                                   </td>
-                                  <td className="px-3 py-2 h-12 align-middle overflow-hidden">
-                                    <div className="flex flex-wrap gap-2">
-                                      {ALL_ROLES.map((role) => {
-                                        const isChecked = editable.userRoles.includes(role);
-                                        return (
-                                          <label
-                                            key={role}
-                                            className="inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-700"
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              disabled={!canManageRoles}
-                                              checked={isChecked}
-                                              onChange={() => {
-                                                setEditableUsers((previous) => {
-                                                  const current = previous[nextUser.id];
-                                                  if (!current) {
-                                                    return previous;
-                                                  }
-                                                  const nextRoles = isChecked
-                                                    ? current.userRoles.filter((value) => value !== role)
-                                                    : [...current.userRoles, role];
-                                                  return {
-                                                    ...previous,
-                                                    [nextUser.id]: {
-                                                      ...current,
-                                                      userRoles:
-                                                        nextRoles.length > 0 ? nextRoles : current.userRoles,
-                                                    },
-                                                  };
-                                                });
-                                              }}
-                                            />
-                                            <span>{role}</span>
-                                          </label>
-                                        );
-                                      })}
-                                    </div>
+                                  <td className="h-12 max-w-[22rem] px-3 py-2 align-middle overflow-hidden">
+                                    {canManageRoles ? (
+                                      <div className="w-full max-w-[220px] overflow-hidden">
+                                        <CheckboxMultiSelect
+                                          label="Roles"
+                                          options={roleOptions}
+                                          selectedValues={editable.userRoles}
+                                          onChange={(nextValues) => {
+                                            const normalizedRoles = Array.from(
+                                              new Set(
+                                                nextValues.filter((value): value is AppRole =>
+                                                  ALL_ROLES.includes(value as AppRole)
+                                                )
+                                              )
+                                            );
+                                            if (normalizedRoles.length === 0) {
+                                              setError("A user must have at least one role.");
+                                              return;
+                                            }
+                                            setEditableUsers((previous) => ({
+                                              ...previous,
+                                              [nextUser.id]: {
+                                                ...editable,
+                                                userRoles: normalizedRoles,
+                                              },
+                                            }));
+                                          }}
+                                        />
+                                      </div>
+                                    ) : (
+                                      <span
+                                        className={`${TABLE_TEXT_TRUNCATE_CLASS} text-xs text-slate-700`}
+                                        title={editable.userRoles.join(", ")}
+                                      >
+                                        {editable.userRoles.join(", ")}
+                                      </span>
+                                    )}
                                   </td>
-                                  <td className="px-3 py-2 h-12 align-middle">
-                                    <button
-                                      type="button"
-                                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                                      onClick={() => {
-                                        void saveProfileEdits(nextUser.id);
-                                      }}
-                                    >
-                                      Save User
-                                    </button>
+                                  <td className="h-12 px-3 py-2 align-middle">
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                        onClick={() => {
+                                          void saveProfileEdits(nextUser.id);
+                                        }}
+                                      >
+                                        Save User
+                                      </button>
+                                      {canDeleteUsers ? (
+                                        <button
+                                          type="button"
+                                          disabled={isDeletingUsers || nextUser.id === profile?.id}
+                                          className="rounded-md border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                          onClick={() => {
+                                            setDeleteTargetUserIds([nextUser.id]);
+                                            setIsDeleteUsersModalOpen(true);
+                                          }}
+                                        >
+                                          Delete
+                                        </button>
+                                      ) : null}
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -1455,6 +1542,28 @@ export default function SettingsPage() {
                 }}
                 onConfirm={() => {
                   void deleteActivityHistory();
+                }}
+              />
+              <ConfirmationModal
+                isOpen={isDeleteUsersModalOpen}
+                title="Delete selected user(s)?"
+                description={
+                  deleteTargetUsers.length > 0
+                    ? `This permanently deletes ${deleteTargetUsers
+                        .map((nextUser) => nextUser.full_name)
+                        .join(", ")}. This action cannot be undone.`
+                    : "This permanently deletes selected users. This action cannot be undone."
+                }
+                confirmLabel="Delete user(s)"
+                tone="danger"
+                isConfirming={isDeletingUsers}
+                onCancel={() => {
+                  if (!isDeletingUsers) {
+                    setIsDeleteUsersModalOpen(false);
+                  }
+                }}
+                onConfirm={() => {
+                  void deleteUsers();
                 }}
               />
             </>

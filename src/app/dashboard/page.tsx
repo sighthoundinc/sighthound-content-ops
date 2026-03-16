@@ -1488,7 +1488,7 @@ export default function DashboardPage() {
     [applyFilterState]
   );
   // applySavedView will be needed in Phase 4B for command palette - keeping for now
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const applySavedView = _applySavedView;
 
   const resetDashboardFilters = useCallback(() => {
@@ -2275,7 +2275,7 @@ export default function DashboardPage() {
     [savedViews]
   );
   // sortedSavedViews will be needed in Phase 4B for command palette - keeping for now
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const sortedSavedViews = _sortedSavedViews;
 
 
@@ -2333,6 +2333,37 @@ export default function DashboardPage() {
                   >
                     Edit columns
                   </button>
+                </div>
+              </details>
+              <details className="relative">
+                <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                  Saved Views {sortedSavedViews.length > 0 ? `(${sortedSavedViews.length})` : ""} ▼
+                </summary>
+                <div className="absolute right-0 z-30 mt-1 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                  {sortedSavedViews.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-slate-500">No saved views yet.</p>
+                  ) : (
+                    sortedSavedViews.map((view) => (
+                      <button
+                        key={view.id}
+                        type="button"
+                        className={`block w-full rounded px-3 py-2 text-left text-sm transition ${
+                          activeSavedViewId === view.id
+                            ? "bg-slate-900 text-white"
+                            : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                        onClick={() => {
+                          closeOpenDashboardMenus();
+                          applySavedView(view);
+                        }}
+                      >
+                        <p className="font-medium">{view.name}</p>
+                        <p className="text-[11px] opacity-75">
+                          {activeSavedViewId === view.id ? "Active" : "Click to apply"}
+                        </p>
+                      </button>
+                    ))
+                  )}
                 </div>
               </details>
               {canCreateBlog || canRunDataImport ? (

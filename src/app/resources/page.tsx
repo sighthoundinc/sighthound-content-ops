@@ -204,8 +204,13 @@ export default function ResourcesPage() {
 
           <Section id="tables-filters-search" title="9. Tables, Filters, and Search">
             <p>
-              Most pages use tables for fast scanning and management. Learning table controls is one
-              of the biggest productivity gains in the system.
+              Most pages use unified tables for fast scanning and management. Learning table controls
+              is one of the biggest productivity gains in the system.
+            </p>
+            <p className="font-semibold text-slate-900">Table overview</p>
+            <p>
+              All data tables (Blogs, Social Posts, Tasks) use a consistent DataTable component with
+              built-in support for sorting, pagination, column customization, and row selection.
             </p>
             <p className="font-semibold text-slate-900">Common table columns</p>
             <BulletList
@@ -216,27 +221,61 @@ export default function ResourcesPage() {
             />
             <p className="font-semibold text-slate-900">Sorting</p>
             <p>
-              Sort by publish date, writer, or status to quickly answer operational questions (for
-              example, what publishes next or what is still waiting for review).
+              Click any column header to sort ascending/descending. Sort state persists within the
+              page session. Use this to quickly answer operational questions (for example, what
+              publishes next or what is still waiting for review).
             </p>
+            <p className="font-semibold text-slate-900">Pagination and row limits</p>
+            <BulletList
+              items={[
+                "Select rows per page (10, 20, 50, 100, or All)",
+                "Navigate between pages using pagination controls",
+                "Row limit resets to default when filters change",
+              ]}
+            />
+            <p className="font-semibold text-slate-900">Column customization</p>
+            <BulletList
+              items={[
+                "Click Edit Columns button to show/hide columns",
+                "Columns persist in local storage for your next visit",
+                "Resize columns by dragging the right edge of any header",
+              ]}
+            />
             <p className="font-semibold text-slate-900">Filtering</p>
             <BulletList
               items={[
                 "Site filter (Sighthound / Redactor)",
-                "Status filter (Draft / Writing / Ready for Publishing / Published)",
-                "Writer filter for workload visibility",
+                "Status filter (Published / Include Unpublished / Unpublished only)",
+                "Writer/Publisher status filters for granular visibility",
               ]}
             />
             <p className="font-semibold text-slate-900">Search</p>
             <p>
-              Search supports title-first discovery and usually matches title text and related URL
-              data. Results update as you type.
+              Type keywords in the search box to filter by title and URL. Results update as you type.
+              Clear the search to reset.
             </p>
+            <p className="font-semibold text-slate-900">Row selection and export</p>
+            <BulletList
+              items={[
+                "Check rows to select them for bulk export",
+                "Export CSV or PDF of all visible rows or selected rows only",
+                "Selection is limited to current page",
+              ]}
+            />
             <p className="font-semibold text-slate-900">Opening and editing entries</p>
             <p>
-              Click a row to open detail view, then update fields like status, publish date, URLs,
-              and linked assets.
+              Click any row to open a detail panel on the right. Update fields like status, publish
+              date, URLs, and linked assets without leaving the page.
             </p>
+            <p className="font-semibold text-slate-900">Keyboard navigation</p>
+            <BulletList
+              items={[
+                "Use arrow keys (↑/↓) to navigate between visible rows",
+                "Press Enter to open the currently focused row",
+                "Press Cmd+C to copy the title of the focused row",
+                "Press Escape to close open panels and menus",
+              ]}
+            />
             <p className="font-semibold text-slate-900">Quick workflow example</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>Writer opens My Tasks and updates a blog to Writing.</li>

@@ -20,6 +20,9 @@ export function useGlobalQuickCreate(): UseGlobalQuickCreateReturn {
   // Global keyboard listener for C key
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) {
+        return;
+      }
       // Only trigger C key when not in form input
       const target = e.target as HTMLElement | null;
       const isFormElement =
@@ -32,8 +35,8 @@ export function useGlobalQuickCreate(): UseGlobalQuickCreateReturn {
         return;
       }
 
-      // C key to open quick create
-      if (e.key.toLowerCase() === "c") {
+      // Q key to open quick create
+      if (e.key.toLowerCase() === "q") {
         e.preventDefault();
         setIsOpen((prev) => !prev);
       }

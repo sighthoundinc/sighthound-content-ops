@@ -68,6 +68,7 @@ export function AppShell({
   } = useSystemFeedback();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [isShortcutModalOpen, setIsShortcutModalOpen] = useState(false);
   const [quickViewSnapshot, setQuickViewSnapshot] = useState<QuickViewSnapshot | null>(
     null
   );
@@ -96,10 +97,17 @@ export function AppShell({
       if (event.metaKey || event.ctrlKey || event.altKey) {
         return;
       }
-      if (event.key === "Escape" && isQuickCreateOpen) {
-        event.preventDefault();
-        setIsQuickCreateOpen(false);
-        return;
+      if (event.key === "Escape") {
+        if (isShortcutModalOpen) {
+          event.preventDefault();
+          setIsShortcutModalOpen(false);
+          return;
+        }
+        if (isQuickCreateOpen) {
+          event.preventDefault();
+          setIsQuickCreateOpen(false);
+          return;
+        }
       }
 
       const target = event.target as HTMLElement | null;
@@ -130,7 +138,7 @@ export function AppShell({
         return;
       }
 
-      if (event.key.toLowerCase() === "c" && (canCreateBlogs || canManageSocialPosts)) {
+      if (event.key.toLowerCase() === "q" && (canCreateBlogs || canManageSocialPosts)) {
         event.preventDefault();
         setIsQuickCreateOpen(true);
         return;
@@ -156,6 +164,7 @@ export function AppShell({
     canCreateBlogs,
     canManageSocialPosts,
     isQuickCreateOpen,
+    isShortcutModalOpen,
     pathname,
     router,
   ]);
@@ -217,20 +226,15 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 md:block">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                Shortcuts
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
-                <KbdShortcut>⌘K</KbdShortcut>
-                <KbdShortcut>Ctrl+K</KbdShortcut>
-                <KbdShortcut>/</KbdShortcut>
-                {canCreateBlogs ? <KbdShortcut>N</KbdShortcut> : null}
-                <KbdShortcut>D</KbdShortcut>
-                <KbdShortcut>C</KbdShortcut>
-                <KbdShortcut>G</KbdShortcut>
-              </div>
-            </div>
+            <button
+              type="button"
+              className="hidden text-sm font-medium text-slate-600 underline decoration-slate-300 underline-offset-4 hover:text-slate-900 md:inline-flex"
+              onClick={() => {
+                setIsShortcutModalOpen(true);
+              }}
+            >
+              Shortcut
+            </button>
             {canCreateBlogs || canManageSocialPosts ? (
               <Button
                 type="button"
@@ -495,8 +499,71 @@ export function AppShell({
               ) : null}
             </div>
             <p className="mt-4 text-xs text-slate-500">
-              Shortcut: press <KbdShortcut>C</KbdShortcut> outside form fields.
+              Shortcut: press <KbdShortcut>Q</KbdShortcut> outside form fields.
             </p>
+          </section>
+        </div>
+      ) : null}
+      {isShortcutModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close shortcuts modal"
+            className="absolute inset-0 bg-slate-900/35"
+            onClick={() => {
+              setIsShortcutModalOpen(false);
+            }}
+          />
+          <section className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Shortcuts</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Keyboard shortcuts available across the app.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setIsShortcutModalOpen(false);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="mt-4 space-y-2 text-xs text-slate-700">
+              <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                <span>Open command palette</span>
+                <div className="flex items-center gap-1">
+                  <KbdShortcut>⌘K</KbdShortcut>
+                  <KbdShortcut>Ctrl+K</KbdShortcut>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                <span>Focus search</span>
+                <KbdShortcut>/</KbdShortcut>
+              </div>
+              {canCreateBlogs ? (
+                <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                  <span>Create new blog</span>
+                  <KbdShortcut>N</KbdShortcut>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                <span>Go to dashboard</span>
+                <KbdShortcut>D</KbdShortcut>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                <span>Quick create</span>
+                <KbdShortcut>Q</KbdShortcut>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                <span>Go to calendar</span>
+                <KbdShortcut>G</KbdShortcut>
+              </div>
+            </div>
           </section>
         </div>
       ) : null}

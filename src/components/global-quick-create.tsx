@@ -51,7 +51,7 @@ export function GlobalQuickCreate() {
               Create New
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Press C to open, ESC to close
+              Press Q to open, ESC to close
             </p>
           </div>
 
@@ -109,7 +109,7 @@ export function GlobalQuickCreate() {
           {/* Footer */}
           <div className="border-t border-gray-200 px-6 py-3 bg-gray-50 text-xs text-gray-500">
             <kbd className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-semibold">
-              C
+              Q
             </kbd>
             <span className="ml-2">to create</span>
           </div>

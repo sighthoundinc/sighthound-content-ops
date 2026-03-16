@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   Suspense,
   useCallback,
@@ -11,9 +11,8 @@ import {
 import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { BlogImportModal } from "@/components/blog-import-modal";
 import { Button, buttonClass } from "@/components/button";
-import { DataTable, type DataTableColumn, type DataTableRowAction } from "@/components/data-table";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DataPageFilterPills,
@@ -300,7 +299,6 @@ function isBoardStageQueryFilter(value: string | null): value is BoardStageQuery
 }
 
 function BlogLibraryPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { hasPermission } = useAuth();
   const { showSaving, showSuccess, showError, updateStatus, pushNotification } =
@@ -312,7 +310,6 @@ function BlogLibraryPageContent() {
   const canCreateBlogs = permissionContract.canCreateBlog;
   const canExportCsv = permissionContract.canExportCsv;
   const canExportSelectedCsv = permissionContract.canExportSelectedCsv;
-  const canRunDataImport = hasPermission("run_data_import");
   const canSelectRows = canExportSelectedCsv;
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -872,38 +869,6 @@ function BlogLibraryPageContent() {
     },
     [showError, showSuccess]
   );
-  const rowActions = useCallback(
-    (blog: BlogRecord): DataTableRowAction<BlogRecord>[] => [
-      {
-        id: "open",
-        label: "Open",
-        onClick: () => handleOpenBlogPanel(blog.id),
-      },
-      {
-        id: "copy-title",
-        label: "Copy title",
-        onClick: () => {
-          void copyToClipboard(blog.title, blog.id, "title", "Copied title.");
-        },
-      },
-      {
-        id: "copy-url",
-        label: "Copy URL",
-        onClick: () => {
-          void copyToClipboard(blog.live_url ?? "", blog.id, "url", "Copied URL.");
-        },
-        show: () => Boolean(blog.live_url),
-      },
-      {
-        id: "view-history",
-        label: "View history",
-        onClick: () => {
-          router.push(`/blogs/${blog.id}#history`);
-        },
-      },
-    ],
-    [copyToClipboard, router]
-  );
   useEffect(() => {
     const isFormElement = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) {
@@ -1338,7 +1303,6 @@ function BlogLibraryPageContent() {
                     Export Selection
                   </Button>
                 </PermissionGate>
-                {canRunDataImport ? <BlogImportModal onImported={loadBlogs} /> : null}
                 <Button
                   type="button"
                   onClick={() => {
@@ -1586,8 +1550,6 @@ function BlogLibraryPageContent() {
                 activeIndex={pagedBlogs.findIndex((blog) => blog.id === activeBlogId)}
                 density={rowDensity}
                 emptyMessage="No blogs found."
-                rowActions={rowActions}
-                enableColumnResizing
                 rowClassName={(_blog, _index, isActive, isSelected) =>
                   cn(
                     "transition-colors",

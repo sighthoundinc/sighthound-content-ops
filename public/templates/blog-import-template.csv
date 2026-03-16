@@ -1,0 +1,5 @@
+Site,Blog Title,Live URL,Writer,Publisher,Draft Doc Link,Display Publish Date,Actual Publish Date
+SH or RED,Full blog title,Full published blog URL,Blog writer name,Person who published,Google Doc / writing link,Date shown on blog (YYYY-MM-DD),Internal publish date (YYYY-MM-DD)
+RED,Why Do People Blur License Plates in Video?,https://www.redactor.com/blog/redaction-tools-why-blur-out-license-plates-in-video,Haris,Roger,https://docs.google.com/document/d/example,2024-04-12,2024-04-11
+SH,Vehicle Recognition for Parking Enforcement,https://www.sighthound.com/blog/vehicle-recognition-parking-enforcement,Haris,Roger,https://docs.google.com/document/d/example2,2024-05-21,2024-05-20
+RED,Best Practices for Redacting Body Camera Footage,https://www.redactor.com/blog/body-camera-redaction-best-practices,Haris,Roger,https://docs.google.com/document/d/example3,2024-06-03,2024-06-02

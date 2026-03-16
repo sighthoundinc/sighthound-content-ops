@@ -2366,7 +2366,7 @@ export default function DashboardPage() {
                         className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
                         onClick={() => {
                           closeOpenDashboardMenus();
-                          router.push("/blogs");
+                          router.push("/blogs?import=1");
                         }}
                       >
                         + Import Blogs

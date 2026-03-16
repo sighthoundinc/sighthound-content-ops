@@ -11,6 +11,7 @@ import {
 import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { BlogImportModal } from "@/components/blog-import-modal";
 import { Button, buttonClass } from "@/components/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
@@ -308,6 +309,7 @@ function BlogLibraryPageContent() {
     [hasPermission]
   );
   const canCreateBlogs = permissionContract.canCreateBlog;
+  const canRunDataImport = hasPermission("run_data_import");
   const canExportCsv = permissionContract.canExportCsv;
   const canExportSelectedCsv = permissionContract.canExportSelectedCsv;
   const canSelectRows = canExportSelectedCsv;
@@ -339,6 +341,7 @@ function BlogLibraryPageContent() {
     DEFAULT_LIBRARY_HIDDEN_COLUMNS
   );
   const boardStageQuery = searchParams.get("boardStage");
+  const shouldAutoOpenImport = searchParams.get("import") === "1";
 
   const loadBlogs = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -1174,6 +1177,17 @@ function BlogLibraryPageContent() {
                   >
                     Create Blog
                   </Link>
+                ) : null}
+                {canRunDataImport ? (
+                  <BlogImportModal
+                    autoOpen={shouldAutoOpenImport}
+                    onImported={async (summary) => {
+                      await loadBlogs();
+                      showSuccess(
+                        `Import complete: ${summary.created} created, ${summary.updated} updated, ${summary.failed} failed.`
+                      );
+                    }}
+                  />
                 ) : null}
               </div>
             }

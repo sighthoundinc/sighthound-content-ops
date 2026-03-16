@@ -54,7 +54,7 @@ export interface DataTableProps<TData> {
 const headerCellClass =
   "px-6 py-3 font-medium text-slate-900 whitespace-nowrap relative";
 const bodyCellClass = (density: "compact" | "comfortable") =>
-  density === "compact" ? "px-6 py-2 text-slate-900" : "px-6 py-3 text-slate-900";
+  density === "compact" ? "px-6 py-2 text-slate-900 h-10 align-middle" : "px-6 py-3 text-slate-900 h-12 align-middle";
 
 /**
  * Unified DataTable component for consistent table display and interactions across the application.
@@ -247,7 +247,8 @@ export function DataTable<TData>({
                         bodyCellClass(density),
                         column.align === "center" ? "text-center" : "",
                         column.align === "right" ? "text-right" : "",
-                        column.className
+                        column.className,
+                        "overflow-hidden"
                       )}
                     >
                       {column.render(item, index)}

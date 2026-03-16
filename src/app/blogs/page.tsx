@@ -1237,14 +1237,13 @@ function BlogLibraryPageContent() {
       label: "Title",
       sortable: true,
       render: (blog) => (
-        <div className="max-w-[34rem] space-y-1">
-          <Link
-            href={`/blogs/${blog.id}`}
-            className="interactive-link block max-w-[30rem] truncate font-medium text-slate-800"
-          >
-            {blog.title}
-          </Link>
-        </div>
+        <Link
+          href={`/blogs/${blog.id}`}
+          className="interactive-link block w-full truncate text-sm font-medium text-slate-800"
+          title={blog.title}
+        >
+          {blog.title}
+        </Link>
       ),
     },
     {

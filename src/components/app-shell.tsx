@@ -216,14 +216,9 @@ export function AppShell({
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Sighthound Internal
-            </p>
-            <h1 className="text-lg font-semibold text-slate-900">
-              Content Operations Dashboard
-            </h1>
-          </div>
+          <h1 className="text-lg font-semibold text-slate-900">
+            Content Ops
+          </h1>
 
           <div className="flex items-center gap-4">
             <button
@@ -235,18 +230,6 @@ export function AppShell({
             >
               Shortcut
             </button>
-            {canCreateBlogs || canManageSocialPosts ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={() => {
-                  setIsQuickCreateOpen(true);
-                }}
-              >
-                Quick Create
-              </Button>
-            ) : null}
             <div className="relative" ref={notificationPanelRef}>
               <Button
                 type="button"

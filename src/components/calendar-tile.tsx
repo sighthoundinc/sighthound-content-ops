@@ -40,16 +40,14 @@ export function CalendarTile({
   return (
     <article
       className={cn(
-        // Base glass-morphism styling
-        "relative flex h-40 flex-col rounded-xl border backdrop-blur-sm transition-all duration-200",
-        // Glass effect: subtle border and background
-        "border-white/30 bg-white/40",
+        // Base styling with clear borders and backgrounds
+        "relative flex h-40 flex-col rounded-lg border border-slate-200 bg-white transition-all duration-200",
         // Out of month styling
-        !isCurrentMonth && "bg-slate-50/30 border-slate-200/20",
-        // Today styling with enhanced glass effect
-        isToday && "border-indigo-400/60 bg-indigo-50/50 shadow-lg shadow-indigo-200/30",
+        !isCurrentMonth && "bg-slate-50 border-slate-100",
+        // Today styling with highlight
+        isToday && "border-indigo-400 bg-indigo-50 shadow-md",
         // Focus ring
-        isFocused && "ring-2 ring-indigo-400 ring-offset-2",
+        isFocused && "ring-2 ring-indigo-400 ring-offset-1",
         // Custom today container class (for backwards compatibility)
         todayContainerClassName && isToday && todayContainerClassName,
         className,
@@ -57,7 +55,7 @@ export function CalendarTile({
     >
       <div
         className={cn(
-          "flex items-center justify-between gap-2 border-b border-white/20 px-3 py-2",
+          "flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2",
           headerClassName,
         )}
       >

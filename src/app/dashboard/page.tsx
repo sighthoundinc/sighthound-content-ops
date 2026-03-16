@@ -260,7 +260,7 @@ const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }
   { value: "writer_status", label: "Sort by: Writer Status" },
   { value: "publisher_status", label: "Sort by: Publisher Status" },
 ];
-type MetricFilterKey = "scheduled_this_week" | "ready_to_publish" | "delayed";
+type MetricFilterKey = "scheduled_this_week" | "ready_to_publish" | "delayed" | "currently_writing" | "under_review" | "needs_revision" | "unscheduled_backlog" | "publishing_in_progress";
 
 type DashboardFilterState = {
   search: string;
@@ -1329,10 +1329,41 @@ export default function DashboardPage() {
       );
     }).length;
 
+    const currentlyWriting = blogs.filter(
+      (blog) => blog.writer_status === "in_progress"
+    ).length;
+
+    const underReview = blogs.filter(
+      (blog) =>
+        blog.writer_status === "needs_revision" ||
+        blog.publisher_status === "in_progress"
+    ).length;
+
+    const needsRevision = blogs.filter(
+      (blog) => blog.writer_status === "needs_revision"
+    ).length;
+
+    const unscheduledBacklog = blogs.filter(
+      (blog) =>
+        blog.writer_status === "not_started" &&
+        getBlogScheduledDate(blog) === null
+    ).length;
+
+    const publishingInProgress = blogs.filter(
+      (blog) =>
+        blog.writer_status === "completed" &&
+        blog.publisher_status === "in_progress"
+    ).length;
+
     return {
       scheduledThisWeek,
       readyToPublish,
       delayed,
+      currentlyWriting,
+      underReview,
+      needsRevision,
+      unscheduledBacklog,
+      publishingInProgress,
     };
   }, [blogs]);
 
@@ -2523,7 +2554,7 @@ export default function DashboardPage() {
               </p>
               <p className="text-[11px] text-slate-500">Counts reflect the full dataset</p>
             </div>
-            <div className="mt-2 grid gap-2 text-sm md:grid-cols-3">
+            <div className="mt-2 grid gap-2 text-sm md:grid-cols-4">
               <button
                 type="button"
                 className={`rounded-lg border px-3 py-2 text-left transition ${
@@ -2564,6 +2595,111 @@ export default function DashboardPage() {
                 </p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
                   {focusStripMetrics.readyToPublish}
+                </p>
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg border px-3 py-2 text-left transition ${
+                  activeMetricFilter === "currently_writing"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) =>
+                    previous === "currently_writing" ? null : "currently_writing"
+                  );
+                  setActiveQuickQueue(null);
+                }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                  Currently Writing
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.currentlyWriting}
+                </p>
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg border px-3 py-2 text-left transition ${
+                  activeMetricFilter === "under_review"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) =>
+                    previous === "under_review" ? null : "under_review"
+                  );
+                  setActiveQuickQueue(null);
+                }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                  Under Review
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.underReview}
+                </p>
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg border px-3 py-2 text-left transition ${
+                  activeMetricFilter === "needs_revision"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) =>
+                    previous === "needs_revision" ? null : "needs_revision"
+                  );
+                  setActiveQuickQueue(null);
+                }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                  Needs Revision
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.needsRevision}
+                </p>
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg border px-3 py-2 text-left transition ${
+                  activeMetricFilter === "unscheduled_backlog"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) =>
+                    previous === "unscheduled_backlog" ? null : "unscheduled_backlog"
+                  );
+                  setActiveQuickQueue(null);
+                }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                  Unscheduled Backlog
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.unscheduledBacklog}
+                </p>
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg border px-3 py-2 text-left transition ${
+                  activeMetricFilter === "publishing_in_progress"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) =>
+                    previous === "publishing_in_progress" ? null : "publishing_in_progress"
+                  );
+                  setActiveQuickQueue(null);
+                }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                  Publishing In Progress
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.publishingInProgress}
                 </p>
               </button>
               <button

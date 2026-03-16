@@ -66,13 +66,14 @@ type EditorFormState = {
 };
 
 const LINKEDIN_CAPTION_LIMIT = 3000;
-const AUTOSAVE_DEBOUNCE_MS = 900;
+const AUTOSAVE_DEBOUNCE_MS = 30000;
 
+// Unicode bold sans-serif characters for LinkedIn-compatible bold text
 const BOLD_SANS_UPPER = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭";
 const BOLD_SANS_LOWER = "𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇";
 const BOLD_SANS_DIGITS = "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵";
 
-function toBoldSans(input: string) {
+function toBoldFormat(input: string) {
   let output = "";
   for (const character of input) {
     if (character >= "A" && character <= "Z") {
@@ -292,7 +293,7 @@ export default function SocialPostEditorPage() {
     }, 0);
   };
 
-  const handleBoldSans = () => {
+  const handleBoldFormat = () => {
     if (!captionRef.current || !form) {
       return;
     }
@@ -303,10 +304,10 @@ export default function SocialPostEditorPage() {
       return;
     }
     const selected = form.caption.slice(start, end);
-    const transformed = toBoldSans(selected);
+    const transformed = toBoldFormat(selected);
     const next = `${form.caption.slice(0, start)}${transformed}${form.caption.slice(end)}`;
     applyCaptionEdit(next, start, start + transformed.length);
-    showSuccess("Bold Sans applied.");
+    showSuccess("Bold format applied.");
   };
 
   const handleInsertBullet = () => {
@@ -551,12 +552,12 @@ export default function SocialPostEditorPage() {
                       <Button
                         variant="icon"
                         size="icon"
-                        aria-label="Bold Sans (LinkedIn style)"
-                        onClick={handleBoldSans}
+                        aria-label="Bold format"
+                        onClick={handleBoldFormat}
                       >
-                        𝗕
+                        <strong>B</strong>
                       </Button>
-                      <span className="tooltip-bubble">Bold Sans (LinkedIn style)</span>
+                      <span className="tooltip-bubble">Bold Sans (LinkedIn)</span>
                     </span>
                     <span className="tooltip-container">
                       <Button

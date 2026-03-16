@@ -242,9 +242,9 @@ function CalendarBlogEventCard({
       style={dragStyle}
       type="button"
       onClick={onOpen}
-      className={`group relative flex w-full items-start gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-left transition-colors duration-150 ${
+      className={`group relative flex w-full items-start gap-2 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-left shadow-sm transition-colors duration-150 ${
         canDrag ? "cursor-grab hover:bg-slate-50 active:cursor-grabbing" : "cursor-default"
-      } ${isDragging ? "opacity-60" : ""}`}
+      } ${isDragging ? "opacity-50 shadow-lg" : ""}`}
       title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nPublisher · ${
         blog.publisher?.full_name ?? "Unassigned"
       }\nPublish Date · ${scheduledDate ?? "Unscheduled"}\nStatus · ${toTitleCase(stage)}`}
@@ -295,7 +295,7 @@ function CalendarSocialEventCard({
     <button
       type="button"
       onClick={onOpen}
-      className="group relative flex w-full items-start gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-left transition-colors duration-150 hover:bg-slate-50"
+      className="group relative flex w-full items-start gap-2 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-left shadow-sm transition-colors duration-150 hover:bg-slate-50"
       title={`${post.title}\nType · ${SOCIAL_POST_TYPE_LABELS[post.type]}\nStatus · ${SOCIAL_POST_STATUS_LABELS[post.status]}\nScheduled · ${post.scheduled_date ?? "Unscheduled"}`}
     >
       <span className="self-stretch w-1 rounded-full bg-orange-500" />
@@ -1269,7 +1269,7 @@ export default function CalendarPage() {
                       setDragOverDateKey(null);
                     }}
                   >
-                <div className="grid grid-cols-7 gap-3" ref={calendarGridRef}>
+                <div className="grid grid-cols-7 gap-2" ref={calendarGridRef} style={{ contain: "layout" }}>
                     {days.map((day) => {
                       const key = format(day, "yyyy-MM-dd");
                       const items = calendarItemsByDate[key] ?? [];

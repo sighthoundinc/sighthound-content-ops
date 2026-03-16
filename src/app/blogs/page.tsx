@@ -14,7 +14,7 @@ import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button, buttonClass } from "@/components/button";
-import { ExternalLink } from "@/components/external-link";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DataPageFilterPills,
@@ -199,8 +199,6 @@ const escapeHtmlValue = (value: string) =>
     .replaceAll(">", "&gt;")
     .replaceAll("\"", "&quot;")
     .replaceAll("'", "&#39;");
-const escapeRegexValue = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function getPublishedDateKey(blog: BlogRecord) {
   return blog.display_published_date ?? getBlogPublishDate(blog);
@@ -298,25 +296,6 @@ function getAssigneeLabel(name: string | null | undefined) {
   return name && name.trim().length > 0 ? name : "Unassigned";
 }
 
-function renderHighlightedText(value: string, query: string) {
-  const normalizedQuery = query.trim();
-  if (!normalizedQuery) {
-    return value;
-  }
-  const matcher = new RegExp(`(${escapeRegexValue(normalizedQuery)})`, "ig");
-  return value.split(matcher).map((part, index) =>
-    part.toLowerCase() === normalizedQuery.toLowerCase() ? (
-      <mark
-        key={`${part}-${index}`}
-        className="rounded bg-amber-100 px-0.5 text-slate-900"
-      >
-        {part}
-      </mark>
-    ) : (
-      part
-    )
-  );
-}
 
 function isBoardStageQueryFilter(value: string | null): value is BoardStageQueryFilter {
   return value === "idea" || value === "writing" || value === "reviewing" || value === "publishing" || value === "published";
@@ -363,6 +342,8 @@ function BlogLibraryPageContent() {
     DEFAULT_LIBRARY_HIDDEN_COLUMNS
   );
   const [columnWidths, setColumnWidths] = useState<Partial<Record<LibraryColumnKey, number>>>({});
+  const [blogDataTableSortField, setBlogDataTableSortField] = useState<string>("published_date");
+  const [blogDataTableSortDirection, setBlogDataTableSortDirection] = useState<"asc" | "desc">("desc");
   const blogRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const boardStageQuery = searchParams.get("boardStage");
 
@@ -705,7 +686,6 @@ function BlogLibraryPageContent() {
     [activeBlogId, blogs]
   );
   const headerCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
-  const bodyCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
   const tableColumnCount = visibleColumnOrder.length + (canSelectRows ? 1 : 0);
   const allVisibleSelected =
     pagedBlogs.length > 0 && pagedBlogs.every((blog) => selectedIdSet.has(blog.id));
@@ -983,17 +963,6 @@ function BlogLibraryPageContent() {
     });
   };
 
-  const toggleRowSelection = (blogId: string, nextChecked: boolean) => {
-    if (!canSelectRows) {
-      return;
-    }
-    setSelectedBlogIds((previous) => {
-      if (nextChecked) {
-        return previous.includes(blogId) ? previous : [...previous, blogId];
-      }
-      return previous.filter((id) => id !== blogId);
-    });
-  };
 
   const getExportCellValue = (blog: BlogRecord, column: LibraryColumnKey) => {
     if (column === "site") {
@@ -1247,6 +1216,56 @@ function BlogLibraryPageContent() {
       </th>
     );
   };
+
+  const blogTableColumns: DataTableColumn<BlogRecord>[] = [
+    {
+      id: "site",
+      label: "Site",
+      sortable: true,
+      render: (blog) => (
+        <span
+          className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${
+            getSiteBadgeClasses(blog.site)
+          }`}
+        >
+          {getSiteLabel(blog.site)}
+        </span>
+      ),
+    },
+    {
+      id: "title",
+      label: "Title",
+      sortable: true,
+      render: (blog) => (
+        <div className="max-w-[34rem] space-y-1">
+          <Link
+            href={`/blogs/${blog.id}`}
+            className="interactive-link block max-w-[30rem] truncate font-medium text-slate-800"
+          >
+            {blog.title}
+          </Link>
+        </div>
+      ),
+    },
+    {
+      id: "writer_status",
+      label: "Writer Status",
+      sortable: true,
+      render: (blog) => <WriterStatusBadge status={blog.writer_status} />,
+    },
+    {
+      id: "publisher_status",
+      label: "Publisher Status",
+      sortable: true,
+      render: (blog) => <PublisherStatusBadge status={blog.publisher_status} />,
+    },
+    {
+      id: "publish_date",
+      label: "Publish Date",
+      sortable: true,
+      render: (blog) => formatPublishedDate(blog),
+    },
+  ];
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
@@ -1642,259 +1661,36 @@ function BlogLibraryPageContent() {
               </div>
             ) : hasNoResults ? null : (
               <div className="overflow-auto rounded-lg border border-slate-200">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                    <tr>
-                      {canSelectRows ? (
-                        <th className={headerCellClass}>
-                          <input
-                            type="checkbox"
-                            checked={allVisibleSelected}
-                            onChange={(event) => {
-                              toggleSelectAllVisible(event.target.checked);
-                            }}
-                          />
-                        </th>
-                      ) : null}
-                      {visibleColumnOrder.map((column) => renderHeaderCell(column))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {pagedBlogs.map((blog) => {
-                      const copiedTitle =
-                        copiedCell?.blogId === blog.id && copiedCell.field === "title";
-                      const copiedUrl = copiedCell?.blogId === blog.id && copiedCell.field === "url";
-                      const stage = getStageForBadge(blog);
-                      return (
-                        <tr
-                          key={blog.id}
-                          ref={(node) => {
-                            blogRowRefs.current[blog.id] = node;
-                          }}
-                          className={`group table-row-focus cursor-pointer ${
-                            activeBlogId === blog.id ? "bg-slate-100" : ""
-                          } ${focusedBlogId === blog.id ? "bg-slate-100" : ""}`}
-                          onClick={(event) => {
-                            const target = event.target as HTMLElement;
-                            if (
-                              target.closest(
-                                "a,button,input,textarea,select,summary,details,label"
-                              )
-                            ) {
-                              return;
-                            }
-                            setFocusedBlogId(blog.id);
-                            handleOpenBlogPanel(blog.id);
-                          }}
-                        >
-                          {canSelectRows ? (
-                            <td className={`${bodyCellClass} align-top`}>
-                              <input
-                                type="checkbox"
-                                checked={selectedIdSet.has(blog.id)}
-                                onChange={(event) => {
-                                  setFocusedBlogId(blog.id);
-                                  toggleRowSelection(blog.id, event.target.checked);
-                                }}
-                              />
-                            </td>
-                          ) : null}
-                          {visibleColumnOrder.map((column) => {
-                            if (column === "site") {
-                              return (
-                                <td key={column} className={`${bodyCellClass} align-top`}>
-                                  <span
-                                    className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${getSiteBadgeClasses(
-                                      blog.site
-                                    )}`}
-                                  >
-                                    {getSiteLabel(blog.site)}
-                                  </span>
-                                </td>
-                              );
-                            }
-
-                            if (column === "title") {
-                              return (
-                                <td key={column} className={`${bodyCellClass} align-top text-slate-900`}>
-                                  <div className="max-w-[34rem] space-y-1">
-                                    <div className="group/title inline-flex max-w-full items-start gap-2">
-                                      <Link
-                                        href={`/blogs/${blog.id}`}
-                                        title={blog.title}
-                                        className="interactive-link block max-w-[30rem] truncate font-medium text-slate-800"
-                                      >
-                                        {renderHighlightedText(blog.title, searchQuery)}
-                                      </Link>
-                                      <span className="tooltip-container">
-                                        <button
-                                          type="button"
-                                          aria-label="Copy blog title"
-                                          className="pressable reveal-on-row-hover rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-                                          onClick={() => {
-                                            void copyToClipboard(
-                                              blog.title,
-                                              blog.id,
-                                              "title",
-                                              "Copied title."
-                                            );
-                                          }}
-                                        >
-                                          {copiedTitle ? "✓" : "📋"}
-                                        </button>
-                                        <span className="tooltip-bubble">Copy title</span>
-                                      </span>
-                                      <details className="relative">
-                                        <summary className="pressable reveal-on-row-hover cursor-pointer list-none rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100">
-                                          ⋯
-                                        </summary>
-                                        <div className="absolute right-0 z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white p-1 shadow-md">
-                                          <Link
-                                            href={`/blogs/${blog.id}`}
-                                            className="interactive-link block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-                                            onClick={() => {
-                                              closeOpenDetailsMenus();
-                                            }}
-                                          >
-                                            Open details
-                                          </Link>
-                                          <button
-                                            type="button"
-                                            className="pressable block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
-                                            onClick={() => {
-                                              closeOpenDetailsMenus();
-                                              void copyToClipboard(
-                                                blog.title,
-                                                blog.id,
-                                                "title",
-                                                "Copied title."
-                                              );
-                                            }}
-                                          >
-                                            Copy title
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="pressable block w-full rounded px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
-                                            onClick={() => {
-                                              closeOpenDetailsMenus();
-                                              void copyToClipboard(
-                                                blog.live_url ?? "",
-                                                blog.id,
-                                                "url",
-                                                "Copied URL."
-                                              );
-                                            }}
-                                          >
-                                            Copy URL
-                                          </button>
-                                        </div>
-                                      </details>
-                                    </div>
-                                    <p className="line-clamp-1 text-xs text-slate-500">
-                                      Writer: {getAssigneeLabel(blog.writer?.full_name)} • Publisher:{" "}
-                                      {getAssigneeLabel(blog.publisher?.full_name)}
-                                    </p>
-                                  </div>
-                                </td>
-                              );
-                            }
-
-                            if (column === "live_url") {
-                              return (
-                                <td key={column} className={`${bodyCellClass} align-top text-slate-700`}>
-                                  {blog.live_url ? (
-                                    <div className="group/url inline-flex max-w-[24rem] items-center gap-2">
-                                      <ExternalLink
-                                        href={blog.live_url}
-                                        className="interactive-link truncate text-left text-slate-700"
-                                        title={blog.live_url}
-                                      >
-                                        {renderHighlightedText(blog.live_url, searchQuery)} ↗
-                                      </ExternalLink>
-                                      <span className="tooltip-container">
-                                        <button
-                                          type="button"
-                                          aria-label="Copy blog URL"
-                                          className="pressable reveal-on-row-hover rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
-                                          onClick={() => {
-                                            void copyToClipboard(
-                                              blog.live_url ?? "",
-                                              blog.id,
-                                              "url",
-                                              "Copied URL."
-                                            );
-                                          }}
-                                        >
-                                          {copiedUrl ? "✓" : "🔗"}
-                                        </button>
-                                        <span className="tooltip-bubble">Copy URL</span>
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    "—"
-                                  )}
-                                </td>
-                              );
-                            }
-
-                            if (column === "writer_status") {
-                              return (
-                                <td key={column} className={`${bodyCellClass} align-top`}>
-                                  <WriterStatusBadge status={blog.writer_status} />
-                                </td>
-                              );
-                            }
-
-                            if (column === "published_date") {
-                              return (
-                                <td key={column} className={`${bodyCellClass} align-top text-slate-600`}>
-                                  {formatPublishedDate(blog)}
-                                </td>
-                              );
-                            }
-
-                            if (column === "writer") {
-                              return (
-                                <td key={column} className={`${bodyCellClass} align-top text-slate-700`}>
-                                  {getAssigneeLabel(blog.writer?.full_name)}
-                                </td>
-                              );
-                            }
-
-                            if (column === "publisher") {
-                              return (
-                                <td key={column} className={`${bodyCellClass} align-top text-slate-700`}>
-                                  {getAssigneeLabel(blog.publisher?.full_name)}
-                                </td>
-                              );
-                            }
-
-                            if (column === "publisher_status") {
-                              return (
-                                <td key={column} className={`${bodyCellClass} align-top`}>
-                                  <PublisherStatusBadge status={blog.publisher_status} />
-                                </td>
-                              );
-                            }
-
-                            return (
-                              <td key={column} className={`${bodyCellClass} align-top`}>
-                                <span
-                                  className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getStageBadgeClasses(
-                                    stage
-                                  )}`}
-                                >
-                                  {getStageLabel(stage)}
-                                </span>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                {canSelectRows ? (
+                  <div className="mb-3 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={(event) => {
+                        toggleSelectAllVisible(event.target.checked);
+                      }}
+                    />
+                    <span className="text-sm text-slate-600">
+                      {selectedBlogIds.length > 0 ? `${selectedBlogIds.length} selected` : "Select rows"}
+                    </span>
+                  </div>
+                ) : null}
+                <DataTable
+                  data={pagedBlogs}
+                  columns={blogTableColumns}
+                  sortField={blogDataTableSortField}
+                  sortDirection={blogDataTableSortDirection}
+                  onSort={(field, direction) => {
+                    setBlogDataTableSortField(field);
+                    setBlogDataTableSortDirection(direction);
+                  }}
+                  onRowClick={(blog) => {
+                    handleOpenBlogPanel(blog.id);
+                  }}
+                  activeIndex={pagedBlogs.findIndex((b) => b.id === activeBlogId)}
+                  density={rowDensity}
+                  emptyMessage="No blogs found."
+                />
               </div>
             )}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">

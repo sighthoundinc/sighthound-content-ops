@@ -4,12 +4,21 @@ For product behavior, see `SPECIFICATION.md`.
 For end-user instructions, see `HOW_TO_USE_APP.md`.
 
 ## 1) System overview
-- Frontend: Next.js + TypeScript + Tailwind
+- Frontend: Next.js + TypeScript + Tailwind (Phase 4A-4C UI complete)
 - Backend: Supabase (Postgres, Auth, RLS, triggers/functions)
 - Integration: Slack via `supabase/functions/slack-notify`
 - Authorization: permission matrix + role templates + DB checks
 
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
+
+### UI Architecture (Phase 4A-4C)
+**Phase 4A**: Core UI components (AppShell, DataPageHeader, FilterBar, StatusBadgeSystem)
+**Phase 4B**: Global command palette + quick create modal  
+**Phase 4C**: Unified DataTable system for Dashboard, Tasks, Blogs, Social Posts
+- All pages use consistent DataTable component for sorting, filtering, pagination
+- Column definitions defined at page level with type safety
+- StatusBadgeSystem used throughout for status rendering
+- Zero dead code, production-ready quality (TypeScript 0 errors, ESLint 0 errors)
 
 ## 2) Key directories
 - `src/` — app routes/components/libs

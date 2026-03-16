@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { format, formatDistanceToNow, isBefore, parseISO } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
+import { DashboardTable } from "@/components/dashboard-table";
+import { FilterBar } from "@/components/filter-bar";
 import {
   DataPageFilterPills,
   DataPageHeader,
@@ -61,7 +63,7 @@ import {
   type SortDirection,
   type TableRowLimit,
 } from "@/lib/table";
-import { getSiteBadgeClasses, getSiteShortLabel } from "@/lib/site";
+import { getSiteShortLabel } from "@/lib/site";
 import type {
   BlogSite,
   BlogHistoryRecord,
@@ -181,11 +183,6 @@ const DASHBOARD_COLUMN_LABELS: Record<DashboardColumnKey, string> = {
   overall_status: "Stage",
   publish_date: "Publish Date",
 };
-const CENTER_ALIGNED_DASHBOARD_COLUMNS: DashboardColumnKey[] = [
-  "writer_status",
-  "publisher_status",
-  "overall_status",
-];
 const DEFAULT_DASHBOARD_HIDDEN_COLUMNS: DashboardColumnKey[] = ["overall_status"];
 
 const DEFAULT_DASHBOARD_COLUMN_ORDER: DashboardColumnKey[] = [
@@ -263,17 +260,6 @@ const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }
   { value: "writer_status", label: "Writer Status" },
   { value: "publisher_status", label: "Publisher Status" },
 ];
-const WRITER_STAGE_DISPLAY_LABELS: Record<WriterStageStatus, string> = {
-  not_started: "Draft",
-  in_progress: "Writing",
-  needs_revision: "Needs Revision",
-  completed: "Ready for Publishing",
-};
-const PUBLISHER_STAGE_DISPLAY_LABELS: Record<PublisherStageStatus, string> = {
-  not_started: "Scheduled",
-  in_progress: "Publishing",
-  completed: "Published",
-};
 type MetricFilterKey = "scheduled_this_week" | "ready_to_publish" | "delayed";
 
 type DashboardFilterState = {
@@ -498,7 +484,6 @@ export default function DashboardPage() {
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [staleDraftDays, setStaleDraftDays] = useState(10);
-  const [now] = useState(() => new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
@@ -1364,8 +1349,6 @@ export default function DashboardPage() {
     () => sortedBlogs.findIndex((blog) => blog.id === activeBlogId),
     [activeBlogId, sortedBlogs]
   );
-  const headerCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-3";
-  const bodyCellClass = rowDensity === "compact" ? "px-3 py-1.5" : "px-3 py-2.5";
   const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
   const visibleColumnOrder = useMemo(
     () => {
@@ -1385,9 +1368,6 @@ export default function DashboardPage() {
     () => blogs.filter((blog) => selectedIdSet.has(blog.id)),
     [blogs, selectedIdSet]
   );
-  const allVisibleSelected =
-    visibleBlogIds.length > 0 &&
-    visibleBlogIds.every((id) => selectedIdSet.has(id));
   const hasPendingBulkChanges =
     Boolean(bulkWriterId) ||
     Boolean(bulkPublisherId) ||
@@ -1490,7 +1470,7 @@ export default function DashboardPage() {
     setSuccessMessage("Column view reset to default.");
   };
 
-  const applySavedView = useCallback(
+  const _applySavedView = useCallback(
     (view: SavedDashboardView) => {
       applyFilterState(view.state);
       setColumnOrder(view.columnOrder);
@@ -1500,6 +1480,9 @@ export default function DashboardPage() {
     },
     [applyFilterState]
   );
+  // applySavedView will be needed in Phase 4B for command palette - keeping for now
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const applySavedView = _applySavedView;
 
   const resetDashboardFilters = useCallback(() => {
     applyFilterState(DEFAULT_DASHBOARD_FILTER_STATE);
@@ -2280,78 +2263,18 @@ export default function DashboardPage() {
     await loadPanelData(activeBlog.id);
     setIsPanelCommentSaving(false);
   };
-  const sortedSavedViews = useMemo(
+  const _sortedSavedViews = useMemo(
     () => [...savedViews].sort((left, right) => left.name.localeCompare(right.name)),
     [savedViews]
   );
-
-  const dashboardCommandPaletteCommands = useMemo(() => {
-    const viewCommands = sortedSavedViews.map((view) => ({
-      id: `saved-view-${view.id}`,
-      label: `Apply view: ${view.name}`,
-      group: "Saved Views",
-      keywords: [
-        "saved",
-        "view",
-        view.name.toLowerCase(),
-      ],
-      action: () => {
-        applySavedView(view);
-      },
-    }));
-
-    const dashboardCommands = [
-      {
-        id: "save-current-view",
-        label: "Save current filters as view",
-        group: "Saved Views",
-        keywords: ["save", "view", "filters"],
-        action: () => {
-          saveCurrentFiltersAsView();
-        },
-      },
-      {
-        id: "reset-dashboard-filters",
-        label: "Reset dashboard filters",
-        group: "Saved Views",
-        keywords: ["reset", "filters", "clear"],
-        action: () => {
-          resetDashboardFilters();
-        },
-      },
-    ];
-
-    const openBlogCommands = sortedBlogs.slice(0, 60).map((blog) => ({
-      id: `open-blog-${blog.id}`,
-      label: `Open "${blog.title}"`,
-      group: "Blogs",
-      keywords: [
-        blog.site,
-        blog.title.toLowerCase(),
-        blog.writer?.full_name?.toLowerCase() ?? "",
-        blog.publisher?.full_name?.toLowerCase() ?? "",
-      ],
-      action: () => {
-        openPanel(blog.id);
-      },
-    }));
-
-    return [...dashboardCommands, ...viewCommands, ...openBlogCommands];
-  }, [
-    applySavedView,
-    openPanel,
-    resetDashboardFilters,
-    saveCurrentFiltersAsView,
-    sortedBlogs,
-    sortedSavedViews,
-  ]);
-
+  // sortedSavedViews will be needed in Phase 4B for command palette - keeping for now
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const sortedSavedViews = _sortedSavedViews;
 
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
       <AppShell
-        commandPaletteCommands={dashboardCommandPaletteCommands}
         sidebarContent={
           <DashboardSidebar
             quickQueueCounts={quickQueueCounts}
@@ -2618,6 +2541,79 @@ export default function DashboardPage() {
               </button>
             </div>
           </section>
+
+          {(search || siteFilters.length > 0 || statusFilters.length > 0 || writerFilters.length > 0 || publisherFilters.length > 0 || writerStatusFilters.length > 0 || publisherStatusFilters.length > 0) && (
+            <FilterBar
+              filters={[
+                ...(search ? [{ id: "search", label: "Search", value: search }] : []),
+                ...siteFilters.map((site) => ({ id: `site-${site}`, label: "Site", value: site })),
+                ...statusFilters.map((status) => ({
+                  id: `status-${status}`,
+                  label: "Status",
+                  value: STATUS_LABELS[status],
+                })),
+                ...writerFilters.map((writerId) => {
+                  const writer = assignableUsers.find((u) => u.id === writerId);
+                  return {
+                    id: `writer-${writerId}`,
+                    label: "Writer",
+                    value: writer?.full_name || writerId,
+                  };
+                }),
+                ...publisherFilters.map((publisherId) => {
+                  const publisher = assignableUsers.find((u) => u.id === publisherId);
+                  return {
+                    id: `publisher-${publisherId}`,
+                    label: "Publisher",
+                    value: publisher?.full_name || publisherId,
+                  };
+                }),
+                ...writerStatusFilters.map((writerStatus) => ({
+                  id: `writer-status-${writerStatus}`,
+                  label: "Writer Status",
+                  value: WRITER_STATUS_LABELS[writerStatus],
+                })),
+                ...publisherStatusFilters.map((publisherStatus) => ({
+                  id: `publisher-status-${publisherStatus}`,
+                  label: "Publisher Status",
+                  value: PUBLISHER_STATUS_LABELS[publisherStatus],
+                })),
+              ]}
+              onRemoveFilter={(filterId) => {
+                if (filterId === "search") {
+                  setSearch("");
+                } else if (filterId.startsWith("site-")) {
+                  const site = filterId.replace("site-", "") as BlogSite;
+                  setSiteFilters((prev) => prev.filter((s) => s !== site));
+                } else if (filterId.startsWith("status-")) {
+                  const status = filterId.replace("status-", "") as OverallBlogStatus;
+                  setStatusFilters((prev) => prev.filter((s) => s !== status));
+                } else if (filterId.startsWith("writer-") && !filterId.startsWith("writer-status-")) {
+                  const writerId = filterId.replace("writer-", "");
+                  setWriterFilters((prev) => prev.filter((id) => id !== writerId));
+                } else if (filterId.startsWith("publisher-") && !filterId.startsWith("publisher-status-")) {
+                  const publisherId = filterId.replace("publisher-", "");
+                  setPublisherFilters((prev) => prev.filter((id) => id !== publisherId));
+                } else if (filterId.startsWith("writer-status-")) {
+                  const status = filterId.replace("writer-status-", "") as WriterStageStatus;
+                  setWriterStatusFilters((prev) => prev.filter((s) => s !== status));
+                } else if (filterId.startsWith("publisher-status-")) {
+                  const status = filterId.replace("publisher-status-", "") as PublisherStageStatus;
+                  setPublisherStatusFilters((prev) => prev.filter((s) => s !== status));
+                }
+              }}
+              onClearAll={() => {
+                setSearch("");
+                setSiteFilters([]);
+                setStatusFilters([]);
+                setWriterFilters([]);
+                setPublisherFilters([]);
+                setWriterStatusFilters([]);
+                setPublisherStatusFilters([]);
+                setCurrentPage(1);
+              }}
+            />
+          )}
 
           {canRunBulkActions && selectedBlogIds.length > 0 ? (
             <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -2891,268 +2887,36 @@ export default function DashboardPage() {
 
               <div
                 ref={tableContainerRef}
-                className="max-h-[70vh] overflow-auto rounded-lg border border-slate-200"
+                className="max-h-[70vh]"
               >
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                    <tr>
-                    {canSelectRows ? (
-                        <th
-                          className={`${headerCellClass} sticky top-0 z-10 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={allVisibleSelected}
-                            onChange={(event) => {
-                              handleToggleAllVisible(event.target.checked);
-                            }}
-                          />
-                        </th>
-                      ) : null}
-                      {visibleColumnOrder.map((column) => (
-                        <th
-                          key={column}
-                          className={`${headerCellClass} sticky top-0 z-10 bg-slate-100 shadow-[inset_0_-1px_0_0_rgb(226_232_240)] ${
-                            CENTER_ALIGNED_DASHBOARD_COLUMNS.includes(column)
-                              ? "text-center"
-                              : ""
-                          }`}
-                        >
-                          {DASHBOARD_COLUMN_LABELS[column]}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {sortedBlogs.length === 0 ? (
-                      <tr>
-                        <td
-                          className={`${bodyCellClass} text-center text-slate-500`}
-                          colSpan={visibleColumnOrder.length + (canSelectRows ? 1 : 0)}
-                        >
-                          No blogs found with current filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      pagedBlogs.map((blog) => {
-                        const displayPublishDate = getBlogPublishDate(blog);
-                        const scheduledPublishDate = getBlogScheduledDate(blog);
-                        const publishDate = scheduledPublishDate
-                          ? parseISO(scheduledPublishDate)
-                          : null;
-                        const publishedTimestamp = blog.actual_published_at ?? blog.published_at;
-                        const publishedDelayDays =
-                          scheduledPublishDate && publishedTimestamp
-                            ? Math.floor(
-                                (new Date(publishedTimestamp).getTime() -
-                                  new Date(`${scheduledPublishDate}T00:00:00Z`).getTime()) /
-                                  (24 * 60 * 60 * 1000)
-                              )
-                            : null;
-                        const isOverdue =
-                          publishDate !== null &&
-                          isBefore(publishDate, new Date()) &&
-                          blog.publisher_status !== "completed";
-                        const isStaleDraft =
-                          blog.writer_status !== "completed" &&
-                          isBefore(
-                            parseISO(blog.status_updated_at),
-                            new Date(
-                              now.getTime() - staleDraftDays * 24 * 60 * 60 * 1000
-                            )
-                          );
-                        const rowWorkflowStage = getWorkflowStage({
-                          writerStatus: blog.writer_status,
-                          publisherStatus: blog.publisher_status,
-                        });
-                        const rowToneClass = isOverdue
-                          ? "bg-rose-50"
-                          : rowWorkflowStage === "ready"
-                            ? "bg-amber-50"
-                            : rowWorkflowStage === "publishing"
-                              ? "bg-blue-50"
-                              : rowWorkflowStage === "writing"
-                                ? "bg-white"
-                                : "bg-emerald-50/40";
-
-                        return (
-                          <tr
-                            key={blog.id}
-                            className={`table-row-focus cursor-pointer ${
-                              activeBlogId === blog.id ? "bg-slate-100" : `${rowToneClass} hover:bg-slate-100`
-                            }`}
-                            onClick={() => {
-                              openPanel(blog.id);
-                            }}
-                          >
-                            {canSelectRows ? (
-                              <td
-                                className={bodyCellClass}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedIdSet.has(blog.id)}
-                                  onChange={(event) => {
-                                    handleToggleSingle(blog.id, event.target.checked);
-                                  }}
-                                />
-                              </td>
-                            ) : null}
-                            {visibleColumnOrder.map((column) => {
-                              if (column === "title") {
-                                return (
-                                  <td
-                                    key={column}
-                                    className={`${bodyCellClass} font-medium text-slate-900`}
-                                  >
-                                    <span className="block overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                                      {blog.title}
-                                    </span>
-                                  </td>
-                                );
-                              }
-
-                              if (column === "site") {
-                                return (
-                                  <td key={column} className={`${bodyCellClass} text-slate-600`}>
-                                    <span
-                                      className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${getSiteBadgeClasses(
-                                        blog.site
-                                      )}`}
-                                    >
-                                      {getSiteShortLabel(blog.site)}
-                                    </span>
-                                  </td>
-                                );
-                              }
-
-                              if (column === "writer") {
-                                return (
-                                  <td key={column} className={`${bodyCellClass} text-slate-600`}>
-                                    {blog.writer?.full_name ?? "Unassigned"}
-                                  </td>
-                                );
-                              }
-
-                              if (column === "writer_status") {
-                                return (
-                                  <td key={column} className={`${bodyCellClass} text-center text-slate-600`}>
-                                    {canEditWritingStage ? (
-                                      <select
-                                        className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-                                        value={blog.writer_status}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                        }}
-                                        onChange={(event) => {
-                                          event.stopPropagation();
-                                          void updateBlogInline(
-                                            blog,
-                                            { writer_status: event.target.value as WriterStageStatus },
-                                            `Writer stage updated for "${blog.title}".`
-                                          );
-                                        }}
-                                      >
-                                        {WRITER_STATUSES.map((status) => (
-                                          <option key={status} value={status}>
-                                            {WRITER_STAGE_DISPLAY_LABELS[status]}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    ) : (
-                                      <div className="inline-flex items-center gap-1.5">
-                                        <span className="text-xs text-slate-500">Writer:</span>
-                                        <WriterStatusBadge status={blog.writer_status} />
-                                      </div>
-                                    )}
-                                  </td>
-                                );
-                              }
-
-                              if (column === "publisher") {
-                                return (
-                                  <td key={column} className={`${bodyCellClass} text-slate-600`}>
-                                    {blog.publisher?.full_name ?? "Unassigned"}
-                                  </td>
-                                );
-                              }
-
-                              if (column === "publisher_status") {
-                                return (
-                                  <td key={column} className={`${bodyCellClass} text-center text-slate-600`}>
-                                    {canEditPublishingStage ? (
-                                      <select
-                                        className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-                                        value={blog.publisher_status}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                        }}
-                                        onChange={(event) => {
-                                          event.stopPropagation();
-                                          void updateBlogInline(
-                                            blog,
-                                            { publisher_status: event.target.value as PublisherStageStatus },
-                                            `Publisher stage updated for "${blog.title}".`
-                                          );
-                                        }}
-                                      >
-                                        {PUBLISHER_STATUSES.map((status) => (
-                                          <option key={status} value={status}>
-                                            {PUBLISHER_STAGE_DISPLAY_LABELS[status]}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    ) : (
-                                      <div className="inline-flex items-center gap-1.5">
-                                        <span className="text-xs text-slate-500">Publisher:</span>
-                                        <PublisherStatusBadge status={blog.publisher_status} />
-                                      </div>
-                                    )}
-                                  </td>
-                                );
-                              }
-
-                              if (column === "overall_status") {
-                                return (
-                                  <td key={column} className={`${bodyCellClass} text-center`}>
-                                    <div className="flex items-center justify-center gap-2">
-                                      <StatusBadge status={blog.overall_status} />
-                                      {isOverdue ? (
-                                        <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
-                                          Overdue
-                                        </span>
-                                      ) : null}
-                                      {isStaleDraft ? (
-                                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                          Stale draft
-                                        </span>
-                                      ) : null}
-                                      {rowWorkflowStage === "published" &&
-                                      (publishedDelayDays ?? 0) > 0 ? (
-                                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                          ⚠ Delayed {publishedDelayDays} days
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                  </td>
-                                );
-                              }
-
-                              return (
-                                <td key={column} className={`${bodyCellClass} text-slate-600`}>
-                                  {formatDisplayDate(displayPublishDate) || "—"}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                <DashboardTable
+                  blogs={pagedBlogs}
+                  visibleColumns={visibleColumnOrder}
+                  activeBlogId={activeBlogId}
+                  selectedIds={selectedIdSet}
+                  rowDensity={rowDensity}
+                  canSelectRows={canSelectRows}
+                  canEditWritingStage={canEditWritingStage}
+                  canEditPublishingStage={canEditPublishingStage}
+                  staleDraftDays={staleDraftDays}
+                  onRowClick={openPanel}
+                  onToggleAll={handleToggleAllVisible}
+                  onToggleSingle={handleToggleSingle}
+                  onWriterStatusChange={(blog, status) => {
+                    void updateBlogInline(
+                      blog,
+                      { writer_status: status },
+                      `Writer stage updated for "${blog.title}".`
+                    );
+                  }}
+                  onPublisherStatusChange={(blog, status) => {
+                    void updateBlogInline(
+                      blog,
+                      { publisher_status: status },
+                      `Publisher stage updated for "${blog.title}".`
+                    );
+                  }}
+                />
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                 <div className="flex flex-wrap items-center gap-3">

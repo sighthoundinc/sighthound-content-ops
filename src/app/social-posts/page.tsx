@@ -27,6 +27,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { CalendarTile } from "@/components/calendar-tile";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   DataPageFilterPills,
   DataPageHeader,
@@ -352,6 +353,8 @@ function SocialPostsPageContent() {
   const [activeMonth, setActiveMonth] = useState(new Date());
   const [listRowLimit, setListRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [listCurrentPage, setListCurrentPage] = useState(1);
+  const [listSortField, setListSortField] = useState<string>("updated");
+  const [listSortDirection, setListSortDirection] = useState<"asc" | "desc">("desc");
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [hasAppliedCreateQuery, setHasAppliedCreateQuery] = useState(false);
@@ -523,18 +526,42 @@ function SocialPostsPageContent() {
     );
   }, [filteredPosts]);
 
+  const sortedListPosts = useMemo(() => {
+    const sorted = [...filteredPosts];
+    sorted.sort((a, b) => {
+      let comparison = 0;
+      switch (listSortField) {
+        case "title":
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case "status":
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case "product":
+          comparison = a.product.localeCompare(b.product);
+          break;
+        case "type":
+          comparison = a.type.localeCompare(b.type);
+          break;
+        case "scheduled":
+          comparison = (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? "");
+          break;
+        case "updated":
+        default:
+          comparison = a.updated_at.localeCompare(b.updated_at);
+      }
+      return listSortDirection === "asc" ? comparison : -comparison;
+    });
+    return sorted;
+  }, [filteredPosts, listSortField, listSortDirection]);
+
   const listPageCount = useMemo(
-    () => getTablePageCount(filteredPosts.length, listRowLimit),
-    [filteredPosts.length, listRowLimit]
+    () => getTablePageCount(sortedListPosts.length, listRowLimit),
+    [sortedListPosts.length, listRowLimit]
   );
   const pagedListPosts = useMemo(
-    () =>
-      getTablePageRows(
-        [...filteredPosts].sort((left, right) => right.updated_at.localeCompare(left.updated_at)),
-        listCurrentPage,
-        listRowLimit
-      ),
-    [filteredPosts, listCurrentPage, listRowLimit]
+    () => getTablePageRows(sortedListPosts, listCurrentPage, listRowLimit),
+    [sortedListPosts, listCurrentPage, listRowLimit]
   );
 
   useEffect(() => {
@@ -1066,6 +1093,62 @@ function SocialPostsPageContent() {
     );
   };
 
+  const listTableColumns: DataTableColumn<SocialPostWithRelations>[] = [
+    {
+      id: "title",
+      label: "Title",
+      sortable: true,
+      render: (post) => post.title,
+    },
+    {
+      id: "status",
+      label: "Status",
+      align: "center",
+      sortable: true,
+      render: (post) => <SocialPostStatusBadge status={post.status} />,
+    },
+    {
+      id: "product",
+      label: "Product",
+      sortable: true,
+      render: (post) => SOCIAL_POST_PRODUCT_LABELS[post.product],
+    },
+    {
+      id: "type",
+      label: "Type",
+      sortable: true,
+      render: (post) => SOCIAL_POST_TYPE_LABELS[post.type],
+    },
+    {
+      id: "scheduled",
+      label: "Scheduled",
+      sortable: true,
+      render: (post) => formatDisplayDate(post.scheduled_date) || "—",
+    },
+    {
+      id: "platforms",
+      label: "Platforms",
+      sortable: false,
+      render: (post) =>
+        post.platforms.length > 0
+          ? post.platforms.map((p) => SOCIAL_PLATFORM_LABELS[p]).join(", ")
+          : "—",
+    },
+    {
+      id: "blog",
+      label: "Associated Blog",
+      sortable: false,
+      render: (post) => post.associated_blog?.title ?? "—",
+    },
+    {
+      id: "updated",
+      label: "Updated",
+      sortable: true,
+      render: (post) =>
+        formatDistanceToNow(new Date(post.updated_at), { addSuffix: true }),
+    },
+  ];
+
   return (
     <ProtectedPage>
       <AppShell>
@@ -1169,78 +1252,20 @@ function SocialPostsPageContent() {
                   }}
                 />
               </div>
-              <div className="overflow-auto rounded-lg border border-slate-200">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                    <tr>
-                      <th className="px-3 py-2">Title</th>
-                      <th className="px-3 py-2 text-center">Status</th>
-                      <th className="px-3 py-2">Product</th>
-                      <th className="px-3 py-2">Type</th>
-                      <th className="px-3 py-2">Scheduled</th>
-                      <th className="px-3 py-2">Platforms</th>
-                      <th className="px-3 py-2">Associated Blog</th>
-                      <th className="px-3 py-2">Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {pagedListPosts.length === 0 ? (
-                      <tr>
-                        <td className="px-3 py-4 text-center text-slate-500" colSpan={8}>
-                          No social posts found.
-                        </td>
-                      </tr>
-                    ) : (
-                      pagedListPosts.map((post) => (
-                        <tr
-                          key={post.id}
-                          tabIndex={0}
-                          className="table-row-focus cursor-pointer"
-                          onClick={() => {
-                            openPostPanel(post.id);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key !== "Enter" && event.key !== " ") {
-                              return;
-                            }
-                            event.preventDefault();
-                            openPostPanel(post.id);
-                          }}
-                        >
-                          <td className="px-3 py-2 font-medium text-slate-900">{post.title}</td>
-                          <td className="px-3 py-2 text-center">
-                            <SocialPostStatusBadge status={post.status} />
-                          </td>
-                          <td className="px-3 py-2 text-slate-700">
-                            {SOCIAL_POST_PRODUCT_LABELS[post.product]}
-                          </td>
-                          <td className="px-3 py-2 text-slate-700">
-                            {SOCIAL_POST_TYPE_LABELS[post.type]}
-                          </td>
-                          <td className="px-3 py-2 text-slate-700">
-                            {formatDisplayDate(post.scheduled_date) || "—"}
-                          </td>
-                          <td className="px-3 py-2 text-slate-700">
-                            {post.platforms.length > 0
-                              ? post.platforms
-                                  .map((platform) => SOCIAL_PLATFORM_LABELS[platform])
-                                  .join(", ")
-                              : "—"}
-                          </td>
-                          <td className="px-3 py-2 text-slate-700">
-                            {post.associated_blog?.title ?? "—"}
-                          </td>
-                          <td className="px-3 py-2 text-slate-500">
-                            {formatDistanceToNow(new Date(post.updated_at), {
-                              addSuffix: true,
-                            })}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                data={pagedListPosts}
+                columns={listTableColumns}
+                sortField={listSortField}
+                sortDirection={listSortDirection}
+                onSort={(field, direction) => {
+                  setListSortField(field);
+                  setListSortDirection(direction);
+                }}
+                onRowClick={(post) => openPostPanel(post.id)}
+                activeIndex={pagedListPosts.findIndex((p) => p.id === activePostId)}
+                density="comfortable"
+                emptyMessage="No social posts found"
+              />
               <div className="flex justify-end rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                 <TablePaginationControls
                   currentPage={listCurrentPage}

@@ -14,6 +14,8 @@ You cannot:
 - bypass permission rules without admin override capabilities
 
 ## 2) Main pages
+**Note**: Dashboard, Blogs, Tasks, and Social Posts now use the unified DataTable component for consistent sorting, filtering, and pagination across all pages (Phase 4C complete).
+
 ### Dashboard (`/dashboard`)
 Use Dashboard for operations scanning and bulk coordination.
 
@@ -24,11 +26,13 @@ Highlights:
   - ready to publish
   - delayed (scheduled publish date is in the past and overall status is not `Published`)
 - metrics are clickable and act as table filters
-- searchable/filterable table with:
+- unified DataTable with:
   - site badges (`SH`, `RED`)
   - clamped titles for readability
   - urgency row tones (overdue/ready/publishing)
   - inline writer/publisher stage update dropdowns (permission-based)
+  - click column headers to sort by any column
+  - consistent pagination and density controls
 - active filter chips + one-click clear-all behavior
 - exports:
   - Export View CSV

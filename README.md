@@ -15,6 +15,26 @@ Internal content operations platform for Sighthound marketing workflows across `
 - End-user guide: `HOW_TO_USE_APP.md`
 - Operations runbook: `OPERATIONS.md`
 
+## UX implementation status
+### Phase 4A: UI Foundation ✅ COMPLETE
+- AppShell layout and navigation
+- DataPageHeader, DataPageToolbar, DataPageFilterPills components
+- FilterBar system
+- StatusBadgeSystem (WriterStatusBadge, PublisherStatusBadge, StageBadges)
+
+### Phase 4B: Command Palette & Global Quick Create ✅ COMPLETE
+- Global command palette (⌘K shortcut)
+- Quick create modal for workflows
+- Navigation and context integration
+
+### Phase 4C: DataTable Migrations ✅ COMPLETE
+- Dashboard: DataTable + FilterBar system
+- Social Posts: DataTable with sorting, filtering, pagination, inline editing
+- Tasks: DataTable with inline status updates, row highlighting
+- Blogs: DataTable with row selection, copy utilities, export controls
+- All pages unified on DataTable component + consistent column definitions
+- Zero dead code, production-ready quality
+
 ## Current UX highlights
 ### Dashboard
 - Sidebar navigation split:

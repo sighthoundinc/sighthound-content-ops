@@ -1,115 +1,194 @@
 "use client";
 
-import { Command } from "cmdk";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import { useCommandPalette } from "@/hooks/use-command-palette";
+import type { Command } from "@/lib/command-palette-config";
 
-import { cn } from "@/lib/utils";
-
-export type CommandPaletteCommand = {
-  id: string;
-  label: string;
-  group: string;
-  keywords?: string[];
-  action: () => void;
+const ICON_EMOJI_MAP: Record<string, string> = {
+  Home: "🏠",
+  Calendar: "📅",
+  BookOpen: "📖",
+  Share2: "📤",
+  CheckSquare: "☑️",
+  Lightbulb: "💡",
+  Settings: "⚙️",
+  Plus: "➕",
+  Command: "⌘",
 };
 
-export function CommandPalette({
-  commands,
-}: {
-  commands: CommandPaletteCommand[];
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState("");
+function getIcon(iconName?: string): string {
+  if (!iconName) return "→";
+  return ICON_EMOJI_MAP[iconName] || "→";
+}
 
+export function CommandPalette() {
+  const {
+    isOpen,
+    close,
+    searchTerm,
+    setSearchTerm,
+    results,
+    groupedResults,
+    selectedIndex,
+    selectResult,
+    executeSelected,
+    handleKeyDown,
+  } = useCommandPalette();
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const resultsContainerRef = useRef<HTMLDivElement>(null);
+  const selectedItemRef = useRef<HTMLButtonElement>(null);
+
+  // Focus input when palette opens
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setIsOpen((previous) => !previous);
-        return;
-      }
-
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
     }
   }, [isOpen]);
 
-  const groupedCommands = useMemo(() => {
-    const commandGroups = new Map<string, CommandPaletteCommand[]>();
-    for (const command of commands) {
-      const existingCommands = commandGroups.get(command.group) ?? [];
-      existingCommands.push(command);
-      commandGroups.set(command.group, existingCommands);
+  // Scroll selected item into view
+  useEffect(() => {
+    if (selectedItemRef.current && resultsContainerRef.current) {
+      selectedItemRef.current.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
     }
-    return Array.from(commandGroups.entries());
-  }, [commands]);
+  }, [selectedIndex]);
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
+
+  const categoryOrder = ["navigation", "create"];
+  const sortedCategories = Object.keys(groupedResults).sort((a, b) => {
+    const aIndex = categoryOrder.indexOf(a);
+    const bIndex = categoryOrder.indexOf(b);
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+  });
+
+  let currentIndex = 0;
+  const getIsSelected = (cmdIndex: number) => cmdIndex === selectedIndex;
 
   return (
-    <>
-      <button
-        type="button"
-        aria-label="Close command palette"
-        className="fixed inset-0 z-40 bg-slate-900/30"
-        onClick={() => {
-          setIsOpen(false);
-        }}
+    <div className="fixed inset-0 z-50">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={close}
+        aria-hidden="true"
       />
-      <div className="fixed inset-x-4 top-16 z-50 mx-auto w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-        <Command className="w-full" shouldFilter value={query} onValueChange={setQuery}>
-          <div className="border-b border-slate-200 px-3 py-2">
-            <Command.Input
-              autoFocus
-              placeholder="Search commands..."
-              className="w-full bg-transparent px-2 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            />
+
+      {/* Modal */}
+      <div className="absolute inset-x-0 top-1/4 flex justify-center">
+        <div
+          className="w-full max-w-2xl bg-white rounded-lg shadow-lg overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="command-palette-title"
+        >
+          {/* Search Input */}
+          <div className="border-b border-gray-200 p-4">
+            <div className="flex items-center gap-3">
+              <span className="text-gray-400 text-lg">🔍</span>
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search commands, navigate, or create..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  handleKeyDown(e);
+                }}
+                className="flex-1 outline-none text-sm"
+                aria-label="Command search"
+              />
+            </div>
           </div>
-          <Command.List className="max-h-[60vh] overflow-y-auto p-2">
-            <Command.Empty className="px-3 py-5 text-sm text-slate-500">
-              No matching commands.
-            </Command.Empty>
-            {groupedCommands.map(([groupName, groupCommands]) => (
-              <Command.Group
-                key={groupName}
-                heading={groupName}
-                className={cn(
-                  "mb-2 overflow-hidden rounded-md border border-transparent p-1 text-xs font-semibold uppercase tracking-wide text-slate-500",
-                  "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pb-1"
-                )}
-              >
-                {groupCommands.map((command) => (
-                  <Command.Item
-                    key={command.id}
-                    value={`${command.label} ${(command.keywords ?? []).join(" ")}`}
-                    className="cursor-pointer rounded-md px-2 py-2 text-sm font-medium text-slate-700 aria-selected:bg-slate-100 aria-selected:text-slate-900"
-                    onSelect={() => {
-                      command.action();
-                      setIsOpen(false);
-                    }}
-                  >
-                    {command.label}
-                  </Command.Item>
+
+          {/* Results */}
+          <div
+            ref={resultsContainerRef}
+            className="max-h-96 overflow-y-auto"
+            role="listbox"
+            aria-label="Command results"
+          >
+            {results.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 text-sm">
+                No commands found
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {sortedCategories.map((category) => (
+                  <div key={category}>
+                    {/* Category Header */}
+                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50">
+                      {category === "navigation" && "Navigation"}
+                      {category === "create" && "Create"}
+                    </div>
+
+                    {/* Commands */}
+                    <div>
+                      {groupedResults[category]?.map((command: Command) => {
+                        const isSelected = getIsSelected(currentIndex);
+                        const itemIndex = currentIndex;
+                        currentIndex++;
+
+                        return (
+                          <button
+                            key={command.id}
+                            ref={isSelected ? selectedItemRef : null}
+                            onClick={() => {
+                              selectResult(itemIndex);
+                              executeSelected();
+                            }}
+                            onMouseEnter={() => selectResult(itemIndex)}
+                            className={`w-full px-4 py-3 text-left text-sm flex items-center gap-3 transition-colors ${
+                              isSelected
+                                ? "bg-blue-50 text-blue-900"
+                                : "text-gray-700 hover:bg-gray-50"
+                            }`}
+                            role="option"
+                            aria-selected={isSelected}
+                          >
+                            <div className="flex-shrink-0 text-lg">
+                              {getIcon(command.icon)}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">{command.label}</div>
+                              {command.description && (
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  {command.description}
+                                </div>
+                              )}
+                            </div>
+                            {command.keyboard && (
+                              <div className="text-xs text-gray-400 ml-auto flex-shrink-0">
+                                {command.keyboard}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ))}
-              </Command.Group>
-            ))}
-          </Command.List>
-        </Command>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between text-xs text-gray-500">
+            <div>Press ESC to close</div>
+            <div className="flex gap-2">
+              <kbd className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-semibold">
+                ↑↓
+              </kbd>
+              <kbd className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-semibold">
+                Enter
+              </kbd>
+            </div>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

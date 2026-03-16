@@ -101,11 +101,13 @@ Key behavior:
 - today strip (scheduled this week / ready / delayed) with clickable metric filtering
 - delayed definition: scheduled publish date passed while `overall_status != published`
 - active filter chips and clear-all control
-- table optimized for scanability:
+- **Phase 4C**: Unified DataTable with:
   - two-line clamped titles
   - site badges (`SH`, `RED`)
   - urgency/state row tones
   - inline writer/publisher stage controls (permission-gated)
+  - click-to-sort on column headers
+  - consistent pagination and density controls
 - export controls (permission-gated)
 - edit columns popover
 - bulk actions (permission-gated)
@@ -241,12 +243,34 @@ The project is migration-driven (`supabase/migrations`) with compatibility layer
 - high traceability (history + comments + permission audits)
 - low-cognitive-load UI for operational scanning
 - predictable filter/search behavior with immediate visual state feedback
-## 13) Acceptance criteria (current)
+## 13) Implementation phases
+### Phase 4A: UI Foundation ✅ COMPLETE
+1. AppShell layout and navigation patterns
+2. DataPageHeader, DataPageToolbar, DataPageFilterPills reusable components
+3. FilterBar system for consistent filtering across pages
+4. StatusBadgeSystem (WriterStatusBadge, PublisherStatusBadge, StageBadges)
+
+### Phase 4B: Command Palette & Global Quick Create ✅ COMPLETE
+1. Global command palette (⌘K shortcut)
+2. Quick create modal for workflows
+3. Navigation integration and context awareness
+
+### Phase 4C: DataTable Migrations ✅ COMPLETE
+1. Dashboard migrated to unified DataTable + FilterBar system
+2. Social Posts migrated with sorting, filtering, pagination, inline editing
+3. Tasks migrated with inline status updates and row highlighting
+4. Blogs migrated with row selection, copy utilities, and export controls
+5. All four pages use consistent DataTable component and column definitions
+6. Zero dead code, production-ready code quality
+7. TypeScript 0 errors, ESLint 0 errors on migrated pages
+
+## 14) Acceptance criteria (current)
 1. Permission-guarded workflows execute with DB-authoritative enforcement.
-2. Dashboard queues/pipelines are actionable and scan-friendly.
-3. Tasks and Calendar prioritize execution clarity.
+2. Dashboard queues/pipelines are actionable and scan-friendly (Phase 4C DataTable).
+3. Tasks and Calendar prioritize execution clarity (Phase 4C DataTable).
 4. Comments/history and permission audit logs are available for traceability.
 5. Settings and Permissions pages support operational administration.
 6. Admin quick-view runs actions in selected non-admin user context and supports clean return flow.
 7. Admin cleanup controls can purge activity history with optional comments cleanup.
 8. Migration, lint, and typecheck workflows remain stable.
+9. All major pages use unified DataTable behavior with consistent sorting/filtering/pagination.

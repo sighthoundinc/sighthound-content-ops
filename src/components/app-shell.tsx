@@ -5,10 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getUserRoles } from "@/lib/roles";
 
-import {
-  CommandPalette,
-  type CommandPaletteCommand,
-} from "@/components/command-palette";
 import { Button } from "@/components/button";
 import { KbdShortcut } from "@/components/kbd-shortcut";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
@@ -56,11 +52,9 @@ function formatNotificationAge(createdAt: number) {
 
 export function AppShell({
   children,
-  commandPaletteCommands = [],
   sidebarContent = null,
 }: {
   children: React.ReactNode;
-  commandPaletteCommands?: CommandPaletteCommand[];
   sidebarContent?: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -96,82 +90,6 @@ export function AppShell({
       user.id !== quickViewSnapshot.adminUserId
   );
 
-  const builtInCommandPaletteCommands = useMemo(() => {
-    const navigationCommands: CommandPaletteCommand[] = NAV_ITEMS.map((item) => ({
-      id: `nav-${item.href}`,
-      label: `Go to ${item.label}`,
-      group: "Navigation",
-      keywords: [item.href, item.label.toLowerCase(), "navigate"],
-      action: () => {
-        router.push(item.href);
-      },
-    }));
-
-    navigationCommands.push({
-      id: "nav-settings",
-      label: "Go to settings",
-      group: "Navigation",
-      keywords: ["settings", "preferences", "configuration"],
-      action: () => {
-        router.push("/settings");
-      },
-    });
-
-    if (canManagePermissions) {
-      navigationCommands.push({
-        id: "nav-permissions",
-        label: "Go to permissions",
-        group: "Navigation",
-        keywords: ["permissions", "roles", "access"],
-        action: () => {
-          router.push("/settings/permissions");
-        },
-      });
-    }
-
-    if (canCreateBlogs || canManageSocialPosts) {
-      navigationCommands.push({
-        id: "open-quick-create",
-        label: "Open quick create",
-        group: "Create",
-        keywords: ["quick", "create", "new", "content", "c"],
-        action: () => {
-          setIsQuickCreateOpen(true);
-        },
-      });
-    }
-
-    if (canManageSocialPosts) {
-      navigationCommands.push({
-        id: "nav-add-social-post",
-        label: "Create new social post",
-        group: "Create",
-        keywords: ["social", "post", "new", "create", "add"],
-        action: () => {
-          router.push("/social-posts?create=1");
-        },
-      });
-    }
-
-    if (canCreateBlogs) {
-      navigationCommands.push({
-        id: "nav-add-blog",
-        label: "Create new blog",
-        group: "Create",
-        keywords: ["blog", "new", "create", "add"],
-        action: () => {
-          router.push("/blogs/new");
-        },
-      });
-    }
-
-    return navigationCommands;
-  }, [canCreateBlogs, canManagePermissions, canManageSocialPosts, router]);
-
-  const allCommandPaletteCommands = useMemo(
-    () => [...builtInCommandPaletteCommands, ...commandPaletteCommands],
-    [builtInCommandPaletteCommands, commandPaletteCommands]
-  );
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
@@ -287,7 +205,6 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <CommandPalette commands={allCommandPaletteCommands} />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <div>

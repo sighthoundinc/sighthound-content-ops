@@ -1,15 +1,4 @@
-import {
-  PUBLISHER_STATUS_COLORS,
-  PUBLISHER_STATUS_LABELS,
-  SOCIAL_POST_STATUS_COLORS,
-  SOCIAL_POST_STATUS_LABELS,
-  STATUS_COLORS,
-  STATUS_LABELS,
-  WORKFLOW_STAGE_COLORS,
-  WORKFLOW_STAGE_LABELS,
-  WRITER_STATUS_COLORS,
-  WRITER_STATUS_LABELS,
-} from "@/lib/status";
+import { StatusBadgeSystem } from "./status-badge-system";
 import type {
   OverallBlogStatus,
   PublisherStageStatus,
@@ -17,48 +6,17 @@ import type {
   WorkflowStage,
   WriterStageStatus,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
-function BaseStatusBadge({
-  className,
-  children,
-}: {
-  className: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center justify-center rounded-full px-2.5 py-1 text-center text-xs font-medium leading-4 whitespace-nowrap",
-        className
-      )}
-    >
-      {children}
-    </span>
-  );
-}
 
 export function StatusBadge({ status }: { status: OverallBlogStatus }) {
-  return (
-    <BaseStatusBadge className={STATUS_COLORS[status]}>
-      {STATUS_LABELS[status]}
-    </BaseStatusBadge>
-  );
+  return <StatusBadgeSystem variant="overall" status={status} />;
 }
 
 export function WorkflowStageBadge({ stage }: { stage: WorkflowStage }) {
-  return (
-    <BaseStatusBadge className={WORKFLOW_STAGE_COLORS[stage]}>
-      {WORKFLOW_STAGE_LABELS[stage]}
-    </BaseStatusBadge>
-  );
+  return <StatusBadgeSystem variant="workflow" status={stage} />;
 }
 
 export function WriterStatusBadge({ status }: { status: WriterStageStatus }) {
-  return (
-    <BaseStatusBadge className={WRITER_STATUS_COLORS[status]}>
-      {WRITER_STATUS_LABELS[status]}
-    </BaseStatusBadge>
-  );
+  return <StatusBadgeSystem variant="writer" status={status} />;
 }
 
 export function PublisherStatusBadge({
@@ -66,17 +24,9 @@ export function PublisherStatusBadge({
 }: {
   status: PublisherStageStatus;
 }) {
-  return (
-    <BaseStatusBadge className={PUBLISHER_STATUS_COLORS[status]}>
-      {PUBLISHER_STATUS_LABELS[status]}
-    </BaseStatusBadge>
-  );
+  return <StatusBadgeSystem variant="publisher" status={status} />;
 }
 
 export function SocialPostStatusBadge({ status }: { status: SocialPostStatus }) {
-  return (
-    <BaseStatusBadge className={SOCIAL_POST_STATUS_COLORS[status]}>
-      {SOCIAL_POST_STATUS_LABELS[status]}
-    </BaseStatusBadge>
-  );
+  return <StatusBadgeSystem variant="social" status={status} />;
 }

@@ -2475,37 +2475,30 @@ export default function DashboardPage() {
                   selectedValues={writerFilters}
                   onChange={setWriterFilters}
                 />
-                <details className="rounded-md border border-slate-200 bg-white px-3 py-2 md:col-span-2 xl:col-span-2">
-                  <summary className="cursor-pointer list-none text-sm font-medium text-slate-700">
-                    Status
-                  </summary>
-                  <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                    <CheckboxMultiSelect
-                      label="Writer Status"
-                      options={writerStatusFilterOptions}
-                      selectedValues={writerStatusFilters}
-                      onChange={(nextValues) => {
-                        setWriterStatusFilters(nextValues as WriterStageStatus[]);
-                      }}
-                    />
-                    <CheckboxMultiSelect
-                      label="Publisher Status"
-                      options={publisherStatusFilterOptions}
-                      selectedValues={publisherStatusFilters}
-                      onChange={(nextValues) => {
-                        setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-                      }}
-                    />
-                    <CheckboxMultiSelect
-                      label="Overall Status"
-                      options={overallStatusFilterOptions}
-                      selectedValues={statusFilters}
-                      onChange={(nextValues) => {
-                        setStatusFilters(nextValues as OverallBlogStatus[]);
-                      }}
-                    />
-                  </div>
-                </details>
+                <CheckboxMultiSelect
+                  label="Writer Status"
+                  options={writerStatusFilterOptions}
+                  selectedValues={writerStatusFilters}
+                  onChange={(nextValues) => {
+                    setWriterStatusFilters(nextValues as WriterStageStatus[]);
+                  }}
+                />
+                <CheckboxMultiSelect
+                  label="Publisher Status"
+                  options={publisherStatusFilterOptions}
+                  selectedValues={publisherStatusFilters}
+                  onChange={(nextValues) => {
+                    setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
+                  }}
+                />
+                <CheckboxMultiSelect
+                  label="Overall Status"
+                  options={overallStatusFilterOptions}
+                  selectedValues={statusFilters}
+                  onChange={(nextValues) => {
+                    setStatusFilters(nextValues as OverallBlogStatus[]);
+                  }}
+                />
                 <details className="relative">
                   <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
                     + Add Filter

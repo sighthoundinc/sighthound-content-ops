@@ -61,7 +61,7 @@ import {
   type SortDirection,
   type TableRowLimit,
 } from "@/lib/table";
-import { getSiteBadgeClasses, getSiteLabel } from "@/lib/site";
+import { getSiteBadgeClasses, getSiteShortLabel } from "@/lib/site";
 import type {
   BlogSite,
   BlogHistoryRecord,
@@ -198,18 +198,7 @@ const DEFAULT_DASHBOARD_COLUMN_ORDER: DashboardColumnKey[] = [
   "publish_date",
   "overall_status",
 ];
-const REQUIRED_DASHBOARD_COLUMNS: DashboardColumnKey[] = [
-  "site",
-  "title",
-  "writer",
-  "writer_status",
-  "publisher",
-  "publisher_status",
-  "publish_date",
-];
-const REQUIRED_DASHBOARD_COLUMN_SET = new Set<DashboardColumnKey>(
-  REQUIRED_DASHBOARD_COLUMNS
-);
+const REQUIRED_DASHBOARD_COLUMNS: DashboardColumnKey[] = [];
 
 const DASHBOARD_COLUMN_VIEW_STORAGE_KEY = "dashboard-column-view:v1";
 const DASHBOARD_COLUMN_HIDDEN_STORAGE_KEY = "dashboard-column-hidden:v1";
@@ -244,7 +233,7 @@ const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => 
   return normalized;
 };
 
-const normalizeDashboardHiddenColumns = (value: unknown): DashboardColumnKey[] => {
+  const normalizeDashboardHiddenColumns = (value: unknown): DashboardColumnKey[] => {
   if (!Array.isArray(value)) {
     return DEFAULT_DASHBOARD_HIDDEN_COLUMNS;
   }
@@ -255,8 +244,7 @@ const normalizeDashboardHiddenColumns = (value: unknown): DashboardColumnKey[] =
     if (
       typeof item !== "string" ||
       !isDashboardColumnKey(item) ||
-      seen.has(item) ||
-      REQUIRED_DASHBOARD_COLUMN_SET.has(item)
+      seen.has(item)
     ) {
       continue;
     }
@@ -1461,9 +1449,6 @@ export default function DashboardPage() {
     });
   };
   const toggleColumnVisibility = (column: DashboardColumnKey) => {
-    if (REQUIRED_DASHBOARD_COLUMN_SET.has(column)) {
-      return;
-    }
     setHiddenColumns((previous) => {
       if (previous.includes(column)) {
         return previous.filter((hiddenColumn) => hiddenColumn !== column);
@@ -1722,7 +1707,7 @@ export default function DashboardPage() {
       }
 
       if (column === "site") {
-        return getSiteLabel(blog.site);
+        return getSiteShortLabel(blog.site);
       }
 
       if (column === "writer") {
@@ -2911,9 +2896,8 @@ export default function DashboardPage() {
                               type="checkbox"
                               checked={!hiddenColumnSet.has(column)}
                               disabled={
-                                REQUIRED_DASHBOARD_COLUMN_SET.has(column) ||
-                                (!hiddenColumnSet.has(column) &&
-                                  visibleColumnOrder.length <= 1)
+                                !hiddenColumnSet.has(column) &&
+                                  visibleColumnOrder.length <= 1
                               }
                               onChange={() => {
                                 toggleColumnVisibility(column);
@@ -2921,7 +2905,6 @@ export default function DashboardPage() {
                             />
                             <span className="font-medium">
                               {DASHBOARD_COLUMN_LABELS[column]}
-                              {REQUIRED_DASHBOARD_COLUMN_SET.has(column) ? " (required)" : ""}
                             </span>
                           </label>
                           <div className="inline-flex items-center gap-1">
@@ -2951,9 +2934,6 @@ export default function DashboardPage() {
                         </div>
                       ))}
                     </div>
-                    <p className="mt-2 text-xs text-slate-500">
-                      Core workflow columns are required and always visible.
-                    </p>
                   </div>
                 ) : null}
               </section>
@@ -3137,7 +3117,7 @@ export default function DashboardPage() {
                                         blog.site
                                       )}`}
                                     >
-                                      {getSiteLabel(blog.site)}
+                                      {getSiteShortLabel(blog.site)}
                                     </span>
                                   </td>
                                 );

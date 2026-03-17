@@ -319,7 +319,7 @@ function BlogLibraryPageContent() {
     useState<LibraryPublisherStatusFilter>("all");
   const [sortField, setSortField] = useState<LibrarySortField>("published_date");
   const [sortDirection, setSortDirection] = useState<LibrarySortDirection>("desc");
-  const rowDensity: RowDensity = "compact";
+  const rowDensity = "compact" as const;
   const [rowLimit, setRowLimit] = useState<LibraryRowLimit>(DEFAULT_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
@@ -983,6 +983,13 @@ function BlogLibraryPageContent() {
     }, 1200);
   };
 
+  const getSmartExportScope = (): "view" | "selected" => {
+    if (selectedBlogs.length === 0 || selectedBlogs.length === sortedBlogs.length) {
+      return "view";
+    }
+    return "selected";
+  };
+
   const exportCsv = (scope: "view" | "selected") => {
     const statusId = showSaving("Generating CSV…");
     if (scope === "view" && !canExportCsv) {
@@ -1222,52 +1229,39 @@ function BlogLibraryPageContent() {
                   </div>
                 </details>
                 <PermissionGate
-                  can={canExportCsv}
-                  reason="You do not have permission to export the current blog view."
+                  can={canExportCsv || canExportSelectedCsv}
+                  reason="You do not have permission to export."
                   requiredPermission={ExportScopePermissions.viewExport}
                 >
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      exportCsv("view");
-                    }}
-                  >
-                    Export CSV
-                  </Button>
-                </PermissionGate>
-                <PermissionGate
-                  can={canExportCsv}
-                  reason="You do not have permission to export the current blog view."
-                  requiredPermission={ExportScopePermissions.viewExport}
-                >
-                  <Button
-                    type="button"
-                    className="pressable rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      exportPdf("view");
-                    }}
-                  >
-                    Export PDF
-                  </Button>
-                </PermissionGate>
-                <PermissionGate
-                  can={canExportSelectedCsv}
-                  reason="You do not have permission to export selected blog rows."
-                  requiredPermission={ExportScopePermissions.selectedExport}
-                >
-                  <Button
-                    type="button"
-                    disabled={!canExportSelectedCsv || selectedBlogs.length === 0}
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      exportCsv("selected");
-                    }}
-                  >
-                    Export Selection
-                  </Button>
+                  <details className="relative">
+                    <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100">
+                      Export ▼
+                    </summary>
+                    <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                      <button
+                        type="button"
+                        disabled={sortedBlogs.length === 0}
+                        className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => {
+                          closeOpenDetailsMenus();
+                          exportCsv(getSmartExportScope());
+                        }}
+                      >
+                        As .CSV file
+                      </button>
+                      <button
+                        type="button"
+                        disabled={sortedBlogs.length === 0}
+                        className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => {
+                          closeOpenDetailsMenus();
+                          exportPdf(getSmartExportScope());
+                        }}
+                      >
+                        As .PDF file
+                      </button>
+                    </div>
+                  </details>
                 </PermissionGate>
                 <Button
                   type="button"

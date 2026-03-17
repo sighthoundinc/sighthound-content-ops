@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { Button } from "@/components/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
@@ -532,7 +531,21 @@ export default function MyTasksPage() {
     }
     return "View options";
   };
+  const closeOpenDetailsMenus = () => {
+    document.querySelectorAll("details[open]").forEach((el) => {
+      (el as HTMLDetailsElement).open = false;
+    });
+  };
+
   const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
+  const escapeHtmlValue = (value: string) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll("\"", "&quot;")
+      .replaceAll("'", "&#39;");
+
   const exportTaskCsv = () => {
     if (!canExportCsv) {
       showError("You do not have permission to export tasks.");
@@ -566,6 +579,87 @@ export default function MyTasksPage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(downloadUrl);
     showSuccess("Task export complete.");
+  };
+
+  const exportTaskPdf = () => {
+    if (!canExportCsv) {
+      showError("You do not have permission to export tasks.");
+      return;
+    }
+    if (filteredTaskItems.length === 0) {
+      showError("No tasks to export.");
+      return;
+    }
+    const exportableColumns = visibleColumnOrder.filter((column) => column !== "options");
+    if (exportableColumns.length === 0) {
+      showError("Select at least one data column before exporting.");
+      return;
+    }
+
+    const popup = window.open("", "_blank", "width=1100,height=800");
+    if (!popup) {
+      showError("Popup blocked. Allow popups to export PDF.");
+      return;
+    }
+    const generatedAt = format(new Date(), "MMM d yyyy, h:mm a");
+
+    const headerMarkup = exportableColumns
+      .map((column) => `<th>${escapeHtmlValue(TASK_TABLE_COLUMN_LABELS[column])}</th>`)
+      .join("");
+    const rowsMarkup = filteredTaskItems
+      .map((task) => {
+        const cellMarkup = exportableColumns
+          .map((column) => `<td>${escapeHtmlValue(getTaskExportCellValue(task, column))}</td>`)
+          .join("");
+        return `<tr>${cellMarkup}</tr>`;
+      })
+      .join("");
+    popup.document.open();
+    popup.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>My Tasks Export</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0f172a; padding: 24px; }
+    h1 { margin: 0 0 12px 0; font-size: 20px; }
+    p { margin: 0 0 18px 0; color: #475569; font-size: 13px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
+    th { background: #f8fafc; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>My Tasks Export</h1>
+  <p>Generated ${escapeHtmlValue(generatedAt)}</p>
+  <table>
+    <thead>
+      <tr>
+        ${headerMarkup}
+      </tr>
+    </thead>
+    <tbody>${rowsMarkup}</tbody>
+  </table>
+</body>
+</html>`);
+    popup.document.close();
+
+    const triggerPrintWhenReady = () => {
+      if (popup.closed) {
+        return;
+      }
+      const isReady = popup.document.readyState === "complete";
+      const hasBody = Boolean(popup.document.body?.childElementCount);
+      if (!isReady || !hasBody) {
+        window.setTimeout(triggerPrintWhenReady, 120);
+        return;
+      }
+      popup.focus();
+      popup.print();
+    };
+
+    window.setTimeout(triggerPrintWhenReady, 180);
+    showSuccess("Export ready. Use your browser's print dialog to save as PDF.");
   };
 
   useEffect(() => {
@@ -868,15 +962,35 @@ export default function MyTasksPage() {
                     </div>
                   </div>
                 </details>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={!canExportCsv || filteredTaskItems.length === 0}
-                  onClick={exportTaskCsv}
-                >
-                  Export
-                </Button>
+                <details className="relative">
+                  <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100">
+                    Export ▼
+                  </summary>
+                  <div className="absolute right-0 z-20 mt-1 rounded-md border border-slate-200 bg-white shadow-md">
+                    <button
+                      type="button"
+                      disabled={sortedTaskItems.length === 0}
+                      onClick={() => {
+                        exportTaskCsv();
+                        closeOpenDetailsMenus();
+                      }}
+                      className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                    >
+                      As .CSV file
+                    </button>
+                    <button
+                      type="button"
+                      disabled={sortedTaskItems.length === 0}
+                      onClick={() => {
+                        exportTaskPdf();
+                        closeOpenDetailsMenus();
+                      }}
+                      className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                    >
+                      As .PDF file
+                    </button>
+                  </div>
+                </details>
               </>
             }
             filters={

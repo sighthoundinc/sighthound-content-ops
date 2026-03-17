@@ -497,7 +497,7 @@ export default function DashboardPage() {
   );
   const [savedViews, setSavedViews] = useState<SavedDashboardView[]>([]);
   const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
-  const rowDensity: RowDensity = "compact";
+  const rowDensity = "compact" as const;
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [staleDraftDays, setStaleDraftDays] = useState(10);
@@ -1776,6 +1776,13 @@ export default function DashboardPage() {
     URL.revokeObjectURL(downloadUrl);
   }, []);
 
+  const getSmartExportScope = (): "selected" | "view" => {
+    if (selectedBlogIds.length === 0 || selectedBlogIds.length === sortedBlogs.length) {
+      return "view";
+    }
+    return "selected";
+  };
+
   const handleExportCsv = (scope: "selected" | "view") => {
     if (scope === "selected" && !canExportSelectedCsv) {
       setError("You do not have permission to export selected CSV.");
@@ -2948,30 +2955,6 @@ export default function DashboardPage() {
                       rowLimit={rowLimit}
                       noun="blogs"
                     />
-                    {canExportCsv ? (
-                      <button
-                        type="button"
-                        disabled={sortedBlogs.length === 0}
-                        className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => {
-                          handleExportCsv("view");
-                        }}
-                      >
-                        Export View CSV
-                      </button>
-                    ) : null}
-                    {canExportSelectedCsv && canSelectRows ? (
-                      <button
-                        type="button"
-                        disabled={selectedBlogIds.length === 0}
-                        className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => {
-                          handleExportCsv("selected");
-                        }}
-                      >
-                        Export Selected CSV
-                      </button>
-                    ) : null}
                   </div>
                   <div className="ml-auto flex items-center gap-2">
                     <button
@@ -2983,6 +2966,25 @@ export default function DashboardPage() {
                     >
                       Edit Columns
                     </button>
+                    {canExportCsv || canExportSelectedCsv ? (
+                      <details className="relative">
+                        <summary className="cursor-pointer list-none rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                          Export ▼
+                        </summary>
+                        <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                          <button
+                            type="button"
+                            disabled={sortedBlogs.length === 0}
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() => {
+                              handleExportCsv(getSmartExportScope());
+                            }}
+                          >
+                            As .CSV file
+                          </button>
+                        </div>
+                      </details>
+                    ) : null}
                   </div>
                 </div>
                 {isEditColumnsOpen ? (

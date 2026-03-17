@@ -63,6 +63,10 @@ export async function DELETE(request: NextRequest) {
         .select("*", { count: "exact", head: true });
       if (targetUserIds && targetUserIds.length > 0) {
         countQuery = countQuery.in("changed_by", targetUserIds);
+      } else {
+        // For delete all, we need to add a condition that's always true
+        // to satisfy Supabase's requirement for WHERE clause
+        countQuery = countQuery.neq("id", null);
       }
       const { count, error: countError } = await countQuery;
       if (countError) {
@@ -72,6 +76,9 @@ export async function DELETE(request: NextRequest) {
       let deleteQuery = adminClient.from(table).delete();
       if (targetUserIds && targetUserIds.length > 0) {
         deleteQuery = deleteQuery.in("changed_by", targetUserIds);
+      } else {
+        // For delete all, we need to add a condition that's always true
+        deleteQuery = deleteQuery.neq("id", null);
       }
       const { error: deleteError } = await deleteQuery;
       if (deleteError) {
@@ -88,6 +95,9 @@ export async function DELETE(request: NextRequest) {
         countQuery = countQuery.or(
           `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`
         );
+      } else {
+        // For delete all, we need to add a condition that's always true
+        countQuery = countQuery.neq("id", null);
       }
       const { count, error: countError } = await countQuery;
       if (countError) {
@@ -99,6 +109,9 @@ export async function DELETE(request: NextRequest) {
         deleteQuery = deleteQuery.or(
           `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`
         );
+      } else {
+        // For delete all, we need to add a condition that's always true
+        deleteQuery = deleteQuery.neq("id", null);
       }
       const { error: deleteError } = await deleteQuery;
       if (deleteError) {

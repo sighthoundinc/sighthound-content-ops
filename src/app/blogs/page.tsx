@@ -175,14 +175,9 @@ const PUBLISHER_STATUS_FILTER_OPTIONS: Array<{
 
 const SORT_OPTIONS: Array<{ value: LibrarySortField; label: string }> = [
   { value: "none", label: "None" },
-  { value: "published_date", label: "Published Date" },
-  { value: "title", label: "Title" },
-  { value: "site", label: "Site" },
-];
-
-const SORT_DIRECTION_OPTIONS: Array<{ value: LibrarySortDirection; label: string }> = [
-  { value: "desc", label: "Descending" },
-  { value: "asc", label: "Ascending" },
+  { value: "published_date", label: "Sort by: Publish Date" },
+  { value: "title", label: "Sort by: Title" },
+  { value: "site", label: "Sort by: Site" },
 ];
 const SORTABLE_LIBRARY_COLUMNS: Partial<Record<LibraryColumnKey, LibrarySortField>> = {
   site: "site",
@@ -1343,7 +1338,7 @@ function BlogLibraryPageContent() {
             }
             filters={
               <>
-              <div className="grid gap-4 sm:grid-cols-2 md:col-span-2 xl:col-span-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 <select
                   aria-label="Publish State"
                   value={statusFilter}
@@ -1400,45 +1395,44 @@ function BlogLibraryPageContent() {
                     </option>
                   ))}
                 </select>
-                <select
-                  aria-label="Sort Field"
-                  value={sortField}
-                  onChange={(event) => {
-                    setSortField(event.target.value as LibrarySortField);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  {SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Sort Direction"
-                  value={sortDirection}
-                  disabled={sortField === "none"}
-                  onChange={(event) => {
-                    setSortDirection(event.target.value as LibrarySortDirection);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
-                >
-                  {SORT_DIRECTION_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex items-end justify-end sm:col-span-2">
-                  <Button
-                    type="button"
-                    onClick={resetFilters}
-                    variant="secondary"
-                    size="sm"
+                <div className="flex items-center gap-2">
+                  <select
+                    aria-label="Sort Field"
+                    value={sortField}
+                    onChange={(event) => {
+                      setSortField(event.target.value as LibrarySortField);
+                    }}
+                    className="focus-field flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                   >
-                    Reset Filters
-                  </Button>
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="Sort Direction"
+                    value={sortDirection}
+                    disabled={sortField === "none"}
+                    onChange={(event) => {
+                      setSortDirection(event.target.value as LibrarySortDirection);
+                    }}
+                    className="focus-field w-16 rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  >
+                    <option value="asc">↑</option>
+                    <option value="desc">↓</option>
+                  </select>
                 </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  onClick={resetFilters}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Reset Filters
+                </Button>
               </div>
             </>
             }

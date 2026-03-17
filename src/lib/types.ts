@@ -211,6 +211,15 @@ export interface BlogIdeaRecord {
   converted_blog_id: string | null;
 }
 
+export interface IdeaCommentRecord {
+  id: string;
+  idea_id: string;
+  comment: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SocialPostRecord {
   id: string;
   title: string;
@@ -306,6 +315,12 @@ export interface Database {
         Insert: Partial<BlogIdeaRecord> &
           Pick<BlogIdeaRecord, "title" | "site" | "created_by">;
         Update: Partial<BlogIdeaRecord>;
+      };
+      blog_idea_comments: {
+        Row: IdeaCommentRecord;
+        Insert: Partial<IdeaCommentRecord> &
+          Pick<IdeaCommentRecord, "idea_id" | "comment" | "created_by">;
+        Update: Partial<IdeaCommentRecord>;
       };
       social_posts: {
         Row: SocialPostRecord;

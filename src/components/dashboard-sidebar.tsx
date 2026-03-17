@@ -3,6 +3,10 @@
 import { format } from "date-fns";
 
 import type { QuickQueueKey } from "@/app/dashboard/page";
+import {
+  WRITER_STATUS_LABELS,
+  PUBLISHER_STATUS_LABELS,
+} from "@/lib/status";
 
 type QuickQueueCounts = {
   writerInProgress: number;
@@ -39,22 +43,22 @@ export function DashboardSidebar({
   const writingItems: Array<{ key: QuickQueueKey; label: string; count: number }> = [
     {
       key: "writer_in_progress",
-      label: "Drafting",
+      label: WRITER_STATUS_LABELS.in_progress,
       count: quickQueueCounts.writerInProgress,
     },
     {
       key: "writer_needs_revision",
-      label: "Needs Revision",
+      label: WRITER_STATUS_LABELS.needs_revision,
       count: quickQueueCounts.writerNeedsRevision,
     },
     {
       key: "writer_completed_waiting_publish",
-      label: "Ready for Publishing",
+      label: `${WRITER_STATUS_LABELS.completed} (Awaiting Publishing)`,
       count: quickQueueCounts.writerCompletedWaitingPublishing,
     },
     {
       key: "backlog_unscheduled",
-      label: "Backlog",
+      label: `${WRITER_STATUS_LABELS.not_started} (Unscheduled)`,
       count: quickQueueCounts.backlogUnscheduledIdeas,
     },
   ];
@@ -62,22 +66,22 @@ export function DashboardSidebar({
   const publishingItems: Array<{ key: QuickQueueKey; label: string; count: number }> = [
     {
       key: "publisher_not_started",
-      label: "Not Started",
+      label: PUBLISHER_STATUS_LABELS.not_started,
       count: quickQueueCounts.publisherNotStarted,
     },
     {
       key: "publisher_in_progress",
-      label: "In Progress",
+      label: PUBLISHER_STATUS_LABELS.in_progress,
       count: quickQueueCounts.publisherInProgress,
     },
     {
       key: "publisher_final_review",
-      label: "Final Review",
+      label: `${PUBLISHER_STATUS_LABELS.pending_review} (Publisher)`,
       count: quickQueueCounts.publisherFinalReview,
     },
     {
       key: "publisher_published",
-      label: "Published",
+      label: PUBLISHER_STATUS_LABELS.completed,
       count: quickQueueCounts.publisherPublished,
     },
   ];

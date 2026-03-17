@@ -2551,30 +2551,32 @@ export default function DashboardPage() {
                     />
                   </div>
                 </details>
-                <select
-                  aria-label="Sort By"
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                  value={sortField}
-                  onChange={(event) => {
-                    setSortField(event.target.value as DashboardSortField);
-                  }}
-                >
-                  {DASHBOARD_SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="rounded-md border border-slate-300 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                  onClick={() => {
-                    setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
-                  }}
-                >
-                  {DASHBOARD_SORT_OPTIONS.find((option) => option.value === sortField)?.label}{" "}
-                  {sortDirection === "asc" ? "↑" : "↓"}
-                </button>
+                <div className="flex items-end gap-2">
+                  <select
+                    aria-label="Sort By"
+                    className="focus-field flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    value={sortField}
+                    onChange={(event) => {
+                      setSortField(event.target.value as DashboardSortField);
+                    }}
+                  >
+                    {DASHBOARD_SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="flex items-center justify-center w-10 rounded-md border border-slate-300 bg-white text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={() => {
+                      setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
+                    }}
+                    title={sortDirection === "asc" ? "Ascending" : "Descending"}
+                  >
+                    {sortDirection === "asc" ? "↑" : "↓"}
+                  </button>
+                </div>
               </>
             }
           />
@@ -3104,38 +3106,40 @@ export default function DashboardPage() {
                 ) : null}
               </section>
 
-              <div
-                ref={tableContainerRef}
-                className="max-h-[70vh]"
-              >
-                <DashboardTable
-                  blogs={pagedBlogs}
-                  visibleColumns={visibleColumnOrder}
-                  activeBlogId={activeBlogId}
-                  selectedIds={selectedIdSet}
-                  rowDensity={rowDensity}
-                  canSelectRows={canSelectRows}
-                  canEditWritingStage={canEditWritingStage}
-                  canEditPublishingStage={canEditPublishingStage}
-                  staleDraftDays={staleDraftDays}
-                  onRowClick={openPanel}
-                  onToggleAll={handleToggleAllVisible}
-                  onToggleSingle={handleToggleSingle}
-                  onWriterStatusChange={(blog, status) => {
-                    void updateBlogInline(
-                      blog,
-                      { writer_status: status },
-                      `Writer stage updated for "${blog.title}".`
-                    );
-                  }}
-                  onPublisherStatusChange={(blog, status) => {
-                    void updateBlogInline(
-                      blog,
-                      { publisher_status: status },
-                      `Publisher stage updated for "${blog.title}".`
-                    );
-                  }}
-                />
+              <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div
+                  ref={tableContainerRef}
+                  className="max-h-[70vh] overflow-y-auto"
+                >
+                  <DashboardTable
+                    blogs={pagedBlogs}
+                    visibleColumns={visibleColumnOrder}
+                    activeBlogId={activeBlogId}
+                    selectedIds={selectedIdSet}
+                    rowDensity={rowDensity}
+                    canSelectRows={canSelectRows}
+                    canEditWritingStage={canEditWritingStage}
+                    canEditPublishingStage={canEditPublishingStage}
+                    staleDraftDays={staleDraftDays}
+                    onRowClick={openPanel}
+                    onToggleAll={handleToggleAllVisible}
+                    onToggleSingle={handleToggleSingle}
+                    onWriterStatusChange={(blog, status) => {
+                      void updateBlogInline(
+                        blog,
+                        { writer_status: status },
+                        `Writer stage updated for "${blog.title}".`
+                      );
+                    }}
+                    onPublisherStatusChange={(blog, status) => {
+                      void updateBlogInline(
+                        blog,
+                        { publisher_status: status },
+                        `Publisher stage updated for "${blog.title}".`
+                      );
+                    }}
+                  />
+                </div>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                 <div className="flex flex-wrap items-center gap-3">

@@ -915,13 +915,19 @@ export function canTransitionWriterStatus(
     return true;
   }
   if (nextStatus === "in_progress") {
-    return hasPermission("start_writing");
+    return (
+      (currentStatus === "not_started" && hasPermission("start_writing")) ||
+      (currentStatus === "needs_revision" && hasPermission("start_writing"))
+    );
   }
-  if (nextStatus === "completed") {
-    return hasPermission("submit_draft");
+  if (nextStatus === "pending_review") {
+    return currentStatus === "in_progress" && hasPermission("submit_draft");
   }
   if (nextStatus === "needs_revision") {
-    return hasPermission("request_revision");
+    return currentStatus === "pending_review" && hasPermission("request_revision");
+  }
+  if (nextStatus === "completed") {
+    return currentStatus === "pending_review" && hasPermission("submit_draft");
   }
   return false;
 }
@@ -942,10 +948,18 @@ export function canTransitionPublisherStatus(
     return true;
   }
   if (nextStatus === "in_progress") {
-    return hasPermission("start_publishing");
+    return currentStatus === "not_started" && hasPermission("start_publishing");
+  }
+  if (nextStatus === "pending_review") {
+    return currentStatus === "in_progress" && hasPermission("submit_draft");
+  }
+  if (nextStatus === "publisher_approved") {
+    return currentStatus === "pending_review" && hasPermission("submit_draft");
   }
   if (nextStatus === "completed") {
-    return hasPermission("complete_publishing");
+    return (
+      currentStatus === "publisher_approved" && hasPermission("complete_publishing")
+    );
   }
   return false;
 }

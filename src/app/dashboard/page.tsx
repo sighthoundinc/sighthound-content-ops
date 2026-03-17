@@ -260,7 +260,25 @@ const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }
   { value: "writer_status", label: "Sort by: Writer Status" },
   { value: "publisher_status", label: "Sort by: Publisher Status" },
 ];
-type MetricFilterKey = "scheduled_this_week" | "ready_to_publish" | "delayed" | "currently_writing" | "under_review" | "needs_revision" | "unscheduled_backlog" | "publishing_in_progress";
+type MetricFilterKey =
+  | "scheduled_this_week"
+  | "ready_to_publish"
+  | "delayed"
+  | "currently_writing"
+  | "under_review"
+  | "needs_revision"
+  | "unscheduled_backlog"
+  | "publishing_in_progress";
+const METRIC_FILTER_LABELS: Record<MetricFilterKey, string> = {
+  scheduled_this_week: "Scheduled This Week",
+  ready_to_publish: "Ready to Publish",
+  currently_writing: "Currently Writing",
+  under_review: "Under Review",
+  needs_revision: "Needs Revision",
+  unscheduled_backlog: "Unscheduled Backlog",
+  publishing_in_progress: "Publishing In Progress",
+  delayed: "Delayed",
+};
 
 type DashboardFilterState = {
   search: string;
@@ -1010,6 +1028,23 @@ export default function DashboardPage() {
     []
   );
   const filteredBlogs = useMemo(() => {
+    const todayDate = new Date();
+    const weekStart = new Date(todayDate);
+    weekStart.setDate(todayDate.getDate() - todayDate.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    const todayKey = format(todayDate, "yyyy-MM-dd");
+
+    const isScheduledThisWeek = (blog: BlogRecord) => {
+      const scheduledDate = getBlogScheduledDate(blog);
+      if (!scheduledDate) {
+        return false;
+      }
+      const scheduledTime = new Date(`${scheduledDate}T00:00:00`).getTime();
+      return scheduledTime >= weekStart.getTime() && scheduledTime <= weekEnd.getTime();
+    };
 
     const matchesQuickQueue = (blog: BlogRecord) => {
       if (!activeQuickQueue) {
@@ -1055,33 +1090,42 @@ export default function DashboardPage() {
         return true;
       }
 
+      if (activeMetricFilter === "scheduled_this_week") {
+        return isScheduledThisWeek(blog);
+      }
       if (activeMetricFilter === "ready_to_publish") {
         return blog.overall_status === "ready_to_publish";
       }
-
-      if (activeMetricFilter === "delayed") {
-        const scheduledDate = getBlogScheduledDate(blog);
-        const todayKey = format(new Date(), "yyyy-MM-dd");
+      if (activeMetricFilter === "currently_writing") {
+        return blog.writer_status === "in_progress";
+      }
+      if (activeMetricFilter === "under_review") {
         return (
-          scheduledDate !== null &&
-          scheduledDate < todayKey &&
-          blog.overall_status !== "published"
+          blog.writer_status === "needs_revision" ||
+          blog.publisher_status === "in_progress"
         );
       }
-
-      const todayDate = new Date();
-      const weekStart = new Date(todayDate);
-      weekStart.setDate(todayDate.getDate() - todayDate.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
-      const scheduledDate = getBlogScheduledDate(blog);
-      if (!scheduledDate) {
-        return false;
+      if (activeMetricFilter === "needs_revision") {
+        return blog.writer_status === "needs_revision";
       }
-      const scheduledTime = new Date(`${scheduledDate}T00:00:00`).getTime();
-      return scheduledTime >= weekStart.getTime() && scheduledTime <= weekEnd.getTime();
+      if (activeMetricFilter === "unscheduled_backlog") {
+        return (
+          blog.writer_status === "not_started" &&
+          getBlogScheduledDate(blog) === null
+        );
+      }
+      if (activeMetricFilter === "publishing_in_progress") {
+        return (
+          blog.writer_status === "completed" &&
+          blog.publisher_status === "in_progress"
+        );
+      }
+      const scheduledDate = getBlogScheduledDate(blog);
+      return (
+        scheduledDate !== null &&
+        scheduledDate < todayKey &&
+        blog.overall_status !== "published"
+      );
     };
     return blogs.filter((blog) => {
       const normalizedSearch = search.toLowerCase().trim();
@@ -1613,13 +1657,7 @@ export default function DashboardPage() {
         activeMetricFilter
           ? {
               id: "metric",
-              label: `Metric: ${
-                activeMetricFilter === "scheduled_this_week"
-                  ? "Scheduled This Week"
-                  : activeMetricFilter === "ready_to_publish"
-                    ? "Ready to Publish"
-                    : "Delayed"
-              }`,
+              label: `Metric: ${METRIC_FILTER_LABELS[activeMetricFilter]}`,
               onRemove: () => {
                 setActiveMetricFilter(null);
               },

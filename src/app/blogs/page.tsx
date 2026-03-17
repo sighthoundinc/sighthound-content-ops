@@ -55,7 +55,6 @@ type LibraryPublisherStatusFilter = "all" | PublisherStageStatus;
 type LibrarySortField = "none" | "published_date" | "title" | "site";
 type LibrarySortDirection = "asc" | "desc";
 type LibraryRowLimit = 10 | 20 | 50 | 100 | "all";
-type RowDensity = "compact" | "comfortable";
 type LibraryColumnKey =
   | "site"
   | "title"
@@ -71,7 +70,6 @@ type BoardStageQueryFilter = "idea" | "writing" | "reviewing" | "publishing" | "
 const ROW_LIMIT_OPTIONS: LibraryRowLimit[] = [10, 20, 50, 100, "all"];
 const DEFAULT_ROW_LIMIT: LibraryRowLimit = 20;
 const BLOG_LIBRARY_COLUMN_VIEW_STORAGE_KEY = "blog-library-column-view:v1";
-const BLOG_LIBRARY_ROW_DENSITY_STORAGE_KEY = "blog-library-row-density:v1";
 const DEFAULT_LIBRARY_COLUMN_ORDER: LibraryColumnKey[] = [
   "site",
   "title",
@@ -321,7 +319,7 @@ function BlogLibraryPageContent() {
     useState<LibraryPublisherStatusFilter>("all");
   const [sortField, setSortField] = useState<LibrarySortField>("published_date");
   const [sortDirection, setSortDirection] = useState<LibrarySortDirection>("desc");
-  const [rowDensity, setRowDensity] = useState<RowDensity>("comfortable");
+  const rowDensity: RowDensity = "compact";
   const [rowLimit, setRowLimit] = useState<LibraryRowLimit>(DEFAULT_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
@@ -481,21 +479,6 @@ function BlogLibraryPageContent() {
       JSON.stringify({ order: columnOrder, hidden: hiddenColumns })
     );
   }, [columnOrder, hiddenColumns]);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const storedDensity = window.localStorage.getItem(BLOG_LIBRARY_ROW_DENSITY_STORAGE_KEY);
-    if (storedDensity === "compact" || storedDensity === "comfortable") {
-      setRowDensity(storedDensity);
-    }
-  }, []);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(BLOG_LIBRARY_ROW_DENSITY_STORAGE_KEY, rowDensity);
-  }, [rowDensity]);
   const closeOpenDetailsMenus = useCallback(() => {
     document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
       menu.open = false;
@@ -1238,34 +1221,6 @@ function BlogLibraryPageContent() {
                     </div>
                   </div>
                 </details>
-                <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white">
-                  <button
-                    type="button"
-                    className={`px-2.5 py-1.5 text-xs font-medium ${
-                      rowDensity === "compact"
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setRowDensity("compact");
-                    }}
-                  >
-                    Compact
-                  </button>
-                  <button
-                    type="button"
-                    className={`border-l border-slate-300 px-2.5 py-1.5 text-xs font-medium ${
-                      rowDensity === "comfortable"
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setRowDensity("comfortable");
-                    }}
-                  >
-                    Comfortable
-                  </button>
-                </div>
                 <PermissionGate
                   can={canExportCsv}
                   reason="You do not have permission to export the current blog view."

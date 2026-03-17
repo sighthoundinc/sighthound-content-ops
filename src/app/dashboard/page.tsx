@@ -162,7 +162,6 @@ type DashboardSortField =
   | "overall_status"
   | "writer_status"
   | "publisher_status";
-type RowDensity = "compact" | "comfortable";
 type DashboardColumnKey =
   | "title"
   | "site"
@@ -199,7 +198,6 @@ const REQUIRED_DASHBOARD_COLUMNS: DashboardColumnKey[] = [];
 
 const DASHBOARD_COLUMN_VIEW_STORAGE_KEY = "dashboard-column-view:v1";
 const DASHBOARD_COLUMN_HIDDEN_STORAGE_KEY = "dashboard-column-hidden:v1";
-const DASHBOARD_ROW_DENSITY_STORAGE_KEY = "dashboard-row-density:v1";
 
 const isDashboardColumnKey = (value: string): value is DashboardColumnKey =>
   value in DASHBOARD_COLUMN_LABELS;
@@ -499,7 +497,7 @@ export default function DashboardPage() {
   );
   const [savedViews, setSavedViews] = useState<SavedDashboardView[]>([]);
   const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
-  const [rowDensity, setRowDensity] = useState<RowDensity>("comfortable");
+  const rowDensity: RowDensity = "compact";
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [staleDraftDays, setStaleDraftDays] = useState(10);
@@ -548,10 +546,6 @@ export default function DashboardPage() {
   );
   const columnHiddenStorageKey = useMemo(
     () => buildUserScopedStorageKey(DASHBOARD_COLUMN_HIDDEN_STORAGE_KEY, profile?.id),
-    [profile?.id]
-  );
-  const rowDensityStorageKey = useMemo(
-    () => buildUserScopedStorageKey(DASHBOARD_ROW_DENSITY_STORAGE_KEY, profile?.id),
     [profile?.id]
   );
   const closeOpenDashboardMenus = useCallback(() => {
@@ -756,11 +750,6 @@ export default function DashboardPage() {
         setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
       }
     }
-    const savedRowDensity = window.localStorage.getItem(rowDensityStorageKey);
-    if (savedRowDensity === "compact" || savedRowDensity === "comfortable") {
-      setRowDensity(savedRowDensity);
-    }
-
     const savedHiddenColumns = window.localStorage.getItem(columnHiddenStorageKey);
     if (savedHiddenColumns) {
       try {
@@ -770,13 +759,7 @@ export default function DashboardPage() {
         setHiddenColumns(DEFAULT_DASHBOARD_HIDDEN_COLUMNS);
       }
     }
-  }, [columnHiddenStorageKey, columnViewStorageKey, rowDensityStorageKey]);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(rowDensityStorageKey, rowDensity);
-  }, [rowDensity, rowDensityStorageKey]);
+  }, [columnHiddenStorageKey, columnViewStorageKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -2991,34 +2974,6 @@ export default function DashboardPage() {
                     ) : null}
                   </div>
                   <div className="ml-auto flex items-center gap-2">
-                    <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white">
-                      <button
-                        type="button"
-                        className={`px-2.5 py-1.5 text-xs font-medium ${
-                          rowDensity === "compact"
-                            ? "bg-slate-900 text-white"
-                            : "text-slate-700 hover:bg-slate-100"
-                        }`}
-                        onClick={() => {
-                          setRowDensity("compact");
-                        }}
-                      >
-                        Compact
-                      </button>
-                      <button
-                        type="button"
-                        className={`border-l border-slate-300 px-2.5 py-1.5 text-xs font-medium ${
-                          rowDensity === "comfortable"
-                            ? "bg-slate-900 text-white"
-                            : "text-slate-700 hover:bg-slate-100"
-                        }`}
-                        onClick={() => {
-                          setRowDensity("comfortable");
-                        }}
-                      >
-                        Comfortable
-                      </button>
-                    </div>
                     <button
                       type="button"
                       className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"

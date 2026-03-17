@@ -67,9 +67,7 @@ type TaskTableColumnKey =
   | "publisher_status"
   | "publish_date"
   | "options";
-type RowDensity = "compact" | "comfortable";
 const TASK_TABLE_COLUMN_VIEW_STORAGE_KEY = "tasks-column-view:v1";
-const TASK_TABLE_ROW_DENSITY_STORAGE_KEY = "tasks-row-density:v1";
 const DEFAULT_TASK_TABLE_COLUMN_ORDER: TaskTableColumnKey[] = [
   "site",
   "task",
@@ -209,7 +207,6 @@ export default function MyTasksPage() {
   const [siteFilter, setSiteFilter] = useState<"all" | "sighthound.com" | "redactor.com">("all");
   const [taskSortField, setTaskSortField] = useState<string>("publish_date");
   const [taskSortDirection, setTaskSortDirection] = useState<"asc" | "desc">("asc");
-  const [rowDensity, setRowDensity] = useState<RowDensity>("comfortable");
   const [copiedCell, setCopiedCell] = useState<{
     taskId: string;
     field: "title" | "url";
@@ -336,21 +333,6 @@ export default function MyTasksPage() {
       JSON.stringify({ order: columnOrder, hidden: hiddenColumns })
     );
   }, [columnOrder, hiddenColumns]);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const storedDensity = window.localStorage.getItem(TASK_TABLE_ROW_DENSITY_STORAGE_KEY);
-    if (storedDensity === "compact" || storedDensity === "comfortable") {
-      setRowDensity(storedDensity);
-    }
-  }, []);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(TASK_TABLE_ROW_DENSITY_STORAGE_KEY, rowDensity);
-  }, [rowDensity]);
 
   const taskItems = useMemo(() => {
     if (!user?.id) {
@@ -886,34 +868,6 @@ export default function MyTasksPage() {
                     </div>
                   </div>
                 </details>
-                <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white">
-                  <button
-                    type="button"
-                    className={`px-2.5 py-1.5 text-xs font-medium ${
-                      rowDensity === "compact"
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setRowDensity("compact");
-                    }}
-                  >
-                    Compact
-                  </button>
-                  <button
-                    type="button"
-                    className={`border-l border-slate-300 px-2.5 py-1.5 text-xs font-medium ${
-                      rowDensity === "comfortable"
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setRowDensity("comfortable");
-                    }}
-                  >
-                    Comfortable
-                  </button>
-                </div>
                 <Button
                   type="button"
                   variant="secondary"
@@ -1053,7 +1007,7 @@ export default function MyTasksPage() {
                   activeIndex={pagedTasks.findIndex(
                     (t) => t.id === highlightedTaskId
                   )}
-                  density="comfortable"
+                  density="compact"
                   emptyMessage="You have no assigned tasks. You're all caught up."
                 />
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">

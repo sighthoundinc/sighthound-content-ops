@@ -85,8 +85,9 @@ export async function DELETE(request: NextRequest) {
         .from(table)
         .select("*", { count: "exact", head: true });
       if (targetUserIds && targetUserIds.length > 0) {
-        const actorFilter = `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`;
-        countQuery = countQuery.or(actorFilter);
+        countQuery = countQuery.or(
+          `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`
+        );
       }
       const { count, error: countError } = await countQuery;
       if (countError) {
@@ -95,8 +96,9 @@ export async function DELETE(request: NextRequest) {
 
       let deleteQuery = adminClient.from(table).delete();
       if (targetUserIds && targetUserIds.length > 0) {
-        const actorFilter = `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`;
-        deleteQuery = deleteQuery.or(actorFilter);
+        deleteQuery = deleteQuery.or(
+          `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`
+        );
       }
       const { error: deleteError } = await deleteQuery;
       if (deleteError) {
@@ -141,9 +143,10 @@ export async function DELETE(request: NextRequest) {
       totalDeleted,
     });
   } catch (error) {
-    console.error(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Activity history deletion error:", errorMessage, error);
     return NextResponse.json(
-      { error: "Unexpected server error" },
+      { error: `Unexpected server error: ${errorMessage}` },
       { status: 500 }
     );
   }

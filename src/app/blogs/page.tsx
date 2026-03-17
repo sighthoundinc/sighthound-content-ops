@@ -1338,78 +1338,87 @@ function BlogLibraryPageContent() {
             }
             filters={
               <>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                <select
-                  aria-label="Publish State"
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value as LibraryStatusFilter);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  {STATUS_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Website"
-                  value={siteFilter}
-                  onChange={(event) => {
-                    setSiteFilter(event.target.value as LibrarySiteFilter);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  {SITE_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Writer Status"
-                  value={writerStatusFilter}
-                  onChange={(event) => {
-                    setWriterStatusFilter(event.target.value as LibraryWriterStatusFilter);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  {WRITER_STATUS_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Publisher Status"
-                  value={publisherStatusFilter}
-                  onChange={(event) => {
-                    setPublisherStatusFilter(event.target.value as LibraryPublisherStatusFilter);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  {PUBLISHER_STATUS_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex items-center gap-2">
+                <label className="space-y-1">
+                  <span className="block text-xs font-medium text-slate-700">Publish State</span>
                   <select
-                    aria-label="Sort Field"
-                    value={sortField}
+                    value={statusFilter}
                     onChange={(event) => {
-                      setSortField(event.target.value as LibrarySortField);
+                      setStatusFilter(event.target.value as LibraryStatusFilter);
                     }}
-                    className="focus-field flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                   >
-                    {SORT_OPTIONS.map((option) => (
+                    {STATUS_FILTER_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
                   </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-xs font-medium text-slate-700">Website</span>
+                  <select
+                    value={siteFilter}
+                    onChange={(event) => {
+                      setSiteFilter(event.target.value as LibrarySiteFilter);
+                    }}
+                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  >
+                    {SITE_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-xs font-medium text-slate-700">Writer Status</span>
+                  <select
+                    value={writerStatusFilter}
+                    onChange={(event) => {
+                      setWriterStatusFilter(event.target.value as LibraryWriterStatusFilter);
+                    }}
+                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  >
+                    {WRITER_STATUS_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-xs font-medium text-slate-700">Publisher Status</span>
+                  <select
+                    value={publisherStatusFilter}
+                    onChange={(event) => {
+                      setPublisherStatusFilter(event.target.value as LibraryPublisherStatusFilter);
+                    }}
+                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  >
+                    {PUBLISHER_STATUS_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex items-end gap-2">
+                  <label className="flex-1 space-y-1">
+                    <span className="block text-xs font-medium text-slate-700">Sort by</span>
+                    <select
+                      value={sortField}
+                      onChange={(event) => {
+                        setSortField(event.target.value as LibrarySortField);
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    >
+                      {SORT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <select
                     aria-label="Sort Direction"
                     value={sortDirection}
@@ -1417,24 +1426,21 @@ function BlogLibraryPageContent() {
                     onChange={(event) => {
                       setSortDirection(event.target.value as LibrarySortDirection);
                     }}
-                    className="focus-field w-16 rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    className="focus-field w-14 rounded-md border border-slate-300 bg-white px-2 py-2 text-center text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
                   >
                     <option value="asc">↑</option>
                     <option value="desc">↓</option>
                   </select>
+                  <Button
+                    type="button"
+                    onClick={resetFilters}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Reset Filters
+                  </Button>
                 </div>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  onClick={resetFilters}
-                  variant="secondary"
-                  size="sm"
-                >
-                  Reset Filters
-                </Button>
-              </div>
-            </>
+              </>
             }
           />
           <DataPageFilterPills pills={activeFilterPills} />

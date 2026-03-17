@@ -45,7 +45,7 @@ export function CheckboxMultiSelect({
 
   const triggerText =
     selectedLabels.length === 0
-      ? `All ${label}`
+      ? label
       : selectedLabels.length <= 2
         ? `${label}: ${selectedLabels.join(", ")}`
         : `${label}: ${selectedLabels.length} selected`;

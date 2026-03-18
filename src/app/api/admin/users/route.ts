@@ -126,9 +126,87 @@ export async function DELETE(request: NextRequest) {
     const adminClient = auth.context.adminClient;
     const deletedUserIds: string[] = [];
     const failed: Array<{ userId: string; error: string }> = [];
+    const reassignCreatedContentOwnership = async (
+      fromUserId: string,
+      toUserId: string
+    ) => {
+      const ownershipTables = [
+        "blogs",
+        "social_posts",
+        "blog_ideas",
+        "blog_idea_comments",
+      ] as const;
+
+      for (const table of ownershipTables) {
+        const { error } = await adminClient
+          .from(table)
+          .update({ created_by: toUserId })
+          .eq("created_by", fromUserId);
+
+        if (!error) {
+          continue;
+        }
+
+        const normalizedMessage = error.message.toLowerCase();
+        const normalizedCode = (error.code ?? "").toLowerCase();
+        const isMissingSchemaResource =
+          normalizedCode === "42p01" ||
+          normalizedCode === "42703" ||
+          normalizedCode === "pgrst204" ||
+          normalizedCode === "pgrst205" ||
+          normalizedMessage.includes("does not exist") ||
+          normalizedMessage.includes("could not find the table") ||
+          (normalizedMessage.includes("could not find")
+            && normalizedMessage.includes("schema cache"));
+        if (!isMissingSchemaResource) {
+          return `${table}: ${error.message}`;
+        }
+      }
+
+      return null;
+    };
 
     for (const userId of normalizedUserIds) {
-      const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
+      const reassignmentError = await reassignCreatedContentOwnership(
+        userId,
+        auth.context.userId
+      );
+      if (reassignmentError) {
+        failed.push({
+          userId,
+          error: `Unable to reassign authored content before delete: ${reassignmentError}`,
+        });
+        continue;
+      }
+      let { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
+      const isDatabaseDeleteError =
+        deleteAuthError?.message
+          ?.toLowerCase()
+          .includes("database error deleting user") ?? false;
+      if (isDatabaseDeleteError) {
+        const retryReassignmentError = await reassignCreatedContentOwnership(
+          userId,
+          auth.context.userId
+        );
+        if (retryReassignmentError) {
+          failed.push({
+            userId,
+            error: `Unable to reassign authored content before delete: ${retryReassignmentError}`,
+          });
+          continue;
+        }
+
+        const retryDeleteResult = await adminClient.auth.admin.deleteUser(userId);
+        deleteAuthError = retryDeleteResult.error;
+      }
+      const shouldAttemptSoftDelete =
+        deleteAuthError?.message
+          ?.toLowerCase()
+          .includes("database error deleting user") ?? false;
+      if (shouldAttemptSoftDelete) {
+        const softDeleteResult = await adminClient.auth.admin.deleteUser(userId, true);
+        deleteAuthError = softDeleteResult.error;
+      }
       if (deleteAuthError) {
         failed.push({ userId, error: deleteAuthError.message });
         continue;

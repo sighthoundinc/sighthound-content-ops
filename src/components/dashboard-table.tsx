@@ -23,6 +23,7 @@ import {
   TABLE_HEAD_CLASS,
   TABLE_HEADER_CELL_CLASS,
   TABLE_STICKY_HEADER_CELL_CLASS,
+  type SortDirection,
 } from "@/lib/table";
 
 export type DashboardTableColumnKey =
@@ -61,8 +62,11 @@ export interface DashboardTableProps {
   canSelectRows: boolean;
   canEditWritingStage: boolean;
   canEditPublishingStage: boolean;
+  sortField: DashboardTableColumnKey;
+  sortDirection: SortDirection;
   staleDraftDays: number;
   onRowClick: (blogId: string) => void;
+  onSortChange: (column: DashboardTableColumnKey) => void;
   onToggleAll: (checked: boolean) => void;
   onToggleSingle: (blogId: string, checked: boolean) => void;
   onWriterStatusChange: (blog: BlogRecord, status: WriterStageStatus) => void;
@@ -112,8 +116,11 @@ export function DashboardTable({
   canSelectRows,
   canEditWritingStage,
   canEditPublishingStage,
+  sortField,
+  sortDirection,
   staleDraftDays,
   onRowClick,
+  onSortChange,
   onToggleAll,
   onToggleSingle,
   onWriterStatusChange,
@@ -132,6 +139,18 @@ export function DashboardTable({
 
   const getBlogScheduledDate = (blog: BlogRecord): string | null => {
     return blog.scheduled_publish_date || null;
+  };
+  const getColumnSortIndicator = (column: DashboardTableColumnKey) => {
+    if (sortField !== column) {
+      return "↕";
+    }
+    return sortDirection === "asc" ? "↑" : "↓";
+  };
+  const getColumnAriaSort = (column: DashboardTableColumnKey) => {
+    if (sortField !== column) {
+      return "none";
+    }
+    return sortDirection === "asc" ? "ascending" : "descending";
   };
 
   const now = new Date();
@@ -166,13 +185,31 @@ export function DashboardTable({
             {visibleColumns.map((column) => (
               <th
                 key={column}
+                aria-sort={getColumnAriaSort(column)}
                 className={cn(
                   TABLE_HEADER_CELL_CLASS,
                   TABLE_STICKY_HEADER_CELL_CLASS,
                   CENTER_ALIGNED_COLUMNS.includes(column) ? "text-center" : ""
                 )}
               >
-                {DASHBOARD_COLUMN_LABELS[column]}
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex w-full items-center gap-1 text-xs font-semibold leading-4 tracking-wide text-slate-600 hover:text-slate-900",
+                    CENTER_ALIGNED_COLUMNS.includes(column)
+                      ? "justify-center"
+                      : "justify-start"
+                  )}
+                  onClick={() => {
+                    onSortChange(column);
+                  }}
+                  title={`Sort by ${DASHBOARD_COLUMN_LABELS[column]}`}
+                >
+                  <span>{DASHBOARD_COLUMN_LABELS[column]}</span>
+                  <span aria-hidden="true" className="text-[11px] text-slate-500">
+                    {getColumnSortIndicator(column)}
+                  </span>
+                </button>
               </th>
             ))}
           </tr>
@@ -304,7 +341,7 @@ export function DashboardTable({
                       return (
                         <td key={column} className={bodyCellClass}>
                           <span
-                            className="block max-w-[10rem] truncate text-slate-600"
+                            className="block max-w-[10rem] truncate text-slate-800"
                             title={blog.writer?.full_name ?? "Unassigned"}
                           >
                             {blog.writer?.full_name ?? "Unassigned"}
@@ -356,7 +393,7 @@ export function DashboardTable({
                       return (
                         <td key={column} className={bodyCellClass}>
                           <span
-                            className="block max-w-[10rem] truncate text-slate-600"
+                            className="block max-w-[10rem] truncate text-slate-800"
                             title={blog.publisher?.full_name ?? "Unassigned"}
                           >
                             {blog.publisher?.full_name ?? "Unassigned"}
@@ -437,7 +474,7 @@ export function DashboardTable({
                     // publish_date column
                     return (
                       <td key={column} className={bodyCellClass}>
-                        <span className="text-slate-600">
+                        <span className="text-slate-800">
                           {formatDisplayDate(displayPublishDate) || "—"}
                         </span>
                       </td>

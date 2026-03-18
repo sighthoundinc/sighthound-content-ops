@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useEffect } from "react";
 import { useGlobalQuickCreate } from "@/hooks/use-global-quick-create";
 import { useRouter } from "next/navigation";
 
@@ -8,20 +8,42 @@ export function GlobalQuickCreate() {
   const { isOpen, close } = useGlobalQuickCreate();
   const router = useRouter();
 
-  const handleCreateBlog = () => {
+  const handleCreateBlog = useCallback(() => {
     router.push("/blogs/new");
     close();
-  };
+  }, [close, router]);
 
-  const handleCreateSocialPost = () => {
+  const handleCreateSocialPost = useCallback(() => {
     router.push("/social-posts?create=1");
     close();
-  };
+  }, [close, router]);
 
-  const handleCreateIdea = () => {
+  const handleCreateIdea = useCallback(() => {
     router.push("/ideas");
     close();
-  };
+  }, [close, router]);
+
+  useEffect(() => {
+    const handleCreateCommand = (event: Event) => {
+      const customEvent = event as CustomEvent<{ command?: { id?: string } }>;
+      const commandId = customEvent.detail?.command?.id;
+      if (commandId === "create-blog") {
+        handleCreateBlog();
+        return;
+      }
+      if (commandId === "create-social-post") {
+        handleCreateSocialPost();
+        return;
+      }
+      if (commandId === "create-idea") {
+        handleCreateIdea();
+      }
+    };
+    window.addEventListener("create-command", handleCreateCommand as EventListener);
+    return () => {
+      window.removeEventListener("create-command", handleCreateCommand as EventListener);
+    };
+  }, [handleCreateBlog, handleCreateIdea, handleCreateSocialPost]);
 
   if (!isOpen) return null;
 
@@ -51,7 +73,7 @@ export function GlobalQuickCreate() {
               Create New
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Press Q to open, ESC to close
+              Press C to open, ESC to close
             </p>
           </div>
 
@@ -109,7 +131,7 @@ export function GlobalQuickCreate() {
           {/* Footer */}
           <div className="border-t border-gray-200 px-6 py-3 bg-gray-50 text-xs text-gray-500">
             <kbd className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-semibold">
-              Q
+              C
             </kbd>
             <span className="ml-2">to create</span>
           </div>

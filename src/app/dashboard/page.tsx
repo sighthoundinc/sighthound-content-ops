@@ -6,14 +6,23 @@ import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
 import { Button } from "@/components/button";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { DashboardTable } from "@/components/dashboard-table";
+import { DetailDrawerField } from "@/components/detail-drawer";
 import { FilterBar } from "@/components/filter-bar";
 import {
+  DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
+  DATA_PAGE_CONTROL_ACTIONS_CLASS,
+  DATA_PAGE_CONTROL_ROW_CLASS,
+  DATA_PAGE_CONTROL_STRIP_CLASS,
+  DATA_PAGE_STACK_CLASS,
+  DataPageEmptyState,
   DataPageFilterPills,
   DataPageHeader,
+  DataPageTableFeedback,
   DataPageToolbar,
 } from "@/components/data-page";
 import { KbdShortcut } from "@/components/kbd-shortcut";
@@ -45,6 +54,10 @@ import {
 } from "@/lib/permissions";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import {
+  SEGMENTED_CONTROL_CLASS,
+  segmentedControlItemClass,
+} from "@/lib/segmented-control";
+import {
   OVERALL_STATUSES,
   PUBLISHER_STATUS_LABELS,
   PUBLISHER_STATUSES,
@@ -63,7 +76,7 @@ import {
   type SortDirection,
   type TableRowLimit,
 } from "@/lib/table";
-import { getSiteShortLabel } from "@/lib/site";
+import { getSiteBadgeClasses, getSiteLabel, getSiteShortLabel } from "@/lib/site";
 import type {
   BlogSite,
   BlogHistoryRecord,
@@ -154,14 +167,6 @@ const OVERALL_STATUS_ORDER = new Map(
   OVERALL_STATUSES.map((status, index) => [status, index])
 );
 
-type DashboardSortField =
-  | "publish_date"
-  | "title"
-  | "writer"
-  | "publisher"
-  | "overall_status"
-  | "writer_status"
-  | "publisher_status";
 type DashboardColumnKey =
   | "title"
   | "site"
@@ -171,6 +176,7 @@ type DashboardColumnKey =
   | "publisher_status"
   | "overall_status"
   | "publish_date";
+type DashboardSortField = DashboardColumnKey;
 
 const DASHBOARD_COLUMN_LABELS: Record<DashboardColumnKey, string> = {
   title: "Title",
@@ -202,6 +208,13 @@ const DASHBOARD_COLUMN_HIDDEN_STORAGE_KEY = "dashboard-column-hidden:v1";
 const isDashboardColumnKey = (value: string): value is DashboardColumnKey =>
   value in DASHBOARD_COLUMN_LABELS;
 const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
+const escapeHtmlValue = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
 
 const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => {
   if (!Array.isArray(value)) {
@@ -228,7 +241,7 @@ const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => 
   return normalized;
 };
 
-  const normalizeDashboardHiddenColumns = (value: unknown): DashboardColumnKey[] => {
+const normalizeDashboardHiddenColumns = (value: unknown): DashboardColumnKey[] => {
   if (!Array.isArray(value)) {
     return DEFAULT_DASHBOARD_HIDDEN_COLUMNS;
   }
@@ -249,23 +262,22 @@ const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => 
   return hiddenColumns;
 };
 
-const DASHBOARD_SORT_OPTIONS: Array<{ value: DashboardSortField; label: string }> = [
-  { value: "publish_date", label: "Sort by: Publish Date" },
-  { value: "title", label: "Sort by: Title" },
-  { value: "writer", label: "Sort by: Writer" },
-  { value: "publisher", label: "Sort by: Publisher" },
-  { value: "overall_status", label: "Sort by: Stage" },
-  { value: "writer_status", label: "Sort by: Writer Status" },
-  { value: "publisher_status", label: "Sort by: Publisher Status" },
+const DASHBOARD_SORT_FIELDS: DashboardSortField[] = [
+  "publish_date",
+  "title",
+  "site",
+  "writer",
+  "publisher",
+  "overall_status",
+  "writer_status",
+  "publisher_status",
 ];
 type MetricFilterKey =
   | "scheduled_this_week"
   | "ready_to_publish"
-  | "delayed"
   | "currently_writing"
   | "under_review"
   | "needs_revision"
-  | "unscheduled_backlog"
   | "publishing_in_progress";
 const METRIC_FILTER_LABELS: Record<MetricFilterKey, string> = {
   scheduled_this_week: "Scheduled This Week",
@@ -273,9 +285,7 @@ const METRIC_FILTER_LABELS: Record<MetricFilterKey, string> = {
   currently_writing: "Currently Writing",
   under_review: "Under Review",
   needs_revision: "Needs Revision",
-  unscheduled_backlog: "Unscheduled Backlog",
   publishing_in_progress: "Publishing In Progress",
-  delayed: "Delayed",
 };
 
 type DashboardFilterState = {
@@ -288,6 +298,7 @@ type DashboardFilterState = {
   publisherStatusFilters: PublisherStageStatus[];
   sortField: DashboardSortField;
   sortDirection: SortDirection;
+  rowDensity: "compact" | "comfortable";
   rowLimit: TableRowLimit;
 };
 
@@ -316,9 +327,7 @@ const DASHBOARD_ACTIVE_SAVED_VIEW_STORAGE_KEY = "dashboard-active-saved-view:v1"
 const buildUserScopedStorageKey = (baseKey: string, userId: string | null | undefined) =>
   `${baseKey}:${userId ?? "anonymous"}`;
 
-const DASHBOARD_SORT_FIELD_SET = new Set<DashboardSortField>(
-  DASHBOARD_SORT_OPTIONS.map((option) => option.value)
-);
+const DASHBOARD_SORT_FIELD_SET = new Set<DashboardSortField>(DASHBOARD_SORT_FIELDS);
 const SITE_SET = new Set<BlogSite>(SITES);
 const OVERALL_STATUS_SET = new Set<OverallBlogStatus>(OVERALL_STATUSES);
 const WRITER_STATUS_SET = new Set<WriterStageStatus>(WRITER_STATUSES);
@@ -335,11 +344,14 @@ const DEFAULT_DASHBOARD_FILTER_STATE: DashboardFilterState = {
   publisherStatusFilters: [],
   sortField: "publish_date",
   sortDirection: "asc",
+  rowDensity: "compact",
   rowLimit: DEFAULT_TABLE_ROW_LIMIT,
 };
 
 const isSortDirection = (value: unknown): value is SortDirection =>
   value === "asc" || value === "desc";
+const isRowDensity = (value: unknown): value is "compact" | "comfortable" =>
+  value === "compact" || value === "comfortable";
 
 const normalizeStringArray = (value: unknown) => {
   if (!Array.isArray(value)) {
@@ -384,6 +396,9 @@ const normalizeDashboardFilterState = (value: unknown): DashboardFilterState => 
   const sortDirection = isSortDirection(state.sortDirection)
     ? state.sortDirection
     : DEFAULT_DASHBOARD_FILTER_STATE.sortDirection;
+  const rowDensity = isRowDensity(state.rowDensity)
+    ? state.rowDensity
+    : DEFAULT_DASHBOARD_FILTER_STATE.rowDensity;
 
   const rowLimit = ROW_LIMIT_SET.has(state.rowLimit as TableRowLimit)
     ? (state.rowLimit as TableRowLimit)
@@ -399,6 +414,7 @@ const normalizeDashboardFilterState = (value: unknown): DashboardFilterState => 
     publisherStatusFilters,
     sortField,
     sortDirection,
+    rowDensity,
     rowLimit,
   };
 };
@@ -456,6 +472,8 @@ export default function DashboardPage() {
     [hasPermission]
   );
   const canCreateBlog = permissionContract.canCreateBlog;
+  const canManageSocialPosts =
+    permissionContract.canViewDashboard || permissionContract.canOverrideWorkflow;
   const canRunDataImport = hasPermission("run_data_import");
   const canExportCsv = permissionContract.canExportCsv;
   const canExportSelectedCsv = permissionContract.canExportSelectedCsv;
@@ -467,6 +485,13 @@ export default function DashboardPage() {
   const canEditPublishingStage = permissionContract.canEditPublisherWorkflow;
   const canDeleteBlog = permissionContract.canDeleteBlog;
   const canCreateComments = permissionContract.canCreateComment;
+  const canEditPanelDetails =
+    canChangeWriterAssignment ||
+    canChangePublisherAssignment ||
+    canEditWritingStage ||
+    canEditPublishingStage ||
+    canEditScheduledDate ||
+    canEditDisplayDate;
   const canRunBulkActions =
     canChangeWriterAssignment ||
     canChangePublisherAssignment ||
@@ -489,6 +514,7 @@ export default function DashboardPage() {
   >([]);
   const [sortField, setSortField] = useState<DashboardSortField>("publish_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [rowDensity, setRowDensity] = useState<"compact" | "comfortable">("compact");
   const [columnOrder, setColumnOrder] = useState<DashboardColumnKey[]>(
     DEFAULT_DASHBOARD_COLUMN_ORDER
   );
@@ -497,7 +523,6 @@ export default function DashboardPage() {
   );
   const [savedViews, setSavedViews] = useState<SavedDashboardView[]>([]);
   const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
-  const rowDensity = "compact" as const;
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [staleDraftDays, setStaleDraftDays] = useState(10);
@@ -517,10 +542,13 @@ export default function DashboardPage() {
   const [panelError, setPanelError] = useState<string | null>(null);
   const [isPanelLoading, setIsPanelLoading] = useState(false);
   const [isPanelCommentSaving, setIsPanelCommentSaving] = useState(false);
+  const [isPanelEditMode, setIsPanelEditMode] = useState(false);
   const [activeQuickQueue, setActiveQuickQueue] = useState<QuickQueueKey | null>(null);
   const [activeMetricFilter, setActiveMetricFilter] = useState<MetricFilterKey | null>(null);
   const [isApplyingFilterFeedback, setIsApplyingFilterFeedback] = useState(false);
   const [isEditColumnsOpen, setIsEditColumnsOpen] = useState(false);
+  const [isWriterFilterSidebarOpen, setIsWriterFilterSidebarOpen] = useState(false);
+  const [isPublisherFilterSidebarOpen, setIsPublisherFilterSidebarOpen] = useState(false);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const [, setCompletionTimingsByBlog] = useState<
     Record<string, BlogCompletionTiming>
@@ -585,6 +613,7 @@ export default function DashboardPage() {
     setPublisherStatusFilters(nextState.publisherStatusFilters);
     setSortField(nextState.sortField);
     setSortDirection(nextState.sortDirection);
+    setRowDensity(nextState.rowDensity);
     setRowLimit(nextState.rowLimit);
     setCurrentPage(1);
   }, []);
@@ -600,6 +629,7 @@ export default function DashboardPage() {
       publisherStatusFilters,
       sortField,
       sortDirection,
+      rowDensity,
       rowLimit,
     }),
     [
@@ -613,8 +643,19 @@ export default function DashboardPage() {
       statusFilters,
       writerFilters,
       writerStatusFilters,
+      rowDensity,
     ]
   );
+  const hasActiveDashboardFilters =
+    search.trim().length > 0 ||
+    siteFilters.length > 0 ||
+    statusFilters.length > 0 ||
+    writerFilters.length > 0 ||
+    publisherFilters.length > 0 ||
+    writerStatusFilters.length > 0 ||
+    publisherStatusFilters.length > 0 ||
+    activeMetricFilter !== null ||
+    activeQuickQueue !== null;
 
   const loadData = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -648,7 +689,9 @@ export default function DashboardPage() {
       ]);
 
     if (blogsError) {
-      setError(blogsError.message);
+      setError(
+        `Couldn't load dashboard. ${blogsError.message ? "Error: " + blogsError.message : "Try refreshing."}`
+      );
       setIsLoading(false);
       return;
     }
@@ -893,6 +936,7 @@ export default function DashboardPage() {
       setPanelComments([]);
       setPanelCommentDraft("");
       setPanelError(null);
+      setIsPanelEditMode(false);
     }
   }, [activeBlogId, blogs]);
 
@@ -927,6 +971,12 @@ export default function DashboardPage() {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeOpenDashboardMenus();
+        if (activeBlogId) {
+          setActiveBlogId(null);
+          setPanelError(null);
+          setPanelCommentDraft("");
+          setIsPanelEditMode(false);
+        }
       }
     };
 
@@ -936,7 +986,7 @@ export default function DashboardPage() {
       document.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [closeOpenDashboardMenus]);
+  }, [activeBlogId, closeOpenDashboardMenus]);
 
   const writerOptions = useMemo(
     () =>
@@ -962,7 +1012,7 @@ export default function DashboardPage() {
   );
 
   const siteFilterOptions = useMemo(
-    () => SITES.map((site) => ({ value: site, label: site })),
+    () => SITES.map((site) => ({ value: site, label: getSiteShortLabel(site) })),
     []
   );
 
@@ -1018,7 +1068,6 @@ export default function DashboardPage() {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
-    const todayKey = format(todayDate, "yyyy-MM-dd");
 
     const isScheduledThisWeek = (blog: BlogRecord) => {
       const scheduledDate = getBlogScheduledDate(blog);
@@ -1091,23 +1140,9 @@ export default function DashboardPage() {
       if (activeMetricFilter === "needs_revision") {
         return blog.writer_status === "needs_revision";
       }
-      if (activeMetricFilter === "unscheduled_backlog") {
-        return (
-          blog.writer_status === "not_started" &&
-          getBlogScheduledDate(blog) === null
-        );
-      }
-      if (activeMetricFilter === "publishing_in_progress") {
-        return (
-          blog.writer_status === "completed" &&
-          blog.publisher_status === "in_progress"
-        );
-      }
-      const scheduledDate = getBlogScheduledDate(blog);
       return (
-        scheduledDate !== null &&
-        scheduledDate < todayKey &&
-        blog.overall_status !== "published"
+        blog.writer_status === "completed" &&
+        blog.publisher_status === "in_progress"
       );
     };
     return blogs.filter((blog) => {
@@ -1185,6 +1220,8 @@ export default function DashboardPage() {
         }
       } else if (sortField === "title") {
         compareResult = collator.compare(left.title, right.title);
+      } else if (sortField === "site") {
+        compareResult = collator.compare(left.site, right.site);
       } else if (sortField === "writer") {
         const leftWriter = left.writer?.full_name ?? "";
         const rightWriter = right.writer?.full_name ?? "";
@@ -1332,7 +1369,6 @@ export default function DashboardPage() {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
-    const todayKey = format(todayDate, "yyyy-MM-dd");
 
     const scheduledThisWeek = blogs.filter((blog) => {
       const scheduledDate = getBlogScheduledDate(blog);
@@ -1347,14 +1383,6 @@ export default function DashboardPage() {
       (blog) => blog.overall_status === "ready_to_publish"
     ).length;
 
-    const delayed = blogs.filter((blog) => {
-      const scheduledDate = getBlogScheduledDate(blog);
-      return (
-        scheduledDate !== null &&
-        scheduledDate < todayKey &&
-        blog.overall_status !== "published"
-      );
-    }).length;
 
     const currentlyWriting = blogs.filter(
       (blog) => blog.writer_status === "in_progress"
@@ -1370,11 +1398,6 @@ export default function DashboardPage() {
       (blog) => blog.writer_status === "needs_revision"
     ).length;
 
-    const unscheduledBacklog = blogs.filter(
-      (blog) =>
-        blog.writer_status === "not_started" &&
-        getBlogScheduledDate(blog) === null
-    ).length;
 
     const publishingInProgress = blogs.filter(
       (blog) =>
@@ -1385,11 +1408,9 @@ export default function DashboardPage() {
     return {
       scheduledThisWeek,
       readyToPublish,
-      delayed,
       currentlyWriting,
       underReview,
       needsRevision,
-      unscheduledBacklog,
       publishingInProgress,
     };
   }, [blogs]);
@@ -1465,6 +1486,14 @@ export default function DashboardPage() {
     }
     setSelectedBlogIds((previous) => previous.filter((id) => id !== blogId));
   };
+  const handleSortByColumn = (column: DashboardColumnKey) => {
+    if (sortField === column) {
+      setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortField(column);
+    setSortDirection("asc");
+  };
 
   const clearBulkUiState = () => {
     setSelectedBlogIds([]);
@@ -1508,21 +1537,6 @@ export default function DashboardPage() {
     });
   };
 
-  const saveColumnView = () => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(
-      columnViewStorageKey,
-      JSON.stringify(columnOrder)
-    );
-    window.localStorage.setItem(
-      columnHiddenStorageKey,
-      JSON.stringify(hiddenColumns)
-    );
-    setError(null);
-    setSuccessMessage("Column view saved.");
-  };
 
   const resetColumnView = () => {
     setColumnOrder(DEFAULT_DASHBOARD_COLUMN_ORDER);
@@ -1535,7 +1549,7 @@ export default function DashboardPage() {
     setSuccessMessage("Column view reset to default.");
   };
 
-  const _applySavedView = useCallback(
+  const applySavedView = useCallback(
     (view: SavedDashboardView) => {
       applyFilterState(view.state);
       setColumnOrder(view.columnOrder);
@@ -1545,9 +1559,6 @@ export default function DashboardPage() {
     },
     [applyFilterState]
   );
-  // applySavedView will be needed in Phase 4B for command palette - keeping for now
-   
-  const applySavedView = _applySavedView;
 
   const resetDashboardFilters = useCallback(() => {
     applyFilterState(DEFAULT_DASHBOARD_FILTER_STATE);
@@ -1592,7 +1603,7 @@ export default function DashboardPage() {
           : null,
         ...siteFilters.map((site) => ({
           id: `site-${site}`,
-          label: `Site: ${site}`,
+          label: `Site: ${getSiteShortLabel(site)}`,
           onRemove: () => {
             setSiteFilters((previous) => previous.filter((value) => value !== site));
           },
@@ -1782,8 +1793,29 @@ export default function DashboardPage() {
     }
     return "selected";
   };
+  const handleCopyValues = useCallback(async (field: "title" | "url") => {
+    const values =
+      field === "title"
+        ? sortedBlogs.map((blog) => blog.title)
+        : sortedBlogs
+            .map((blog) => blog.live_url ?? "")
+            .filter((value) => value.length > 0);
+    if (values.length === 0) {
+      setError(field === "title" ? "No titles to copy." : "No URLs to copy.");
+      setSuccessMessage(null);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(values.join("\n"));
+      setError(null);
+      setSuccessMessage(field === "title" ? "Copied all titles." : "Copied all URLs.");
+    } catch {
+      setError("Could not copy to clipboard.");
+      setSuccessMessage(null);
+    }
+  }, [sortedBlogs]);
 
-  const handleExportCsv = (scope: "selected" | "view") => {
+  const handleExportCsv = useCallback((scope: "selected" | "view") => {
     if (scope === "selected" && !canExportSelectedCsv) {
       setError("You do not have permission to export selected CSV.");
       setSuccessMessage(null);
@@ -1811,7 +1843,133 @@ export default function DashboardPage() {
     triggerCsvDownload(csvContent, filename);
     setError(null);
     setSuccessMessage(`Exported ${rowsToExport.length} blog(s) as CSV.`);
-  };
+  }, [
+    buildCsvContent,
+    canExportCsv,
+    canExportSelectedCsv,
+    selectedBlogs,
+    sortedBlogs,
+    triggerCsvDownload,
+  ]);
+
+  const handleExportPdf = useCallback(
+    (scope: "selected" | "view") => {
+      if (scope === "selected" && !canExportSelectedCsv) {
+        setError("You do not have permission to export selected PDF.");
+        setSuccessMessage(null);
+        return;
+      }
+      if (scope === "view" && !canExportCsv) {
+        setError("You do not have permission to export PDF.");
+        setSuccessMessage(null);
+        return;
+      }
+
+      const rowsToExport = scope === "selected" ? selectedBlogs : sortedBlogs;
+      if (rowsToExport.length === 0) {
+        setError(
+          scope === "selected"
+            ? "Select at least one blog before exporting PDF."
+            : "No blogs available in the current view to export."
+        );
+        setSuccessMessage(null);
+        return;
+      }
+
+      const popup = window.open("", "_blank", "width=1100,height=800");
+      if (!popup) {
+        setError("Popup blocked. Allow popups to export PDF.");
+        setSuccessMessage(null);
+        return;
+      }
+
+      const generatedAt = format(new Date(), "MMM d yyyy, h:mm a");
+      const headerMarkup = visibleColumnOrder
+        .map((column) => `<th>${escapeHtmlValue(DASHBOARD_COLUMN_LABELS[column])}</th>`)
+        .join("");
+      const rowsMarkup = rowsToExport
+        .map((blog) => {
+          const cells = visibleColumnOrder
+            .map((column) => `<td>${escapeHtmlValue(getExportCellValue(blog, column))}</td>`)
+            .join("");
+          return `<tr>${cells}</tr>`;
+        })
+        .join("");
+
+      popup.document.open();
+      popup.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard Export</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0f172a; padding: 24px; }
+    h1 { margin: 0 0 12px 0; font-size: 20px; }
+    p { margin: 0 0 18px 0; color: #475569; font-size: 13px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
+    th { background: #f8fafc; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Dashboard Export</h1>
+  <p>Generated ${escapeHtmlValue(generatedAt)}</p>
+  <table>
+    <thead><tr>${headerMarkup}</tr></thead>
+    <tbody>${rowsMarkup}</tbody>
+  </table>
+</body>
+</html>`);
+      popup.document.close();
+
+      const triggerPrintWhenReady = () => {
+        if (popup.closed) {
+          return;
+        }
+        const isReady = popup.document.readyState === "complete";
+        const hasBody = Boolean(popup.document.body?.childElementCount);
+        if (!isReady || !hasBody) {
+          window.setTimeout(triggerPrintWhenReady, 120);
+          return;
+        }
+        popup.focus();
+        popup.print();
+      };
+
+      window.setTimeout(triggerPrintWhenReady, 180);
+      setError(null);
+      setSuccessMessage(
+        `PDF ready for ${rowsToExport.length} blog(s). Use the print dialog to save.`
+      );
+    },
+    [
+      canExportCsv,
+      canExportSelectedCsv,
+      getExportCellValue,
+      selectedBlogs,
+      sortedBlogs,
+      visibleColumnOrder,
+    ]
+  );
+  useEffect(() => {
+    const handlePaletteAction = (event: Event) => {
+      const actionId = (event as CustomEvent<{ actionId?: string }>).detail?.actionId;
+      if (actionId === "clear_all_filters") {
+        clearAllFilters();
+        return;
+      }
+      if (actionId === "export_current_view") {
+        handleExportCsv("view");
+      }
+    };
+    window.addEventListener("command-palette-action", handlePaletteAction as EventListener);
+    return () => {
+      window.removeEventListener(
+        "command-palette-action",
+        handlePaletteAction as EventListener
+      );
+    };
+  }, [clearAllFilters, handleExportCsv]);
 
   const ensureBulkSelection = () => {
     if (selectedBlogIds.length === 0) {
@@ -2058,6 +2216,16 @@ export default function DashboardPage() {
         return;
       }
       if (
+        updates.writer_status !== undefined &&
+        updates.writer_status !== "not_started" &&
+        updates.writer_status !== "in_progress" &&
+        !blog.google_doc_url
+      ) {
+        setError("Google Doc link required to advance writer stage beyond drafting.");
+        setSuccessMessage(null);
+        return;
+      }
+      if (
         updates.publisher_status !== undefined &&
         !canTransitionPublisherStatus(
           blog.publisher_status,
@@ -2066,6 +2234,15 @@ export default function DashboardPage() {
         )
       ) {
         setError("You do not have permission to apply that publisher status change.");
+        setSuccessMessage(null);
+        return;
+      }
+      if (
+        updates.publisher_status !== undefined &&
+        updates.publisher_status !== "not_started" &&
+        !blog.google_doc_url
+      ) {
+        setError("Google Doc link required to advance publisher status.");
         setSuccessMessage(null);
         return;
       }
@@ -2219,9 +2396,17 @@ export default function DashboardPage() {
 
     setIsPanelLoading(false);
   }, []);
+  const closePanel = useCallback(() => {
+    setActiveBlogId(null);
+    setPanelError(null);
+    setPanelCommentDraft("");
+    setIsPanelEditMode(false);
+  }, []);
 
   const openPanel = useCallback((blogId: string) => {
     setActiveBlogId(blogId);
+    setIsPanelEditMode(false);
+    setPanelError(null);
     setPanelCommentDraft("");
     void loadPanelData(blogId);
   }, [loadPanelData]);
@@ -2329,14 +2514,10 @@ export default function DashboardPage() {
     await loadPanelData(activeBlog.id);
     setIsPanelCommentSaving(false);
   };
-  const _sortedSavedViews = useMemo(
+  const sortedSavedViews = useMemo(
     () => [...savedViews].sort((left, right) => left.name.localeCompare(right.name)),
     [savedViews]
   );
-  // sortedSavedViews will be needed in Phase 4B for command palette - keeping for now
-   
-  const sortedSavedViews = _sortedSavedViews;
-
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
@@ -2348,246 +2529,79 @@ export default function DashboardPage() {
             recentlyPublished={mostRecentPublishedBlog}
             onApplyQuickQueueFilter={applyQuickQueuePreset}
             onOpenBlog={openPanel}
+            isWriterFilterOpen={isWriterFilterSidebarOpen}
+            onWriterFilterToggle={setIsWriterFilterSidebarOpen}
+            isPublisherFilterOpen={isPublisherFilterSidebarOpen}
+            onPublisherFilterToggle={setIsPublisherFilterSidebarOpen}
           />
         }
       >
-        <div className="space-y-5 transition-opacity duration-200">
+        <div className={`${DATA_PAGE_STACK_CLASS} transition-opacity duration-200`}>
           <DataPageHeader
             title="Dashboard"
             description="Track assignments, writing progress, and publishing readiness."
             primaryAction={
               <div className="flex flex-wrap items-center gap-2">
-              <details className="relative">
-                <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                  Actions ▼
-                </summary>
-                <div className="absolute right-0 z-30 mt-1 w-52 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
-                  <button
-                    type="button"
-                    className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      closeOpenDashboardMenus();
-                      saveCurrentFiltersAsView();
-                    }}
-                  >
-                    Save view
-                  </button>
-                  <button
-                    type="button"
-                    className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      closeOpenDashboardMenus();
-                      resetDashboardFilters();
-                    }}
-                  >
-                    Reset filters
-                  </button>
-                  <button
-                    type="button"
-                    className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                    onClick={() => {
-                      closeOpenDashboardMenus();
-                      setIsEditColumnsOpen((previous) => !previous);
-                    }}
-                  >
-                    Edit columns
-                  </button>
-                </div>
-              </details>
-              <details className="relative">
-                <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                  Saved Views {sortedSavedViews.length > 0 ? `(${sortedSavedViews.length})` : ""} ▼
-                </summary>
-                <div className="absolute right-0 z-30 mt-1 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
-                  {sortedSavedViews.length === 0 ? (
-                    <p className="px-3 py-2 text-xs text-slate-500">No saved views yet.</p>
-                  ) : (
-                    sortedSavedViews.map((view) => (
-                      <button
-                        key={view.id}
-                        type="button"
-                        className={`block w-full rounded px-3 py-2 text-left text-sm transition ${
-                          activeSavedViewId === view.id
-                            ? "bg-slate-900 text-white"
-                            : "text-slate-700 hover:bg-slate-100"
-                        }`}
-                        onClick={() => {
-                          closeOpenDashboardMenus();
-                          applySavedView(view);
-                        }}
-                      >
-                        <p className="font-medium">{view.name}</p>
-                        <p className="text-[11px] opacity-75">
-                          {activeSavedViewId === view.id ? "Active" : "Click to apply"}
-                        </p>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </details>
-              {canCreateBlog || canRunDataImport ? (
-                <details className="relative">
-                  <summary className="cursor-pointer list-none rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
-                    + Add
-                  </summary>
-                  <div className="absolute right-0 z-30 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
-                    {canCreateBlog ? (
-                      <>
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                          onClick={() => {
-                            closeOpenDashboardMenus();
-                            router.push("/blogs/new");
-                          }}
-                        >
-                          <span>+ Add Blog</span>
-                          <KbdShortcut className="bg-slate-50">N</KbdShortcut>
-                        </button>
+                {canCreateBlog || canManageSocialPosts ? (
+                  <details className="relative">
+                    <summary className="cursor-pointer list-none rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+                      Add
+                    </summary>
+                    <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                      {canCreateBlog ? (
+                        <>
+                          <button
+                            type="button"
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                            onClick={() => {
+                              closeOpenDashboardMenus();
+                              router.push("/ideas");
+                            }}
+                          >
+                            New Idea
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                            onClick={() => {
+                              closeOpenDashboardMenus();
+                              router.push("/blogs/new");
+                            }}
+                          >
+                            <span>New Blog</span>
+                            <KbdShortcut className="bg-slate-50">N</KbdShortcut>
+                          </button>
+                        </>
+                      ) : null}
+                      {canManageSocialPosts ? (
                         <button
                           type="button"
                           className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
                           onClick={() => {
                             closeOpenDashboardMenus();
-                            router.push("/ideas");
+                            router.push("/social-posts?create=1");
                           }}
                         >
-                          + Add Idea
+                          New Social Post
                         </button>
-                      </>
-                    ) : null}
-                    {canRunDataImport ? (
-                      <button
-                        type="button"
-                        className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                        onClick={() => {
-                          closeOpenDashboardMenus();
-                          router.push("/blogs?import=1");
-                        }}
-                      >
-                        + Import Blogs
-                      </button>
-                    ) : null}
-                  </div>
-                </details>
-              ) : null}
-            </div>
+                      ) : null}
+                    </div>
+                  </details>
+                ) : null}
+              </div>
             }
           />
-          <DataPageToolbar
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search title, URL, writer, publisher, or site"
-            actions={
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={clearAllFilters}
-              >
-                Clear all filters
-              </Button>
-            }
-            filters={
-              <>
-                <CheckboxMultiSelect
-                  label="All Sites"
-                  options={siteFilterOptions}
-                  selectedValues={siteFilters}
-                  onChange={(nextValues) => {
-                    setSiteFilters(nextValues as BlogSite[]);
-                  }}
-                />
-                <CheckboxMultiSelect
-                  label="All Writers"
-                  options={writerFilterOptions}
-                  selectedValues={writerFilters}
-                  onChange={setWriterFilters}
-                />
-                <CheckboxMultiSelect
-                  label="All Publishers"
-                  options={publisherFilterOptions}
-                  selectedValues={publisherFilters}
-                  onChange={setPublisherFilters}
-                />
-                <CheckboxMultiSelect
-                  label="All Writer Status"
-                  options={writerStatusFilterOptions}
-                  selectedValues={writerStatusFilters}
-                  onChange={(nextValues) => {
-                    setWriterStatusFilters(nextValues as WriterStageStatus[]);
-                  }}
-                />
-                <CheckboxMultiSelect
-                  label="All Publisher Status"
-                  options={publisherStatusFilterOptions}
-                  selectedValues={publisherStatusFilters}
-                  onChange={(nextValues) => {
-                    setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-                  }}
-                />
-                <details className="relative">
-                  <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                    + Add Filter
-                  </summary>
-                  <div className="absolute left-0 z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
-                    <CheckboxMultiSelect
-                      label="All Overall Status"
-                      options={overallStatusFilterOptions}
-                      selectedValues={statusFilters}
-                      onChange={(nextValues) => {
-                        setStatusFilters(nextValues as OverallBlogStatus[]);
-                      }}
-                    />
-                  </div>
-                </details>
-                <div className="flex items-end gap-2">
-                  <select
-                    aria-label="Sort By"
-                    className="focus-field flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                    value={sortField}
-                    onChange={(event) => {
-                      setSortField(event.target.value as DashboardSortField);
-                    }}
-                  >
-                    {DASHBOARD_SORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="flex items-center justify-center w-10 rounded-md border border-slate-300 bg-white text-sm text-slate-700 hover:bg-slate-50"
-                    onClick={() => {
-                      setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
-                    }}
-                    title={sortDirection === "asc" ? "Ascending" : "Descending"}
-                  >
-                    {sortDirection === "asc" ? "↑" : "↓"}
-                  </button>
-                </div>
-              </>
-            }
-          />
-          <DataPageFilterPills pills={activeFilterPills} />
-          {isApplyingFilterFeedback ? (
-            <div aria-live="polite" className="inline-flex items-center gap-2 text-xs text-slate-500">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
-              Updating results…
-            </div>
-          ) : null}
-          <section className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+          <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
             <div className="flex items-baseline justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Highlights (click to view)
               </p>
               <p className="text-[11px] text-slate-500">Counts reflect the full dataset</p>
             </div>
-            <div className="mt-2 grid gap-2 text-sm md:grid-cols-4">
+            <div className="mt-2 grid gap-2 text-sm md:grid-cols-3">
               <button
                 type="button"
-                className={`rounded-lg border px-3 py-2 text-left transition ${
+                className={`rounded-lg border px-3 py-3 text-left transition ${
                   activeMetricFilter === "scheduled_this_week"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -2608,28 +2622,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                className={`rounded-lg border px-3 py-2 text-left transition ${
-                  activeMetricFilter === "ready_to_publish"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) =>
-                    previous === "ready_to_publish" ? null : "ready_to_publish"
-                  );
-                  setActiveQuickQueue(null);
-                }}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wide">
-                  Ready to Publish
-                </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.readyToPublish}
-                </p>
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-2 text-left transition ${
+                className={`rounded-lg border px-3 py-3 text-left transition ${
                   activeMetricFilter === "currently_writing"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -2650,7 +2643,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                className={`rounded-lg border px-3 py-2 text-left transition ${
+                className={`rounded-lg border px-3 py-3 text-left transition ${
                   activeMetricFilter === "under_review"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -2671,7 +2664,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                className={`rounded-lg border px-3 py-2 text-left transition ${
+                className={`rounded-lg border px-3 py-3 text-left transition ${
                   activeMetricFilter === "needs_revision"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -2692,28 +2685,28 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                className={`rounded-lg border px-3 py-2 text-left transition ${
-                  activeMetricFilter === "unscheduled_backlog"
+                className={`rounded-lg border px-3 py-3 text-left transition ${
+                  activeMetricFilter === "ready_to_publish"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
                 onClick={() => {
                   setActiveMetricFilter((previous) =>
-                    previous === "unscheduled_backlog" ? null : "unscheduled_backlog"
+                    previous === "ready_to_publish" ? null : "ready_to_publish"
                   );
                   setActiveQuickQueue(null);
                 }}
               >
                 <p className="text-[11px] font-semibold uppercase tracking-wide">
-                  Unscheduled Backlog
+                  Ready to Publish
                 </p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.unscheduledBacklog}
+                  {focusStripMetrics.readyToPublish}
                 </p>
               </button>
               <button
                 type="button"
-                className={`rounded-lg border px-3 py-2 text-left transition ${
+                className={`rounded-lg border px-3 py-3 text-left transition ${
                   activeMetricFilter === "publishing_in_progress"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -2732,32 +2725,86 @@ export default function DashboardPage() {
                   {focusStripMetrics.publishingInProgress}
                 </p>
               </button>
-              <button
-                type="button"
-                title="Blogs whose scheduled publish date has passed and overall status is not published."
-                className={`rounded-lg border px-3 py-2 text-left transition ${
-                  activeMetricFilter === "delayed"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) => (previous === "delayed" ? null : "delayed"));
-                  setActiveQuickQueue(null);
-                }}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wide">Delayed</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.delayed}
-                </p>
-              </button>
             </div>
           </section>
+          <DataPageToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search title, URL, writer, publisher, or site"
+            actions={
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={clearAllFilters}
+              >
+                Clear all filters
+              </Button>
+            }
+            filters={
+              <div className="md:col-span-2 xl:col-span-4 grid gap-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <CheckboxMultiSelect
+                    label="All Sites"
+                    options={siteFilterOptions}
+                    selectedValues={siteFilters}
+                    onChange={(nextValues) => {
+                      setSiteFilters(nextValues as BlogSite[]);
+                    }}
+                  />
+                  <CheckboxMultiSelect
+                    label="All Writers"
+                    options={writerFilterOptions}
+                    selectedValues={writerFilters}
+                    onChange={setWriterFilters}
+                  />
+                  <CheckboxMultiSelect
+                    label="All Publishers"
+                    options={publisherFilterOptions}
+                    selectedValues={publisherFilters}
+                    onChange={setPublisherFilters}
+                  />
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <CheckboxMultiSelect
+                    label="All Writer Status"
+                    options={writerStatusFilterOptions}
+                    selectedValues={writerStatusFilters}
+                    onChange={(nextValues) => {
+                      setWriterStatusFilters(nextValues as WriterStageStatus[]);
+                    }}
+                  />
+                  <CheckboxMultiSelect
+                    label="All Publisher Status"
+                    options={publisherStatusFilterOptions}
+                    selectedValues={publisherStatusFilters}
+                    onChange={(nextValues) => {
+                      setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
+                    }}
+                  />
+                  <CheckboxMultiSelect
+                    label="All Overall Status"
+                    options={overallStatusFilterOptions}
+                    selectedValues={statusFilters}
+                    onChange={(nextValues) => {
+                      setStatusFilters(nextValues as OverallBlogStatus[]);
+                    }}
+                  />
+                </div>
+              </div>
+            }
+          />
+          <DataPageFilterPills pills={activeFilterPills} />
 
           {(search || siteFilters.length > 0 || statusFilters.length > 0 || writerFilters.length > 0 || publisherFilters.length > 0 || writerStatusFilters.length > 0 || publisherStatusFilters.length > 0) && (
             <FilterBar
               filters={[
                 ...(search ? [{ id: "search", label: "Search", value: search }] : []),
-                ...siteFilters.map((site) => ({ id: `site-${site}`, label: "Site", value: site })),
+                ...siteFilters.map((site) => ({
+                  id: `site-${site}`,
+                  label: "Site",
+                  value: getSiteShortLabel(site),
+                })),
                 ...statusFilters.map((status) => ({
                   id: `status-${status}`,
                   label: "Status",
@@ -2946,8 +2993,8 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <section className="relative rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" ref={columnEditorRef}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
+              <section className={`${DATA_PAGE_CONTROL_STRIP_CLASS} relative`} ref={columnEditorRef}>
+                <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
                   <div className="flex flex-wrap items-center gap-3">
                     <TableResultsSummary
                       totalRows={sortedBlogs.length}
@@ -2956,20 +3003,64 @@ export default function DashboardPage() {
                       noun="blogs"
                     />
                   </div>
-                  <div className="ml-auto flex items-center gap-2">
+                  <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
+                    <details className="relative">
+                      <summary
+                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                      >
+                        Copy
+                      </summary>
+                      <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                        <button
+                          type="button"
+                          disabled={sortedBlogs.length === 0}
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() => {
+                            closeOpenDashboardMenus();
+                            void handleCopyValues("title");
+                          }}
+                        >
+                          All titles
+                        </button>
+                        <button
+                          type="button"
+                          disabled={sortedBlogs.length === 0}
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() => {
+                            closeOpenDashboardMenus();
+                            void handleCopyValues("url");
+                          }}
+                        >
+                          All URLs
+                        </button>
+                      </div>
+                    </details>
                     <button
                       type="button"
-                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
                       onClick={() => {
                         setIsEditColumnsOpen((previous) => !previous);
                       }}
                     >
-                      Edit Columns
+                      Customize
                     </button>
+                    {canRunDataImport ? (
+                      <button
+                        type="button"
+                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-slate-900 bg-slate-900 text-white hover:bg-slate-700`}
+                        onClick={() => {
+                          router.push("/blogs?import=1");
+                        }}
+                      >
+                        Import
+                      </button>
+                    ) : null}
                     {canExportCsv || canExportSelectedCsv ? (
                       <details className="relative">
-                        <summary className="cursor-pointer list-none rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                          Export ▼
+                        <summary
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-900 bg-slate-900 text-white hover:bg-slate-700`}
+                        >
+                          Export
                         </summary>
                         <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-md">
                           <button
@@ -2978,9 +3069,21 @@ export default function DashboardPage() {
                             className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               handleExportCsv(getSmartExportScope());
+                              closeOpenDashboardMenus();
                             }}
                           >
                             As .CSV file
+                          </button>
+                          <button
+                            type="button"
+                            disabled={sortedBlogs.length === 0}
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() => {
+                              handleExportPdf(getSmartExportScope());
+                              closeOpenDashboardMenus();
+                            }}
+                          >
+                            As .PDF file
                           </button>
                         </div>
                       </details>
@@ -2997,10 +3100,41 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                          onClick={saveColumnView}
+                          onClick={saveCurrentFiltersAsView}
                         >
                           Save View
                         </button>
+                        <details className="relative">
+                          <summary className="cursor-pointer list-none rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                            Load View ▼
+                          </summary>
+                          <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                            {sortedSavedViews.length === 0 ? (
+                              <p className="px-3 py-2 text-xs text-slate-500">No saved views yet.</p>
+                            ) : (
+                              sortedSavedViews.map((view) => (
+                                <button
+                                  key={view.id}
+                                  type="button"
+                                  className={`block w-full rounded px-3 py-2 text-left text-sm transition ${
+                                    activeSavedViewId === view.id
+                                      ? "bg-slate-900 text-white"
+                                      : "text-slate-700 hover:bg-slate-100"
+                                  }`}
+                                  onClick={() => {
+                                    closeOpenDashboardMenus();
+                                    applySavedView(view);
+                                  }}
+                                >
+                                  <p className="font-medium">{view.name}</p>
+                                  <p className="text-[11px] opacity-75">
+                                    {activeSavedViewId === view.id ? "Active" : "Click to apply"}
+                                  </p>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </details>
                         <button
                           type="button"
                           className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
@@ -3011,6 +3145,35 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="mt-2 grid gap-2 md:grid-cols-2">
+                      <div className="col-span-full flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+                        <span className="text-xs font-medium text-slate-600">Density</span>
+                        <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
+                          <button
+                            type="button"
+                            className={segmentedControlItemClass({
+                              isActive: rowDensity === "compact",
+                              className: "px-2 py-1 text-xs",
+                            })}
+                            onClick={() => {
+                              setRowDensity("compact");
+                            }}
+                          >
+                            Compact
+                          </button>
+                          <button
+                            type="button"
+                            className={segmentedControlItemClass({
+                              isActive: rowDensity === "comfortable",
+                              className: "px-2 py-1 text-xs",
+                            })}
+                            onClick={() => {
+                              setRowDensity("comfortable");
+                            }}
+                          >
+                            Comfortable
+                          </button>
+                        </div>
+                      </div>
                       {columnOrder.map((column, index) => (
                         <div
                           key={column}
@@ -3062,6 +3225,36 @@ export default function DashboardPage() {
                   </div>
                 ) : null}
               </section>
+              {sortedBlogs.length === 0 && hasActiveDashboardFilters ? (
+                <DataPageEmptyState
+                  title="No blogs match your filters."
+                  description="Try clearing filters or importing blogs."
+                  action={
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={clearAllFilters}
+                      >
+                        Clear all filters
+                      </Button>
+                      {canRunDataImport ? (
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            router.push("/blogs?import=1");
+                          }}
+                        >
+                          Open import
+                        </Button>
+                      ) : null}
+                    </div>
+                  }
+                />
+              ) : null}
 
               <div className="overflow-hidden rounded-lg border border-slate-200">
                 <div
@@ -3077,8 +3270,11 @@ export default function DashboardPage() {
                     canSelectRows={canSelectRows}
                     canEditWritingStage={canEditWritingStage}
                     canEditPublishingStage={canEditPublishingStage}
+                    sortField={sortField}
+                    sortDirection={sortDirection}
                     staleDraftDays={staleDraftDays}
                     onRowClick={openPanel}
+                    onSortChange={handleSortByColumn}
                     onToggleAll={handleToggleAllVisible}
                     onToggleSingle={handleToggleSingle}
                     onWriterStatusChange={(blog, status) => {
@@ -3098,7 +3294,7 @@ export default function DashboardPage() {
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
                 <div className="flex flex-wrap items-center gap-3">
                   <TableRowLimitSelect
                     value={rowLimit}
@@ -3126,387 +3322,404 @@ export default function DashboardPage() {
                   ↑ Move to top
                 </button>
               </div>
+              <DataPageTableFeedback isVisible={isApplyingFilterFeedback} />
             </div>
           )}
 
-          {activeBlog ? (
-            <>
-              <button
-                type="button"
-                aria-label="Close blog panel"
-                className="fixed inset-0 z-30 bg-slate-900/25"
-                onClick={() => {
-                  setActiveBlogId(null);
-                  setPanelError(null);
-                  setPanelCommentDraft("");
-                }}
-              />
-              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-slate-200 bg-white shadow-2xl">
-                <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Blog Panel
-                      </p>
-                      <h3 className="mt-1 text-lg font-semibold text-slate-900">
-                        {activeBlog.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-600">{activeBlog.site}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <WorkflowStageBadge
-                          stage={getWorkflowStage({
-                            writerStatus: activeBlog.writer_status,
-                            publisherStatus: activeBlog.publisher_status,
-                          })}
-                        />
-                        <StatusBadge status={activeBlog.overall_status} />
-                        <WriterStatusBadge status={activeBlog.writer_status} />
-                        <PublisherStatusBadge status={activeBlog.publisher_status} />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                      onClick={() => {
-                        setActiveBlogId(null);
-                        setPanelError(null);
-                        setPanelCommentDraft("");
-                      }}
-                    >
-                      Close
-                    </button>
+          <BlogDetailsDrawer
+            blog={activeBlog}
+            isOpen={Boolean(activeBlog)}
+            onClose={closePanel}
+            subtitle={activeBlog ? getSiteLabel(activeBlog.site) : undefined}
+            commentsCount={panelComments.length}
+            timelineCount={panelHistory.length}
+            siteBadge={
+              activeBlog ? (
+                <span
+                  className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${getSiteBadgeClasses(
+                    activeBlog.site
+                  )}`}
+                >
+                  {getSiteShortLabel(activeBlog.site)}
+                </span>
+              ) : null
+            }
+            statusBadges={
+              activeBlog ? (
+                <>
+                  <WorkflowStageBadge
+                    stage={getWorkflowStage({
+                      writerStatus: activeBlog.writer_status,
+                      publisherStatus: activeBlog.publisher_status,
+                    })}
+                  />
+                  <StatusBadge status={activeBlog.overall_status} />
+                  <WriterStatusBadge status={activeBlog.writer_status} />
+                  <PublisherStatusBadge status={activeBlog.publisher_status} />
+                </>
+              ) : null
+            }
+            overviewFields={
+              activeBlog
+                ? [
+                    {
+                      label: "Workflow stage",
+                      value: toTitleCase(
+                        getWorkflowStage({
+                          writerStatus: activeBlog.writer_status,
+                          publisherStatus: activeBlog.publisher_status,
+                        })
+                      ),
+                    },
+                    {
+                      label: "Overall status",
+                      value: STATUS_LABELS[activeBlog.overall_status],
+                    },
+                  ]
+                : []
+            }
+            workflowContent={
+              activeBlog ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {isPanelEditMode && canChangeWriterAssignment ? (
+                    <label className="block space-y-1">
+                      <span className="text-xs text-slate-500">Writer</span>
+                      <select
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        value={activeBlog.writer_id ?? ""}
+                        onChange={(event) => {
+                          const nextWriterId = event.target.value || null;
+                          void updateBlogInline(
+                            activeBlog,
+                            { writer_id: nextWriterId },
+                            `Writer updated for \"${activeBlog.title}\".`
+                          );
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {assignmentOptions.map((userOption) => (
+                          <option key={userOption.id} value={userOption.id}>
+                            {userOption.full_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <DetailDrawerField
+                      label="Writer"
+                      value={activeBlog.writer?.full_name ?? "Unassigned"}
+                    />
+                  )}
+
+                  {isPanelEditMode && canChangePublisherAssignment ? (
+                    <label className="block space-y-1">
+                      <span className="text-xs text-slate-500">Publisher</span>
+                      <select
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        value={activeBlog.publisher_id ?? ""}
+                        onChange={(event) => {
+                          const nextPublisherId = event.target.value || null;
+                          void updateBlogInline(
+                            activeBlog,
+                            { publisher_id: nextPublisherId },
+                            `Publisher updated for \"${activeBlog.title}\".`
+                          );
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {assignmentOptions.map((userOption) => (
+                          <option key={userOption.id} value={userOption.id}>
+                            {userOption.full_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <DetailDrawerField
+                      label="Publisher"
+                      value={activeBlog.publisher?.full_name ?? "Unassigned"}
+                    />
+                  )}
+
+                  {isPanelEditMode && canEditWritingStage ? (
+                    <label className="block space-y-1">
+                      <span className="text-xs text-slate-500">Writer status</span>
+                      <select
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        value={activeBlog.writer_status}
+                        onChange={(event) => {
+                          void updateBlogInline(
+                            activeBlog,
+                            { writer_status: event.target.value as WriterStageStatus },
+                            `Writer status updated for \"${activeBlog.title}\".`
+                          );
+                        }}
+                      >
+                        {WRITER_STATUSES.map((status) => {
+                          const isTransitionAllowed = canTransitionWriterStatus(
+                            activeBlog.writer_status,
+                            status,
+                            hasPermission
+                          );
+                          const needsGoogleDoc =
+                            status !== "not_started" &&
+                            status !== "in_progress" &&
+                            !activeBlog.google_doc_url;
+                          return (
+                            <option
+                              key={status}
+                              value={status}
+                              disabled={!isTransitionAllowed || needsGoogleDoc}
+                            >
+                              {WRITER_STATUS_LABELS[status]}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+                  ) : (
+                    <DetailDrawerField
+                      label="Writer status"
+                      value={WRITER_STATUS_LABELS[activeBlog.writer_status]}
+                    />
+                  )}
+
+                  {isPanelEditMode && canEditPublishingStage ? (
+                    <label className="block space-y-1">
+                      <span className="text-xs text-slate-500">Publisher status</span>
+                      <select
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        value={activeBlog.publisher_status}
+                        onChange={(event) => {
+                          void updateBlogInline(
+                            activeBlog,
+                            { publisher_status: event.target.value as PublisherStageStatus },
+                            `Publisher status updated for \"${activeBlog.title}\".`
+                          );
+                        }}
+                      >
+                        {PUBLISHER_STATUSES.map((status) => {
+                          const isTransitionAllowed = canTransitionPublisherStatus(
+                            activeBlog.publisher_status,
+                            status,
+                            hasPermission
+                          );
+                          const needsGoogleDoc =
+                            status !== "not_started" && !activeBlog.google_doc_url;
+                          return (
+                            <option
+                              key={status}
+                              value={status}
+                              disabled={!isTransitionAllowed || needsGoogleDoc}
+                            >
+                              {PUBLISHER_STATUS_LABELS[status]}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+                  ) : (
+                    <DetailDrawerField
+                      label="Publisher status"
+                      value={PUBLISHER_STATUS_LABELS[activeBlog.publisher_status]}
+                    />
+                  )}
+                </div>
+              ) : null
+            }
+            datesContent={
+              activeBlog ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {isPanelEditMode && canEditScheduledDate ? (
+                    <label className="block space-y-1">
+                      <span className="text-xs text-slate-500">Scheduled date</span>
+                      <input
+                        type="date"
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        value={formatDateInput(getBlogScheduledDate(activeBlog))}
+                        onChange={(event) => {
+                          const nextDate = event.target.value || null;
+                          void updateBlogInline(
+                            activeBlog,
+                            {
+                              scheduled_publish_date: nextDate,
+                              target_publish_date: nextDate,
+                            },
+                            `Scheduled date updated for \"${activeBlog.title}\".`
+                          );
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <DetailDrawerField
+                      label="Scheduled date"
+                      value={formatDisplayDate(getBlogScheduledDate(activeBlog)) || "—"}
+                    />
+                  )}
+
+                  {isPanelEditMode && canEditDisplayDate ? (
+                    <label className="block space-y-1">
+                      <span className="text-xs text-slate-500">Display date</span>
+                      <input
+                        type="date"
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        value={formatDateInput(activeBlog.display_published_date)}
+                        onChange={(event) => {
+                          const nextDisplayDate = event.target.value || null;
+                          void updateBlogInline(
+                            activeBlog,
+                            { display_published_date: nextDisplayDate },
+                            `Display date updated for \"${activeBlog.title}\".`
+                          );
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <DetailDrawerField
+                      label="Display date"
+                      value={formatDisplayDate(activeBlog.display_published_date) || "—"}
+                    />
+                  )}
+
+                  <DetailDrawerField
+                    label="Published date"
+                    value={formatDisplayDate(getBlogPublishDate(activeBlog)) || "—"}
+                  />
+                </div>
+              ) : null
+            }
+            linksContent={
+              activeBlog ? (
+                <div className="space-y-3 text-sm text-slate-700">
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500">Google Doc</p>
+                    {activeBlog.google_doc_url ? (
+                      <ExternalLink href={activeBlog.google_doc_url} className="block truncate text-blue-600" title={activeBlog.google_doc_url}>
+                        {activeBlog.google_doc_url}
+                      </ExternalLink>
+                    ) : (
+                      <p>—</p>
+                    )}
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <details className="relative">
-                      <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
-                        Actions ▼
-                      </summary>
-                      <div className="absolute left-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
-                        <Link
-                          href={`/blogs/${activeBlog.id}`}
-                          className="block rounded px-3 py-2 text-xs text-slate-700 hover:bg-slate-100"
-                          onClick={() => {
-                            closeOpenDashboardMenus();
-                          }}
-                        >
-                          Open blog page
-                        </Link>
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500">Live URL</p>
+                    {activeBlog.live_url ? (
+                      <ExternalLink href={activeBlog.live_url} className="block truncate text-blue-600" title={activeBlog.live_url}>
+                        {activeBlog.live_url}
+                      </ExternalLink>
+                    ) : (
+                      <p>—</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500">Blog Page</p>
+                    <Link
+                      href={`/blogs/${activeBlog.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="interactive-link block truncate text-blue-600"
+                      title={`/blogs/${activeBlog.id}`}
+                    >
+                      {`/blogs/${activeBlog.id}`}
+                    </Link>
+                  </div>
+                </div>
+              ) : undefined
+            }
+            commentsContent={
+              activeBlog ? (
+                <div className="space-y-2">
+                  {canCreateComments ? (
+                    <>
+                      <textarea
+                        value={panelCommentDraft}
+                        onChange={(event) => {
+                          setPanelCommentDraft(event.target.value);
+                        }}
+                        className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        placeholder="Add a comment..."
+                        maxLength={2000}
+                      />
+                      <div className="flex justify-end">
                         <button
                           type="button"
-                          className="block w-full rounded px-3 py-2 text-left text-xs text-slate-700 hover:bg-slate-100"
+                          disabled={isPanelCommentSaving}
+                          className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => {
-                            closeOpenDashboardMenus();
-                            void loadPanelData(activeBlog.id);
+                            void handlePanelAddComment();
                           }}
                         >
-                          Refresh
+                          {isPanelCommentSaving ? "Adding..." : "Add Comment"}
                         </button>
                       </div>
-                    </details>
-                  </div>
-                </div>
-
-                <div className="space-y-5 p-4">
-
-                  <section className="rounded-lg border border-slate-200 p-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Assignments & Dates
-                    </h4>
-                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                      <label className="block text-xs text-slate-600">
-                        Writer
-                        {canChangeWriterAssignment ? (
-                          <select
-                            className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                            value={activeBlog.writer_id ?? ""}
-                            onChange={(event) => {
-                              const nextWriterId = event.target.value || null;
-                              void updateBlogInline(
-                                activeBlog,
-                                { writer_id: nextWriterId },
-                                `Writer updated for "${activeBlog.title}".`
-                              );
-                            }}
-                          >
-                            <option value="">Unassigned</option>
-                            {assignmentOptions.map((userOption) => (
-                              <option key={userOption.id} value={userOption.id}>
-                                {userOption.full_name}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <p className="mt-1 text-sm font-medium text-slate-900">
-                            {activeBlog.writer?.full_name ?? "Unassigned"}
-                          </p>
-                        )}
-                      </label>
-
-                      <label className="block text-xs text-slate-600">
-                        Publisher
-                        {canChangePublisherAssignment ? (
-                          <select
-                            className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                            value={activeBlog.publisher_id ?? ""}
-                            onChange={(event) => {
-                              const nextPublisherId = event.target.value || null;
-                              void updateBlogInline(
-                                activeBlog,
-                                { publisher_id: nextPublisherId },
-                                `Publisher updated for "${activeBlog.title}".`
-                              );
-                            }}
-                          >
-                            <option value="">Unassigned</option>
-                            {assignmentOptions.map((userOption) => (
-                              <option key={userOption.id} value={userOption.id}>
-                                {userOption.full_name}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <p className="mt-1 text-sm font-medium text-slate-900">
-                            {activeBlog.publisher?.full_name ?? "Unassigned"}
-                          </p>
-                        )}
-                      </label>
-
-                      <label className="block text-xs text-slate-600">
-                        Writer status
-                        <select
-                          disabled={!canEditWritingStage}
-                          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
-                          value={activeBlog.writer_status}
-                          onChange={(event) => {
-                            void updateBlogInline(
-                              activeBlog,
-                              { writer_status: event.target.value as WriterStageStatus },
-                              `Writer status updated for "${activeBlog.title}".`
-                            );
-                          }}
-                        >
-                          {WRITER_STATUSES.map((status) => {
-                            const isTransitionAllowed = canTransitionWriterStatus(
-                              activeBlog.writer_status,
-                              status,
-                              hasPermission
-                            );
-                            return (
-                              <option
-                                key={status}
-                                value={status}
-                                disabled={!isTransitionAllowed}
-                              >
-                                {WRITER_STATUS_LABELS[status]}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </label>
-
-                      <label className="block text-xs text-slate-600">
-                        Publisher status
-                        <select
-                          disabled={!canEditPublishingStage}
-                          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
-                          value={activeBlog.publisher_status}
-                          onChange={(event) => {
-                            void updateBlogInline(
-                              activeBlog,
-                              { publisher_status: event.target.value as PublisherStageStatus },
-                              `Publisher status updated for "${activeBlog.title}".`
-                            );
-                          }}
-                        >
-                          {PUBLISHER_STATUSES.map((status) => {
-                            const isTransitionAllowed = canTransitionPublisherStatus(
-                              activeBlog.publisher_status,
-                              status,
-                              hasPermission
-                            );
-                            return (
-                              <option
-                                key={status}
-                                value={status}
-                                disabled={!isTransitionAllowed}
-                              >
-                                {PUBLISHER_STATUS_LABELS[status]}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </label>
-
-                      <label className="block text-xs text-slate-600">
-                        Scheduled date
-                        <input
-                          disabled={!canEditScheduledDate}
-                          type="date"
-                          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
-                          value={formatDateInput(getBlogScheduledDate(activeBlog))}
-                          onChange={(event) => {
-                            const nextDate = event.target.value || null;
-                            void updateBlogInline(
-                              activeBlog,
-                              {
-                                scheduled_publish_date: nextDate,
-                                target_publish_date: nextDate,
-                              },
-                              `Scheduled date updated for "${activeBlog.title}".`
-                            );
-                          }}
-                        />
-                      </label>
-
-                      <label className="block text-xs text-slate-600">
-                        Display date
-                        <input
-                          disabled={!canEditDisplayDate}
-                          type="date"
-                          className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
-                          value={formatDateInput(activeBlog.display_published_date)}
-                          onChange={(event) => {
-                            const nextDisplayDate = event.target.value || null;
-                            void updateBlogInline(
-                              activeBlog,
-                              { display_published_date: nextDisplayDate },
-                              `Display date updated for "${activeBlog.title}".`
-                            );
-                          }}
-                        />
-                      </label>
-                    </div>
-                  </section>
-
-                  <section className="rounded-lg border border-slate-200 p-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Links
-                    </h4>
-                    <div className="mt-2 space-y-1 text-sm text-slate-700">
-                      <p>
-                        Google Doc:{" "}
-                        {activeBlog.google_doc_url ? (
-                          <ExternalLink
-                            href={activeBlog.google_doc_url}
-                            className="text-blue-600 underline"
-                          >
-                            {activeBlog.google_doc_url}
-                          </ExternalLink>
-                        ) : (
-                          "—"
-                        )}
-                      </p>
-                      <p>
-                        Live URL:{" "}
-                        {activeBlog.live_url ? (
-                          <ExternalLink
-                            href={activeBlog.live_url}
-                            className="text-blue-600 underline"
-                          >
-                            {activeBlog.live_url}
-                          </ExternalLink>
-                        ) : (
-                          "—"
-                        )}
-                      </p>
-                    </div>
-                  </section>
-
-                  <section className="rounded-lg border border-slate-200 p-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Comments
-                    </h4>
-                    <div className="mt-2 space-y-2">
-                      {canCreateComments ? (
-                        <>
-                          <textarea
-                            value={panelCommentDraft}
-                            onChange={(event) => {
-                              setPanelCommentDraft(event.target.value);
-                            }}
-                            className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                            placeholder="Add a comment..."
-                            maxLength={2000}
-                          />
-                          <div className="flex justify-end">
-                            <button
-                              type="button"
-                              disabled={isPanelCommentSaving}
-                              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                              onClick={() => {
-                                void handlePanelAddComment();
-                              }}
-                            >
-                              {isPanelCommentSaving ? "Adding..." : "Add Comment"}
-                            </button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      You do not have permission to add comments.
+                    </p>
+                  )}
+                  {panelComments.length === 0 ? (
+                    <p className="text-sm text-slate-500">No comments yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {panelComments.map((comment) => (
+                        <li key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                          <div className="flex items-start gap-2">
+                            <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700">
+                              {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-600">
+                                {comment.author?.full_name ?? "Unknown"} —{" "}
+                                {formatDistanceToNow(new Date(comment.created_at), {
+                                  addSuffix: true,
+                                })}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-800">{comment.comment}</p>
+                            </div>
                           </div>
-                        </>
-                      ) : (
-                        <p className="text-sm text-slate-500">
-                          You do not have permission to add comments.
-                        </p>
-                      )}
-                      {panelComments.length === 0 ? (
-                        <p className="text-sm text-slate-500">No comments yet.</p>
-                      ) : (
-                        <ul className="space-y-2">
-                          {panelComments.map((comment) => (
-                            <li key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                              <div className="flex items-start gap-2">
-                                <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700">
-                                  {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
-                                </span>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-semibold text-slate-600">
-                                    {comment.author?.full_name ?? "Unknown"} —{" "}
-                                    {formatDistanceToNow(new Date(comment.created_at), {
-                                      addSuffix: true,
-                                    })}
-                                  </p>
-                                  <p className="mt-1 text-sm text-slate-800">{comment.comment}</p>
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </section>
-
-                  <section className="rounded-lg border border-slate-200 p-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Activity Timeline
-                    </h4>
-                    {isPanelLoading ? (
-                      <p className="mt-2 text-sm text-slate-500">Loading timeline…</p>
-                    ) : panelHistory.length === 0 ? (
-                      <p className="mt-2 text-sm text-slate-500">No activity history yet.</p>
-                    ) : (
-                      <ol className="mt-2 space-y-2">
-                        {panelHistory.map((entry) => (
-                          <li
-                            key={entry.id}
-                            className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                          >
-                            <p className="text-sm font-medium text-slate-800">
-                              {toTitleCase(entry.event_type)}
-                            </p>
-                            <p className="text-xs text-slate-600">
-                              {entry.field_name ? `${entry.field_name}: ` : ""}
-                              {entry.old_value ?? "—"} → {entry.new_value ?? "—"}
-                            </p>
-                            <p className="text-xs text-slate-400">
-                              {format(new Date(entry.changed_at), "PPp")}
-                            </p>
-                          </li>
-                        ))}
-                      </ol>
-                    )}
-                  </section>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-              </aside>
-            </>
-          ) : null}
+              ) : undefined
+            }
+            timelineContent={
+              activeBlog ? (
+                isPanelLoading ? (
+                  <p className="text-sm text-slate-500">Loading timeline…</p>
+                ) : panelHistory.length === 0 ? (
+                  <p className="text-sm text-slate-500">No activity history yet.</p>
+                ) : (
+                  <ol className="space-y-2">
+                    {panelHistory.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-slate-800">
+                          {toTitleCase(entry.event_type)}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          {entry.field_name ? `${entry.field_name}: ` : ""}
+                          {entry.old_value ?? "—"} → {entry.new_value ?? "—"}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {format(new Date(entry.changed_at), "PPp")}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                )
+              ) : undefined
+            }
+            canEdit={canEditPanelDetails}
+            isEditMode={isPanelEditMode}
+            onToggleEditMode={() => {
+              setIsPanelEditMode((previous) => !previous);
+            }}
+          />
         </div>
       </AppShell>
     </ProtectedPage>

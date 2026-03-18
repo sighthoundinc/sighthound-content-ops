@@ -35,8 +35,8 @@ export function useGlobalQuickCreate(): UseGlobalQuickCreateReturn {
         return;
       }
 
-      // Q key to open quick create
-      if (e.key.toLowerCase() === "q") {
+      // C key to open quick create
+      if (e.key.toLowerCase() === "c") {
         e.preventDefault();
         setIsOpen((prev) => !prev);
       }

@@ -98,16 +98,22 @@ Use detail pages for record-level edits:
 
 ### Ideas (`/ideas`)
 - manage blog idea backlog
-- convert ideas into blog records
+- comments and references are visible on cards by default
+- edit title/site/comments-references through **Edit Idea** (single edit path)
+- convert ideas directly into:
+  - blog records (`Convert to Blog`)
+  - social post records (`Convert to Social Post`)
 
 ### Social Posts (`/social-posts`)
 - track social posting workflow linked to content operations
 
 ### Social Post Editor (`/social-posts/[id]`)
-- focused editor for one social post at a time
-- autosave + manual save
-- caption formatting helpers (LinkedIn-friendly)
-- blog lookup/linking, platform selection, checklist, and copy utilities
+- guided 4-step editor flow for one social post at a time:
+  1. **Setup**: Post Title, Platform(s), Publish Date, Canva Link/Page, Product, Type
+  2. **Link Context (optional)**: Associated Blog lookup + linked blog actions (open/copy/clear)
+  3. **Write Caption**: large UTF-8 editor, formatting helpers, character counter, platform guidance, grouped Copy menu
+  4. **Review & Publish**: checklist validation, status transitions, and stage-based final action
+- autosave is active during editing, with explicit final stage action in Step 4
 
 ### Settings (`/settings`)
 - self profile fields

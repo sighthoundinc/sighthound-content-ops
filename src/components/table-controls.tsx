@@ -13,10 +13,10 @@ export function TableRowLimitSelect({
   onChange: (value: TableRowLimit) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-slate-600">
+    <label className="flex items-center gap-2 text-xs text-slate-600">
       <span className="font-medium text-slate-700">Rows per page</span>
       <select
-        className="focus-field rounded-md border border-slate-300 px-2 py-1 text-sm"
+        className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs font-normal text-slate-800"
         value={String(value)}
         onChange={(event) => {
           const nextValue =
@@ -49,7 +49,7 @@ export function TableResultsSummary({
 }) {
   const range = getTableVisibleRange(totalRows, currentPage, rowLimit);
   return (
-    <p className="text-sm text-slate-600">
+    <p className="text-xs text-slate-500 font-normal">
       Showing <span className="font-medium text-slate-900">{range.start}</span>-
       <span className="font-medium text-slate-900">{range.end}</span> of{" "}
       <span className="font-medium text-slate-900">{totalRows}</span> {noun}
@@ -83,7 +83,7 @@ export function TablePaginationControls({
       >
         Prev
       </Button>
-      <p className="text-sm text-slate-600">
+      <p className="text-xs text-slate-500 font-normal">
         Page <span className="font-medium text-slate-900">{currentPage}</span> of{" "}
         <span className="font-medium text-slate-900">{pageCount}</span>
       </p>

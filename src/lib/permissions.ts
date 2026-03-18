@@ -1,6 +1,7 @@
 import type {
   AppPermissionKey,
   AppRole,
+  BlogRecord,
   CanonicalAppPermissionKey,
   LegacyAppPermissionKey,
   PublisherStageStatus,
@@ -962,4 +963,32 @@ export function canTransitionPublisherStatus(
     );
   }
   return false;
+}
+
+export function canAdvanceWriterStatus(blog: BlogRecord): {
+  allowed: boolean;
+  blockedReason?: string;
+} {
+  // Block if moving beyond "in_progress" without Google Doc
+  if (!blog.google_doc_url && blog.writer_status !== "in_progress" && blog.writer_status !== "not_started") {
+    return {
+      allowed: false,
+      blockedReason: "Google Doc link required to advance beyond writing stage",
+    };
+  }
+  return { allowed: true };
+}
+
+export function canAdvancePublisherStatus(blog: BlogRecord): {
+  allowed: boolean;
+  blockedReason?: string;
+} {
+  // Block if moving to review stages without Google Doc
+  if (!blog.google_doc_url && blog.publisher_status !== "not_started") {
+    return {
+      allowed: false,
+      blockedReason: "Google Doc link required to advance publisher status",
+    };
+  }
+  return { allowed: true };
 }

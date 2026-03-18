@@ -2,9 +2,10 @@ export interface Command {
   id: string;
   label: string;
   description?: string;
-  category: "navigation" | "create";
-  actionType: "navigate" | "create";
+  category: "navigation" | "create" | "actions";
+  actionType: "navigate" | "create" | "action";
   targetUrl?: string;
+  actionId?: "import_blogs" | "export_current_view" | "clear_all_filters";
   icon?: string;
   keyboard?: string;
 }
@@ -99,5 +100,33 @@ export const allCommands: Command[] = [
     category: "create",
     actionType: "create",
     icon: "Plus",
+  },
+  // Global Action Commands
+  {
+    id: "action-import-blogs",
+    label: "Import Blogs",
+    description: "Open blog import",
+    category: "actions",
+    actionType: "action",
+    actionId: "import_blogs",
+    icon: "Upload",
+  },
+  {
+    id: "action-export-current-view",
+    label: "Export Current View",
+    description: "Export rows from the current page view",
+    category: "actions",
+    actionType: "action",
+    actionId: "export_current_view",
+    icon: "Download",
+  },
+  {
+    id: "action-clear-all-filters",
+    label: "Clear All Filters",
+    description: "Reset active page filters",
+    category: "actions",
+    actionType: "action",
+    actionId: "clear_all_filters",
+    icon: "FilterX",
   },
 ];

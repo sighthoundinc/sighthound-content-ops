@@ -60,7 +60,7 @@ export const STATUS_LABELS: Record<OverallBlogStatus, string> = {
   planned: "Draft",
   writing: "Writing",
   needs_revision: "Needs Revision",
-  ready_to_publish: "Ready for Publishing",
+  ready_to_publish: "Ready",
   published: "Published",
 };
 export const SOCIAL_POST_STATUS_LABELS: Record<SocialPostStatus, string> = {
@@ -89,7 +89,7 @@ export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
 export const WRITER_STATUS_LABELS: Record<WriterStageStatus, string> = {
   not_started: "Draft",
   in_progress: "Writing in Progress",
-  pending_review: "Waiting for Approval",
+  pending_review: "Awaiting Editorial Review",
   needs_revision: "Needs Revision",
   completed: "Writing Approved",
 };
@@ -97,7 +97,7 @@ export const WRITER_STATUS_LABELS: Record<WriterStageStatus, string> = {
 export const PUBLISHER_STATUS_LABELS: Record<PublisherStageStatus, string> = {
   not_started: "Not Started",
   in_progress: "Publishing in Progress",
-  pending_review: "Waiting for Approval",
+  pending_review: "Awaiting Publishing Approval",
   publisher_approved: "Publishing Approved",
   completed: "Published",
 };

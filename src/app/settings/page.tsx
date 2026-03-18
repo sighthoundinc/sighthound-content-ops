@@ -62,6 +62,7 @@ const TIMEZONE_OPTIONS = [
 ];
 
 const ALL_ROLES: AppRole[] = ["admin", "writer", "publisher", "editor"];
+const INACTIVE_USERS_PURGE_CONFIRMATION_TEXT = "DELETE INACTIVE USERS";
 
 type UserSortField = "full_name" | "email" | "roles" | "is_active" | "created_at";
 type EditableUserState = {
@@ -72,14 +73,6 @@ type EditableUserState = {
   isActive: boolean;
 };
 type ActivityHistoryDeleteScope = "all" | "users";
-
-const USER_SORT_OPTIONS: Array<{ value: UserSortField; label: string }> = [
-  { value: "created_at", label: "Created Date" },
-  { value: "full_name", label: "Name" },
-  { value: "email", label: "Email" },
-  { value: "roles", label: "Roles" },
-  { value: "is_active", label: "Active Status" },
-];
 
 function splitName(fullName: string) {
   const [firstName, ...rest] = fullName.trim().split(/\s+/);
@@ -105,6 +98,7 @@ export default function SettingsPage() {
   const canReassignPublisherAssignments =
     permissionContract.canReassignPublisherAssignments;
   const canManageUserDirectory = canManageUsers || canManageRoles || canDeleteUsers;
+  const canEditUsersInDirectory = canManageUsers || canManageRoles;
   const canReassignAssignments =
     canReassignWriterAssignments || canReassignPublisherAssignments;
   const [settings, setSettings] = useState<AppSettingsRecord | null>(null);
@@ -120,10 +114,10 @@ export default function SettingsPage() {
   const [newRole, setNewRole] = useState<AppRole>("writer");
   const [userRoleFilter, setUserRoleFilter] = useState<AppRole | "all">("all");
   const [userActiveFilter, setUserActiveFilter] = useState<"all" | "active" | "inactive">(
-    "all"
+    "active"
   );
-  const [userSortField, setUserSortField] = useState<UserSortField>("created_at");
-  const [userSortDirection, setUserSortDirection] = useState<SortDirection>("desc");
+  const [userSortField] = useState<UserSortField>("created_at");
+  const [userSortDirection] = useState<SortDirection>("desc");
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [reassignFromUserId, setReassignFromUserId] = useState("");
@@ -141,6 +135,16 @@ export default function SettingsPage() {
   const [deleteTargetUserIds, setDeleteTargetUserIds] = useState<string[]>([]);
   const [isDeleteUsersModalOpen, setIsDeleteUsersModalOpen] = useState(false);
   const [isDeletingUsers, setIsDeletingUsers] = useState(false);
+  const [isDeleteInactiveUsersModalOpen, setIsDeleteInactiveUsersModalOpen] =
+    useState(false);
+  const [isDeletingInactiveUsers, setIsDeletingInactiveUsers] = useState(false);
+  const [inactiveUsersConfirmationText, setInactiveUsersConfirmationText] =
+    useState("");
+  const [isWipeAppCleanModalOpen, setIsWipeAppCleanModalOpen] = useState(false);
+  const [isWipingAppClean, setIsWipingAppClean] = useState(false);
+  const [editTargetUserId, setEditTargetUserId] = useState<string | null>(null);
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [isSavingEditedUser, setIsSavingEditedUser] = useState(false);
   const [quickViewTargetUserId, setQuickViewTargetUserId] = useState("");
   const [isSwitchingQuickViewUser, setIsSwitchingQuickViewUser] = useState(false);
   const [isRestoringAdminFromQuickView, setIsRestoringAdminFromQuickView] =
@@ -365,20 +369,38 @@ export default function SettingsPage() {
       .eq("id", 1);
 
     if (saveError) {
-      setError(saveError.message);
+      setError(`Couldn't save settings. ${saveError.message}`);
       return;
     }
-    setSuccess("Settings saved.");
+    setSuccess("Settings saved");
+  };
+  const updateEditableUser = (
+    targetUserId: string,
+    updates: Partial<EditableUserState>
+  ) => {
+    setEditableUsers((previous) => {
+      const existing = previous[targetUserId];
+      if (!existing) {
+        return previous;
+      }
+      return {
+        ...previous,
+        [targetUserId]: {
+          ...existing,
+          ...updates,
+        },
+      };
+    });
   };
 
   const saveProfileEdits = async (targetUserId: string) => {
     if (!session?.access_token) {
       setError("Missing active session token.");
-      return;
+      return false;
     }
     const edits = editableUsers[targetUserId];
     if (!edits) {
-      return;
+      return false;
     }
 
     setError(null);
@@ -400,15 +422,16 @@ export default function SettingsPage() {
     });
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) {
-      setError(payload.error ?? "Failed to save profile updates.");
-      return;
+      setError(`Couldn't update profile. ${payload.error ?? "Try again."}`);
+      return false;
     }
 
     await loadUsers();
     if (targetUserId === profile?.id) {
       await refreshProfile();
     }
-    setSuccess("Profile updated.");
+    setSuccess("Profile updated");
+    return true;
   };
 
   const createUser = async (event: FormEvent<HTMLFormElement>) => {
@@ -438,11 +461,11 @@ export default function SettingsPage() {
 
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) {
-      setError(payload.error ?? "Failed to create user.");
+      setError(`Couldn't create user. ${payload.error ?? "Try again."}`);
       return;
     }
 
-    setSuccess("User created successfully.");
+    setSuccess("User created");
     setNewEmail("");
     setNewPassword("");
     setNewFullName("");
@@ -480,21 +503,76 @@ export default function SettingsPage() {
       failed?: Array<{ userId: string; error: string }>;
     };
     if (!response.ok) {
-      setError(payload.error ?? "Failed to delete users.");
+      const reassignmentFailurePrefix =
+        "unable to reassign authored content before delete:";
+      const normalizedTopLevelError = payload.error?.toLowerCase() ?? "";
+      const failedReassignmentEntry = payload.failed?.find((entry) =>
+        entry.error.toLowerCase().includes(reassignmentFailurePrefix)
+      );
+      const topLevelReassignmentFailure =
+        normalizedTopLevelError.includes(reassignmentFailurePrefix);
+
+      if (topLevelReassignmentFailure || failedReassignmentEntry) {
+        const technicalDetailsRaw = (
+          failedReassignmentEntry?.error ?? payload.error ?? ""
+        )
+          .replace(
+            /unable to reassign authored content before delete:\s*/i,
+            ""
+          )
+          .trim();
+        const technicalDetails = technicalDetailsRaw
+          ? ` Details: ${technicalDetailsRaw}.`
+          : "";
+        setError(
+          `Could not delete user because authored content could not be reassigned automatically. Reassign that user's authored records, then try again.${technicalDetails}`
+        );
+    } else {
+        setError(payload.error ?? "Couldn't delete users. Try again.");
+      }
       setIsDeletingUsers(false);
       return;
     }
 
     const failedCount = payload.failed?.length ?? 0;
+    const firstFailureError = payload.failed?.[0]?.error;
     setSuccess(
-      `Deleted ${payload.deletedCount ?? 0} user(s)${
-        failedCount > 0 ? `, failed ${failedCount}` : ""
-      }.`
+      `Deleted ${payload.deletedCount ?? 0} user${
+        (payload.deletedCount ?? 0) === 1 ? "" : "s"
+      }${
+        failedCount > 0 ? ` (${failedCount} failed)` : ""
+      }`
     );
+    if (failedCount > 0 && firstFailureError) {
+      setError(`Some users could not be deleted. First failure: ${firstFailureError}`);
+    }
+    setUserActiveFilter("active");
     setDeleteTargetUserIds([]);
     setIsDeleteUsersModalOpen(false);
     setIsDeletingUsers(false);
     await loadUsers();
+  };
+  const openEditUserModal = (targetUserId: string) => {
+    setEditTargetUserId(targetUserId);
+    setIsEditUserModalOpen(true);
+  };
+  const closeEditUserModal = () => {
+    if (isSavingEditedUser) {
+      return;
+    }
+    setIsEditUserModalOpen(false);
+    setEditTargetUserId(null);
+  };
+  const saveEditedUserFromModal = async () => {
+    if (!editTargetUserId) {
+      return;
+    }
+    setIsSavingEditedUser(true);
+    const didSave = await saveProfileEdits(editTargetUserId);
+    setIsSavingEditedUser(false);
+    if (didSave) {
+      closeEditUserModal();
+    }
   };
 
   const reassignEverythingFromUser = async (event: FormEvent<HTMLFormElement>) => {
@@ -547,14 +625,14 @@ export default function SettingsPage() {
       totalTransferred?: number;
     };
     if (!response.ok) {
-      setError(payload.error ?? "Failed to reassign assignments.");
+      setError(`Couldn't reassign. ${payload.error ?? "Try again."}`);
       return;
     }
 
     setSuccess(
-      `Transferred ${payload.totalTransferred ?? 0} assignments (writer: ${
-        payload.transferredWriterAssignments ?? 0
-      }, publisher: ${payload.transferredPublisherAssignments ?? 0}).`
+      `Transferred ${payload.totalTransferred ?? 0} assignment${
+        (payload.totalTransferred ?? 0) === 1 ? "" : "s"
+      }`
     );
   };
 
@@ -625,6 +703,141 @@ export default function SettingsPage() {
         payload.permissionAuditLogsDeleted ?? 0
       }${commentsSummary}).`
     );
+  };
+  const wipeAppClean = async () => {
+    if (!session?.access_token) {
+      setError("Missing active session token.");
+      return;
+    }
+    if (!profile || !getUserRoles(profile).includes("admin") || !canDeleteUsers) {
+      setError("Only admins can wipe app data.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsWipingAppClean(true);
+
+    const response = await fetch("/api/admin/wipe-app-clean", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`,
+      },
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      deletedAuthUsers?: number;
+      preservedAuthUsers?: number;
+      preservedAdminUserId?: string;
+      failedUserDeletes?: Array<{ userId: string; error: string }>;
+      wipeSummary?: {
+        truncated_table_count?: number;
+      };
+    };
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to wipe app data.");
+      setIsWipingAppClean(false);
+      return;
+    }
+    if ((payload.failedUserDeletes?.length ?? 0) > 0) {
+      setError(
+        `App data was wiped, but ${payload.failedUserDeletes?.length ?? 0} auth user deletion(s) failed.`
+      );
+      setIsWipingAppClean(false);
+      return;
+    }
+
+    setIsWipeAppCleanModalOpen(false);
+    setIsWipingAppClean(false);
+    clearQuickViewSnapshot();
+    setQuickViewSnapshot(null);
+    if (typeof window !== "undefined") {
+      const resetDashboardStorageKeys = [
+        "dashboard-filter-state:v1",
+        "dashboard-saved-views:v1",
+        "dashboard-active-saved-view:v1",
+        "dashboard-column-view:v1",
+        "dashboard-column-hidden:v1",
+      ];
+      for (const key of resetDashboardStorageKeys) {
+        window.localStorage.removeItem(`${key}:${profile.id}`);
+        window.localStorage.removeItem(`${key}:anonymous`);
+      }
+    }
+    setDeleteTargetUserIds([]);
+    setActivityHistoryDeleteUserIds([]);
+    await loadUsers();
+    await refreshProfile();
+    setSuccess(
+      `WIPE APP CLEAN complete. Cleared ${
+        payload.wipeSummary?.truncated_table_count ?? 0
+      } table(s), deleted ${payload.deletedAuthUsers ?? 0} other user account(s), and preserved your admin account.`
+    );
+  };
+  const deleteInactiveUsers = async () => {
+    if (!session?.access_token) {
+      setError("Missing active session token.");
+      return;
+    }
+    if (!profile || !getUserRoles(profile).includes("admin") || !canDeleteUsers) {
+      setError("Only admins can delete inactive users.");
+      return;
+    }
+    if (
+      inactiveUsersConfirmationText.trim() !==
+      INACTIVE_USERS_PURGE_CONFIRMATION_TEXT
+    ) {
+      setError(
+        `Type exactly "${INACTIVE_USERS_PURGE_CONFIRMATION_TEXT}" to continue.`
+      );
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsDeletingInactiveUsers(true);
+
+    const response = await fetch("/api/admin/users/inactive", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        confirmationText: inactiveUsersConfirmationText.trim(),
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      candidateCount?: number;
+      deletedCount?: number;
+      failed?: Array<{ userId: string; error: string }>;
+    };
+    if (!response.ok) {
+      setError(payload.error ?? "Failed to delete inactive users.");
+      setIsDeletingInactiveUsers(false);
+      return;
+    }
+
+    const failedCount = payload.failed?.length ?? 0;
+    setSuccess(
+      `Deleted ${payload.deletedCount ?? 0} of ${payload.candidateCount ?? 0} inactive user(s).`
+    );
+    if (failedCount > 0) {
+      setError(
+        `Some inactive users could not be deleted. First failure: ${
+          payload.failed?.[0]?.error ?? "Unknown error"
+        }`
+      );
+    }
+
+    setIsDeleteInactiveUsersModalOpen(false);
+    setInactiveUsersConfirmationText("");
+    setIsDeletingInactiveUsers(false);
+    setUserActiveFilter("all");
+    await loadUsers();
   };
 
   const filteredUsers = useMemo(() => {
@@ -720,6 +933,24 @@ export default function SettingsPage() {
   const deleteTargetUsers = useMemo(
     () => users.filter((nextUser) => deleteTargetUserIds.includes(nextUser.id)),
     [deleteTargetUserIds, users]
+  );
+  const inactiveUsers = useMemo(
+    () =>
+      users.filter(
+        (nextUser) => !nextUser.is_active && nextUser.id !== profile?.id
+      ),
+    [profile?.id, users]
+  );
+  const isInactiveUsersPurgeConfirmationValid =
+    inactiveUsersConfirmationText.trim() ===
+    INACTIVE_USERS_PURGE_CONFIRMATION_TEXT;
+  const editTargetUser = useMemo(
+    () => users.find((nextUser) => nextUser.id === editTargetUserId) ?? null,
+    [editTargetUserId, users]
+  );
+  const editTargetUserDraft = useMemo(
+    () => (editTargetUserId ? editableUsers[editTargetUserId] ?? null : null),
+    [editTargetUserId, editableUsers]
   );
   const isTargetedCleanupWithoutUsers =
     activityHistoryDeleteScope === "users" &&
@@ -1029,6 +1260,33 @@ export default function SettingsPage() {
                   </div>
                 </section>
               ) : null}
+              {isAdminUser && canDeleteUsers ? (
+                <section className="rounded-lg border border-rose-300 bg-rose-100/50 p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-rose-800">
+                    WIPE APP CLEAN
+                  </h3>
+                  <p className="mt-1 text-sm text-rose-800/90">
+                    Full factory reset. Permanently deletes all users except your currently
+                    signed-in admin account, plus blogs, social posts, ideas, comments,
+                    activity history, permission logs, and import history.
+                  </p>
+                  <p className="mt-2 text-xs font-medium text-rose-900">
+                    This action cannot be undone.
+                  </p>
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      disabled={isWipingAppClean}
+                      className="rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        setIsWipeAppCleanModalOpen(true);
+                      }}
+                    >
+                      WIPE APP CLEAN
+                    </button>
+                  </div>
+                </section>
+              ) : null}
               {isAdminUser || isQuickViewActive ? (
                 <section className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">
@@ -1265,7 +1523,10 @@ export default function SettingsPage() {
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                         Users
                       </h3>
-                    <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+                    <p className="mt-1 text-xs text-slate-500">
+                      Compact list view. Click Edit to update user details.
+                    </p>
+                    <div className="mt-4 grid gap-2 md:grid-cols-2">
                       <select
                         className="rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={userRoleFilter}
@@ -1293,59 +1554,33 @@ export default function SettingsPage() {
                         <option value="active">Active Only</option>
                         <option value="inactive">Inactive Only</option>
                       </select>
-                      <select
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        value={userSortField}
-                        onChange={(event) => {
-                          setUserSortField(event.target.value as UserSortField);
-                        }}
-                      >
-                        {USER_SORT_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            Sort: {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        value={userSortDirection}
-                        onChange={(event) => {
-                          setUserSortDirection(event.target.value as SortDirection);
-                        }}
-                      >
-                        <option value="asc">Sort Direction: Ascending</option>
-                        <option value="desc">Sort Direction: Descending</option>
-                      </select>
-                      <TableRowLimitSelect
-                        value={rowLimit}
-                        onChange={(value) => {
-                          setRowLimit(value);
-                        }}
-                      />
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                      <TableResultsSummary
-                        totalRows={sortedUsers.length}
-                        currentPage={currentPage}
-                        rowLimit={rowLimit}
-                        noun="users"
-                      />
-                      <TablePaginationControls
-                        currentPage={currentPage}
-                        pageCount={pageCount}
-                        onPageChange={setCurrentPage}
-                      />
-                    </div>
+                    {canDeleteUsers ? (
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2">
+                        <p className="text-xs text-rose-800">
+                          Inactive users available for permanent deletion:{" "}
+                          <span className="font-semibold">{inactiveUsers.length}</span>
+                        </p>
+                        <button
+                          type="button"
+                          disabled={
+                            inactiveUsers.length === 0 || isDeletingInactiveUsers
+                          }
+                          className="rounded-md border border-rose-300 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => {
+                            setIsDeleteInactiveUsersModalOpen(true);
+                          }}
+                        >
+                          Delete All Inactive Users
+                        </button>
+                      </div>
+                    ) : null}
                     <div className="mt-3 overflow-auto rounded-lg border border-slate-200">
                       <table className={TABLE_BASE_CLASS}>
                         <thead className={TABLE_HEAD_CLASS}>
                           <tr>
                             <th className="px-3 py-2 font-medium whitespace-nowrap">Email</th>
-                            <th className="px-3 py-2 font-medium whitespace-nowrap">Active</th>
-                            <th className="px-3 py-2 font-medium whitespace-nowrap">First Name</th>
-                            <th className="px-3 py-2 font-medium whitespace-nowrap">Last Name</th>
-                            <th className="px-3 py-2 font-medium whitespace-nowrap">Display Name</th>
-                            <th className="px-3 py-2 font-medium whitespace-nowrap">Roles</th>
+                            <th className="px-3 py-2 font-medium whitespace-nowrap">Username</th>
                             <th className="px-3 py-2 font-medium whitespace-nowrap">Actions</th>
                           </tr>
                         </thead>
@@ -1354,7 +1589,7 @@ export default function SettingsPage() {
                             <tr>
                               <td
                                 className="h-12 px-3 py-2 align-middle text-center text-slate-500"
-                                colSpan={7}
+                                colSpan={3}
                               >
                                 No users found with current filters.
                               </td>
@@ -1375,119 +1610,30 @@ export default function SettingsPage() {
                                       {nextUser.email}
                                     </span>
                                   </td>
-                                  <td className="h-12 px-3 py-2 align-middle">
-                                    <label className="inline-flex items-center gap-2 text-xs text-slate-700">
-                                      <input
-                                        type="checkbox"
-                                        disabled={!canManageUsers}
-                                        checked={editable.isActive}
-                                        onChange={(event) => {
-                                          setEditableUsers((previous) => ({
-                                            ...previous,
-                                            [nextUser.id]: {
-                                              ...editable,
-                                              isActive: event.target.checked,
-                                            },
-                                          }));
-                                        }}
-                                      />
-                                      <span>{editable.isActive ? "Active" : "Inactive"}</span>
-                                    </label>
+                                  <td className="h-12 max-w-[16rem] px-3 py-2 align-middle overflow-hidden">
+                                    <span
+                                      className={TABLE_TEXT_TRUNCATE_CLASS}
+                                      title={`${editable.displayName || "—"}${
+                                        nextUser.is_active ? "" : " (inactive)"
+                                      }`}
+                                    >
+                                      {editable.displayName || "—"}
+                                      {nextUser.is_active ? "" : " (inactive)"}
+                                    </span>
                                   </td>
-                                  <td className="h-12 px-3 py-2 align-middle">
-                                    <input
-                                      value={editable.firstName}
-                                      onChange={(event) => {
-                                        setEditableUsers((previous) => ({
-                                          ...previous,
-                                          [nextUser.id]: {
-                                            ...editable,
-                                            firstName: event.target.value,
-                                          },
-                                        }));
-                                      }}
-                                      className="focus-field w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                                    />
-                                  </td>
-                                  <td className="h-12 px-3 py-2 align-middle">
-                                    <input
-                                      value={editable.lastName}
-                                      onChange={(event) => {
-                                        setEditableUsers((previous) => ({
-                                          ...previous,
-                                          [nextUser.id]: {
-                                            ...editable,
-                                            lastName: event.target.value,
-                                          },
-                                        }));
-                                      }}
-                                      className="focus-field w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                                    />
-                                  </td>
-                                  <td className="h-12 px-3 py-2 align-middle">
-                                    <input
-                                      value={editable.displayName}
-                                      onChange={(event) => {
-                                        setEditableUsers((previous) => ({
-                                          ...previous,
-                                          [nextUser.id]: {
-                                            ...editable,
-                                            displayName: event.target.value,
-                                          },
-                                        }));
-                                      }}
-                                      className="focus-field w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                                    />
-                                  </td>
-                                  <td className="h-12 max-w-[22rem] px-3 py-2 align-middle overflow-hidden">
-                                    {canManageRoles ? (
-                                      <div className="w-full max-w-[220px] overflow-hidden">
-                                        <CheckboxMultiSelect
-                                          label="Roles"
-                                          options={roleOptions}
-                                          selectedValues={editable.userRoles}
-                                          onChange={(nextValues) => {
-                                            const normalizedRoles = Array.from(
-                                              new Set(
-                                                nextValues.filter((value): value is AppRole =>
-                                                  ALL_ROLES.includes(value as AppRole)
-                                                )
-                                              )
-                                            );
-                                            if (normalizedRoles.length === 0) {
-                                              setError("A user must have at least one role.");
-                                              return;
-                                            }
-                                            setEditableUsers((previous) => ({
-                                              ...previous,
-                                              [nextUser.id]: {
-                                                ...editable,
-                                                userRoles: normalizedRoles,
-                                              },
-                                            }));
-                                          }}
-                                        />
-                                      </div>
-                                    ) : (
-                                      <span
-                                        className={`${TABLE_TEXT_TRUNCATE_CLASS} text-xs text-slate-700`}
-                                        title={editable.userRoles.join(", ")}
-                                      >
-                                        {editable.userRoles.join(", ")}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="h-12 px-3 py-2 align-middle">
+                                  <td className="h-12 px-3 py-2 align-middle whitespace-nowrap">
                                     <div className="flex items-center gap-2">
-                                      <button
-                                        type="button"
-                                        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                                        onClick={() => {
-                                          void saveProfileEdits(nextUser.id);
-                                        }}
-                                      >
-                                        Save User
-                                      </button>
+                                      {canEditUsersInDirectory ? (
+                                        <button
+                                          type="button"
+                                          className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                          onClick={() => {
+                                            openEditUserModal(nextUser.id);
+                                          }}
+                                        >
+                                          Edit
+                                        </button>
+                                      ) : null}
                                       {canDeleteUsers ? (
                                         <button
                                           type="button"
@@ -1510,9 +1656,247 @@ export default function SettingsPage() {
                         </tbody>
                       </table>
                     </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <TableResultsSummary
+                        totalRows={sortedUsers.length}
+                        currentPage={currentPage}
+                        rowLimit={rowLimit}
+                        noun="users"
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <TableRowLimitSelect
+                          value={rowLimit}
+                          onChange={(value) => {
+                            setRowLimit(value);
+                          }}
+                        />
+                        <TablePaginationControls
+                          currentPage={currentPage}
+                          pageCount={pageCount}
+                          onPageChange={setCurrentPage}
+                        />
+                      </div>
+                    </div>
                     </section>
                   ) : null}
                 </>
+              ) : null}
+              {isEditUserModalOpen && editTargetUser && editTargetUserDraft ? (
+                <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+                  <button
+                    type="button"
+                    aria-label="Close edit user modal"
+                    className="absolute inset-0 bg-slate-900/30"
+                    onClick={closeEditUserModal}
+                  />
+                  <div className="relative z-10 w-full max-w-xl rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-semibold text-slate-900">Edit User</h3>
+                        <p className="mt-1 text-sm text-slate-600">
+                          Update username, name fields, and roles for{" "}
+                          <span className="font-medium text-slate-900">
+                            {editTargetUser.email}
+                          </span>
+                          .
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isSavingEditedUser}
+                        className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={closeEditUserModal}
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <div className="mt-4 space-y-4">
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Username
+                        </span>
+                        <input
+                          value={editTargetUserDraft.displayName}
+                          onChange={(event) => {
+                            updateEditableUser(editTargetUser.id, {
+                              displayName: event.target.value,
+                            });
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1 block text-sm font-medium text-slate-700">
+                            First Name
+                          </span>
+                          <input
+                            value={editTargetUserDraft.firstName}
+                            onChange={(event) => {
+                              updateEditableUser(editTargetUser.id, {
+                                firstName: event.target.value,
+                              });
+                            }}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-sm font-medium text-slate-700">
+                            Last Name
+                          </span>
+                          <input
+                            value={editTargetUserDraft.lastName}
+                            onChange={(event) => {
+                              updateEditableUser(editTargetUser.id, {
+                                lastName: event.target.value,
+                              });
+                            }}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
+                      <div className="max-w-sm">
+                        {canManageRoles ? (
+                          <CheckboxMultiSelect
+                            label="Roles"
+                            options={roleOptions}
+                            selectedValues={editTargetUserDraft.userRoles}
+                            onChange={(nextValues) => {
+                              const normalizedRoles = Array.from(
+                                new Set(
+                                  nextValues.filter((value): value is AppRole =>
+                                    ALL_ROLES.includes(value as AppRole)
+                                  )
+                                )
+                              );
+                              if (normalizedRoles.length === 0) {
+                                setError("A user must have at least one role.");
+                                return;
+                              }
+                              updateEditableUser(editTargetUser.id, {
+                                userRoles: normalizedRoles,
+                              });
+                            }}
+                          />
+                        ) : (
+                          <label className="block">
+                            <span className="mb-1 block text-sm font-medium text-slate-700">
+                              Roles
+                            </span>
+                            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                              {editTargetUserDraft.userRoles.join(", ")}
+                            </p>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={isSavingEditedUser}
+                        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={closeEditUserModal}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSavingEditedUser}
+                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                          void saveEditedUserFromModal();
+                        }}
+                      >
+                        {isSavingEditedUser ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {isDeleteInactiveUsersModalOpen ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <button
+                    type="button"
+                    aria-label="Close delete inactive users modal"
+                    className="absolute inset-0 bg-slate-900/30"
+                    onClick={() => {
+                      if (!isDeletingInactiveUsers) {
+                        setIsDeleteInactiveUsersModalOpen(false);
+                        setInactiveUsersConfirmationText("");
+                      }
+                    }}
+                  />
+                  <div className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl">
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Delete all inactive users?
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      This permanently deletes{" "}
+                      <span className="font-semibold text-slate-900">
+                        {inactiveUsers.length}
+                      </span>{" "}
+                      inactive user account(s) from authentication and app data. This action
+                      cannot be undone.
+                    </p>
+                    <div className="mt-3 max-h-36 overflow-auto rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                      {inactiveUsers.length === 0 ? (
+                        <p className="text-xs text-slate-500">
+                          No inactive users found.
+                        </p>
+                      ) : (
+                        <ul className="space-y-1 text-xs text-slate-700">
+                          {inactiveUsers.map((nextUser) => (
+                            <li key={nextUser.id}>
+                              {nextUser.full_name} ({nextUser.email})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <label className="mt-4 block">
+                      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-600">
+                        Type {INACTIVE_USERS_PURGE_CONFIRMATION_TEXT}
+                      </span>
+                      <input
+                        value={inactiveUsersConfirmationText}
+                        onChange={(event) => {
+                          setInactiveUsersConfirmationText(event.target.value);
+                        }}
+                        className="w-full rounded-md border border-rose-300 px-3 py-2 text-sm"
+                        disabled={isDeletingInactiveUsers}
+                      />
+                    </label>
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={isDeletingInactiveUsers}
+                        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                          setIsDeleteInactiveUsersModalOpen(false);
+                          setInactiveUsersConfirmationText("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          isDeletingInactiveUsers ||
+                          inactiveUsers.length === 0 ||
+                          !isInactiveUsersPurgeConfirmationValid
+                        }
+                        className="rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                          void deleteInactiveUsers();
+                        }}
+                      >
+                        {isDeletingInactiveUsers
+                          ? "Deleting..."
+                          : "Delete Inactive Users"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : null}
               <ConfirmationModal
                 isOpen={isDeleteHistoryModalOpen}
@@ -1564,6 +1948,22 @@ export default function SettingsPage() {
                 }}
                 onConfirm={() => {
                   void deleteUsers();
+                }}
+              />
+              <ConfirmationModal
+                isOpen={isWipeAppCleanModalOpen}
+                title="WIPE APP CLEAN?"
+                description="This permanently deletes all app data and all user accounts except your currently signed-in admin account. This action cannot be undone."
+                confirmLabel="Wipe app clean"
+                tone="danger"
+                isConfirming={isWipingAppClean}
+                onCancel={() => {
+                  if (!isWipingAppClean) {
+                    setIsWipeAppCleanModalOpen(false);
+                  }
+                }}
+                onConfirm={() => {
+                  void wipeAppClean();
                 }}
               />
             </>

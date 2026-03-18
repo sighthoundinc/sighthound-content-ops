@@ -71,6 +71,13 @@ Internal content operations platform for Sighthound marketing workflows across `
 - Quick-add from idea lane
 - Stage columns deep-link back to table view filters
 
+### Ideas (`/ideas`)
+- Idea cards keep comments/references visible by default
+- Idea title/site/comments-references are edited through `Edit Idea` (single edit path)
+- Conversion actions include:
+  - `Convert to Blog`
+  - `Convert to Social Post`
+
 ### Tasks
 - Top-3 priority summary + expandable full list
 - `⚠ Overdue` / `Due Soon` / `Upcoming` indicators
@@ -92,9 +99,15 @@ Internal content operations platform for Sighthound marketing workflows across `
 - Admin quick-view as non-admin user with return-to-admin workflow
 
 ### Social Post Editor (`/social-posts/[id]`)
-- Focused single-post workspace
-- Autosave + manual save
-- Caption formatting/copy utilities and linked-blog lookup
+- Guided 4-step single-post workflow:
+  1. Setup (title, platforms, publish date, Canva link/page, product, type)
+  2. Link Context (optional blog lookup + linked blog actions)
+  3. Write Caption (UTF-8 editor + formatting + grouped Copy menu + platform guidance)
+  4. Review & Publish (checklist validation, status transitions, stage-based final CTA)
+- Stage-based final CTA behavior:
+  - Draft incomplete → `Save Draft`
+  - Draft complete → `Move to Review`
+  - In Review complete → `Mark Published`
 
 ## Tech stack
 - Next.js (App Router) + TypeScript + Tailwind

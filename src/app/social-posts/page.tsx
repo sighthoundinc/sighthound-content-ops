@@ -29,6 +29,9 @@ import { Button } from "@/components/button";
 import { CalendarTile } from "@/components/calendar-tile";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
+  DATA_PAGE_CONTROL_STRIP_CLASS,
+  DATA_PAGE_STACK_CLASS,
+  DATA_PAGE_TABLE_SECTION_CLASS,
   DataPageFilterPills,
   DataPageHeader,
   DataPageToolbar,
@@ -51,6 +54,10 @@ import {
   SOCIAL_POST_TYPES,
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
+import {
+  SEGMENTED_CONTROL_CLASS,
+  segmentedControlItemClass,
+} from "@/lib/segmented-control";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -341,6 +348,7 @@ function SocialPostsPageContent() {
   const { showError, showSuccess } = useSystemFeedback();
   const requestedView = searchParams.get("view");
   const shouldOpenCreateModal = searchParams.get("create") === "1";
+  const requestedTitle = searchParams.get("title");
   const requestedScheduledDate = searchParams.get("scheduled_date");
   const [posts, setPosts] = useState<SocialPostWithRelations[]>([]);
   const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>([]);
@@ -411,12 +419,12 @@ function SocialPostsPageContent() {
       ]);
 
     if (postsError) {
-      setError(postsError.message);
+      setError(`Couldn't load posts. ${postsError.message}`);
       setIsLoading(false);
       return;
     }
     if (linksError) {
-      setError(linksError.message);
+      setError(`Couldn't load links. ${linksError.message}`);
       setIsLoading(false);
       return;
     }
@@ -454,6 +462,9 @@ function SocialPostsPageContent() {
       return;
     }
     setIsCreateModalOpen(true);
+    if (requestedTitle?.trim()) {
+      setNewTitle(requestedTitle.trim());
+    }
     if (
       requestedScheduledDate &&
       /^\d{4}-\d{2}-\d{2}$/.test(requestedScheduledDate)
@@ -463,6 +474,7 @@ function SocialPostsPageContent() {
     setHasAppliedCreateQuery(true);
   }, [
     hasAppliedCreateQuery,
+    requestedTitle,
     requestedScheduledDate,
     shouldOpenCreateModal,
   ]);
@@ -766,6 +778,11 @@ function SocialPostsPageContent() {
       ].filter((pill) => pill !== null),
     [search, statusFilter]
   );
+  const clearAllFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setListCurrentPage(1);
+  };
 
   const activePostLinks = useMemo(
     () => (activePost ? linksByPost[activePost.id] ?? [] : []),
@@ -817,7 +834,7 @@ function SocialPostsPageContent() {
       .single();
 
     if (insertError) {
-      setError(insertError.message);
+      setError(`Couldn't create post. ${insertError.message}`);
       setIsCreating(false);
       return;
     }
@@ -834,7 +851,7 @@ function SocialPostsPageContent() {
     setNewType("image");
     setNewScheduledDate("");
     setIsCreateModalOpen(false);
-    showSuccess("Social post created.");
+    showSuccess("Social post created");
     setIsCreating(false);
   };
 
@@ -860,7 +877,7 @@ function SocialPostsPageContent() {
       .eq("id", post.id);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(`Couldn't move post. ${updateError.message}`);
       return;
     }
 
@@ -872,7 +889,7 @@ function SocialPostsPageContent() {
     setPanelForm((previous) =>
       previous ? { ...previous, status: nextStatus } : previous
     );
-    showSuccess(`Moved post to ${SOCIAL_POST_STATUS_LABELS[nextStatus]}.`);
+    showSuccess(`Moved to ${SOCIAL_POST_STATUS_LABELS[nextStatus]}`);
     if (activePostId === post.id) {
       void loadPanelDetails(post.id);
     }
@@ -921,7 +938,7 @@ function SocialPostsPageContent() {
       .single();
 
     if (updateError) {
-      setPanelError(updateError.message);
+      setPanelError(`Couldn't save post. ${updateError.message}`);
       setIsPanelSaving(false);
       return;
     }
@@ -934,7 +951,7 @@ function SocialPostsPageContent() {
         previous.map((entry) => (entry.id === updatedPost.id ? updatedPost : entry))
       );
     }
-    showSuccess("Social post details saved.");
+    showSuccess("Post saved");
     await loadPanelDetails(activePost.id);
     setIsPanelSaving(false);
   };
@@ -1004,10 +1021,10 @@ function SocialPostsPageContent() {
         ...normalizedLinks,
       ]);
       await loadPanelDetails(activePost.id);
-      showSuccess("Published links saved.");
+      showSuccess("Links saved");
     } catch (saveError) {
       setPanelError(
-        saveError instanceof Error ? saveError.message : "Failed to save links."
+        saveError instanceof Error ? `Couldn't save links. ${saveError.message}` : "Couldn't save links. Try again."
       );
     } finally {
       setIsLinksSaving(false);
@@ -1037,7 +1054,7 @@ function SocialPostsPageContent() {
     });
 
     if (insertError) {
-      setPanelError(insertError.message);
+      setPanelError(`Couldn't add comment. ${insertError.message}`);
       setIsCommentSaving(false);
       return;
     }
@@ -1045,7 +1062,7 @@ function SocialPostsPageContent() {
     setPanelCommentDraft("");
     setReplyToComment(null);
     await loadPanelDetails(activePost.id);
-    showSuccess("Comment added.");
+    showSuccess("Comment added");
     setIsCommentSaving(false);
   };
 
@@ -1157,22 +1174,38 @@ function SocialPostsPageContent() {
   return (
     <ProtectedPage>
       <AppShell>
-        <div className="space-y-5">
+        <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
             title="Social Posts"
             description="Keep each social post in one card from idea to published links."
             primaryAction={
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                onClick={() => {
-                  setNewScheduledDate("");
-                  setIsCreateModalOpen(true);
-                }}
-              >
-                New Social Post
-              </Button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  onClick={() => {
+                    setNewScheduledDate("");
+                    setIsCreateModalOpen(true);
+                  }}
+                >
+                  New Social Post
+                </Button>
+                <div className={SEGMENTED_CONTROL_CLASS}>
+                  {(["board", "list", "calendar"] as SocialPostsView[]).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      className={segmentedControlItemClass({ isActive: view === mode })}
+                      onClick={() => {
+                        setView(mode);
+                      }}
+                    >
+                      {toTitleCase(mode)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             }
           />
 
@@ -1181,24 +1214,14 @@ function SocialPostsPageContent() {
             onSearchChange={setSearch}
             searchPlaceholder="Search title, caption, blog..."
             actions={
-              <div className="inline-flex items-center rounded-md border border-slate-300 bg-white p-0.5">
-                {(["board", "list", "calendar"] as SocialPostsView[]).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    className={`rounded px-3 py-1.5 text-sm font-medium ${
-                      view === mode
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setView(mode);
-                    }}
-                  >
-                    {toTitleCase(mode)}
-                  </button>
-                ))}
-              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={clearAllFilters}
+              >
+                Clear all filters
+              </Button>
             }
             filters={
               <select
@@ -1240,8 +1263,8 @@ function SocialPostsPageContent() {
               </section>
             </DndContext>
           ) : view === "list" ? (
-            <section className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+            <section className={DATA_PAGE_TABLE_SECTION_CLASS}>
+              <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
                 <TableResultsSummary
                   totalRows={filteredPosts.length}
                   currentPage={listCurrentPage}
@@ -1269,7 +1292,7 @@ function SocialPostsPageContent() {
                 density="comfortable"
                 emptyMessage="No social posts found"
               />
-              <div className="flex justify-end rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} justify-end`}>
                 <TablePaginationControls
                   currentPage={listCurrentPage}
                   pageCount={listPageCount}

@@ -8,10 +8,12 @@ import { formatDistanceToNow } from "date-fns";
 import { AppShell } from "@/components/app-shell";
 import { Button, buttonClass } from "@/components/button";
 import { ExternalLink } from "@/components/external-link";
+import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DataPageEmptyState,
   DataPageFilterPills,
   DataPageHeader,
+  DATA_PAGE_STACK_CLASS,
   DataPageToolbar,
 } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
@@ -28,6 +30,11 @@ import {
   canTransitionWriterStatus,
 } from "@/lib/permissions";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
+import {
+  SEGMENTED_CONTROL_CLASS,
+  segmentedControlItemClass,
+} from "@/lib/segmented-control";
+import { getSiteShortLabel } from "@/lib/site";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
@@ -80,8 +87,8 @@ const PRODUCT_FILTER_OPTIONS: Array<{ value: ProductFilter; label: string }> = [
 
 const WEBSITE_FILTER_OPTIONS: Array<{ value: WebsiteFilter; label: string }> = [
   { value: "all", label: "All Websites" },
-  { value: "sighthound.com", label: "sighthound.com" },
-  { value: "redactor.com", label: "redactor.com" },
+  { value: "sighthound.com", label: "SH" },
+  { value: "redactor.com", label: "RED" },
 ];
 
 const STATUS_FILTER_OPTIONS: Array<{ value: BoardStageFilter; label: string }> = [
@@ -403,13 +410,28 @@ export default function BlogCardBoardPage() {
     return grouped;
   }, [filteredBlogs]);
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setSearchQuery("");
     setProductFilter("all");
     setAuthorFilter("all");
     setWebsiteFilter("all");
     setStatusFilter("all");
-  };
+  }, []);
+  useEffect(() => {
+    const handlePaletteAction = (event: Event) => {
+      const actionId = (event as CustomEvent<{ actionId?: string }>).detail?.actionId;
+      if (actionId === "clear_all_filters") {
+        resetFilters();
+      }
+    };
+    window.addEventListener("command-palette-action", handlePaletteAction as EventListener);
+    return () => {
+      window.removeEventListener(
+        "command-palette-action",
+        handlePaletteAction as EventListener
+      );
+    };
+  }, [resetFilters]);
 
   const copyValue = useCallback(
     async (value: string, successMessage: string) => {
@@ -618,24 +640,20 @@ export default function BlogCardBoardPage() {
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
       <AppShell>
-        <div className="space-y-5">
+        <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
             title="CardBoard"
             description="Pipeline board for team-wide blog stage visibility and movement."
             primaryAction={
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-sm">
+                <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
                   <Link
                     href="/blogs"
-                    className={buttonClass({
-                      variant: "secondary",
-                      size: "sm",
-                      className: "border-0",
-                    })}
+                    className={segmentedControlItemClass({ isActive: false })}
                   >
                     Table View
                   </Link>
-                  <span className="rounded bg-slate-900 px-3 py-1.5 font-medium text-white">
+                  <span className={segmentedControlItemClass({ isActive: true })}>
                     Pipeline View
                   </span>
                 </div>
@@ -715,7 +733,7 @@ export default function BlogCardBoardPage() {
                 variant="secondary"
                 size="sm"
               >
-                Reset Filters
+                Clear all filters
               </Button>
             }
           />
@@ -855,7 +873,7 @@ export default function BlogCardBoardPage() {
                                 setIsQuickAddOpen(true);
                               }}
                             >
-                              + New Blog Idea
+                              New Blog Idea
                             </Button>
                           )}
                         </div>
@@ -998,7 +1016,7 @@ export default function BlogCardBoardPage() {
                                     </p>
                                     <p>
                                       <span className="font-medium text-slate-700">Website:</span>{" "}
-                                      {blog.site}
+                                      {getSiteShortLabel(blog.site)}
                                     </p>
                                   </div>
                                 ) : (
@@ -1017,6 +1035,10 @@ export default function BlogCardBoardPage() {
                                     </p>
                                   </div>
                                 )}
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                  <WriterStatusBadge status={blog.writer_status} />
+                                  <PublisherStatusBadge status={blog.publisher_status} />
+                                </div>
                               </article>
                             );
                           })

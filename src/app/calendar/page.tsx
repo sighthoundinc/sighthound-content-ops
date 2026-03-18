@@ -34,6 +34,7 @@ import { Button } from "@/components/button";
 import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import {
+  DATA_PAGE_STACK_CLASS,
   DataPageFilterPills,
   DataPageHeader,
   DataPageToolbar,
@@ -54,6 +55,10 @@ import {
   canViewAllTaskScope,
   createUiPermissionContract,
 } from "@/lib/permissions/uiPermissions";
+import {
+  SEGMENTED_CONTROL_CLASS,
+  segmentedControlItemClass,
+} from "@/lib/segmented-control";
 import {
   SOCIAL_POST_STATUS_LABELS,
   SOCIAL_POST_TYPE_LABELS,
@@ -432,12 +437,12 @@ export default function CalendarPage() {
       ]);
 
     if (blogsError) {
-      setError(blogsError.message);
+      setError(`Couldn't load calendar. ${blogsError.message}`);
       setIsLoading(false);
       return;
     }
     if (socialPostsError) {
-      setError(socialPostsError.message);
+      setError(`Couldn't load posts. ${socialPostsError.message}`);
       setIsLoading(false);
       return;
     }
@@ -1002,7 +1007,7 @@ export default function CalendarPage() {
   return (
     <ProtectedPage requiredPermissions={["view_calendar"]}>
       <AppShell>
-        <div className="space-y-6">
+        <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
             title="Calendar"
             description={`${timezone} timezone • week starts on ${
@@ -1079,70 +1084,6 @@ export default function CalendarPage() {
                     className="focus-field rounded border-none p-0 text-sm focus:outline-none"
                   />
                 </label>
-                <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white text-sm">
-                  <button
-                    type="button"
-                    className={`px-3 py-1.5 ${
-                      hasBlogsEnabled
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setContentFilters((previous) =>
-                        previous.includes("blogs")
-                          ? previous.filter((item) => item !== "blogs")
-                          : [...previous, "blogs"]
-                      );
-                    }}
-                  >
-                    {hasBlogsEnabled ? "✓ " : ""}Blogs
-                  </button>
-                  <button
-                    type="button"
-                    className={`border-l border-slate-300 px-3 py-1.5 ${
-                      hasSocialPostsEnabled
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setContentFilters((previous) =>
-                        previous.includes("social_posts")
-                          ? previous.filter((item) => item !== "social_posts")
-                          : [...previous, "social_posts"]
-                      );
-                    }}
-                  >
-                    {hasSocialPostsEnabled ? "✓ " : ""}Social Posts
-                  </button>
-                </div>
-                <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white text-sm">
-                  <button
-                    type="button"
-                    className={`px-3 py-1.5 ${
-                      mode === "month"
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setMode("month");
-                    }}
-                  >
-                    Month
-                  </button>
-                  <button
-                    type="button"
-                    className={`border-l border-slate-300 px-3 py-1.5 ${
-                      mode === "week"
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                    onClick={() => {
-                      setMode("week");
-                    }}
-                  >
-                    Week
-                  </button>
-                </div>
                 <label className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">
                   <span className="font-medium">View</span>
                   <select
@@ -1158,6 +1099,58 @@ export default function CalendarPage() {
                     </option>
                   </select>
                 </label>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
+                    <button
+                      type="button"
+                      className={segmentedControlItemClass({ isActive: hasBlogsEnabled })}
+                      onClick={() => {
+                        setContentFilters((previous) =>
+                          previous.includes("blogs")
+                            ? previous.filter((item) => item !== "blogs")
+                            : [...previous, "blogs"]
+                        );
+                      }}
+                    >
+                      {hasBlogsEnabled ? "✓ " : ""}Blogs
+                    </button>
+                    <button
+                      type="button"
+                      className={segmentedControlItemClass({
+                        isActive: hasSocialPostsEnabled,
+                      })}
+                      onClick={() => {
+                        setContentFilters((previous) =>
+                          previous.includes("social_posts")
+                            ? previous.filter((item) => item !== "social_posts")
+                            : [...previous, "social_posts"]
+                        );
+                      }}
+                    >
+                      {hasSocialPostsEnabled ? "✓ " : ""}Social Posts
+                    </button>
+                  </div>
+                  <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
+                    <button
+                      type="button"
+                      className={segmentedControlItemClass({ isActive: mode === "month" })}
+                      onClick={() => {
+                        setMode("month");
+                      }}
+                    >
+                      Month
+                    </button>
+                    <button
+                      type="button"
+                      className={segmentedControlItemClass({ isActive: mode === "week" })}
+                      onClick={() => {
+                        setMode("week");
+                      }}
+                    >
+                      Week
+                    </button>
+                  </div>
+                </div>
               </>
             }
             filters={
@@ -1316,7 +1309,7 @@ export default function CalendarPage() {
                                   setQuickCreateDateKey(null);
                                 }}
                               >
-                                + Add Blog
+                                New Blog
                               </Link>
                               <Link
                                 href={`/social-posts?view=calendar&create=1&scheduled_date=${key}`}
@@ -1325,7 +1318,7 @@ export default function CalendarPage() {
                                   setQuickCreateDateKey(null);
                                 }}
                               >
-                                + Add Social Post
+                                New Social Post
                               </Link>
                             </div>
                           ) : null}

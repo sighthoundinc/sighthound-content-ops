@@ -137,6 +137,27 @@ export function DataTable<TData>({
     }
     onSort(columnId, newDirection);
   };
+  const getColumnSortIndicator = (columnId: string) => {
+    if (!sortField || sortField !== columnId) {
+      return "↕";
+    }
+    return sortDirection === "asc" ? "↑" : "↓";
+  };
+  const getColumnAriaSort = (columnId: string) => {
+    if (!sortField || sortField !== columnId) {
+      return "none";
+    }
+    return sortDirection === "asc" ? "ascending" : "descending";
+  };
+  const getSortButtonAriaLabel = (columnLabel: string, columnId: string) => {
+    if (sortField !== columnId) {
+      return `Sort by ${columnLabel} ascending`;
+    }
+    if (sortDirection === "asc") {
+      return `Sort by ${columnLabel} descending`;
+    }
+    return `Sort by ${columnLabel} ascending`;
+  };
 
   return (
     <div
@@ -172,6 +193,7 @@ export function DataTable<TData>({
             {visibleColumns.map((column) => (
               <th
                 key={column.id}
+                aria-sort={column.sortable ? getColumnAriaSort(column.id) : undefined}
                 className={cn(
                   TABLE_HEADER_CELL_CLASS,
                   TABLE_STICKY_HEADER_CELL_CLASS,
@@ -184,18 +206,24 @@ export function DataTable<TData>({
                   <button
                     type="button"
                     onClick={() => handleColumnSort(column.id)}
-                    className="inline-flex items-center gap-1 hover:text-slate-900 cursor-pointer"
-                    aria-label={`Sort by ${column.label}`}
-                  >
-                    {column.label}
-                    {sortField === column.id && (
-                      <span className="text-xs">
-                        {sortDirection === "asc" ? "↑" : "↓"}
-                      </span>
+                    className={cn(
+                      "inline-flex w-full items-center gap-1 text-xs font-semibold leading-4 tracking-wide text-slate-600 hover:text-slate-900",
+                      column.align === "center"
+                        ? "justify-center"
+                        : column.align === "right"
+                          ? "justify-end"
+                          : "justify-start"
                     )}
+                    aria-label={getSortButtonAriaLabel(column.label, column.id)}
+                    title={`Sort by ${column.label}`}
+                  >
+                    <span>{column.label}</span>
+                    <span aria-hidden="true" className="text-[11px] text-slate-500">
+                      {getColumnSortIndicator(column.id)}
+                    </span>
                   </button>
                 ) : (
-                  column.label
+                  <span className="text-xs font-semibold leading-4 tracking-wide text-slate-600">{column.label}</span>
                 )}
               </th>
             ))}

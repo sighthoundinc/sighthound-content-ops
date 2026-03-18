@@ -17,6 +17,18 @@ type FilterPill = {
   onRemove: () => void;
 };
 
+export const DATA_PAGE_STACK_CLASS = "space-y-6";
+export const DATA_PAGE_TABLE_SECTION_CLASS =
+  "space-y-3 rounded-lg border border-slate-200 bg-white p-4";
+export const DATA_PAGE_CONTROL_STRIP_CLASS =
+  "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2";
+export const DATA_PAGE_CONTROL_ROW_CLASS =
+  "flex w-full flex-wrap items-center justify-between gap-3";
+export const DATA_PAGE_CONTROL_ACTIONS_CLASS = "ml-auto flex items-center gap-2";
+export const DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS =
+  "inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium";
+export const DATA_PAGE_TABLE_FEEDBACK_CLASS = "min-h-[1rem] px-1";
+
 export function DataPageHeader({
   title,
   description,
@@ -34,6 +46,31 @@ export function DataPageHeader({
       </div>
       {primaryAction ? <div>{primaryAction}</div> : null}
     </header>
+  );
+}
+
+export function DataPageTableFeedback({
+  isVisible,
+  label = "Updating results…",
+  className,
+}: {
+  isVisible: boolean;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn(DATA_PAGE_TABLE_FEEDBACK_CLASS, className)}>
+      {isVisible ? (
+        <div
+          aria-live="polite"
+          role="status"
+          className="inline-flex items-center gap-2 text-xs text-slate-500"
+        >
+          <span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
+          {label}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

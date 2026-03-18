@@ -35,6 +35,10 @@ type SystemStatusItem = {
   actionLabel: string | null;
   onAction: (() => void) | null;
   closing: boolean;
+  signature: string;
+  dedupCount: number;
+  lastFiredAt: number;
+  persistent: boolean;
 };
 
 type ShowStatusOptions = {
@@ -42,6 +46,9 @@ type ShowStatusOptions = {
   actionLabel?: string;
   onAction?: () => void;
   notification?: NotificationInput;
+  id?: string;
+  persistent?: boolean;
+  deduplicationContext?: string;
 };
 
 interface SystemFeedbackContextValue {
@@ -82,6 +89,26 @@ function createId() {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function generateSignature(
+  type: SystemStatusType,
+  message: string,
+  context?: string
+): string {
+  const normalized = message.toLowerCase().slice(0, 50);
+  const parts = [type, normalized];
+  if (context) {
+    parts.push(context);
+  }
+  return parts.join("::");
+}
+
+function isKeywordError(message: string): boolean {
+  const errorKeywords = ["permission", "failed", "blocked", "error", "denied"];
+  return errorKeywords.some((keyword) =>
+    message.toLowerCase().includes(keyword)
+  );
 }
 
 function getStatusIcon(type: SystemStatusType) {
@@ -131,7 +158,7 @@ function SystemStatusCard({
   }, []);
 
   const startTimer = useCallback(() => {
-    if (remainingMs === null || remainingMs <= 0 || item.closing) {
+    if (item.persistent || remainingMs === null || remainingMs <= 0 || item.closing) {
       return;
     }
     clearTimer();
@@ -139,7 +166,7 @@ function SystemStatusCard({
     timeoutRef.current = window.setTimeout(() => {
       onDismiss(item.id);
     }, remainingMs);
-  }, [clearTimer, item.closing, item.id, onDismiss, remainingMs]);
+  }, [clearTimer, item.closing, item.id, item.persistent, onDismiss, remainingMs]);
 
   useEffect(() => {
     setRemainingMs(item.durationMs);
@@ -183,13 +210,13 @@ function SystemStatusCard({
     <div
       className={`pointer-events-auto flex w-full items-start gap-3 rounded-[10px] border bg-white px-3 py-2 shadow-sm transition-all ${
         item.type === "error"
-          ? "border-rose-200"
+          ? "border-rose-300"
           : item.type === "warning"
             ? "border-amber-200"
           : item.type === "success"
-            ? "border-emerald-200"
+            ? "border-emerald-100"
             : item.type === "info"
-              ? "border-blue-200"
+              ? "border-blue-100"
             : "border-slate-200"
       } ${
         item.closing ? "translate-y-0 opacity-0 duration-[250ms]" : ""
@@ -205,7 +232,12 @@ function SystemStatusCard({
         {getStatusIcon(item.type)}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-slate-800">{item.message}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className={`text-sm ${item.type === "error" ? "font-medium text-slate-900" : "text-slate-800"}`}>{item.message}</p>
+          {item.dedupCount > 1 ? (
+            <span className="text-[10px] text-slate-500">({item.dedupCount}x)</span>
+          ) : null}
+        </div>
         {item.actionLabel && item.onAction ? (
           <button
             type="button"
@@ -268,18 +300,62 @@ export function SystemFeedbackProvider({ children }: { children: React.ReactNode
 
   const enqueueStatus = useCallback(
     (type: SystemStatusType, message: string, options?: ShowStatusOptions) => {
-      const id = createId();
-      const nextStatus: SystemStatusItem = {
-        id,
+      const now = Date.now();
+      const signature = generateSignature(
         type,
         message,
-        durationMs: options?.durationMs ?? STATUS_DEFAULT_DURATIONS[type],
-        actionLabel: options?.actionLabel ?? null,
-        onAction: options?.onAction ?? null,
-        closing: false,
-      };
+        options?.deduplicationContext
+      );
+      const isPersistent =
+        options?.persistent ??
+        (type === "error" && isKeywordError(message));
 
+      let returnId = "";
+
+      // Single setState call to handle both dedup check and new/update logic
       setStatuses((previous) => {
+        // Check if we can dedup (within 2s window)
+        const existing = previous.find(
+          (status) =>
+            !status.closing &&
+            status.signature === signature &&
+            now - status.lastFiredAt < 2000
+        );
+
+        if (existing) {
+          returnId = existing.id;
+          // Update existing toast with incremented count and reset timer
+          return previous.map((status) =>
+            status.id === existing.id
+              ? {
+                  ...status,
+                  dedupCount: status.dedupCount + 1,
+                  lastFiredAt: now,
+                  durationMs:
+                    options?.durationMs ??
+                    STATUS_DEFAULT_DURATIONS[type],
+                }
+              : status
+          );
+        }
+
+        // Create new status item
+        const id = options?.id ?? createId();
+        returnId = id;
+        const nextStatus: SystemStatusItem = {
+          id,
+          type,
+          message,
+          durationMs: options?.durationMs ?? STATUS_DEFAULT_DURATIONS[type],
+          actionLabel: options?.actionLabel ?? null,
+          onAction: options?.onAction ?? null,
+          closing: false,
+          signature,
+          dedupCount: 1,
+          lastFiredAt: now,
+          persistent: isPersistent,
+        };
+
         const withNew = [...previous, nextStatus];
         const active = withNew.filter((status) => !status.closing);
         if (active.length <= STATUS_LIMIT) {
@@ -300,7 +376,7 @@ export function SystemFeedbackProvider({ children }: { children: React.ReactNode
         pushNotification(options.notification);
       }
 
-      return id;
+      return returnId;
     },
     [pushNotification, removeStatusNow]
   );
@@ -354,8 +430,15 @@ export function SystemFeedbackProvider({ children }: { children: React.ReactNode
       id: string,
       payload: { type: SystemStatusType; message: string } & ShowStatusOptions
     ) => {
-      setStatuses((previous) =>
-        previous.map((status) =>
+      const now = Date.now();
+      setStatuses((previous) => {
+        const found = previous.some((status) => status.id === id);
+        if (!found && process.env.NODE_ENV === "development") {
+          console.warn(
+            `updateStatus called with non-existent ID: ${id}. Check progress → result chaining pattern.`
+          );
+        }
+        return previous.map((status) =>
           status.id === id
             ? {
                 ...status,
@@ -366,10 +449,21 @@ export function SystemFeedbackProvider({ children }: { children: React.ReactNode
                 actionLabel: payload.actionLabel ?? null,
                 onAction: payload.onAction ?? null,
                 closing: false,
+                signature: generateSignature(
+                  payload.type,
+                  payload.message,
+                  payload.deduplicationContext
+                ),
+                dedupCount: 1,
+                lastFiredAt: now,
+                persistent:
+                  payload.persistent ??
+                  (payload.type === "error" &&
+                    isKeywordError(payload.message)),
               }
             : status
-        )
-      );
+        );
+      });
       if (payload.notification) {
         pushNotification(payload.notification);
       }

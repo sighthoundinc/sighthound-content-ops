@@ -14,6 +14,9 @@ const ICON_EMOJI_MAP: Record<string, string> = {
   Settings: "⚙️",
   Plus: "➕",
   Command: "⌘",
+  Upload: "📥",
+  Download: "📤",
+  FilterX: "🧹",
 };
 
 function getIcon(iconName?: string): string {
@@ -58,7 +61,7 @@ export function CommandPalette() {
 
   if (!isOpen) return null;
 
-  const categoryOrder = ["navigation", "create"];
+  const categoryOrder = ["navigation", "create", "actions"];
   const sortedCategories = Object.keys(groupedResults).sort((a, b) => {
     const aIndex = categoryOrder.indexOf(a);
     const bIndex = categoryOrder.indexOf(b);
@@ -123,6 +126,7 @@ export function CommandPalette() {
                     <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50">
                       {category === "navigation" && "Navigation"}
                       {category === "create" && "Create"}
+                      {category === "actions" && "Actions"}
                     </div>
 
                     {/* Commands */}

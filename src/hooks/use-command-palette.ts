@@ -57,6 +57,16 @@ export function useCommandPalette(): UseCommandPaletteReturn {
         window.dispatchEvent(
           new CustomEvent("create-command", { detail: { command } })
         );
+      } else if (command.actionType === "action" && command.actionId) {
+        if (command.actionId === "import_blogs") {
+          window.location.href = "/blogs?import=1";
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("command-palette-action", {
+              detail: { actionId: command.actionId },
+            })
+          );
+        }
       }
       close();
     }

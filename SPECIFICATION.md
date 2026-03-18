@@ -152,15 +152,25 @@ Key behavior:
 
 ### Ideas (`/ideas`)
 - idea intake and management
-- conversion path toward blog workflow
+- comments/references remain visible by default on idea cards
+- single edit path through the `Edit Idea` modal (title/site/comments-references)
+- conversion paths toward:
+  - blog workflow (`Convert to Blog`)
+  - social post workflow (`Convert to Social Post`)
 
 ### Social Posts (`/social-posts`)
 - social workflow operations connected to content planning
 
 ### Social Post Editor (`/social-posts/[id]`)
-- focused single-record editor
-- autosave plus manual save option
-- caption helper tools, copy actions, and linked-blog lookup
+- guided dedicated editor with 4-step workflow:
+  1. Setup (title, platforms, publish date, Canva link/page, product, type)
+  2. Link Context (optional associated blog lookup + linked blog actions)
+  3. Write Caption (UTF-8 editor focus, formatting tools, grouped copy actions, character guidance)
+  4. Review & Publish (checklist validation, status transition controls, stage-based final action)
+- autosave plus explicit stage action in Step 4:
+  - draft incomplete → `Save Draft`
+  - draft complete → `Move to Review`
+  - in review complete → `Mark Published`
 
 ### Settings (`/settings`)
 - profile fields

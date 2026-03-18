@@ -45,9 +45,6 @@ export default function IdeasPage() {
   const [editDescription, setEditDescription] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [ideaComments, setIdeaComments] = useState<Record<string, IdeaCommentRecord[]>>({});
-  const [expandedCommentsSections, setExpandedCommentsSections] = useState<Set<string>>(new Set());
-  const [newComment, setNewComment] = useState<Record<string, string>>({});
-  const [isCommentSubmitting, setIsCommentSubmitting] = useState<Record<string, boolean>>({});
 
   const canCreateBlog = permissionContract.canCreateBlog;
 
@@ -61,7 +58,7 @@ export default function IdeasPage() {
       .order("created_at", { ascending: false });
 
     if (loadError) {
-      setError(loadError.message);
+      setError(`Couldn't load ideas. ${loadError.message}`);
       setIsLoading(false);
       return;
     }
@@ -85,6 +82,68 @@ export default function IdeasPage() {
     () => ideas.filter((idea) => !idea.is_converted),
     [ideas]
   );
+
+  useEffect(() => {
+    if (activeIdeas.length === 0) {
+      setIdeaComments({});
+      return;
+    }
+
+    const loadComments = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data, error: loadError } = await supabase
+        .from("blog_idea_comments")
+        .select("id,idea_id,comment,created_by,created_at,updated_at")
+        .in(
+          "idea_id",
+          activeIdeas.map((idea) => idea.id)
+        )
+        .order("created_at", { ascending: true });
+
+      if (loadError) {
+        setError(`Couldn't load idea comments. ${loadError.message}`);
+        return;
+      }
+
+      const nextComments = ((data ?? []) as IdeaCommentRecord[]).reduce<
+        Record<string, IdeaCommentRecord[]>
+      >((acc, comment) => {
+        if (!acc[comment.idea_id]) {
+          acc[comment.idea_id] = [];
+        }
+        acc[comment.idea_id].push(comment);
+        return acc;
+      }, {});
+      setIdeaComments(nextComments);
+    };
+
+    void loadComments();
+  }, [activeIdeas]);
+
+  const visibleCommentsByIdea = useMemo(() => {
+    return activeIdeas.reduce<
+      Record<string, Array<{ id: string; comment: string; created_at: string }>>
+    >((acc, idea) => {
+      const combined: Array<{ id: string; comment: string; created_at: string }> = [];
+      const descriptionComment = idea.description?.trim();
+      if (descriptionComment) {
+        combined.push({
+          id: `description-${idea.id}`,
+          comment: descriptionComment,
+          created_at: idea.created_at,
+        });
+      }
+      for (const comment of ideaComments[idea.id] ?? []) {
+        combined.push({
+          id: comment.id,
+          comment: comment.comment,
+          created_at: comment.created_at,
+        });
+      }
+      acc[idea.id] = combined;
+      return acc;
+    }, {});
+  }, [activeIdeas, ideaComments]);
 
   const addIdea = async ({
     nextTitle,
@@ -121,14 +180,14 @@ export default function IdeasPage() {
       .single();
 
     if (insertError) {
-      setError(insertError.message);
+      setError(`Couldn't create idea. ${insertError.message}`);
       setIsSubmitting(false);
       return false;
     }
 
     if (data) {
       setIdeas((previous) => [data as BlogIdeaRecord, ...previous]);
-      showSuccess("Idea saved.");
+      showSuccess("Idea created");
     }
     setIsSubmitting(false);
     return true;
@@ -163,37 +222,6 @@ export default function IdeasPage() {
     setQuickIdeaTitle("");
   };
 
-  const loadComments = async (ideaId: string) => {
-    const supabase = getSupabaseBrowserClient();
-    const { data, error: loadError } = await supabase
-      .from("blog_idea_comments")
-      .select("id,idea_id,comment,created_by,created_at,updated_at")
-      .eq("idea_id", ideaId)
-      .order("created_at", { ascending: true });
-
-    if (loadError) {
-      console.error("Failed to load comments:", loadError);
-      return;
-    }
-
-    setIdeaComments((prev) => ({
-      ...prev,
-      [ideaId]: (data ?? []) as IdeaCommentRecord[],
-    }));
-  };
-
-  const toggleCommentsSection = async (ideaId: string) => {
-    const newExpanded = new Set(expandedCommentsSections);
-    if (newExpanded.has(ideaId)) {
-      newExpanded.delete(ideaId);
-    } else {
-      newExpanded.add(ideaId);
-      if (!ideaComments[ideaId]) {
-        await loadComments(ideaId);
-      }
-    }
-    setExpandedCommentsSections(newExpanded);
-  };
 
   const openEditModal = (idea: BlogIdeaRecord) => {
     setEditingIdeaId(idea.id);
@@ -255,53 +283,6 @@ export default function IdeasPage() {
     closeEditModal();
   };
 
-  const addComment = async (ideaId: string) => {
-    const comment = newComment[ideaId]?.trim();
-    if (!comment) {
-      setError("Comment cannot be empty.");
-      return false;
-    }
-
-    if (!user?.id) {
-      setError("You must be logged in.");
-      return false;
-    }
-
-    setIsCommentSubmitting((prev) => ({ ...prev, [ideaId]: true }));
-    const supabase = getSupabaseBrowserClient();
-    const { data, error: insertError } = await supabase
-      .from("blog_idea_comments")
-      .insert({
-        idea_id: ideaId,
-        comment,
-        created_by: user.id,
-      })
-      .select("id,idea_id,comment,created_by,created_at,updated_at")
-      .single();
-
-    if (insertError) {
-      setError(insertError.message);
-      setIsCommentSubmitting((prev) => ({ ...prev, [ideaId]: false }));
-      return false;
-    }
-
-    if (data) {
-      setIdeaComments((prev) => ({
-        ...prev,
-        [ideaId]: [...(prev[ideaId] || []), data as IdeaCommentRecord],
-      }));
-      setNewComment((prev) => ({ ...prev, [ideaId]: "" }));
-      showSuccess("Comment added.");
-    }
-    setIsCommentSubmitting((prev) => ({ ...prev, [ideaId]: false }));
-    return true;
-  };
-
-  const handleCommentSubmit =
-    (ideaId: string) => async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      await addComment(ideaId);
-    };
 
   return (
     <ProtectedPage>
@@ -321,7 +302,7 @@ export default function IdeasPage() {
               }}
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
             >
-              Add Idea
+              New Idea
             </button>
           </header>
 
@@ -371,81 +352,37 @@ export default function IdeasPage() {
                   <li key={idea.id} className="rounded-md border border-slate-200 p-4">
                     <h4 className="text-base font-semibold text-slate-900">{idea.title}</h4>
                     <p className="mt-1 text-sm text-slate-600">Site: {idea.site}</p>
-                    {idea.description ? (
-                      <p className="mt-2 whitespace-pre-wrap rounded bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                        {idea.description}
-                      </p>
-                    ) : null}
                     <p className="mt-2 text-xs text-slate-500">
                       Added {formatDateTime(idea.created_at)}
                     </p>
 
                     {/* Comments & References Section */}
                     <div className="mt-3 border-t border-slate-200 pt-3">
-                      <button
-                        type="button"
-                        className="text-sm font-medium text-slate-700 hover:text-slate-900"
-                        onClick={() => {
-                          void toggleCommentsSection(idea.id);
-                        }}
-                      >
-                        {expandedCommentsSections.has(idea.id) ? "▼" : "▶"} Comments &
-                        References ({ideaComments[idea.id]?.length || 0})
-                      </button>
-
-                      {expandedCommentsSections.has(idea.id) ? (
-                        <div className="mt-3 space-y-3">
-                          {/* Comments List */}
-                          {ideaComments[idea.id] && ideaComments[idea.id].length > 0 ? (
-                            <ul className="space-y-2 rounded-md bg-slate-50 p-3">
-                              {ideaComments[idea.id].map((comment) => (
-                                <li key={comment.id} className="border-l-2 border-slate-300 pl-3 text-sm">
-                                  <p className="text-slate-700">{comment.comment}</p>
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    {formatDateTime(comment.created_at)}
-                                  </p>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-xs text-slate-500">No comments yet.</p>
-                          )}
-
-                          {/* Add Comment Form */}
-                          <form
-                            onSubmit={handleCommentSubmit(idea.id)}
-                            className="flex flex-col gap-2"
-                          >
-                            <input
-                              type="text"
-                              value={newComment[idea.id] || ""}
-                              onChange={(event) => {
-                                setNewComment((prev) => ({
-                                  ...prev,
-                                  [idea.id]: event.target.value,
-                                }));
-                              }}
-                              placeholder="Add a comment or reference link..."
-                              maxLength={500}
-                              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs"
-                            />
-                            <button
-                              type="submit"
-                              disabled={isCommentSubmitting[idea.id] || !newComment[idea.id]?.trim()}
-                              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {isCommentSubmitting[idea.id] ? "Adding..." : "Add"}
-                            </button>
-                          </form>
-                        </div>
-                      ) : null}
+                      <p className="text-sm font-medium text-slate-700">
+                        Comments & References ({visibleCommentsByIdea[idea.id]?.length || 0})
+                      </p>
+                      {visibleCommentsByIdea[idea.id] &&
+                      visibleCommentsByIdea[idea.id].length > 0 ? (
+                        <ul className="mt-2 space-y-2 rounded-md bg-slate-50 p-3">
+                          {visibleCommentsByIdea[idea.id].map((comment) => (
+                            <li key={comment.id} className="border-l-2 border-slate-300 pl-3 text-sm">
+                              <p className="text-slate-700">{comment.comment}</p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {formatDateTime(comment.created_at)}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">No comments yet.</p>
+                      )}
                     </div>
 
                     {/* Action Buttons */}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                         onClick={() => {
                           openEditModal(idea);
                         }}
@@ -455,7 +392,7 @@ export default function IdeasPage() {
                       {canCreateBlog ? (
                         <button
                           type="button"
-                          className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          className="rounded-md border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
                           onClick={() => {
                             router.push(`/blogs/new?ideaId=${idea.id}`);
                           }}
@@ -463,6 +400,19 @@ export default function IdeasPage() {
                           Convert to Blog
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        className="rounded-md border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                        onClick={() => {
+                          const search = new URLSearchParams({
+                            create: "1",
+                            title: idea.title,
+                          });
+                          router.push(`/social-posts?${search.toString()}`);
+                        }}
+                      >
+                        Convert to Social Post
+                      </button>
                     </div>
                   </li>
                 ))}
@@ -487,9 +437,9 @@ export default function IdeasPage() {
             <div className="relative z-10 w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Add Idea</h3>
+                  <h3 className="text-base font-semibold text-slate-900">New Idea</h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    Keep it lightweight: title, site, and optional context.
+                    Keep it lightweight: title, site, and optional comments or references.
                   </p>
                 </div>
                 <button
@@ -536,7 +486,7 @@ export default function IdeasPage() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Description (optional)
+                    Comments & References (optional)
                   </span>
                   <textarea
                     value={description}
@@ -545,7 +495,7 @@ export default function IdeasPage() {
                     }}
                     className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     maxLength={2000}
-                    placeholder="Optional context..."
+                    placeholder="Optional comments or reference links..."
                   />
                 </label>
                 <div className="flex items-center gap-2">
@@ -590,7 +540,7 @@ export default function IdeasPage() {
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Edit Idea</h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    Update the title, site, or description before converting to a blog.
+                    Update the title, site, or comments and references before converting.
                   </p>
                 </div>
                 <button
@@ -637,7 +587,7 @@ export default function IdeasPage() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Description (optional)
+                    Comments & References (optional)
                   </span>
                   <textarea
                     value={editDescription}
@@ -646,7 +596,7 @@ export default function IdeasPage() {
                     }}
                     className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     maxLength={2000}
-                    placeholder="Optional context..."
+                    placeholder="Optional comments or reference links..."
                   />
                 </label>
                 <div className="flex items-center gap-2">

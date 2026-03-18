@@ -256,9 +256,17 @@ function escapeCsvCell(value: string) {
 
 export function BlogImportModal({
   autoOpen = false,
+  triggerLabel = "Import Blogs",
+  triggerVariant = "secondary",
+  triggerSize = "sm",
+  triggerClassName,
   onImported,
 }: {
   autoOpen?: boolean;
+  triggerLabel?: string;
+  triggerVariant?: "primary" | "secondary" | "destructive" | "ghost" | "icon";
+  triggerSize?: "xs" | "sm" | "md" | "icon";
+  triggerClassName?: string;
   onImported: (result: {
     created: number;
     updated: number;
@@ -294,6 +302,10 @@ export function BlogImportModal({
   const selectedRowsWithErrors = useMemo(
     () => selectedRows.filter((row) => rowErrorMap.has(row.rowNumber)),
     [rowErrorMap, selectedRows]
+  );
+  const selectedValidationErrors = useMemo(
+    () => parseErrors.filter((rowError) => selectedRowSet.has(rowError.rowNumber)),
+    [parseErrors, selectedRowSet]
   );
   const selectedInvalidCount = selectedRowsWithErrors.length;
   const selectedValidCount = selectedRows.length - selectedInvalidCount;
@@ -465,13 +477,14 @@ export function BlogImportModal({
     <>
       <Button
         type="button"
-        variant="secondary"
-        size="sm"
+        variant={triggerVariant}
+        size={triggerSize}
+        className={triggerClassName}
         onClick={() => {
           setIsOpen(true);
         }}
       >
-        Import Blogs
+        {triggerLabel}
       </Button>
       {isOpen ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
@@ -654,11 +667,11 @@ export function BlogImportModal({
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     Step 3 · Validation
                   </p>
-                  {parseErrors.length === 0 ? (
+                  {selectedValidationErrors.length === 0 ? (
                     <p className="mt-2 text-sm text-emerald-700">No validation errors found.</p>
                   ) : (
                     <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-sm text-rose-700">
-                      {parseErrors.map((validationError, index) => (
+                      {selectedValidationErrors.map((validationError, index) => (
                         <li key={`${validationError.rowNumber}-${validationError.message}-${index}`}>
                           Row {validationError.rowNumber}: {validationError.message}
                         </li>

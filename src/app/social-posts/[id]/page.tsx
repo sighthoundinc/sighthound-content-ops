@@ -12,8 +12,9 @@ import { SocialPostStatusBadge } from "@/components/status-badge";
 import {
   SOCIAL_PLATFORMS,
   SOCIAL_PLATFORM_LABELS,
+  SOCIAL_POST_PRODUCTS,
   SOCIAL_POST_PRODUCT_LABELS,
-  SOCIAL_POST_STATUSES,
+  SOCIAL_POST_TYPES,
   SOCIAL_POST_STATUS_LABELS,
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
@@ -67,6 +68,11 @@ type EditorFormState = {
 
 const LINKEDIN_CAPTION_LIMIT = 3000;
 const AUTOSAVE_DEBOUNCE_MS = 30000;
+const PLATFORM_CAPTION_GUIDANCE: Record<SocialPlatform, string> = {
+  linkedin: "LinkedIn: lead with a strong hook, then add concise proof points.",
+  facebook: "Facebook: keep it short, clear, and conversational with one CTA.",
+  instagram: "Instagram: front-load impact and keep hashtag use intentional.",
+};
 
 // Unicode bold sans-serif characters for LinkedIn-compatible bold text
 const BOLD_SANS_UPPER = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭";
@@ -91,6 +97,15 @@ function toBoldFormat(input: string) {
     output += character;
   }
   return output;
+}
+
+function formatSavedTimestamp(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
 
 function normalizePostRow(row: Record<string, unknown>): SocialPostEditorRecord {
@@ -138,7 +153,6 @@ export default function SocialPostEditorPage() {
   const [blogSearchResults, setBlogSearchResults] = useState<BlogLookupResult[]>([]);
   const [isBlogSearchOpen, setIsBlogSearchOpen] = useState(false);
   const [isBlogSearchLoading, setIsBlogSearchLoading] = useState(false);
-  const [lastSavedCaption, setLastSavedCaption] = useState("");
 
   const loadPost = useCallback(async () => {
     if (!postId) {
@@ -155,7 +169,7 @@ export default function SocialPostEditorPage() {
       .eq("id", postId)
       .single();
     if (loadError) {
-      setError(loadError.message);
+      setError(`Couldn't load post. ${loadError.message}`);
       setIsLoading(false);
       return;
     }
@@ -173,7 +187,6 @@ export default function SocialPostEditorPage() {
       status: normalized.status,
       associated_blog_id: normalized.associated_blog_id,
     });
-    setLastSavedCaption(normalized.caption ?? "");
     setBlogSearchQuery(normalized.associated_blog?.title ?? "");
     setIsLoading(false);
   }, [postId]);
@@ -197,7 +210,7 @@ export default function SocialPostEditorPage() {
           p_limit: 8,
         });
         if (searchError) {
-          showError(searchError.message);
+          showError(`Couldn't search blogs. ${searchError.message}`);
           setBlogSearchResults([]);
           setIsBlogSearchLoading(false);
           return;
@@ -243,14 +256,13 @@ export default function SocialPostEditorPage() {
         )
         .single();
       if (saveError) {
-        updateStatus(statusId, { type: "error", message: saveError.message });
+        updateStatus(statusId, { type: "error", message: `Couldn't save. ${saveError.message}` });
         setIsSaving(false);
         return;
       }
       const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
       setPost(normalized);
-      setLastSavedCaption(normalized.caption ?? "");
-      updateStatus(statusId, { type: "success", message: "Saved." });
+      updateStatus(statusId, { type: "success", message: "Post saved" });
       setIsSaving(false);
     },
     [post, showSaving, updateStatus]
@@ -270,17 +282,65 @@ export default function SocialPostEditorPage() {
 
   const captionLength = form?.caption.length ?? 0;
   const isOverLimit = captionLength > LINKEDIN_CAPTION_LIMIT;
+  const hasTitle = Boolean(form?.title.trim());
+  const hasCaption = Boolean(form?.caption.trim());
+  const hasPlatform = Boolean(form && form.platforms.length > 0);
+  const hasPublishDate = Boolean(form?.scheduled_date);
+  const hasCanvaLink = Boolean(form?.canva_url.trim());
+  const hasLinkedBlog = Boolean(form?.associated_blog_id);
+  const isDraftComplete =
+    hasTitle && hasCaption && hasPlatform && hasPublishDate && hasCanvaLink;
+  const canTransitionToReview =
+    isDraftComplete || form?.status === "review" || form?.status === "published";
+  const canTransitionToPublished =
+    isDraftComplete && (form?.status === "review" || form?.status === "published");
 
   const checklistItems = useMemo(
     () => [
-      { label: "Title exists", done: Boolean(form?.title.trim()) },
-      { label: "Caption written", done: Boolean(form?.caption.trim()) },
-      { label: "Platform selected", done: Boolean(form && form.platforms.length > 0) },
-      { label: "Canva link added", done: Boolean(form?.canva_url.trim()) },
-      { label: "Blog linked", done: Boolean(form?.associated_blog_id) },
+      { label: "Title exists", done: hasTitle, required: true },
+      { label: "Platform selected", done: hasPlatform, required: true },
+      { label: "Publish date set", done: hasPublishDate, required: true },
+      { label: "Canva link added", done: hasCanvaLink, required: true },
+      { label: "Caption written", done: hasCaption, required: true },
+      { label: "Blog linked", done: hasLinkedBlog, required: false },
     ],
-    [form]
+    [hasCanvaLink, hasCaption, hasLinkedBlog, hasPlatform, hasPublishDate, hasTitle]
   );
+  const finalAction = useMemo(() => {
+    if (form?.status === "idea") {
+      if (!isDraftComplete) {
+        return {
+          label: "Save Draft",
+          nextStatus: "idea" as SocialPostStatus,
+          helper: "Complete required checklist items to move this to Review.",
+        };
+      }
+      return {
+        label: "Move to Review",
+        nextStatus: "review" as SocialPostStatus,
+        helper: "Draft is complete. Move this post to Review.",
+      };
+    }
+    if (form?.status === "review") {
+      if (!isDraftComplete) {
+        return {
+          label: "Save Draft",
+          nextStatus: "idea" as SocialPostStatus,
+          helper: "Review requires all required items. Saving this back to Draft.",
+        };
+      }
+      return {
+        label: "Mark Published",
+        nextStatus: "published" as SocialPostStatus,
+        helper: "Review is complete. Mark this post as Published.",
+      };
+    }
+    return {
+      label: "Save Changes",
+      nextStatus: "published" as SocialPostStatus,
+      helper: "Update details for this published post.",
+    };
+  }, [form?.status, isDraftComplete]);
 
   const applyCaptionEdit = (nextCaption: string, selectionStart: number, selectionEnd: number) => {
     setForm((previous) => (previous ? { ...previous, caption: nextCaption } : previous));
@@ -307,7 +367,7 @@ export default function SocialPostEditorPage() {
     const transformed = toBoldFormat(selected);
     const next = `${form.caption.slice(0, start)}${transformed}${form.caption.slice(end)}`;
     applyCaptionEdit(next, start, start + transformed.length);
-    showSuccess("Bold format applied.");
+    showSuccess("Bold format applied");
   };
 
   const handleInsertBullet = () => {
@@ -352,17 +412,28 @@ export default function SocialPostEditorPage() {
     applyCaptionEdit(next, nextCursor, nextCursor);
   };
 
-  const copyText = async (text: string, successLabel: string) => {
+  const copyText = async (text: string) => {
     if (!text.trim()) {
-      showError("Nothing to copy.");
+      showError("Nothing to copy");
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      showSuccess(successLabel);
+      showSuccess("Copied to clipboard");
     } catch {
-      showError("Could not copy.");
+      showError("Copy failed. Try again");
     }
+  };
+  const handleFinalAction = () => {
+    if (!form) {
+      return;
+    }
+    const nextForm: EditorFormState = {
+      ...form,
+      status: finalAction.nextStatus,
+    };
+    setForm(nextForm);
+    void persistPost(nextForm, "manual");
   };
 
   if (isLoading) {
@@ -396,7 +467,7 @@ export default function SocialPostEditorPage() {
         <div className="space-y-5">
           <DataPageHeader
             title={form.title || "Social Post"}
-            description="Focused workspace for writing, linking, formatting, and publishing."
+            description="Follow the natural flow: Setup → Link Context → Write Caption → Review & Publish."
             primaryAction={
               <div className="flex items-center gap-2">
                 <Button
@@ -408,25 +479,161 @@ export default function SocialPostEditorPage() {
                 >
                   Back to Social Posts
                 </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={isSaving}
-                  onClick={() => {
-                    void persistPost(form, "manual");
-                  }}
-                >
-                  {isSaving ? "Saving…" : "Save Now"}
-                </Button>
               </div>
             }
           />
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-4">
+              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                    1
+                  </span>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">Setup</h3>
+                    <p className="text-sm text-slate-600">
+                      Define the post essentials before writing or review.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+                    <span className="font-medium">Post Title</span>
+                    <input
+                      value={form.title}
+                      onChange={(event) => {
+                        setForm((previous) =>
+                          previous ? { ...previous, title: event.target.value } : previous
+                        );
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+                    <span className="font-medium">Platform(s)</span>
+                    <div className="flex flex-wrap gap-2">
+                      {SOCIAL_PLATFORMS.map((platform) => {
+                        const isSelected = form.platforms.includes(platform);
+                        return (
+                          <Button
+                            key={platform}
+                            size="xs"
+                            variant={isSelected ? "primary" : "secondary"}
+                            onClick={() => {
+                              setForm((previous) => {
+                                if (!previous) {
+                                  return previous;
+                                }
+                                const nextPlatforms = previous.platforms.includes(platform)
+                                  ? previous.platforms.filter((entry) => entry !== platform)
+                                  : [...previous.platforms, platform];
+                                return { ...previous, platforms: nextPlatforms };
+                              });
+                            }}
+                          >
+                            {SOCIAL_PLATFORM_LABELS[platform]}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-700">
+                    <span className="font-medium">Publish Date</span>
+                    <input
+                      type="date"
+                      value={form.scheduled_date}
+                      onChange={(event) => {
+                        setForm((previous) =>
+                          previous ? { ...previous, scheduled_date: event.target.value } : previous
+                        );
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-700">
+                    <span className="font-medium">Canva Link</span>
+                    <input
+                      type="url"
+                      value={form.canva_url}
+                      onChange={(event) => {
+                        setForm((previous) =>
+                          previous ? { ...previous, canva_url: event.target.value } : previous
+                        );
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="https://www.canva.com/..."
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-700">
+                    <span className="font-medium">Canva Page</span>
+                    <input
+                      value={form.canva_page}
+                      onChange={(event) => {
+                        setForm((previous) =>
+                          previous ? { ...previous, canva_page: event.target.value } : previous
+                        );
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="e.g. 23"
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-700">
+                    <span className="font-medium">Product</span>
+                    <select
+                      value={form.product}
+                      onChange={(event) => {
+                        setForm((previous) =>
+                          previous
+                            ? { ...previous, product: event.target.value as SocialPostProduct }
+                            : previous
+                        );
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      {SOCIAL_POST_PRODUCTS.map((product) => (
+                        <option key={product} value={product}>
+                          {SOCIAL_POST_PRODUCT_LABELS[product]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-700">
+                    <span className="font-medium">Type</span>
+                    <select
+                      value={form.type}
+                      onChange={(event) => {
+                        setForm((previous) =>
+                          previous ? { ...previous, type: event.target.value as SocialPostType } : previous
+                        );
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      {SOCIAL_POST_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {SOCIAL_POST_TYPE_LABELS[type]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </section>
 
-          <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-            <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-              <div className="grid gap-3 md:grid-cols-2">
+              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                    2
+                  </span>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Link Context <span className="text-slate-500">(optional)</span>
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      Link a related blog so caption and publishing context stay connected.
+                    </p>
+                  </div>
+                </div>
                 <label className="space-y-1 text-sm text-slate-700">
-                  <span className="font-medium">Associated Blog</span>
+                  <span className="font-medium">Associated Blog Search</span>
                   <input
                     value={blogSearchQuery}
                     onFocus={() => setIsBlogSearchOpen(true)}
@@ -437,280 +644,354 @@ export default function SocialPostEditorPage() {
                     className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     placeholder="Search blog title..."
                   />
-                  {isBlogSearchOpen ? (
-                    <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white">
-                      {isBlogSearchLoading ? (
-                        <p className="px-3 py-2 text-sm text-slate-500">Searching…</p>
-                      ) : blogSearchResults.length === 0 ? (
-                        <p className="px-3 py-2 text-sm text-slate-500">No matching blogs.</p>
-                      ) : (
-                        blogSearchResults.map((blog) => (
-                          <button
-                            key={blog.id}
-                            type="button"
-                            className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
-                            onClick={() => {
-                              setForm((previous) =>
-                                previous ? { ...previous, associated_blog_id: blog.id } : previous
-                              );
-                              setPost((previous) =>
-                                previous ? { ...previous, associated_blog: blog } : previous
-                              );
-                              setBlogSearchQuery(blog.title);
-                              setBlogSearchResults([]);
-                              setIsBlogSearchOpen(false);
-                            }}
-                          >
-                            <p className="text-sm font-medium text-slate-900">{blog.title}</p>
-                            <p className="text-xs text-slate-500">
-                              {blog.slug || "no-slug"} • {blog.site}
-                            </p>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  ) : null}
                 </label>
-
-                <label className="space-y-1 text-sm text-slate-700">
-                  <span className="font-medium">Platform</span>
-                  <div className="flex flex-wrap gap-2">
-                    {SOCIAL_PLATFORMS.map((platform) => {
-                      const isSelected = form.platforms.includes(platform);
-                      return (
-                        <Button
-                          key={platform}
-                          size="xs"
-                          variant={isSelected ? "primary" : "secondary"}
+                {isBlogSearchOpen ? (
+                  <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white">
+                    {isBlogSearchLoading ? (
+                      <p className="px-3 py-2 text-sm text-slate-500">Searching…</p>
+                    ) : blogSearchResults.length === 0 ? (
+                      <p className="px-3 py-2 text-sm text-slate-500">No matching blogs.</p>
+                    ) : (
+                      blogSearchResults.map((blog) => (
+                        <button
+                          key={blog.id}
+                          type="button"
+                          className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
                           onClick={() => {
-                            setForm((previous) => {
-                              if (!previous) {
-                                return previous;
-                              }
-                              const nextPlatforms = previous.platforms.includes(platform)
-                                ? previous.platforms.filter((entry) => entry !== platform)
-                                : [...previous.platforms, platform];
-                              return { ...previous, platforms: nextPlatforms };
-                            });
+                            setForm((previous) =>
+                              previous ? { ...previous, associated_blog_id: blog.id } : previous
+                            );
+                            setPost((previous) =>
+                              previous ? { ...previous, associated_blog_id: blog.id, associated_blog: blog } : previous
+                            );
+                            setBlogSearchQuery(blog.title);
+                            setBlogSearchResults([]);
+                            setIsBlogSearchOpen(false);
                           }}
                         >
-                          {SOCIAL_PLATFORM_LABELS[platform]}
-                        </Button>
-                      );
-                    })}
+                          <p className="text-sm font-medium text-slate-900">{blog.title}</p>
+                          <p className="text-xs text-slate-500">
+                            {blog.slug || "no-slug"} • {blog.site}
+                          </p>
+                        </button>
+                      ))
+                    )}
                   </div>
-                </label>
-
-                <label className="space-y-1 text-sm text-slate-700">
-                  <span className="font-medium">Publish Date</span>
-                  <input
-                    type="date"
-                    value={form.scheduled_date}
-                    onChange={(event) => {
-                      setForm((previous) =>
-                        previous ? { ...previous, scheduled_date: event.target.value } : previous
-                      );
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  />
-                </label>
-
-                <label className="space-y-1 text-sm text-slate-700">
-                  <span className="font-medium">Canva Link</span>
-                  <input
-                    type="url"
-                    value={form.canva_url}
-                    onChange={(event) => {
-                      setForm((previous) =>
-                        previous ? { ...previous, canva_url: event.target.value } : previous
-                      );
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    placeholder="https://www.canva.com/..."
-                  />
-                </label>
-
-                <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
-                  <span className="font-medium">Post Title</span>
-                  <input
-                    value={form.title}
-                    onChange={(event) => {
-                      setForm((previous) =>
-                        previous ? { ...previous, title: event.target.value } : previous
-                      );
-                    }}
-                    className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  />
-                </label>
-              </div>
-
-              <div className="space-y-2 rounded-lg border border-slate-200 p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-700">Caption Editor</p>
-                  <div className="flex items-center gap-1">
-                    <span className="tooltip-container">
-                      <Button
-                        variant="icon"
-                        size="icon"
-                        aria-label="Bold format"
-                        onClick={handleBoldFormat}
-                      >
-                        <strong>B</strong>
-                      </Button>
-                      <span className="tooltip-bubble">Bold Sans (LinkedIn)</span>
-                    </span>
-                    <span className="tooltip-container">
-                      <Button
-                        variant="icon"
-                        size="icon"
-                        aria-label="Insert bullet"
-                        onClick={handleInsertBullet}
-                      >
-                        •
-                      </Button>
-                      <span className="tooltip-bubble">Insert bullet</span>
-                    </span>
-                  </div>
-                </div>
-                <textarea
-                  ref={captionRef}
-                  value={form.caption}
-                  onChange={(event) => {
-                    setForm((previous) =>
-                      previous ? { ...previous, caption: event.target.value } : previous
-                    );
-                  }}
-                  onKeyDown={handleCaptionKeyDown}
-                  className="focus-field min-h-64 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="Write your LinkedIn caption..."
-                />
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        void copyText(form.caption, "Copied caption.");
-                      }}
-                    >
-                      Copy Caption
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        const url = post.associated_blog?.live_url ?? "";
-                        void copyText(`${form.caption}\n\n${url}`.trim(), "Copied caption + URL.");
-                      }}
-                    >
-                      Copy Caption + URL
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        void copyText(post.associated_blog?.live_url ?? "", "Copied URL.");
-                      }}
-                    >
-                      Copy URL
-                    </Button>
-                  </div>
-                  <p className={`text-xs font-medium ${isOverLimit ? "text-rose-700" : "text-slate-500"}`}>
-                    {captionLength} / {LINKEDIN_CAPTION_LIMIT}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <aside className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <section className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
-                <div className="flex items-center justify-between">
-                  <SocialPostStatusBadge status={form.status} />
-                  <select
-                    value={form.status}
-                    onChange={(event) => {
-                      setForm((previous) =>
-                        previous ? { ...previous, status: event.target.value as SocialPostStatus } : previous
-                      );
-                    }}
-                    className="focus-field rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-                  >
-                    {SOCIAL_POST_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {SOCIAL_POST_STATUS_LABELS[status]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <p className="text-xs text-slate-500">Last saved caption: {lastSavedCaption ? "Yes" : "No"}</p>
-              </section>
-
-              <section className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Posting checklist</p>
-                <ul className="space-y-1">
-                  {checklistItems.map((item) => (
-                    <li key={item.label} className="flex items-center gap-2 text-sm text-slate-700">
-                      <span
-                        className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                          item.done ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
-                        }`}
-                      >
-                        {item.done ? "✓" : "•"}
-                      </span>
-                      {item.label}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Blog reference</p>
-                {post.associated_blog ? (
-                  <>
-                    <p className="text-sm font-medium text-slate-900">{post.associated_blog.title}</p>
-                    <p className="text-xs text-slate-500">{post.associated_blog.site}</p>
-                    <div className="flex items-center gap-2">
+                ) : null}
+                {form.associated_blog_id ? (
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-medium text-slate-900">
+                      {post.associated_blog?.title ?? "Blog linked"}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {post.associated_blog?.site ?? "Linked blog"}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Button
                         variant="secondary"
                         size="xs"
                         onClick={() => {
-                          void copyText(post.associated_blog?.live_url ?? "", "Copied linked blog URL.");
+                          void copyText(post.associated_blog?.live_url ?? "");
                         }}
                       >
                         Copy URL
                       </Button>
-                      {post.associated_blog.live_url ? (
+                      {post.associated_blog?.live_url ? (
                         <ExternalLink
                           href={post.associated_blog.live_url}
                           className="text-xs font-medium text-blue-600 underline"
                         >
-                          Open blog
+                          Open Blog
                         </ExternalLink>
                       ) : null}
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => {
+                          setForm((previous) =>
+                            previous ? { ...previous, associated_blog_id: null } : previous
+                          );
+                          setPost((previous) =>
+                            previous
+                              ? { ...previous, associated_blog_id: null, associated_blog: null }
+                              : previous
+                          );
+                          setBlogSearchQuery("");
+                          setBlogSearchResults([]);
+                          setIsBlogSearchOpen(false);
+                        }}
+                      >
+                        Clear Link
+                      </Button>
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <p className="text-sm text-slate-500">No linked blog yet.</p>
                 )}
               </section>
 
-              <section className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Post metadata</p>
-                <p className="text-xs text-slate-600">Product: {SOCIAL_POST_PRODUCT_LABELS[form.product]}</p>
-                <p className="text-xs text-slate-600">Type: {SOCIAL_POST_TYPE_LABELS[form.type]}</p>
-                <label className="block space-y-1 text-xs text-slate-600">
-                  Canva Page
-                  <input
-                    value={form.canva_page}
+              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                    3
+                  </span>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">Write Caption</h3>
+                    <p className="text-sm text-slate-600">
+                      Use the editor like a focused notepad, then copy from one menu.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-slate-700">Caption Editor (UTF-8)</p>
+                    <div className="flex items-center gap-1">
+                      <span className="tooltip-container">
+                        <Button
+                          variant="icon"
+                          size="icon"
+                          aria-label="Bold format"
+                          onClick={handleBoldFormat}
+                        >
+                          <strong>B</strong>
+                        </Button>
+                        <span className="tooltip-bubble">Bold Sans (LinkedIn)</span>
+                      </span>
+                      <span className="tooltip-container">
+                        <Button
+                          variant="icon"
+                          size="icon"
+                          aria-label="Insert bullet"
+                          onClick={handleInsertBullet}
+                        >
+                          •
+                        </Button>
+                        <span className="tooltip-bubble">Insert bullet</span>
+                      </span>
+                    </div>
+                  </div>
+                  <textarea
+                    ref={captionRef}
+                    value={form.caption}
                     onChange={(event) => {
                       setForm((previous) =>
-                        previous ? { ...previous, canva_page: event.target.value } : previous
+                        previous ? { ...previous, caption: event.target.value } : previous
                       );
                     }}
-                    className="focus-field w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                    onKeyDown={handleCaptionKeyDown}
+                    className="focus-field min-h-[24rem] w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm leading-relaxed"
+                    placeholder="Write your social caption..."
                   />
-                </label>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p
+                        className={`text-xs font-medium ${
+                          isOverLimit ? "text-rose-700" : "text-slate-500"
+                        }`}
+                      >
+                        {captionLength} / {LINKEDIN_CAPTION_LIMIT}
+                      </p>
+                      {form.platforms.length === 0 ? (
+                        <p className="text-xs text-slate-500">
+                          Select at least one platform for platform-specific guidance.
+                        </p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {form.platforms.map((platform) => (
+                            <li key={platform} className="text-xs text-slate-500">
+                              {PLATFORM_CAPTION_GUIDANCE[platform]}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <details className="relative">
+                      <summary className="list-none cursor-pointer rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        Copy
+                      </summary>
+                      <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                        <button
+                          type="button"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            void copyText(form.caption);
+                          }}
+                        >
+                          Caption
+                        </button>
+                        <button
+                          type="button"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            const url = post.associated_blog?.live_url ?? "";
+                            void copyText(`${form.caption}\n\n${url}`.trim());
+                          }}
+                        >
+                          Caption + URL
+                        </button>
+                        <button
+                          type="button"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            void copyText(post.associated_blog?.live_url ?? "");
+                          }}
+                        >
+                          URL only
+                        </button>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                    4
+                  </span>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">Review & Publish</h3>
+                    <p className="text-sm text-slate-600">
+                      Validate checklist items, manage transitions, and run the final stage action.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Checklist + Validation
+                  </p>
+                  <ul className="space-y-1">
+                    {checklistItems.map((item) => (
+                      <li key={item.label} className="flex items-center gap-2 text-sm text-slate-700">
+                        <span
+                          className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${
+                            item.done ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+                          }`}
+                        >
+                          {item.done ? "✓" : "•"}
+                        </span>
+                        <span>{item.label}</span>
+                        <span className="text-xs text-slate-500">
+                          {item.required ? "(required)" : "(optional)"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Status Transition Controls
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant={form.status === "idea" ? "primary" : "secondary"}
+                      onClick={() => {
+                        setForm((previous) =>
+                          previous ? { ...previous, status: "idea" } : previous
+                        );
+                      }}
+                    >
+                      Draft
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={form.status === "review" ? "primary" : "secondary"}
+                      disabled={!canTransitionToReview}
+                      onClick={() => {
+                        setForm((previous) =>
+                          previous ? { ...previous, status: "review" } : previous
+                        );
+                      }}
+                    >
+                      Review
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={form.status === "published" ? "primary" : "secondary"}
+                      disabled={!canTransitionToPublished}
+                      onClick={() => {
+                        setForm((previous) =>
+                          previous ? { ...previous, status: "published" } : previous
+                        );
+                      }}
+                    >
+                      Published
+                    </Button>
+                    <SocialPostStatusBadge status={form.status} />
+                  </div>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-white p-3">
+                  <p className="text-sm text-slate-600">{finalAction.helper}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Next stage: {SOCIAL_POST_STATUS_LABELS[finalAction.nextStatus]}
+                  </p>
+                  {isOverLimit ? (
+                    <p className="mt-1 text-xs text-rose-700">
+                      Caption exceeds the LinkedIn character limit.
+                    </p>
+                  ) : null}
+                  <div className="mt-3">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={isSaving || isOverLimit}
+                      onClick={handleFinalAction}
+                    >
+                      {isSaving ? "Saving…" : finalAction.label}
+                    </Button>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <aside className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <section className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Workflow Progress
+                </p>
+                <ul className="space-y-1">
+                  <li className="flex items-center gap-2 text-sm text-slate-700">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                      {hasTitle && hasPlatform && hasPublishDate && hasCanvaLink ? "✓" : "1"}
+                    </span>
+                    Setup
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-slate-700">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                      {hasLinkedBlog ? "✓" : "2"}
+                    </span>
+                    Link Context (optional)
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-slate-700">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                      {hasCaption ? "✓" : "3"}
+                    </span>
+                    Write Caption
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-slate-700">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                      {form.status === "published" ? "✓" : "4"}
+                    </span>
+                    Review & Publish
+                  </li>
+                </ul>
+              </section>
+              <section className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Current Snapshot
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Status</span>
+                  <SocialPostStatusBadge status={form.status} />
+                </div>
+                <p className="text-xs text-slate-600">
+                  Product: {SOCIAL_POST_PRODUCT_LABELS[form.product]}
+                </p>
+                <p className="text-xs text-slate-600">Type: {SOCIAL_POST_TYPE_LABELS[form.type]}</p>
+                <p className="text-xs text-slate-600">
+                  Last saved: {formatSavedTimestamp(post.updated_at)}
+                </p>
               </section>
             </aside>
           </div>

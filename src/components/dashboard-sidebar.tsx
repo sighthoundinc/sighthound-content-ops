@@ -7,6 +7,8 @@ import {
   WRITER_STATUS_LABELS,
   PUBLISHER_STATUS_LABELS,
 } from "@/lib/status";
+import { getSiteShortLabel } from "@/lib/site";
+import type { BlogSite } from "@/lib/types";
 
 type QuickQueueCounts = {
   writerInProgress: number;
@@ -21,7 +23,7 @@ type QuickQueueCounts = {
 
 type RecentlyPublishedItem = {
   id: string;
-  site: string;
+  site: BlogSite;
   title: string;
   actual_published_at: string | null;
   published_at: string | null;
@@ -33,13 +35,22 @@ export function DashboardSidebar({
   recentlyPublished,
   onApplyQuickQueueFilter,
   onOpenBlog,
+  isWriterFilterOpen,
+  onWriterFilterToggle,
+  isPublisherFilterOpen,
+  onPublisherFilterToggle,
 }: {
   quickQueueCounts: QuickQueueCounts;
   activeQuickQueue: QuickQueueKey | null;
   recentlyPublished: RecentlyPublishedItem | null;
   onApplyQuickQueueFilter: (queue: QuickQueueKey) => void;
   onOpenBlog: (blogId: string) => void;
+  isWriterFilterOpen: boolean;
+  onWriterFilterToggle: (open: boolean) => void;
+  isPublisherFilterOpen: boolean;
+  onPublisherFilterToggle: (open: boolean) => void;
 }) {
+
   const writingItems: Array<{ key: QuickQueueKey; label: string; count: number }> = [
     {
       key: "writer_in_progress",
@@ -90,18 +101,21 @@ export function DashboardSidebar({
     recentlyPublished?.actual_published_at ?? recentlyPublished?.published_at ?? null;
   const publishedDateLabel =
     publishedAt ? format(new Date(publishedAt), "MMM d") : null;
-  const siteIndicator =
-    recentlyPublished?.site === "sighthound.com"
-      ? "SH"
-      : recentlyPublished?.site === "redactor.com"
-        ? "RED"
-        : "";
+  const siteIndicator = recentlyPublished?.site
+    ? getSiteShortLabel(recentlyPublished.site)
+    : "";
 
   return (
     <div className="space-y-3">
-      <details className="rounded-md border border-slate-200 bg-slate-50">
+      <details
+        open={isWriterFilterOpen}
+        onToggle={(event) => {
+          onWriterFilterToggle(event.currentTarget.open);
+        }}
+        className="rounded-md border border-slate-200 bg-slate-50"
+      >
         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-          Writing Filters
+          Writer Filters
         </summary>
         <div className="space-y-1 border-t border-slate-200 p-2">
           {writingItems.map((item) => (
@@ -124,9 +138,15 @@ export function DashboardSidebar({
         </div>
       </details>
 
-      <details className="rounded-md border border-slate-200 bg-slate-50">
+      <details
+        open={isPublisherFilterOpen}
+        onToggle={(event) => {
+          onPublisherFilterToggle(event.currentTarget.open);
+        }}
+        className="rounded-md border border-slate-200 bg-slate-50"
+      >
         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-          Publishing Filters
+          Publisher Filters
         </summary>
         <div className="space-y-1 border-t border-slate-200 p-2">
           {publishingItems.map((item) => (

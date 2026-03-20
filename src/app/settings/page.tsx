@@ -69,6 +69,9 @@ type EditableUserState = {
   firstName: string;
   lastName: string;
   displayName: string;
+  timezone: string;
+  weekStart: number;
+  staleDraftDays: number;
   userRoles: AppRole[];
   isActive: boolean;
 };
@@ -89,7 +92,6 @@ export default function SettingsPage() {
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
   );
-  const canEditAppSettings = permissionContract.canEditAppSettings;
   const canManageUsers = permissionContract.canManageUsers;
   const canDeleteUsers = permissionContract.canDeleteUsers;
   const canManageRoles = permissionContract.canManageRoles;
@@ -147,6 +149,10 @@ export default function SettingsPage() {
   const [editTargetUserId, setEditTargetUserId] = useState<string | null>(null);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [isSavingEditedUser, setIsSavingEditedUser] = useState(false);
+  const [resetPasswordInput, setResetPasswordInput] = useState("");
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
   const [quickViewTargetUserId, setQuickViewTargetUserId] = useState("");
   const [isSwitchingQuickViewUser, setIsSwitchingQuickViewUser] = useState(false);
   const [isRestoringAdminFromQuickView, setIsRestoringAdminFromQuickView] =
@@ -212,6 +218,9 @@ export default function SettingsPage() {
               firstName: nextUser.first_name ?? nameParts.firstName,
               lastName: nextUser.last_name ?? nameParts.lastName,
               displayName: nextUser.display_name ?? nextUser.full_name,
+              timezone: nextUser.timezone ?? "America/New_York",
+              weekStart: nextUser.week_start ?? 1,
+              staleDraftDays: nextUser.stale_draft_days ?? 10,
               userRoles: getUserRoles(nextUser),
               isActive: nextUser.is_active,
             },
@@ -351,31 +360,6 @@ export default function SettingsPage() {
     void loadData();
   }, []);
 
-  const saveSettings = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!settings || !canEditAppSettings) {
-      return;
-    }
-
-    const supabase = getSupabaseBrowserClient();
-    setError(null);
-    setSuccess(null);
-
-    const { error: saveError } = await supabase
-      .from("app_settings")
-      .update({
-        timezone: settings.timezone,
-        week_start: settings.week_start,
-        stale_draft_days: settings.stale_draft_days,
-      })
-      .eq("id", 1);
-
-    if (saveError) {
-      setError(`Couldn't save settings. ${saveError.message}`);
-      return;
-    }
-    setSuccess("Settings saved");
-  };
   const updateEditableUser = (
     targetUserId: string,
     updates: Partial<EditableUserState>
@@ -418,6 +402,9 @@ export default function SettingsPage() {
         firstName: edits.firstName,
         lastName: edits.lastName,
         displayName: edits.displayName,
+        timezone: edits.timezone,
+        weekStart: edits.weekStart,
+        staleDraftDays: edits.staleDraftDays,
         userRoles: canManageRoles ? edits.userRoles : undefined,
         isActive: canManageUsers ? edits.isActive : undefined,
       }),
@@ -575,6 +562,38 @@ export default function SettingsPage() {
     if (didSave) {
       closeEditUserModal();
     }
+  };
+  const resetUserPassword = async () => {
+    if (!editTargetUserId || !session?.access_token) {
+      setResetPasswordError("Missing user or session.");
+      return;
+    }
+    if (!resetPasswordInput || resetPasswordInput.length < 8) {
+      setResetPasswordError("Password must be at least 8 characters.");
+      return;
+    }
+    setResetPasswordError(null);
+    setIsResettingPassword(true);
+    const response = await fetch(`/api/admin/users/${editTargetUserId}/password`, {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        password: resetPasswordInput,
+      }),
+    });
+    const payload = (await response.json()) as { error?: string; message?: string };
+    if (!response.ok) {
+      setResetPasswordError(payload.error ?? "Failed to reset password.");
+      setIsResettingPassword(false);
+      return;
+    }
+    setSuccess(payload.message ?? "Password reset successfully.");
+    setResetPasswordInput("");
+    setIsResetPasswordModalOpen(false);
+    setIsResettingPassword(false);
   };
 
   const reassignEverythingFromUser = async (event: FormEvent<HTMLFormElement>) => {
@@ -996,7 +1015,7 @@ export default function SettingsPage() {
                     My Profile
                   </h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    Update your name and how others see you in the app.
+                    Update your name, timezone, and other personal preferences.
                   </p>
                     <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -1023,6 +1042,9 @@ export default function SettingsPage() {
                                   firstName: "",
                                   lastName: "",
                                   displayName: "",
+                                  timezone: profile.timezone,
+                                  weekStart: profile.week_start,
+                                  staleDraftDays: profile.stale_draft_days,
                                   userRoles: getUserRoles(profile),
                                   isActive: profile.is_active,
                                 }),
@@ -1047,6 +1069,9 @@ export default function SettingsPage() {
                                   firstName: "",
                                   lastName: "",
                                   displayName: "",
+                                  timezone: profile.timezone,
+                                  weekStart: profile.week_start,
+                                  staleDraftDays: profile.stale_draft_days,
                                   userRoles: getUserRoles(profile),
                                   isActive: profile.is_active,
                                 }),
@@ -1071,6 +1096,9 @@ export default function SettingsPage() {
                                   firstName: "",
                                   lastName: "",
                                   displayName: "",
+                                  timezone: profile.timezone,
+                                  weekStart: profile.week_start,
+                                  staleDraftDays: profile.stale_draft_days,
                                   userRoles: getUserRoles(profile),
                                   isActive: profile.is_active,
                                 }),
@@ -1080,6 +1108,81 @@ export default function SettingsPage() {
                           }}
                           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         />
+                      </label>
+                    </div>
+                    <div className="mt-3 max-w-sm">
+                      <label className="block md:col-span-3">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Timezone
+                        </span>
+                        <select
+                          value={editableUsers[profile.id]?.timezone ?? profile.timezone}
+                          onChange={(event) => {
+                            setEditableUsers((previous) => ({
+                              ...previous,
+                              [profile.id]: {
+                                ...(previous[profile.id] ?? {
+                                  firstName: "",
+                                  lastName: "",
+                                  displayName: "",
+                                  timezone: profile.timezone,
+                                  weekStart: profile.week_start,
+                                  staleDraftDays: profile.stale_draft_days,
+                                  userRoles: getUserRoles(profile),
+                                  isActive: profile.is_active,
+                                }),
+                                timezone: event.target.value,
+                              },
+                            }));
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          {TIMEZONE_OPTIONS.map((timezone) => (
+                            <option key={timezone} value={timezone}>
+                              {timezone}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Week Starts On
+                        </span>
+                        <select
+                          value={editableUsers[profile.id]?.weekStart ?? profile.week_start}
+                          onChange={(event) => {
+                            updateEditableUser(profile.id, { weekStart: Number(event.target.value) });
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          {WEEK_DAYS.map((day) => (
+                            <option key={day.value} value={day.value}>
+                              {day.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Drafts need attention after
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            min={1}
+                            max={120}
+                            type="number"
+                            value={editableUsers[profile.id]?.staleDraftDays ?? profile.stale_draft_days}
+                            onChange={(event) => {
+                              updateEditableUser(profile.id, {
+                                staleDraftDays: Number(event.target.value) || 10,
+                              });
+                            }}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          />
+                          <span className="text-sm text-slate-600 whitespace-nowrap">days</span>
+                        </div>
                       </label>
                     </div>
                     <div className="mt-4">
@@ -1096,91 +1199,6 @@ export default function SettingsPage() {
                 </section>
               ) : null}
 
-              <section className="rounded-lg border border-slate-200 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Workspace Defaults
-                </h3>
-                <p className="mt-1 text-sm text-slate-600">
-                  Set your timezone, preferred week start, and draft age thresholds.
-                </p>
-                  <form className="mt-4 grid gap-3 md:grid-cols-3" onSubmit={saveSettings}>
-                    <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">
-                        Timezone
-                      </span>
-                      <select
-                        value={settings.timezone}
-                        onChange={(event) => {
-                          setSettings((previous) =>
-                            previous ? { ...previous, timezone: event.target.value } : previous
-                          );
-                        }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        disabled={!canEditAppSettings}
-                      >
-                        {TIMEZONE_OPTIONS.map((timezone) => (
-                          <option key={timezone} value={timezone}>
-                            {timezone}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">
-                        Week Starts On
-                      </span>
-                      <select
-                        value={settings.week_start}
-                        onChange={(event) => {
-                          setSettings((previous) =>
-                            previous ? { ...previous, week_start: Number(event.target.value) } : previous
-                          );
-                        }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        disabled={!canEditAppSettings}
-                      >
-                        {WEEK_DAYS.map((day) => (
-                          <option key={day.value} value={day.value}>
-                            {day.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">
-                        Mark Drafts as Stale After (days)
-                      </span>
-                      <input
-                        min={1}
-                        max={120}
-                        type="number"
-                        value={settings.stale_draft_days}
-                        onChange={(event) => {
-                          setSettings((previous) =>
-                            previous
-                              ? {
-                                  ...previous,
-                                  stale_draft_days: Number(event.target.value) || 1,
-                                }
-                              : previous
-                          );
-                        }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        disabled={!canEditAppSettings}
-                      />
-                    </label>
-                    {canEditAppSettings ? (
-                      <div className="md:col-span-3">
-                        <button
-                          type="submit"
-                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-                        >
-                          Save Changes
-                        </button>
-                      </div>
-                    ) : null}
-                  </form>
-              </section>
               {isAdminUser ? (
                 <section className="rounded-lg border border-rose-200 bg-rose-50/40 p-4">
                   <h3 className="text-base font-semibold text-rose-900">
@@ -1824,6 +1842,23 @@ export default function SettingsPage() {
                         )}
                       </div>
                     </div>
+                    {canManageUsers ? (
+                      <div className="mt-6 border-t border-slate-200 pt-4">
+                        <p className="mb-3 text-sm font-medium text-slate-900">Reset Password (Test Only)</p>
+                        <button
+                          type="button"
+                          disabled={isSavingEditedUser}
+                          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => {
+                            setResetPasswordError(null);
+                            setResetPasswordInput("");
+                            setIsResetPasswordModalOpen(true);
+                          }}
+                        >
+                          Set New Password
+                        </button>
+                      </div>
+                    ) : null}
                     <div className="mt-4 flex items-center justify-end gap-2">
                       <button
                         type="button"
@@ -1842,6 +1877,76 @@ export default function SettingsPage() {
                         }}
                       >
                         {isSavingEditedUser ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {isResetPasswordModalOpen && editTargetUser ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <button
+                    type="button"
+                    aria-label="Close reset password modal"
+                    className="absolute inset-0 bg-slate-900/30"
+                    onClick={() => {
+                      if (!isResettingPassword) {
+                        setIsResetPasswordModalOpen(false);
+                        setResetPasswordInput("");
+                        setResetPasswordError(null);
+                      }
+                    }}
+                  />
+                  <div className="relative z-10 w-full max-w-sm rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+                    <h3 className="text-base font-semibold text-slate-900">Set New Password</h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Set a new password for{" "}
+                      <span className="font-medium text-slate-900">{editTargetUser.email}</span>
+                    </p>
+                    <div className="mt-4">
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          New Password (min 8 characters)
+                        </span>
+                        <input
+                          type="password"
+                          value={resetPasswordInput}
+                          onChange={(event) => {
+                            setResetPasswordInput(event.target.value);
+                            setResetPasswordError(null);
+                          }}
+                          disabled={isResettingPassword}
+                          placeholder="Enter new password"
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      {resetPasswordError ? (
+                        <p className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                          {resetPasswordError}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={isResettingPassword}
+                        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                          setIsResetPasswordModalOpen(false);
+                          setResetPasswordInput("");
+                          setResetPasswordError(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isResettingPassword || !resetPasswordInput || resetPasswordInput.length < 8}
+                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                          void resetUserPassword();
+                        }}
+                      >
+                        {isResettingPassword ? "Setting..." : "Set Password"}
                       </button>
                     </div>
                   </div>

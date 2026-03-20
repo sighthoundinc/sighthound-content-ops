@@ -27,12 +27,13 @@ type PreservedAdminProfile = {
   first_name?: string | null;
   last_name?: string | null;
   display_name?: string | null;
+  timezone?: string | null;
   role: "admin" | "writer" | "publisher" | "editor";
   user_roles?: Array<"admin" | "writer" | "publisher" | "editor"> | null;
   is_active: boolean;
 };
 const PRESERVED_ADMIN_PROFILE_SELECT =
-  "id,email,full_name,first_name,last_name,display_name,role,user_roles,is_active";
+  "id,email,full_name,first_name,last_name,display_name,timezone,role,user_roles,is_active";
 
 const FULL_WIPE_TABLES: Array<{ table: string; markerColumn: string }> = [
   { table: "social_post_comments", markerColumn: "id" },
@@ -155,6 +156,7 @@ async function restorePreservedAdminProfiles(
       first_name: profile.first_name ?? null,
       last_name: profile.last_name ?? null,
       display_name: profile.display_name ?? profile.full_name,
+      timezone: profile.timezone ?? "America/New_York",
       role: "admin",
       user_roles: ["admin"],
       is_active: true,

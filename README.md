@@ -101,8 +101,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Published entries are non-draggable
 
 ### Settings and Permissions
-- `My Profile` for user name updates
-- `Workspace Defaults` for timezone/week-start/stale-draft defaults
+- `My Profile` for all personal preferences (name, timezone, week start, draft attention threshold)
 - `Access & Oversight` for quick-view and permissions panel entry
 - `Create User Account`, `Reassign User Work`, and `User Directory` for team administration
 - Permission matrix management (`/settings/permissions`)

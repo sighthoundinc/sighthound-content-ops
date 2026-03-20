@@ -123,6 +123,9 @@ export interface ProfileRecord {
   first_name: string | null;
   last_name: string | null;
   display_name: string | null;
+  timezone: string;
+  week_start: number;
+  stale_draft_days: number;
   role: AppRole;
   user_roles: AppRole[] | null;
   is_active: boolean;

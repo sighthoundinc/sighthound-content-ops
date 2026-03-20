@@ -7,6 +7,9 @@ const updateProfileSchema = z.object({
   firstName: z.string().trim().max(100).optional().nullable(),
   lastName: z.string().trim().max(100).optional().nullable(),
   displayName: z.string().trim().max(200).optional().nullable(),
+  timezone: z.string().trim().min(1).max(100).optional(),
+  weekStart: z.number().int().min(0).max(6).optional(),
+  staleDraftDays: z.number().int().min(1).max(120).optional(),
   isActive: z.boolean().optional(),
   userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor"])).optional(),
 });
@@ -67,6 +70,9 @@ export async function PATCH(request: NextRequest) {
     const firstName = toNullableTrimmed(parsed.data.firstName);
     const lastName = toNullableTrimmed(parsed.data.lastName);
     const displayName = toNullableTrimmed(parsed.data.displayName);
+    const timezone = parsed.data.timezone?.trim();
+    const weekStart = parsed.data.weekStart;
+    const staleDraftDays = parsed.data.staleDraftDays;
 
     const profileUpdates: Record<string, unknown> = {};
     if (firstName !== undefined) {
@@ -77,6 +83,15 @@ export async function PATCH(request: NextRequest) {
     }
     if (displayName !== undefined) {
       profileUpdates.display_name = displayName;
+    }
+    if (timezone !== undefined) {
+      profileUpdates.timezone = timezone.length > 0 ? timezone : "America/New_York";
+    }
+    if (weekStart !== undefined) {
+      profileUpdates.week_start = weekStart;
+    }
+    if (staleDraftDays !== undefined) {
+      profileUpdates.stale_draft_days = staleDraftDays;
     }
 
     if (parsed.data.userRoles && canManageRoles) {

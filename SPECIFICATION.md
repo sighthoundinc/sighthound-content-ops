@@ -197,19 +197,50 @@ Key behavior:
   - in review complete → `Mark Published`
 
 ### Settings (`/settings`)
-- `My Profile` section for first name, last name, and display name updates
-- `Workspace Defaults` section for timezone, week start, and stale draft threshold
+- `My Profile` section for all personal preferences:
+  - first name, last name, display name
+  - personal timezone (default: US Eastern)
+  - week start day
+  - draft attention threshold (days)
 - `Access & Oversight` section for quick-view session switching and permissions panel entry
 - team administration sections:
   - `Create User Account`
   - `Reassign User Work`
   - `User Directory` with role and status filters
+- `Activity History` page:
+  - Non-admins view their own dashboard visits only
+  - Admins can filter by event type (All/Login/Dashboard) and user (All Users or specific user)
+  - Timestamps shown in user timezone (non-admin) or UTC (admin)
 - admin-only activity history cleanup (global or user-scoped)
 - optional comments cleanup during history purge
 - admin-only wipe app clean (full factory reset)
   - always preserves currently signed-in admin account
   - optional checkbox can remove all other admin profiles/accounts
   - when unchecked, other admin profiles are preserved
+
+### Activity History (`/settings/access-logs`)
+Admin-accessible page for tracking user access events.
+
+Key behavior:
+- **For non-admins**: restricted to viewing own dashboard visits only (view only, no filtering)
+- **For admins**:
+  - event type filter: All, Login, Dashboard
+  - user filter: All Users or select specific users
+  - all combinations are allowed (e.g., filter by "Dashboard" and "All Users")
+  - timestamps in UTC for consistency
+  - sortable by date, user, or event type
+- **Notification bell integration**: top 5 activity notifications with "View History" link and "Clear All" button
+- **Data source**: `access_logs` table (immutable; only creation/cleanup via admin actions)
+
+### Password Reset (Test-Only)
+Admin-only feature at Settings → User Directory → Edit User → Reset Password section.
+
+Key behavior:
+- visible only to admins
+- password must be minimum 8 characters
+- uses Supabase admin auth to set password
+- user can then log in with new password immediately
+- **Important**: this feature is temporary and for testing purposes only; will be removed before production
 
 ### Permissions (`/settings/permissions`)
 - role-level configurable permission matrix
@@ -299,6 +330,7 @@ Core tables:
 - `permission_audit_logs`
 - `social_post_activity_history`
 - `social_post_comments`
+- `access_logs` (user login and dashboard visit tracking)
 
 Additional modules:
 - `blog_ideas`
@@ -309,6 +341,7 @@ Highlights:
 - blogs carry stage, ownership, and schedule/publish fields
 - history/comments support operational traceability
 - permission tables drive effective capability resolution
+- access_logs table is immutable and tracks login/dashboard visits for audit
 - quick-view state is client-side snapshot state (browser local storage), not persisted in DB
 
 ## 10) Dashboard & Standup APIs

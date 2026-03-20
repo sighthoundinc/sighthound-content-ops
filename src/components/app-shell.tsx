@@ -714,7 +714,7 @@ export function AppShell({
                   )}
                 >
                   <AppIcon
-                    name="settings"
+                    name="lock"
                     boxClassName="h-4 w-4"
                     size={14}
                     className={pathname === "/settings/permissions" ? "text-white" : "text-slate-400 group-hover:text-slate-600"}

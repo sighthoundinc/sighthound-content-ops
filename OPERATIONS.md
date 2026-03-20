@@ -38,11 +38,15 @@ Content mutations (blogs, stages, comments, derived status) are DB-authoritative
 - `src/` — app routes/components/libs
 - `src/lib/permissions.ts` — permission definitions/templates/helpers
 - `src/lib/server-permissions.ts` — server-side permission resolution
+- `src/lib/access-logging.ts` — server-side utility for logging access events
 - `src/app/settings/permissions/` — permission management UI
+- `src/app/settings/access-logs/` — activity history page UI
 - `src/app/api/admin/permissions/` — permission CRUD/reset APIs
 - `src/app/api/admin/reassign-assignments/` — assignment transfer API
+- `src/app/api/admin/access-logs/` — activity history retrieval API
 - `src/app/api/admin/activity-history/` — admin audit/history cleanup API
 - `src/app/api/admin/quick-view/` — admin quick-view user session switch API
+- `src/app/api/admin/users/[userId]/password/` — admin password reset API
 - `src/lib/quick-view.ts` — quick-view snapshot storage helpers
 - `supabase/migrations/` — schema/history migrations
 - `supabase/functions/` — edge functions
@@ -125,11 +129,20 @@ npm run check
 - `20260317141728_blog_idea_comments_and_updates.sql`
 - `20260317194000_blog_ideas_conversion_sync.sql`
 - `20260317194500_canonical_status_workflow.sql`
-- `20260318104000_wipe_app_clean_data.sql`
-- `20260318200000_create_task_assignments.sql`
-- `20260320164320_relax_writer_complete_google_doc_constraint.sql`
-- `20260320195000_add_activity_history_delete_policies.sql`
-- `20260320195100_fix_activity_history_rls.sql`
+|- `20260318104000_wipe_app_clean_data.sql`
+|- `20260318200000_create_task_assignments.sql`
+|- `20260320164320_relax_writer_complete_google_doc_constraint.sql`
+|- `20260320195000_add_activity_history_delete_policies.sql`
+|- `20260320195100_fix_activity_history_rls.sql`
+|- `20260320220000_create_access_logs.sql` (access_logs table with RLS)
+|- `20260320223000_update_access_logs_rls.sql` (RLS policy updates for user self-access)
+
+## 5.5) User preferences
+Per-user preferences are stored in `profiles`:
+- `timezone` (default: `America/New_York`) for all date/time display
+- `week_start` (default: 1 = Monday) for calendar views
+- `stale_draft_days` (default: 10) for dashboard draft flagging
+All are editable via Settings → My Profile.
 
 ## 6) Permission operations
 Primary control plane:
@@ -160,7 +173,31 @@ API:
 
 Use this to move writer/publisher assignments safely between users, instead of manual SQL updates.
 
-## 8) Admin maintenance operations
+## 8) Access history operations
+Access logging API:
+- `POST /api/actions/log-login` (client action) — logs successful login events
+- `POST /api/actions/log-dashboard-visit` (client action) — logs dashboard page visits
+- `GET /api/admin/access-logs` — retrieves activity history with filters
+
+Behavior:
+- **Non-admin users**: can only see their own dashboard visits (read-only)
+- **Admin users**: can filter by event type (All/Login/Dashboard) and user (All Users or specific)
+- **RLS policies**: allow users to see their own logs; admins see all logs
+- **Immutable**: access logs cannot be edited, only created or deleted by admins
+- **Cleanup**: included in `/api/admin/activity-history` deletion scope
+
+Access logs table (`access_logs`):
+- `id` (UUID)
+- `user_id` (FK to profiles)
+- `event_type` ('login' | 'dashboard_visit')
+- `timestamp` (UTC)
+
+Notification bell integration:
+- Top 5 recent activity notifications displayed in bell dropdown
+- "View History" link navigates to full Activity History page
+- "Clear All" button dismisses only bell dropdown view (does not delete full history)
+
+## 8.5) Admin maintenance operations
 Activity history cleanup API:
 - `/api/admin/activity-history` (`DELETE`)
 
@@ -176,7 +213,19 @@ Operational notes:
 - RLS is disabled on activity history maintenance tables to allow service-role cleanup (`20260320195000` and `20260320195100`)
 - delete-all cleanup paths use `.gt("id", "00000000-0000-0000-0000-000000000000")` to safely match all UUID rows
 
-## 9) Quick-view as user operations
+## 9) Admin password reset (test-only) operations
+Password reset API:
+- `PATCH /api/admin/users/[userId]/password` — admin sets password for any user
+
+Behavior:
+- **Authorization**: requires admin role + `manage_users` permission
+- **Password validation**: minimum 8 characters
+- **Authentication**: uses Supabase admin auth to update
+- **User experience**: user can log in with new password immediately
+- **Temporary feature**: intended for testing only; will be removed before production
+- **UI location**: Settings → User Directory → Edit User → Reset Password (Test Only) section
+
+## 10) Quick-view as user operations
 Quick-view session switch API:
 - `/api/admin/quick-view` (`POST`)
 
@@ -190,7 +239,7 @@ Return flow:
 - quick-view snapshot is stored in browser local storage
 - “Return to Admin” restores original admin session
 - sign-out clears quick-view snapshot state
-## 10) Slack operations
+## 11) Slack operations
 Function:
 - `supabase/functions/slack-notify/index.ts`
 
@@ -204,7 +253,7 @@ Deploy/update:
 supabase functions deploy slack-notify --project-ref <PROJECT_REF>
 ```
 
-## 11) Blog import name resolution (Step 1.75)
+## 12) Blog import name resolution (Step 1.75)
 ### Overview
 The system automatically matches imported writer/publisher names against existing users to prevent duplicate user creation. This runs as a mandatory step before final import.
 
@@ -282,7 +331,7 @@ Matches are scored by confidence level (highest to lowest priority):
 - User is then forced to fix validation errors before import can proceed
 - This is correct behavior since unparseable rows should not advance
 
-## 12) Legacy import operations
+## 13) Legacy import operations
 Dry run:
 ```bash
 npm run import:legacy -- --dry-run
@@ -295,7 +344,7 @@ npm run import:legacy
 
 Canonical source is the cleaned workbook (`Calendar View` sheet).
 
-## 12) Troubleshooting quick map
+## 14) Troubleshooting quick map
 ### “Comments table is missing from schema cache”
 1. run latest migrations
 2. confirm `blog_comments` exists
@@ -330,7 +379,7 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 1. run `npm run check`
 2. verify env vars
 3. check Supabase logs + Next runtime logs
-## 13) Deployment pipeline (current state)
+## 15) Deployment pipeline (current state)
 ### Environments
 - Local development: Next app + local env file (`.env.local`)
 - Hosted runtime: Vercel (Next.js app) + Supabase project (DB/Auth/Edge Functions)
@@ -354,7 +403,7 @@ Before release/promotion, run these gates in order:
 - Frontend rollback: redeploy last known-good Vercel deployment.
 - Data rollback: no single-click app-level rollback; use targeted data correction, or restore from DB backup strategy outside this repo.
 
-## 14) Monitoring, logging, and alerting
+## 16) Monitoring, logging, and alerting
 ### Logging sources used today
 - Next.js server/API logs (route handlers log via `console.log`/`console.error`)
 - Supabase logs:
@@ -372,7 +421,7 @@ Before release/promotion, run these gates in order:
 - Operational alerting is log-driven via Vercel + Supabase dashboards and manual triage.
 - Slack notifications are workflow notifications (content events), not a full error-alerting system.
 
-## 15) Common failure handling playbooks
+## 17) Common failure handling playbooks
 ### Import failures and rollback
 For `/api/blogs/import`:
 1. review returned `failures` and `failedRows` payload (row-level diagnostics)
@@ -404,7 +453,7 @@ For legacy XLSX import script (`npm run import:legacy`):
   - if unchecked, other admin profiles are preserved alongside signed-in admin
   - clears all non-admin users, content, logs, permissions, and related operational data
 
-## 16) Admin workflows (current state)
+## 18) Admin workflows (current state)
 Settings UI grouping (for operator orientation):
 - `Access & Oversight` → quick-view and permissions entrypoint
 - `Create User Account` / `Reassign User Work` / `User Directory` → team administration
@@ -431,7 +480,7 @@ Settings UI grouping (for operator orientation):
   2. if restore fails, sign out/in as admin
   3. clear stale local snapshot key `sighthound.quick_view_admin_session_v1` if needed
 
-## 17) Slack integration behavior and debugging
+## 19) Slack integration behavior and debugging
 ### Current behavior
 - Caller: `src/lib/notifications.ts` invokes Supabase function `slack-notify`.
 - Events currently sent:

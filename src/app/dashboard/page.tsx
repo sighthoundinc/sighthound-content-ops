@@ -92,7 +92,7 @@ import type {
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
-import { logAccessEvent } from "@/lib/access-logging";
+import { logDashboardVisitEvent } from "@/app/actions/log-dashboard-visit";
 
 type BlogCommentRecord = {
   id: string;
@@ -475,7 +475,7 @@ export default function DashboardPage() {
     if (!user?.id) {
       return;
     }
-    void logAccessEvent(user.id, "dashboard_visit");
+    void logDashboardVisitEvent(user.id);
   }, [user?.id]);
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),

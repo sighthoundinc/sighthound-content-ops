@@ -48,6 +48,13 @@ The home page is your daily standup—a quick view of what needs your attention:
 - You'll see "All work is on track" with a summary
 - Still shows `Go to Dashboard` and `View Calendar` for context switching
 
+## 1.7 My Profile: personal preferences
+In **Settings** → **My Profile**, update your personal settings in one place:
+- name and display details
+- timezone (default: US Eastern)
+- week start day
+- how many days before drafts are flagged for attention
+
 ## 2. Navigation and layout standards
 The sidebar order is fixed and consistent:
 1. Dashboard
@@ -277,7 +284,7 @@ Settings page organization:
 Critical rule:
 - only an admin can run `Wipe App Clean`
 - this reset removes operational data across the app while preserving the initiating admin account itself
-- the initiating admin’s own content/activity records are also wiped as part of the reset behavior
+- the initiating admin's own content/activity records are also wiped as part of the reset behavior
 - optional: enable `Also remove all other admin profiles and auth accounts` in the wipe confirmation modal to delete other admin accounts; leave it unchecked to preserve them
 
 ## 13. Interaction consistency expectations
@@ -287,3 +294,16 @@ For consistent UX:
 - table layout remains stable during sorting, filtering, and pagination updates
 
 If these behaviors are missing, report it as a bug.
+
+## 14. Password reset (test-only)
+**Note:** This feature is temporary and for testing purposes only. It will be removed before production deployment.
+
+Admins can manually reset passwords for any user (admin or non-admin) via the User Directory:
+1. Open Settings → User Directory
+2. Click "Edit" on any user
+3. Scroll to "Reset Password (Test Only)" section
+4. Enter a new password (minimum 8 characters)
+5. Click "Reset Password"
+6. Confirm the change in the modal
+
+The user can then log in with their new password. This is intended for testing and administrative purposes only.

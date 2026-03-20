@@ -1,20 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/server-permissions";
+import { authenticateRequest } from "@/lib/server-permissions";
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, "manage_users");
+    const auth = await authenticateRequest(request);
     if ("error" in auth) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
+      return NextResponse.json(
+        { error: auth.error },
+        { status: auth.status }
+      );
     }
 
-    const { adminClient } = auth.context;
+    const { adminClient, userId: currentUserId, profile } = auth.context;
+    const isAdmin = profile.role === "admin";
 
     const url = new URL(request.url);
-    const userId = url.searchParams.get("user_id");
-    const eventType = url.searchParams.get("event_type");
+    let userId: string | null = url.searchParams.get("user_id");
+    let eventType: string | null = url.searchParams.get("event_type");
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "100"), 1000);
     const offset = parseInt(url.searchParams.get("offset") || "0");
+
+    // Non-admins can only see their own logs
+    if (!isAdmin) {
+      userId = currentUserId;
+      // Non-admins cannot see login history, only dashboard visits
+      eventType = "dashboard_visit";
+    }
 
     let query = adminClient
       .from("access_logs")
@@ -23,8 +34,7 @@ export async function GET(request: NextRequest) {
         id,
         user_id,
         event_type,
-        created_at,
-        auth_users:user_id(email)
+        created_at
       `,
         { count: "exact" }
       )
@@ -48,15 +58,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Enrich with user profile data
+    // Enrich with user profile data from profiles table
     const logsWithProfiles = data
       ? await Promise.all(
           data.map(async (log: Record<string, unknown>) => {
-            const authUser = Array.isArray(log.auth_users)
-              ? log.auth_users[0]
-              : log.auth_users;
-
-            // Fetch profile to get full_name
+            // Fetch profile to get email and full_name
             const { data: profile } = await adminClient
               .from("profiles")
               .select("full_name, email")
@@ -68,7 +74,7 @@ export async function GET(request: NextRequest) {
               user_id: log.user_id,
               event_type: log.event_type,
               created_at: log.created_at,
-              email: (authUser as Record<string, unknown>)?.email || profile?.email || "",
+              email: profile?.email || "",
               full_name: profile?.full_name || "",
             };
           })

@@ -165,6 +165,18 @@ A feature is complete only if:
 5. Edge cases are handled (errors, empty states, loading states).
 6. Documentation is updated per the documentation rule.
 
+## Admin Password Reset (TEST-ONLY) (MUST)
+
+**Important**: This feature is temporary and for testing purposes only. It must be removed before production deployment.
+
+- **Location**: Settings page → Edit User modal → "Reset Password (Test Only)" section
+- **Permission**: Requires `manage_users` permission (admin-only)
+- **Behavior**: Admins can manually set passwords for any user (admin or non-admin)
+- **UI**: Password reset button in edit user modal opens confirmation dialog with password input
+- **API**: `PATCH /api/admin/users/[userId]/password` validates password (min 8 chars) and uses Supabase admin auth to update
+- **Security**: Protected by standard permission checks; intended for testing only
+- **Removal**: Delete before go-live; flag for removal in code review
+
 ## UI Table Layout Invariants (MUST)
 
 To prevent pagination breakage, pagination control misalignment, and unpredictable row height growth:
@@ -230,6 +242,18 @@ To keep idea intake predictable and avoid split editing patterns:
 1. Define helper in `src/lib/notification-helpers.ts` returning `NotificationInput`
 2. Call `pushNotification(helper(...))` in mutation handler
 3. Update SPECIFICATION.md and this guide with trigger point documentation
+
+## User Preferences (MUST)
+
+**Settings**: Per-user columns in `profiles`
+- `timezone` (default: `America/New_York`) — all date/time display
+- `week_start` (default: 1 = Monday) — calendar views
+- `stale_draft_days` (default: 10) — dashboard draft flagging
+
+**Editable by**: All users (self) + admins (for any user)
+**API endpoint**: `PATCH /api/users/profile` with `timezone`, `weekStart`, `staleDraftDays`
+**UI**: Settings → My Profile
+**Scope**: Per-user, not global
 
 ## Social Post Dedicated Editor Workflow (MUST)
 

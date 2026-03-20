@@ -466,10 +466,10 @@ export default function CalendarPage() {
     );
     if (settingsData) {
       setWeekStart(settingsData.week_start ?? 1);
-      setTimezone(settingsData.timezone ?? "America/Chicago");
+      setTimezone(profile?.timezone ?? settingsData.timezone ?? "America/New_York");
     }
     setIsLoading(false);
-  }, []);
+  }, [profile?.timezone]);
 
   useEffect(() => {
 

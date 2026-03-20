@@ -20,6 +20,7 @@ import {
   Lightbulb,
   Link2,
   LoaderCircle,
+  Lock,
   Megaphone,
   MoreHorizontal,
   NotebookPen,
@@ -65,6 +66,7 @@ const APP_ICON_MAP = {
   chevronRight: ArrowRight,
   check: Check,
   loading: LoaderCircle,
+  lock: Lock,
 } satisfies Record<string, LucideIcon>;
 
 export type AppIconName = keyof typeof APP_ICON_MAP;

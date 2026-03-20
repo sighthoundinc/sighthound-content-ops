@@ -19,6 +19,8 @@ import {
 } from "@/components/table-controls";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import type { ProfileRecord } from "@/lib/types";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
   getTablePageCount,
@@ -46,8 +48,9 @@ const EVENT_TYPE_CATEGORIES: Record<AccessLog["event_type"], string> = {
 };
 
 export default function AccessLogsPage() {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { showError } = useSystemFeedback();
+  const isAdmin = profile?.role === "admin";
 
   const [logs, setLogs] = useState<AccessLog[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -55,6 +58,10 @@ export default function AccessLogsPage() {
   const [error, setError] = useState<string | null>(null);
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
+  const [activityType, setActivityType] = useState<"all" | "login" | "dashboard_visit">("all");
+  const [selectedUserId, setSelectedUserId] = useState<string | "all">("all");
+  const [users, setUsers] = useState<ProfileRecord[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   const loadAccessLogs = useCallback(async () => {
     if (!session?.access_token) {
@@ -65,8 +72,19 @@ export default function AccessLogsPage() {
 
     const effectiveRowLimit = rowLimit === "all" ? 10000 : rowLimit;
     const offset = (currentPage - 1) * effectiveRowLimit;
+    
+    const params = new URLSearchParams();
+    params.append("limit", String(rowLimit));
+    params.append("offset", String(offset));
+    if (isAdmin && selectedUserId !== "all") {
+      params.append("user_id", selectedUserId);
+    }
+    if (isAdmin && activityType !== "all") {
+      params.append("event_type", activityType);
+    }
+    
     const response = await fetch(
-      `/api/admin/access-logs?limit=${rowLimit}&offset=${offset}`,
+      `/api/admin/access-logs?${params.toString()}`,
       {
         headers: {
           authorization: `Bearer ${session.access_token}`,
@@ -91,7 +109,33 @@ export default function AccessLogsPage() {
     setLogs(payload.logs ?? []);
     setTotalCount(payload.total ?? 0);
     setIsLoading(false);
-  }, [session?.access_token, currentPage, rowLimit, showError]);
+  }, [session?.access_token, currentPage, rowLimit, showError, isAdmin, selectedUserId, activityType]);
+
+  const loadUsers = useCallback(async () => {
+    if (!isAdmin) {
+      return;
+    }
+    setIsLoadingUsers(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: usersData, error: usersError } = await supabase
+        .from("profiles")
+        .select("id, full_name, display_name, email")
+        .order("full_name", { ascending: true });
+      if (!usersError && usersData) {
+        setUsers(usersData as ProfileRecord[]);
+      }
+    } catch (err) {
+      console.error("Failed to load users:", err);
+    }
+    setIsLoadingUsers(false);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      void loadUsers();
+    }
+  }, [isAdmin, loadUsers]);
 
   useEffect(() => {
     void loadAccessLogs();
@@ -139,19 +183,66 @@ export default function AccessLogsPage() {
   };
 
   return (
-    <ProtectedPage requiredPermissions={["manage_users"]}>
+    <ProtectedPage>
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
-            title="Access History"
-            description="View login and dashboard access history for all users"
+            title="Activity History"
+            description="View your dashboard activity"
           />
+
+          {error && (
+            <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-sm text-rose-700">{error}</p>
+            </div>
+          )}
+
+          {isAdmin && !isLoading && (
+            <div className="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-4 max-w-md">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Activity Type</label>
+                  <select
+                    value={activityType}
+                    onChange={(e) => {
+                      setActivityType(e.target.value as "all" | "login" | "dashboard_visit");
+                      setCurrentPage(1);
+                    }}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="all">All Activity</option>
+                    <option value="login">Login Only</option>
+                    <option value="dashboard_visit">Dashboard Only</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => {
+                      setSelectedUserId(e.target.value as string);
+                      setCurrentPage(1);
+                    }}
+                    disabled={isLoadingUsers}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+                  >
+                    <option value="all">All Users</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.display_name || user.full_name} ({user.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           {!isLoading && totalCount === 0 && !error && (
             <DataPageEmptyState title="No access logs yet" description="Login and dashboard activity will appear here" />
           )}
 
-          {!isLoading && totalCount > 0 && (
+          {!isLoading && totalCount > 0 && !error && (
             <>
               <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
                 <TableResultsSummary

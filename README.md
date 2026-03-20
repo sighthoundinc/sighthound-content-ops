@@ -1,5 +1,5 @@
 # sighthound-content-ops
-Internal content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
+Content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
 
 ## Product snapshot
 - Blog lifecycle operations from planning through publishing
@@ -7,6 +7,8 @@ Internal content operations platform for Sighthound marketing workflows across `
 - Queue-first dashboard for writing/publishing pipelines
 - Tasks and Calendar execution/scheduling workflows
 - Ideas + Social Posts modules
+- Workspace home (`/`) with premium quick-action navigation
+- Dedicated premium login (`/login`) with Google sign-in option that routes into workspace home (`/`)
 - Settings + Permissions admin control plane
 - Slack workflow notifications via Supabase Edge Function
 
@@ -80,8 +82,17 @@ Internal content operations platform for Sighthound marketing workflows across `
 
 ### Tasks
 - Top-3 priority summary + expandable full list
-- `⚠ Overdue` / `Due Soon` / `Upcoming` indicators
+- `Overdue` / `Due Soon` / `Upcoming` indicators
 - Priority sorting by schedule urgency and status state
+
+## Icon system standard
+- Emoji-based icons are banned from UI iconography.
+- The app uses `lucide-react` (open-source) for all operational icons.
+- Icon rendering is centralized through `src/lib/icons.tsx` (`AppIcon` + `AppIconName`) to keep:
+  - consistent line width and visual roundness
+  - fixed bounding-box usage for alignment
+  - scalable SVG behavior across densities and font weights
+- New icon usage should be added to the shared icon map first, then consumed via `AppIcon`.
 
 ### Calendar
 - Month/week views

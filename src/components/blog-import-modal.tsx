@@ -15,6 +15,7 @@ import {
   TABLE_HEAD_CLASS,
   TABLE_TEXT_TRUNCATE_CLASS,
 } from "@/lib/table";
+import { AppIcon } from "@/lib/icons";
 import { useAuth } from "@/providers/auth-provider";
 
 const REQUIRED_COLUMNS_SET = new Set([
@@ -735,7 +736,7 @@ export function BlogImportModal({
                 <p className="text-sm text-slate-600">Upload file → review rows → import.</p>
               </div>
               <Button type="button" variant="ghost" size="sm" onClick={closeModal}>
-                ✕
+                <AppIcon name="close" boxClassName="h-4 w-4" size={13} />
               </Button>
             </div>
 
@@ -999,10 +1000,16 @@ export function BlogImportModal({
                     Step 3 · Review
                   </p>
                   {selectedValidationErrors.length === 0 ? (
-                    <p className="mt-2 text-sm text-emerald-700">✓ All selected rows look good.</p>
+                    <p className="mt-2 inline-flex items-center gap-1 text-sm text-emerald-700">
+                      <AppIcon name="success" boxClassName="h-4 w-4" size={13} />
+                      All selected rows look good.
+                    </p>
                   ) : (
                     <div className="mt-2">
-                      <p className="text-sm text-rose-700 font-semibold mb-1">⚠ {selectedInvalidCount} row(s) with errors:</p>
+                      <p className="mb-1 inline-flex items-center gap-1 text-sm font-semibold text-rose-700">
+                        <AppIcon name="warning" boxClassName="h-4 w-4" size={13} />
+                        {selectedInvalidCount} row(s) with errors:
+                      </p>
                       <ul className="max-h-32 space-y-1 overflow-auto text-xs text-rose-700">
                         {selectedValidationErrors.slice(0, 5).map((validationError, index) => (
                           <li key={`${validationError.rowNumber}-${validationError.message}-${index}`}>
@@ -1032,18 +1039,36 @@ export function BlogImportModal({
               <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
                 {result.failed === 0 ? (
                   <div>
-                    <p className="text-emerald-700 font-semibold">✓ All {result.created + result.updated} blog(s) imported successfully!</p>
+                    <p className="inline-flex items-center gap-1 font-semibold text-emerald-700">
+                      <AppIcon name="success" boxClassName="h-4 w-4" size={13} />
+                      All {result.created + result.updated} blog(s) imported successfully!
+                    </p>
                     {result.created > 0 && <p className="mt-1 text-xs text-slate-600">Created: {result.created}</p>}
                     {result.updated > 0 && <p className="text-xs text-slate-600">Updated: {result.updated}</p>}
                   </div>
                 ) : (
                   <div>
                     <p className="text-slate-900 font-semibold">Import summary</p>
-                    <p className="mt-2 text-sm space-y-1">
-                      {result.created > 0 && <div className="text-emerald-700">✓ Created {result.created}</div>}
-                      {result.updated > 0 && <div className="text-blue-700">↻ Updated {result.updated}</div>}
-                      {result.failed > 0 && <div className="text-rose-700 font-semibold">✗ Failed {result.failed}</div>}
-                    </p>
+                    <div className="mt-2 space-y-1 text-sm">
+                      {result.created > 0 && (
+                        <div className="inline-flex items-center gap-1 text-emerald-700">
+                          <AppIcon name="success" boxClassName="h-4 w-4" size={13} />
+                          Created {result.created}
+                        </div>
+                      )}
+                      {result.updated > 0 && (
+                        <div className="inline-flex items-center gap-1 text-blue-700">
+                          <AppIcon name="info" boxClassName="h-4 w-4" size={13} />
+                          Updated {result.updated}
+                        </div>
+                      )}
+                      {result.failed > 0 && (
+                        <div className="inline-flex items-center gap-1 font-semibold text-rose-700">
+                          <AppIcon name="error" boxClassName="h-4 w-4" size={13} />
+                          Failed {result.failed}
+                        </div>
+                      )}
+                    </div>
                     {result.failed > 0 ? (
                       <div className="mt-3 space-y-2">
                         <div>

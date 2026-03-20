@@ -4,8 +4,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { AppIcon } from "@/lib/icons";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
+const LOGIN_HIGHLIGHTS = [
+  "See upcoming and overdue publishing work in one calendar view",
+  "Keep blog drafts, reviews, and publish dates moving on schedule",
+  "Coordinate social post creation, captioning, scheduling, and live links",
+] as const;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,7 +25,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (session) {
-      router.replace("/dashboard");
+      router.replace("/");
     }
   }, [router, session]);
 
@@ -48,7 +54,7 @@ export default function LoginPage() {
     }
 
     setIsSubmitting(false);
-    router.replace("/dashboard");
+    router.replace("/");
   };
 
   const handleGoogleSignIn = async () => {
@@ -60,7 +66,7 @@ export default function LoginPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${appUrl}/dashboard`,
+        redirectTo: `${appUrl}/`,
       },
     });
     if (oauthError) {
@@ -69,73 +75,107 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Use Google Workspace (`@sighthound.com`) or admin-managed credentials.
-        </p>
-
-        <button
-          type="button"
-          className="mt-4 w-full rounded-md border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
-          onClick={() => {
-            void handleGoogleSignIn();
-          }}
-        >
-          Continue with Google
-        </button>
-
-        <div className="my-5 flex items-center gap-3">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs uppercase tracking-wide text-slate-500">
-            Or
+    <main className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white px-4 py-10 sm:px-6 lg:py-16">
+      <div className="mx-auto grid w-full max-w-6xl items-stretch gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-sm backdrop-blur-sm sm:p-10">
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+            <AppIcon
+              name="success"
+              boxClassName="h-4 w-4"
+              size={13}
+              className="text-emerald-600"
+            />
+            Secure Workspace Access
           </span>
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            Sighthound Content Ops
+          </h1>
+          <p className="mt-3 max-w-xl text-base text-slate-600 sm:text-lg">
+            Manage your content calendar across blogs and social posts from one place,
+            with clear day-to-day publishing priorities.
+          </p>
+          <ul className="mt-6 space-y-3">
+            {LOGIN_HIGHLIGHTS.map((highlight) => (
+              <li key={highlight} className="flex items-start gap-2 text-sm text-slate-700">
+                <AppIcon
+                  name="check"
+                  boxClassName="mt-0.5 h-4 w-4"
+                  size={13}
+                  className="text-slate-700"
+                />
+                <span>{highlight}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-        <form className="space-y-3" onSubmit={handlePasswordSignIn}>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">
-              Email
-            </span>
-            <input
-              required
-              type="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-              }}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="you@sighthound.com"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">
-              Password
-            </span>
-            <input
-              required
-              type="password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-              }}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="••••••••"
-            />
-          </label>
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">Sign in</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Google Workspace (`@sighthound.com`) or admin-managed credentials.
+          </p>
 
           <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+            onClick={() => {
+              void handleGoogleSignIn();
+            }}
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            <AppIcon name="google" boxClassName="h-4 w-4" size={14} className="text-slate-700" />
+            Continue with Google
           </button>
 
-        </form>
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+              or email sign in
+            </span>
+            <div className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <form className="space-y-3" onSubmit={handlePasswordSignIn}>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
+                Email
+              </span>
+              <input
+                required
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                }}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                placeholder="you@sighthound.com"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
+                Password
+              </span>
+              <input
+                required
+                type="password"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                }}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                placeholder="••••••••"
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-1 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+        </section>
       </div>
     </main>
   );

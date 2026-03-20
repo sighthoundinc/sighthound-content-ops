@@ -1,4 +1,5 @@
 import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
+import type { AppIconName } from "@/lib/icons";
 export interface Command {
   id: string;
   label: string;
@@ -7,7 +8,7 @@ export interface Command {
   actionType: "navigate" | "create" | "action";
   targetUrl?: string;
   actionId?: "import_blogs" | "export_current_view" | "clear_all_filters";
-  icon?: string;
+  icon?: AppIconName;
   keyboard?: string;
 }
 
@@ -20,7 +21,7 @@ export const allCommands: Command[] = [
     category: "navigation",
     actionType: "navigate",
     targetUrl: "/dashboard",
-    icon: "Home",
+    icon: "home",
   },
   {
     id: "nav-calendar",
@@ -29,7 +30,7 @@ export const allCommands: Command[] = [
     category: "navigation",
     actionType: "navigate",
     targetUrl: "/calendar",
-    icon: "Calendar",
+    icon: "calendar",
   },
   {
     id: "nav-blogs",
@@ -38,7 +39,7 @@ export const allCommands: Command[] = [
     category: "navigation",
     actionType: "navigate",
     targetUrl: "/blogs",
-    icon: "BookOpen",
+    icon: "blog",
   },
   {
     id: "nav-social-posts",
@@ -47,7 +48,7 @@ export const allCommands: Command[] = [
     category: "navigation",
     actionType: "navigate",
     targetUrl: "/social-posts",
-    icon: "Share2",
+    icon: "social",
   },
   {
     id: "nav-tasks",
@@ -56,7 +57,7 @@ export const allCommands: Command[] = [
     category: "navigation",
     actionType: "navigate",
     targetUrl: "/tasks",
-    icon: "CheckSquare",
+    icon: "task",
   },
   {
     id: "nav-ideas",
@@ -65,7 +66,7 @@ export const allCommands: Command[] = [
     category: "navigation",
     actionType: "navigate",
     targetUrl: "/ideas",
-    icon: "Lightbulb",
+    icon: "idea",
   },
   {
     id: "nav-settings",
@@ -74,7 +75,7 @@ export const allCommands: Command[] = [
     category: "navigation",
     actionType: "navigate",
     targetUrl: "/settings",
-    icon: "Settings",
+    icon: "settings",
   },
 
   // Create Commands
@@ -84,7 +85,7 @@ export const allCommands: Command[] = [
     description: "Create a new blog post",
     category: "create",
     actionType: "create",
-    icon: "Plus",
+    icon: "plus",
     keyboard: MAIN_CREATE_SHORTCUTS.newBlog,
   },
   {
@@ -93,7 +94,7 @@ export const allCommands: Command[] = [
     description: "Create a new social post",
     category: "create",
     actionType: "create",
-    icon: "Plus",
+    icon: "plus",
     keyboard: MAIN_CREATE_SHORTCUTS.newSocialPost,
   },
   {
@@ -102,7 +103,7 @@ export const allCommands: Command[] = [
     description: "Create a new idea",
     category: "create",
     actionType: "create",
-    icon: "Plus",
+    icon: "plus",
     keyboard: MAIN_CREATE_SHORTCUTS.newIdea,
   },
   // Global Action Commands
@@ -113,7 +114,7 @@ export const allCommands: Command[] = [
     category: "actions",
     actionType: "action",
     actionId: "import_blogs",
-    icon: "Upload",
+    icon: "upload",
   },
   {
     id: "action-export-current-view",
@@ -122,7 +123,7 @@ export const allCommands: Command[] = [
     category: "actions",
     actionType: "action",
     actionId: "export_current_view",
-    icon: "Download",
+    icon: "download",
   },
   {
     id: "action-clear-all-filters",
@@ -131,6 +132,6 @@ export const allCommands: Command[] = [
     category: "actions",
     actionType: "action",
     actionId: "clear_all_filters",
-    icon: "FilterX",
+    icon: "filterX",
   },
 ];

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { NameResolutionResult, UserCandidate } from "@/lib/user-matching";
 import { Button } from "@/components/button";
+import { AppIcon } from "@/lib/icons";
 
 export type NameResolution = {
   action: "use_existing" | "create_new";
@@ -255,7 +256,11 @@ function NameResolutionItem({
             : "border-gray-300 text-gray-700 hover:border-gray-400"
         }`}
       >
-        {isCreateNewSelected && <span className="mr-2">✓</span>}
+        {isCreateNewSelected && (
+          <span className="mr-2 inline-flex">
+            <AppIcon name="success" boxClassName="h-4 w-4" size={13} />
+          </span>
+        )}
         Create New User
       </button>
     </div>
@@ -301,7 +306,11 @@ function CandidateButton({
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-900">{candidate.full_name}</span>
             {isBestMatch && <span className="text-xs font-semibold text-green-700">★ Recommended</span>}
-            {isSelected && <span className="text-sm font-semibold text-blue-700">✓</span>}
+            {isSelected && (
+              <span className="inline-flex text-blue-700">
+                <AppIcon name="success" boxClassName="h-4 w-4" size={13} />
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-600 mt-1">{candidate.email}</p>
           <div className="flex gap-3 mt-1">

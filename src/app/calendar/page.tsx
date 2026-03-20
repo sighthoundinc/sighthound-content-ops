@@ -68,6 +68,7 @@ import {
 import { getSiteLabel, getSiteShortLabel } from "@/lib/site";
 import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { AppIcon } from "@/lib/icons";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
   getTablePageCount,
@@ -261,7 +262,12 @@ function CalendarBlogEventCard({
       <span className={`self-stretch w-1 rounded-full ${getBlogBarClass(blog.site)}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1 text-[11px] text-slate-600">
-          <span aria-hidden>📝</span>
+          <AppIcon
+            name="writing"
+            boxClassName="h-4 w-4"
+            size={12}
+            className="text-slate-500"
+          />
           <span className="font-semibold">{getSiteShortLabel(blog.site)} Blog</span>
         </div>
         <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
@@ -308,7 +314,12 @@ function CalendarSocialEventCard({
       <span className="self-stretch w-1 rounded-full bg-orange-500" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1 text-[11px] text-slate-600">
-          <span aria-hidden>📣</span>
+          <AppIcon
+            name="megaphone"
+            boxClassName="h-4 w-4"
+            size={12}
+            className="text-slate-500"
+          />
           <span className="font-semibold">Social</span>
         </div>
         <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
@@ -820,7 +831,7 @@ export default function CalendarPage() {
         type: "success",
         message: "Status updated.",
         notification: {
-          icon: "📅",
+          icon: "calendar",
           message: "Calendar event rescheduled",
           href: `/calendar`,
         },
@@ -851,7 +862,7 @@ export default function CalendarPage() {
       type: "success",
       message: "Status updated.",
       notification: {
-        icon: "📅",
+        icon: "calendar",
         message: "Calendar event rescheduled",
         href: `/calendar`,
       },
@@ -1114,7 +1125,12 @@ export default function CalendarPage() {
                         );
                       }}
                     >
-                      {hasBlogsEnabled ? "✓ " : ""}Blogs
+                      <span className="inline-flex items-center gap-1">
+                        {hasBlogsEnabled ? (
+                          <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                        ) : null}
+                        Blogs
+                      </span>
                     </button>
                     <button
                       type="button"
@@ -1129,7 +1145,12 @@ export default function CalendarPage() {
                         );
                       }}
                     >
-                      {hasSocialPostsEnabled ? "✓ " : ""}Social Posts
+                      <span className="inline-flex items-center gap-1">
+                        {hasSocialPostsEnabled ? (
+                          <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                        ) : null}
+                        Social Posts
+                      </span>
                     </button>
                   </div>
                   <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
@@ -1525,8 +1546,13 @@ export default function CalendarPage() {
                         scheduledDate < todayDateKey &&
                         activeBlog.publisher_status !== "completed";
                       return isOverdue ? (
-                        <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700">
-                          ⚠ Overdue
+                        <span className="inline-flex items-center justify-center gap-1 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700">
+                          <AppIcon
+                            name="warning"
+                            boxClassName="h-3.5 w-3.5"
+                            size={11}
+                          />
+                          Overdue
                         </span>
                       ) : null;
                     })()}

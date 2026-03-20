@@ -10,6 +10,11 @@ For end-user instructions, see `HOW_TO_USE_APP.md`.
 - Backend: Supabase (Postgres, Auth, RLS, triggers/functions)
 - Integration: Slack via `supabase/functions/slack-notify`
 - Authorization: permission matrix + role templates + DB checks
+- Entry routing:
+  - signed-out traffic to protected routes is redirected to `/login` by middleware
+  - `/login` presents a premium split sign-in layout (brand context + focused auth card)
+  - successful login routes authenticated users to `/` workspace home
+  - clicking the top-left Sighthound brand in the app shell routes to `/`
 
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
 
@@ -21,6 +26,13 @@ Content mutations (blogs, stages, comments, derived status) are DB-authoritative
 - Column definitions defined at page level with type safety
 - StatusBadgeSystem used throughout for status rendering
 - Zero dead code, production-ready quality (TypeScript 0 errors, ESLint 0 errors)
+
+### Icon system operations standard
+- Icon provider: `lucide-react` (open-source SVG icon set)
+- Shared app abstraction: `src/lib/icons.tsx` (`AppIcon`, `AppIconName`)
+- Emoji-based icons are disallowed in UI control/status/notification surfaces
+- Any icon additions should be registered in the shared icon map before use
+- Validation expectation after icon changes: run `npm run check`
 
 ## 2) Key directories
 - `src/` — app routes/components/libs

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/providers/auth-provider";
-import { SystemFeedbackProvider } from "@/providers/system-feedback-provider";
+import { AlertsProvider } from "@/providers/alerts-provider";
+import { NotificationsProvider } from "@/providers/notifications-provider";
 import { CommandPalette } from "@/components/command-palette";
 import { GlobalQuickCreate } from "@/components/global-quick-create";
 
@@ -18,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Sighthound Content Ops",
-  description: "Internal dashboard for Sighthound and Redactor blog operations",
+  description: "Editorial operations dashboard for Sighthound and Redactor workflows",
 };
 
 export default function RootLayout({
@@ -31,13 +32,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SystemFeedbackProvider>
-          <AuthProvider>
-            {children}
-            <CommandPalette />
-            <GlobalQuickCreate />
-          </AuthProvider>
-        </SystemFeedbackProvider>
+        <AlertsProvider>
+          <NotificationsProvider>
+            <AuthProvider>
+              {children}
+              <CommandPalette />
+              <GlobalQuickCreate />
+            </AuthProvider>
+          </NotificationsProvider>
+        </AlertsProvider>
       </body>
     </html>
   );

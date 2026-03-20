@@ -34,7 +34,12 @@ import type {
 } from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
+import { useNotifications } from "@/providers/notifications-provider";
+import {
+  blogWriterStatusChangedNotification,
+  blogPublisherStatusChangedNotification,
+} from "@/lib/notification-helpers";
 
 type BlogFormState = {
   title: string;
@@ -125,7 +130,8 @@ export default function BlogDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { hasPermission, user, profile } = useAuth();
-  const { showError, showSuccess } = useSystemFeedback();
+  const { showError, showSuccess } = useAlerts();
+  const { pushNotification } = useNotifications();
   const blogId = params.id;
 
   const [blog, setBlog] = useState<BlogRecord | null>(null);
@@ -565,12 +571,26 @@ export default function BlogDetailPage() {
       return;
     }
 
+    const previousStatus = blog.writer_status;
     await updateBlog(
       {
         writer_status: form.writer_status,
         google_doc_url: form.google_doc_url.trim() || null,
       },
-      "Writer updates saved."
+      "Writer updates saved.",
+      previousStatus !== form.writer_status
+        ? async () => {
+            pushNotification(
+              blogWriterStatusChangedNotification(
+                blog.title,
+                previousStatus,
+                form.writer_status,
+                profile?.full_name ?? null,
+                blog.id
+              )
+            );
+          }
+        : undefined
     );
   };
 
@@ -596,12 +616,26 @@ export default function BlogDetailPage() {
       return;
     }
 
+    const previousStatus = blog.publisher_status;
     await updateBlog(
       {
         publisher_status: form.publisher_status,
         live_url: form.live_url.trim() || null,
       },
-      "Publisher updates saved."
+      "Publisher updates saved.",
+      previousStatus !== form.publisher_status
+        ? async () => {
+            pushNotification(
+              blogPublisherStatusChangedNotification(
+                blog.title,
+                previousStatus,
+                form.publisher_status,
+                profile?.full_name ?? null,
+                blog.id
+              )
+            );
+          }
+        : undefined
     );
   };
 
@@ -628,6 +662,15 @@ export default function BlogDetailPage() {
       },
       "Writing marked complete.",
       async () => {
+        pushNotification(
+          blogWriterStatusChangedNotification(
+            blog.title,
+            blog.writer_status,
+            "completed",
+            profile?.full_name ?? null,
+            blog.id
+          )
+        );
         await notifySlack({
           eventType: "writer_completed",
           blogId: blog.id,
@@ -668,6 +711,15 @@ export default function BlogDetailPage() {
       },
       "Publishing marked complete.",
       async () => {
+        pushNotification(
+          blogPublisherStatusChangedNotification(
+            blog.title,
+            blog.publisher_status,
+            "completed",
+            profile?.full_name ?? null,
+            blog.id
+          )
+        );
         await notifySlack({
           eventType: "published",
           blogId: blog.id,

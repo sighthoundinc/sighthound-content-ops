@@ -9,6 +9,7 @@ import { DataPageHeader } from "@/components/data-page";
 import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
+import { AppIcon } from "@/lib/icons";
 import {
   SOCIAL_PLATFORMS,
   SOCIAL_PLATFORM_LABELS,
@@ -868,7 +869,11 @@ export default function SocialPostEditorPage() {
                             item.done ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
                           }`}
                         >
-                          {item.done ? "✓" : "•"}
+                          {item.done ? (
+                            <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                          ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+                          )}
                         </span>
                         <span>{item.label}</span>
                         <span className="text-xs text-slate-500">
@@ -953,25 +958,41 @@ export default function SocialPostEditorPage() {
                 <ul className="space-y-1">
                   <li className="flex items-center gap-2 text-sm text-slate-700">
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {hasTitle && hasPlatform && hasPublishDate && hasCanvaLink ? "✓" : "1"}
+                      {hasTitle && hasPlatform && hasPublishDate && hasCanvaLink ? (
+                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                      ) : (
+                        "1"
+                      )}
                     </span>
                     Setup
                   </li>
                   <li className="flex items-center gap-2 text-sm text-slate-700">
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {hasLinkedBlog ? "✓" : "2"}
+                      {hasLinkedBlog ? (
+                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                      ) : (
+                        "2"
+                      )}
                     </span>
                     Link Context (optional)
                   </li>
                   <li className="flex items-center gap-2 text-sm text-slate-700">
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {hasCaption ? "✓" : "3"}
+                      {hasCaption ? (
+                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                      ) : (
+                        "3"
+                      )}
                     </span>
                     Write Caption
                   </li>
                   <li className="flex items-center gap-2 text-sm text-slate-700">
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {form.status === "published" ? "✓" : "4"}
+                      {form.status === "published" ? (
+                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                      ) : (
+                        "4"
+                      )}
                     </span>
                     Review & Publish
                   </li>

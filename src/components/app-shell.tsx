@@ -21,24 +21,27 @@ import {
 } from "@/lib/shortcuts";
 import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { AppIcon, type AppIconName } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useNotifications } from "@/providers/notifications-provider";
 
-const ENTRY_POINT_NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/tasks", label: "My Tasks" },
+type NavItem = { href: string; label: string; icon: AppIconName };
+
+const ENTRY_POINT_NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: "home" },
+  { href: "/tasks", label: "My Tasks", icon: "task" },
 ];
 
-const CONTENT_WORKFLOW_NAV_ITEMS = [
-  { href: "/ideas", label: "Ideas" },
-  { href: "/blogs", label: "Blogs" },
-  { href: "/social-posts", label: "Social Posts" },
+const CONTENT_WORKFLOW_NAV_ITEMS: NavItem[] = [
+  { href: "/ideas", label: "Ideas", icon: "idea" },
+  { href: "/blogs", label: "Blogs", icon: "blog" },
+  { href: "/social-posts", label: "Social Posts", icon: "social" },
 ];
 
-const SECONDARY_NAV_ITEMS = [
-  { href: "/calendar", label: "Calendar" },
-  { href: "/blogs/cardboard", label: "CardBoard" },
+const SECONDARY_NAV_ITEMS: NavItem[] = [
+  { href: "/calendar", label: "Calendar", icon: "calendar" },
+  { href: "/blogs/cardboard", label: "CardBoard", icon: "blog" },
 ];
 type ShortcutDefinition = {
   id: string;
@@ -83,9 +86,9 @@ export function AppShell({
   const {
     notifications,
     unreadCount,
-    markNotificationAsRead,
-    clearNotifications,
-  } = useSystemFeedback();
+    markAsRead,
+    clearAll,
+  } = useNotifications();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [activeQuickCreateIndex, setActiveQuickCreateIndex] = useState(0);
@@ -412,7 +415,7 @@ export function AppShell({
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <Link
-            href="/dashboard"
+            href="/"
             className="flex items-center gap-3 rounded-md px-1 py-1 hover:bg-slate-50"
             aria-label="Sighthound Content Ops"
           >
@@ -436,13 +439,13 @@ export function AppShell({
             <div className="relative" ref={notificationPanelRef}>
               <button
                 type="button"
-                className="text-lg transition hover:opacity-70"
+                className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-800"
                 aria-label="Notifications"
                 onClick={() => {
                   setIsNotificationPanelOpen((previous) => !previous);
                 }}
               >
-                🔔
+                <AppIcon name="bell" boxClassName="h-5 w-5" size={16} />
                 {unreadCount > 0 ? (
                   <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     {unreadCount}
@@ -458,10 +461,10 @@ export function AppShell({
                       variant="secondary"
                       size="xs"
                       onClick={() => {
-                        clearNotifications();
+                        clearAll();
                       }}
                     >
-                      Mark all as read
+                      Clear all
                     </Button>
                   </div>
                   {notifications.length === 0 ? (
@@ -481,20 +484,30 @@ export function AppShell({
                                 : "border-indigo-200 bg-indigo-50"
                             )}
                             onClick={() => {
-                              markNotificationAsRead(notification.id);
+                              markAsRead(notification.id);
                               setIsNotificationPanelOpen(false);
                               if (notification.href) {
                                 router.push(notification.href);
                               }
                             }}
                           >
-                            <p className="text-sm text-slate-800">
-                              <span className="mr-2">{notification.icon}</span>
-                              {notification.message}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {formatNotificationAge(notification.createdAt)}
-                            </p>
+                            <div className="flex items-start gap-2">
+                              <span className="mt-0.5 inline-flex shrink-0">
+                                <AppIcon
+                                  name="bell"
+                                  boxClassName="h-4 w-4"
+                                  size={14}
+                                  className="text-blue-600"
+                                />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-slate-900 text-sm">{notification.title}</p>
+                                <p className="mt-0.5 text-sm text-slate-700">{notification.message}</p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {formatNotificationAge(notification.createdAt)}
+                                </p>
+                              </div>
+                            </div>
                           </button>
                         </li>
                       ))}
@@ -595,11 +608,11 @@ export function AppShell({
                         : "text-slate-700 font-medium hover:bg-slate-50"
                     )}
                   >
-                    <span
-                      className={cn(
-                        "inline-block h-2 w-2 rounded-full",
-                        isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
-                      )}
+                    <AppIcon
+                      name={item.icon}
+                      boxClassName="h-4 w-4"
+                      size={14}
+                      className={isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
                     />
                     {item.label}
                   </Link>
@@ -621,11 +634,11 @@ export function AppShell({
                         : "text-slate-700 font-medium hover:bg-slate-50"
                     )}
                   >
-                    <span
-                      className={cn(
-                        "inline-block h-2 w-2 rounded-full",
-                        isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
-                      )}
+                    <AppIcon
+                      name={item.icon}
+                      boxClassName="h-4 w-4"
+                      size={14}
+                      className={isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
                     />
                     {item.label}
                   </Link>
@@ -647,11 +660,11 @@ export function AppShell({
                         : "text-slate-700 font-medium hover:bg-slate-50"
                     )}
                   >
-                    <span
-                      className={cn(
-                        "inline-block h-2 w-2 rounded-full",
-                        isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
-                      )}
+                    <AppIcon
+                      name={item.icon}
+                      boxClassName="h-4 w-4"
+                      size={14}
+                      className={isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
                     />
                     {item.label}
                   </Link>
@@ -669,13 +682,11 @@ export function AppShell({
                     : "text-slate-700 font-medium hover:bg-slate-50"
                 )}
               >
-                <span
-                  className={cn(
-                    "inline-block h-2 w-2 rounded-full",
-                    pathname === "/settings"
-                      ? "bg-white"
-                      : "bg-slate-300 group-hover:bg-slate-500"
-                  )}
+                <AppIcon
+                  name="settings"
+                  boxClassName="h-4 w-4"
+                  size={14}
+                  className={pathname === "/settings" ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
                 />
                 Settings
               </Link>
@@ -689,13 +700,11 @@ export function AppShell({
                       : "text-slate-700 font-medium hover:bg-slate-50"
                   )}
                 >
-                  <span
-                    className={cn(
-                      "inline-block h-2 w-2 rounded-full",
-                      pathname === "/settings/permissions"
-                        ? "bg-white"
-                        : "bg-slate-300 group-hover:bg-slate-500"
-                    )}
+                  <AppIcon
+                    name="settings"
+                    boxClassName="h-4 w-4"
+                    size={14}
+                    className={pathname === "/settings/permissions" ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
                   />
                   Permissions
                 </Link>

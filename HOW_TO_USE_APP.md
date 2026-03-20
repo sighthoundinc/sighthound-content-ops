@@ -13,6 +13,41 @@ It does NOT:
 - write full content for you
 - publish to your website or social channels automatically
 
+## 1.5 Access and entry flow
+- Signed-out users are routed to `Login` (`/login`)
+- `Login` supports:
+  - `Continue with Google` (Google Workspace SSO)
+  - email/password credentials (admin-managed accounts)
+- `Login` uses a decluttered premium layout:
+  - brand context on the left
+  - focused sign-in card on the right
+- After signing in, users are routed to the workspace home page (`/`)
+
+## 1.6 Daily Standup Home Page
+The home page is your daily standup—a quick view of what needs your attention:
+
+**Layout:**
+- Top-left: greeting with your name
+- Top-right: your role(s) badge (e.g., "Writer, Publisher (Multiple roles)")
+- Main section: actionable work buckets showing:
+  - items needing your revision
+  - items in progress
+  - items approved and waiting for next stage
+  - social posts awaiting action
+
+**Behavior:**
+- Shows only items **assigned to you** in your role
+- High-priority items (revision requests, awaiting approval) are highlighted in red
+- Clicking any bucket navigates to `My Tasks` with that filter pre-applied
+- Filters auto-clear after navigation (normal browsing shows default view)
+- Bottom buttons provide quick links:
+  - `Go to Dashboard` (full view, all filters available)
+  - `View Calendar` (schedule overview)
+
+**When all work is caught up:**
+- You'll see "All work is on track" with a summary
+- Still shows `Go to Dashboard` and `View Calendar` for context switching
+
 ## 2. Navigation and layout standards
 The sidebar order is fixed and consistent:
 1. Dashboard
@@ -33,6 +68,7 @@ Filter groups in the left sidebar:
 Behavior:
 - both filter groups are collapsed by default
 - each group toggles independently (opening one does not open/close the other)
+- clicking the top-left Sighthound brand in the header always returns to workspace home (`/`)
 
 ## 3. Quick role-based start
 ### Writer
@@ -83,6 +119,13 @@ Action order is consistent across pages:
 View toggles (such as Table/Pipeline):
 - stay aligned on the far right
 - related buttons appear on the left side of the toggle
+
+## 4.5 Icon style standard
+To keep the interface clean and predictable:
+- UI icons use a consistent open-source line icon set
+- emoji-style icons are not used for app controls, status markers, or notifications
+- icons are shown inside consistent bounding boxes for alignment
+- icon weight/shape is intentionally consistent across pages
 
 ## 5. Search and filter behavior
 Search is:

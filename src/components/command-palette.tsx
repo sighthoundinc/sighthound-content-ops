@@ -3,26 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import type { Command } from "@/lib/command-palette-config";
-
-const ICON_EMOJI_MAP: Record<string, string> = {
-  Home: "🏠",
-  Calendar: "📅",
-  BookOpen: "📖",
-  Share2: "📤",
-  CheckSquare: "☑️",
-  Lightbulb: "💡",
-  Settings: "⚙️",
-  Plus: "➕",
-  Command: "⌘",
-  Upload: "📥",
-  Download: "📤",
-  FilterX: "🧹",
-};
-
-function getIcon(iconName?: string): string {
-  if (!iconName) return "→";
-  return ICON_EMOJI_MAP[iconName] || "→";
-}
+import { AppIcon } from "@/lib/icons";
 
 export function CommandPalette() {
   const {
@@ -91,7 +72,12 @@ export function CommandPalette() {
           {/* Search Input */}
           <div className="border-b border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <span className="text-gray-400 text-lg">🔍</span>
+              <AppIcon
+                name="search"
+                className="text-gray-400"
+                boxClassName="h-5 w-5"
+                size={16}
+              />
               <input
                 ref={inputRef}
                 type="text"
@@ -153,8 +139,13 @@ export function CommandPalette() {
                             role="option"
                             aria-selected={isSelected}
                           >
-                            <div className="flex-shrink-0 text-lg">
-                              {getIcon(command.icon)}
+                            <div className="flex-shrink-0">
+                              <AppIcon
+                                name={command.icon ?? "chevronRight"}
+                                className={isSelected ? "text-blue-700" : "text-gray-500"}
+                                boxClassName="h-6 w-6"
+                                size={16}
+                              />
                             </div>
                             <div className="flex-1">
                               <div className="font-medium">{command.label}</div>

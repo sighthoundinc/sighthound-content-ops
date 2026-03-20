@@ -9,6 +9,7 @@ import {
 import { formatDisplayDate } from "@/lib/utils";
 import { getSiteBadgeClasses, getSiteShortLabel } from "@/lib/site";
 import { getWorkflowStage } from "@/lib/status";
+import { AppIcon } from "@/lib/icons";
 import type {
   BlogRecord,
   PublisherStageStatus,
@@ -462,8 +463,13 @@ export function DashboardTable({
                             ) : null}
                             {rowWorkflowStage === "published" &&
                             (publishedDelayDays ?? 0) > 0 ? (
-                              <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                ⚠ Delayed {publishedDelayDays} days
+                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                <AppIcon
+                                  name="warning"
+                                  boxClassName="h-3.5 w-3.5"
+                                  size={11}
+                                />
+                                Delayed {publishedDelayDays} days
                               </span>
                             ) : null}
                           </div>

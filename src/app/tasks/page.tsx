@@ -49,7 +49,12 @@ import type {
 } from "@/lib/types";
 import { formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
+import { useNotifications } from "@/providers/notifications-provider";
+import {
+  blogWriterStatusChangedNotification,
+  blogPublisherStatusChangedNotification,
+} from "@/lib/notification-helpers";
 
 type TaskKind = "writer" | "publisher";
 
@@ -202,7 +207,7 @@ function getTaskReason({
   statusPriority: number;
 }) {
   if (isDelayed) {
-    return "⚠ Overdue";
+    return "Overdue";
   }
   if (statusPriority === 2) {
     return "Upcoming";
@@ -211,8 +216,9 @@ function getTaskReason({
 }
 
 export default function MyTasksPage() {
-  const { user, hasPermission } = useAuth();
-  const { showSaving, showSuccess, showError, updateStatus } = useSystemFeedback();
+  const { user, hasPermission, profile } = useAuth();
+  const { showSaving, showSuccess, showError, updateAlert } = useAlerts();
+  const { pushNotification } = useNotifications();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -948,8 +954,8 @@ export default function MyTasksPage() {
         : { publisher_status: nextStatus as PublisherStageStatus };
 
     const supabase = getSupabaseBrowserClient();
-    const statusId = showSaving("Saving changes…");
     setSavingTaskId(task.id);
+    const statusId = showSaving("Saving changes…");
 
     let { data, error: updateError } = await supabase
       .from("blogs")
@@ -970,7 +976,7 @@ export default function MyTasksPage() {
     }
 
     if (updateError) {
-      updateStatus(statusId, {
+      updateAlert(statusId, {
         type: "error",
         message: `Couldn't save. ${updateError.message}`,
         actionLabel: "Retry",
@@ -982,6 +988,7 @@ export default function MyTasksPage() {
       return;
     }
 
+    const previousBlog = blogs.find((b) => b.id === task.blogId);
     setBlogs((previous) =>
       normalizeBlogRows(
         previous.map((blog) =>
@@ -991,29 +998,34 @@ export default function MyTasksPage() {
     );
     setSavingTaskId(null);
 
-    const isPublishCompletion =
-      task.kind === "publisher" && (nextStatus as PublisherStageStatus) === "completed";
-    const notification = isPublishCompletion
-      ? {
-          icon: "✅",
-          message: `Blog published: ${task.title}`,
-          href: `/blogs/${task.blogId}`,
-        }
-      : task.kind === "publisher"
-        ? {
-            icon: "📝",
-            message: `Publishing status updated: ${task.title}`,
-            href: `/blogs/${task.blogId}`,
-          }
-        : {
-            icon: "📝",
-            message: `Writing status updated: ${task.title}`,
-            href: `/blogs/${task.blogId}`,
-          };
-    updateStatus(statusId, {
+    // Emit workflow notification if status actually changed
+    if (previousBlog) {
+      if (task.kind === "writer" && previousBlog.writer_status !== nextStatus) {
+        pushNotification(
+          blogWriterStatusChangedNotification(
+            task.title,
+            previousBlog.writer_status,
+            nextStatus as WriterStageStatus,
+            profile?.full_name ?? null,
+            task.blogId
+          )
+        );
+      } else if (task.kind === "publisher" && previousBlog.publisher_status !== nextStatus) {
+        pushNotification(
+          blogPublisherStatusChangedNotification(
+            task.title,
+            previousBlog.publisher_status,
+            nextStatus as PublisherStageStatus,
+            profile?.full_name ?? null,
+            task.blogId
+          )
+        );
+      }
+    }
+
+    updateAlert(statusId, {
       type: "success",
       message: "Status updated.",
-      notification,
     });
   };
 
@@ -1047,7 +1059,7 @@ export default function MyTasksPage() {
           </Link>
           <p className="mt-1 text-xs text-slate-500">
             {task.kind === "writer" ? "Writer task" : "Publisher task"}
-            {task.isDelayed ? " · ⚠ Overdue" : ""}
+            {task.isDelayed ? " · Overdue" : ""}
           </p>
         </div>
       ),

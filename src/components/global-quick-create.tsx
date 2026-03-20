@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { KbdShortcut } from "@/components/kbd-shortcut";
 import { MAIN_CREATE_SHORTCUTS, QUICK_CREATE_SHORTCUT_KEY } from "@/lib/shortcuts";
+import { AppIcon, type AppIconName } from "@/lib/icons";
 type QuickCreateAction = {
   id: "new-blog" | "new-idea" | "new-social-post";
   label: "New Blog" | "New Idea" | "New Social Post";
-  emoji: string;
+  icon: AppIconName;
   description: string;
   onClick: () => void;
   shortcut: string;
@@ -41,7 +42,7 @@ export function GlobalQuickCreate() {
       {
         id: "new-blog",
         label: "New Blog",
-        emoji: "📖",
+        icon: "blog",
         description: "Create a new blog post",
         onClick: handleCreateBlog,
         shortcut: MAIN_CREATE_SHORTCUTS.newBlog,
@@ -50,7 +51,7 @@ export function GlobalQuickCreate() {
       {
         id: "new-social-post",
         label: "New Social Post",
-        emoji: "📤",
+        icon: "social",
         description: "Create a new social media post",
         onClick: handleCreateSocialPost,
         shortcut: MAIN_CREATE_SHORTCUTS.newSocialPost,
@@ -59,7 +60,7 @@ export function GlobalQuickCreate() {
       {
         id: "new-idea",
         label: "New Idea",
-        emoji: "💡",
+        icon: "idea",
         description: "Add a new content idea",
         onClick: handleCreateIdea,
         shortcut: MAIN_CREATE_SHORTCUTS.newIdea,
@@ -192,7 +193,12 @@ export function GlobalQuickCreate() {
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{action.emoji}</span>
+                  <AppIcon
+                    name={action.icon}
+                    boxClassName="h-8 w-8"
+                    size={18}
+                    className="text-slate-700"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3 font-medium text-gray-900">
                       <span>{action.label}</span>

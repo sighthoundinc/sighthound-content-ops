@@ -1047,7 +1047,7 @@ function BlogLibraryPageContent() {
       type: "success",
       message: "Export complete",
       notification: {
-        icon: "📤",
+        icon: "download",
         message: `CSV ready (${scope === "view" ? "view" : "selected"})}`,
         href: "/blogs",
       },
@@ -1158,13 +1158,13 @@ function BlogLibraryPageContent() {
       type: "success",
       message: "Export complete.",
       notification: {
-        icon: "📤",
+        icon: "download",
         message: `Export ready (${scope === "view" ? "view" : "selected"} PDF)`,
         href: "/blogs",
       },
     });
     pushNotification({
-      icon: "📄",
+      icon: "file",
       message: "Use browser print dialog to save PDF",
       href: "/blogs",
     });

@@ -126,7 +126,7 @@ export function DashboardSidebar({
                 type="button"
                 className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition ${
                   activeQuickQueue === item.key
-                    ? "bg-slate-900 text-white"
+                    ? "bg-slate-900 text-slate-100"
                     : "text-slate-700 hover:bg-white"
                 }`}
                 onClick={() => {
@@ -160,7 +160,7 @@ export function DashboardSidebar({
                 type="button"
                 className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition ${
                   activeQuickQueue === item.key
-                    ? "bg-slate-900 text-white"
+                    ? "bg-slate-900 text-slate-100"
                     : "text-slate-700 hover:bg-white"
                 }`}
                 onClick={() => {

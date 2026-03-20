@@ -33,6 +33,14 @@ For every non-trivial UI or workflow change:
 5. **Accessibility by Default**: Ensure keyboard navigation, visible focus states, and correct ARIA semantics for changed controls.
 6. **Safe Evolution**: Do not change enum keys, persisted values, or API contracts unless explicitly required.
 
+## Iconography Standard (MUST)
+
+1. Emoji-based icons are not allowed for UI controls, status markers, or notifications.
+2. Use the shared open-source icon system (`lucide-react`) via `src/lib/icons.tsx`.
+3. Render icons through `AppIcon` and shared `AppIconName` keys instead of ad-hoc inline glyphs.
+4. Keep icons inside explicit bounding boxes to preserve vertical rhythm and cross-table alignment.
+5. Maintain consistent stroke weight and sizing patterns unless a component has a documented exception.
+
 ## State & Workflow Authority (MUST)
 
 1. Database is the source of truth for all statuses and transitions.
@@ -173,6 +181,40 @@ To keep idea intake predictable and avoid split editing patterns:
 2. **No Inline Editing in Idea Cards**: Do not provide inline comment/reference editing or add-comment controls inside the card body.
 3. **Single Edit Path**: Update idea title/site/comments-references through the **Edit Idea** modal only.
 4. **Conversion Options**: Idea cards provide conversion actions for both blogs and social posts.
+
+## Global Feedback System: Alerts vs Notifications (MUST)
+
+**Split system** separates ephemeral action feedback from persistent workflow events.
+
+### Alerts (`useAlerts`)
+- **Purpose**: Transient system feedback (Saved, Done, errors)
+- **Placement**: Bottom-left fixed corner
+- **Lifecycle**: Auto-dismiss 3–5s (persistent on errors)
+- **No persistence** across sessions
+- **Icons**: lucide-react via `AppIcon` (no emoji)
+- **Trigger**: Direct API calls (save, delete, import, copy)
+- **Provider**: `AlertsProvider` in root layout
+
+### Notifications (`useNotifications`)
+- **Purpose**: Persistent workflow state changes (task assigned, stage changed, awaiting action)
+- **Placement**: Bell icon (top-right) with unread count badge
+- **Lifecycle**: Persistent until explicitly marked as read or cleared
+- **Visible in bell drawer** with titles, messages, timestamps, and links to context
+- **Types**: `task_assigned`, `stage_changed`, `awaiting_action`, `mention`
+- **Icons**: lucide-react via `AppIcon` (no emoji)
+- **Trigger**: Workflow mutations (blog status changes, task assignments)
+- **Provider**: `NotificationsProvider` in root layout
+
+### Implementation
+- **No emoji icons**: All feedback uses `AppIcon` from `src/lib/icons.tsx`
+- **Backward compat**: Old `useSystemFeedback()` calls re-routed to `useAlerts()` via wrapper
+- **Helper functions**: `src/lib/notification-helpers.ts` generates typed notification payloads
+- **Blog workflows**: Status changes in `/blogs/[id]/page.tsx` emit notifications via `pushNotification()`
+
+### Adding New Notifications
+1. Define helper in `src/lib/notification-helpers.ts` returning `NotificationInput`
+2. Call `pushNotification(helper(...))` in mutation handler
+3. Update SPECIFICATION.md and this guide with trigger point documentation
 
 ## Social Post Dedicated Editor Workflow (MUST)
 

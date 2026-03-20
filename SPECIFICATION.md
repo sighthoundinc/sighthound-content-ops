@@ -1,6 +1,6 @@
 # Sighthound Content Operations — Product Specification
 ## 1) Product purpose
-Sighthound Content Operations is an internal workflow application for managing content production across:
+Sighthound Content Operations is a workflow application for managing content production across:
 - `sighthound.com`
 - `redactor.com`
 
@@ -88,6 +88,30 @@ Behavior:
 - publish completion can set publish timestamp
 
 ## 6) Core UX and pages
+### Workspace Home (`/`)
+Daily standup dashboard showing personalized work queue at a glance.
+
+Key behavior:
+- **Header**: personalized greeting with user name + role badge (top right)
+- **Main section**: actionable work buckets showing only items assigned to current user:
+  - Writer queue items (not started, in progress, awaiting revision, approved)
+  - Publisher queue items (awaiting review, in progress, published)
+  - Social post items (awaiting action, in review)
+- **High-priority items** (revisions, awaiting approval) highlighted with red background
+- **Bucket interactions**: clicking a bucket navigates to `My Tasks` with that filter pre-applied (one-time only, clears on refresh)
+- **Empty state**: "All work is on track" with summary when no items pending
+- **Bottom buttons**: persistent quick links to `Dashboard` and `Calendar` for context switching
+- **Data source**: `/api/dashboard/summary` endpoint (see APIs section below)
+
+### Login (`/login`)
+Primary authentication entry for signed-out users.
+
+Key behavior:
+- supports Google OAuth (`Continue with Google`) and email/password sign-in
+- uses a premium split layout (brand context + focused authentication card)
+- unauthenticated requests to protected routes are redirected here by middleware
+- successful sign-in routes users to workspace home (`/`)
+- app header brand click returns users to workspace home (`/`)
 ### Dashboard (`/dashboard`)
 Primary operations page.
 
@@ -136,7 +160,7 @@ Key behavior:
 ### Tasks (`/tasks`)
 - top-3 priority items first
 - full list expansion with pagination
-- urgency tags (`⚠ Overdue`, `Due Soon`, `Upcoming`)
+- urgency tags (`Overdue`, `Due Soon`, `Upcoming`)
 
 ### Calendar (`/calendar`)
 - month/week views
@@ -191,6 +215,13 @@ Key behavior:
 - role-level configurable permission matrix
 - reset managed role to defaults
 - permission audit log
+
+## 6.5) Iconography and visual consistency (MUST)
+- UI iconography uses a single open-source line icon set (`lucide-react`)
+- emoji-based icons are not used for controls, statuses, or notifications
+- icon rendering is centralized via shared app mapping (`AppIcon` + `AppIconName`)
+- icons must render in explicit bounding boxes for stable alignment in tables, lists, and controls
+- icon stroke/size should remain visually consistent across comparable surfaces
 
 ## 7) Error Handling & Edge Cases (MUST)
 Defines how the system behaves outside the happy path. Applies to all modules.
@@ -280,12 +311,47 @@ Highlights:
 - permission tables drive effective capability resolution
 - quick-view state is client-side snapshot state (browser local storage), not persisted in DB
 
-## 10) Admin control APIs (logical)
-- `/api/admin/permissions` — permission matrix read/update/reset
-- `/api/admin/reassign-assignments` — assignment transfer
-- `/api/admin/activity-history` — activity cleanup, optional comments cleanup
-- `/api/admin/quick-view` — admin quick-view token generation/session switch support
-- `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion flag
+## 10) Dashboard & Standup APIs
+### GET `/api/dashboard/summary`
+Returns aggregated work counts for the daily standup home page.
+
+**Authorization**: requires `view_writing_queue` permission
+
+**Response**:
+```
+{
+  writerCounts: {
+    not_started: number,
+    in_progress: number,
+    needs_revision: number,
+    completed: number
+  },
+  publisherCounts: {
+    not_started: number,
+    in_progress: number,
+    completed: number
+  },
+  socialPostCounts: {
+    awaiting_live_link: number,
+    in_review: number
+  },
+  userRoles: string[]
+}
+```
+
+**Filtering logic**:
+- **Writer counts**: blogs where `writer_id = current_user.id` AND `overall_status != "published"`
+- **Publisher counts**: blogs where `publisher_id = current_user.id` AND `writer_status = "completed"` AND `overall_status != "published"`
+- **Social post counts**: social posts where `status IN ["awaiting_live_link", "in_review"]`
+- Admins and those with appropriate roles see their respective queues
+- Counts reflect actual assignments (not admin overviews)
+
+## 11) Admin control APIs (logical)
+|- `/api/admin/permissions` — permission matrix read/update/reset
+|- `/api/admin/reassign-assignments` — assignment transfer
+|- `/api/admin/activity-history` — activity cleanup, optional comments cleanup
+|- `/api/admin/quick-view` — admin quick-view token generation/session switch support
+|- `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion flag
 ## 11) Integrations
 Slack via Supabase Edge Function:
 - `supabase/functions/slack-notify/index.ts`
@@ -322,7 +388,7 @@ The project is migration-driven (`supabase/migrations`) with compatibility layer
 - import collision prevention via deterministic hash
 - permission matrix introduction + expansion migrations
 ## 14) Non-functional requirements
-- fast internal workflow execution
+- fast workflow execution
 - deterministic DB-level invariants for workflow integrity
 - high traceability (history + comments + permission audits)
 - low-cognitive-load UI for operational scanning

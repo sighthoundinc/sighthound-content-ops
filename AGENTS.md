@@ -11,6 +11,136 @@ Project-specific Deft files:
 - `deft/PROJECT.md`
 - `deft/SPECIFICATION.md`
 
+## Rule Conflict Resolution (MUST)
+
+If instructions appear to conflict, resolve in this order:
+
+1. Direct task-specific user instruction for the current request.
+2. Project-specific Deft rules and specifications (`deft/main.md`, `deft/PROJECT.md`, `deft/SPECIFICATION.md`).
+3. This file (`AGENTS.md`) invariants.
+4. Default implementation preferences.
+
+When still ambiguous, choose the option that maximizes predictability, accessibility, and cross-page consistency.
+
+## Change Intelligence Protocol (MUST)
+
+For every non-trivial UI or workflow change:
+
+1. **Reuse Before New**: Prefer extending shared components/patterns over introducing page-specific behavior.
+2. **Single Source of Truth**: Keep labels, statuses, and transition logic centralized; avoid duplicating mappings in components.
+3. **Explicit State UX**: Every state transition should produce a clear user-facing signal (label, badge, message, disabled state, or next action).
+4. **Predictable Interactions**: Keep interaction patterns consistent across pages (ordering, placement, close-on-blur behavior, sorting behavior, and feedback positioning).
+5. **Accessibility by Default**: Ensure keyboard navigation, visible focus states, and correct ARIA semantics for changed controls.
+6. **Safe Evolution**: Do not change enum keys, persisted values, or API contracts unless explicitly required.
+
+## State & Workflow Authority (MUST)
+
+1. Database is the source of truth for all statuses and transitions.
+2. Frontend must not allow invalid transitions (enforced via API + DB constraints).
+3. Derived states (for example overall stage) are read-only and must not be manually editable.
+4. Any new status or transition requires:
+   - DB constraint update
+   - API validation update
+   - UI update (badges, filters, labels, next-action cues)
+   - Documentation update
+
+## Permissions Enforcement (MUST)
+
+1. Supabase RLS is the source of truth for authorization.
+2. Frontend permission checks are UX-only and never a security boundary.
+3. Every feature must define who can view, edit, and perform privileged actions (create/delete/import/publish).
+4. No feature ships without RLS coverage.
+
+## Forms & Input Behavior (MUST)
+
+1. All inputs expose clear validation states (error, success/valid, disabled, loading).
+2. Required fields are enforced at both UI and API levels.
+3. Use consistent patterns for date inputs, URL validation, and select/dropdown behavior.
+4. Show inline errors near fields (toasts can supplement but not replace inline errors).
+5. Never allow silent submit failure; preserve user input and provide actionable errors.
+
+## Feedback & System Status (MUST)
+
+1. Every action must produce visible feedback:
+   - Success → confirmation
+   - Error → actionable error message
+   - Loading → explicit loading/disabled state
+2. Long-running actions (imports, saves, scheduling) must show progress or blocking state.
+3. No action should feel uncertain or silent.
+
+## Error Handling (MUST)
+
+1. All errors must be:
+   - Human-readable
+   - Actionable (what went wrong + what to do next)
+2. Categorize errors:
+   - Validation errors (inline)
+   - System errors (toast + fallback message)
+   - Permission errors (clear access message)
+3. Never expose raw system errors or stack traces to users.
+4. Failed actions must not leave UI in inconsistent state.
+
+## Data Mutation Safety (MUST)
+
+1. All mutations must be:
+   - Atomic (succeed fully or fail cleanly)
+   - Validated before execution
+2. Bulk actions must:
+   - Show preview or confirmation
+   - Provide success/failure breakdown
+3. Destructive actions must require confirmation.
+4. No partial silent updates.
+
+## Documentation Update Rule (MUST)
+
+After any feature or behavior change (when applicable):
+
+1. Update:
+   - `AGENTS.md` (if rules/invariants changed)
+   - `HOW_TO_USE_APP.md` (user-facing behavior)
+   - `OPERATIONS.md` (internal workflows)
+   - `SPECIFICATION.md` (technical logic/behavior)
+   - `README.md` (setup/scope/usage changes)
+   - Any other directly impacted docs
+2. Document:
+   - What changed
+   - Why it changed
+   - Constraints/edge cases
+3. Definition of done: implementation is incomplete until docs reflect reality.
+
+## Change Risk Classification (SHOULD)
+
+All changes should be categorized before implementation:
+
+- **Low Risk**: UI-only, no data or permission impact.
+- **Medium Risk**: Affects workflows, validation, or UX behavior.
+- **High Risk**: Affects DB schema, permissions (RLS), or core logic.
+
+Requirements:
+- **Medium** → requires manual testing.
+- **High** → requires test plan + rollback consideration.
+
+## Delivery Quality Gate (MUST)
+
+Before considering a task complete:
+
+1. Run relevant validation steps (lint/typecheck/tests/build) when available; if not run, state exactly why.
+2. Verify affected UX surfaces for consistency with existing global patterns and invariants in this file.
+3. Confirm documentation updates from the rule above are applied when applicable.
+4. Prefer small, reversible changes over broad rewrites unless the task explicitly requires larger refactoring.
+5. Apply risk-based validation from **Change Risk Classification** where applicable.
+
+## Definition of Done (MUST)
+
+A feature is complete only if:
+
+1. DB schema/constraints are updated as needed.
+2. API enforces validation and permissions.
+3. UI reflects correct state, feedback, and next actions.
+4. RLS policies are implemented for access control changes.
+5. Edge cases are handled (errors, empty states, loading states).
+6. Documentation is updated per the documentation rule.
+
 ## UI Table Layout Invariants (MUST)
 
 To prevent pagination breakage, pagination control misalignment, and unpredictable row height growth:
@@ -21,6 +151,18 @@ To prevent pagination breakage, pagination control misalignment, and unpredictab
 4. **Pagination Boundary**: Keep pagination controls (row limit, page controls) structurally outside the table body. Controls must never render between table rows or appear to be pushed by row expansion.
 
 These rules apply to all table implementations (DataTable, DashboardTable, etc.) across the application.
+
+## Table Interaction Rules (MUST)
+
+1. Row click behavior should be consistent per table type (open detail panel or navigate).
+2. Bulk actions apply only to selected rows.
+3. Sorting and filtering persist within session.
+
+## Search Behavior (MUST)
+
+1. Search supports partial, case-insensitive matching.
+2. Results should update in near real-time with debounced input where appropriate.
+3. Show meaningful empty-state feedback when no results are found.
 
 ## Ideas Page Interaction Invariants (MUST)
 

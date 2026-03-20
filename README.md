@@ -90,14 +90,16 @@ Internal content operations platform for Sighthound marketing workflows across `
 - Published entries are non-draggable
 
 ### Settings and Permissions
-- Profile editing
-- User role management
+- `My Profile` for user name updates
+- `Workspace Defaults` for timezone/week-start/stale-draft defaults
+- `Access & Oversight` for quick-view and permissions panel entry
+- `Create User Account`, `Reassign User Work`, and `User Directory` for team administration
 - Permission matrix management (`/settings/permissions`)
 - Permission audit history
 - Admin-only activity history cleanup (global or user-scoped)
 - Optional comments cleanup during history purge
 - Admin quick-view as non-admin user with return-to-admin workflow
-- Admin-only Wipe App Clean reset with optional checkbox to remove other admin profiles/accounts (signed-in admin is always preserved)
+- Admin-only `Danger Zone: Wipe App Clean` reset with optional checkbox to remove other admin profiles/accounts (signed-in admin is always preserved)
 
 ### Social Post Editor (`/social-posts/[id]`)
 - Guided 4-step single-post workflow:
@@ -174,6 +176,8 @@ Current set:
 - `20260313193000_shared_non_admin_role_model.sql`
 - `20260313200000_role_permissions_and_audit.sql`
 - `20260313213000_expand_permission_matrix.sql`
+- `20260320195000_add_activity_history_delete_policies.sql`
+- `20260320195100_fix_activity_history_rls.sql`
 
 ## Slack edge function
 Path:

@@ -116,6 +116,8 @@ npm run check
 - `20260318104000_wipe_app_clean_data.sql`
 - `20260318200000_create_task_assignments.sql`
 - `20260320164320_relax_writer_complete_google_doc_constraint.sql`
+- `20260320195000_add_activity_history_delete_policies.sql`
+- `20260320195100_fix_activity_history_rls.sql`
 
 ## 6) Permission operations
 Primary control plane:
@@ -159,6 +161,8 @@ Operational notes:
 - endpoint is hard-gated to admin role
 - destructive operation; no restore path
 - intended for test-data cleanup and environment hygiene
+- RLS is disabled on activity history maintenance tables to allow service-role cleanup (`20260320195000` and `20260320195100`)
+- delete-all cleanup paths use `.gt("id", "00000000-0000-0000-0000-000000000000")` to safely match all UUID rows
 
 ## 9) Quick-view as user operations
 Quick-view session switch API:
@@ -389,6 +393,10 @@ For legacy XLSX import script (`npm run import:legacy`):
   - clears all non-admin users, content, logs, permissions, and related operational data
 
 ## 16) Admin workflows (current state)
+Settings UI grouping (for operator orientation):
+- `Access & Oversight` → quick-view and permissions entrypoint
+- `Create User Account` / `Reassign User Work` / `User Directory` → team administration
+- `Activity History Cleanup` and `Danger Zone: Wipe App Clean` → destructive maintenance actions
 ### Activity history cleanup
 - Entry point: Settings → Activity History Cleanup
 - API: `DELETE /api/admin/activity-history`

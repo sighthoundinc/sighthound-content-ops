@@ -976,19 +976,11 @@ export default function SettingsPage() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-7">
-          <header>
+          <header className="space-y-2">
             <h2 className="text-xl font-semibold text-slate-900">Settings</h2>
             <p className="text-sm text-slate-600">
-              Manage profile names, timezone preferences, and team roles.
+              Manage your profile, configure workspace defaults, and access admin controls.
             </p>
-            {canManagePermissions ? (
-              <Link
-                href="/settings/permissions"
-                className="mt-2 inline-flex text-sm font-medium text-blue-600 underline"
-              >
-                Open Permissions Panel
-              </Link>
-            ) : null}
           </header>
 
 
@@ -1003,193 +995,199 @@ export default function SettingsPage() {
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                     My Profile
                   </h3>
-                  <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Roles
-                    </p>
-                    <p className="mt-1 text-sm text-slate-700">
-                      {myRoles.length > 0
-                        ? myRoles.join(", ")
-                        : "No explicit role assigned"}
-                    </p>
-                  </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">
-                        First Name
-                      </span>
-                      <input
-                        value={editableUsers[profile.id]?.firstName ?? ""}
-                        onChange={(event) => {
-                          setEditableUsers((previous) => ({
-                            ...previous,
-                            [profile.id]: {
-                              ...(previous[profile.id] ?? {
-                                firstName: "",
-                                lastName: "",
-                                displayName: "",
-                                userRoles: getUserRoles(profile),
-                                isActive: profile.is_active,
-                              }),
-                              firstName: event.target.value,
-                            },
-                          }));
+                  <p className="mt-1 text-sm text-slate-600">
+                    Update your name and how others see you in the app.
+                  </p>
+                    <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Roles
+                      </p>
+                      <p className="mt-1 text-sm text-slate-700">
+                        {myRoles.length > 0
+                          ? myRoles.join(", ")
+                          : "No explicit role assigned"}
+                      </p>
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          First Name
+                        </span>
+                        <input
+                          value={editableUsers[profile.id]?.firstName ?? ""}
+                          onChange={(event) => {
+                            setEditableUsers((previous) => ({
+                              ...previous,
+                              [profile.id]: {
+                                ...(previous[profile.id] ?? {
+                                  firstName: "",
+                                  lastName: "",
+                                  displayName: "",
+                                  userRoles: getUserRoles(profile),
+                                  isActive: profile.is_active,
+                                }),
+                                firstName: event.target.value,
+                              },
+                            }));
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Last Name
+                        </span>
+                        <input
+                          value={editableUsers[profile.id]?.lastName ?? ""}
+                          onChange={(event) => {
+                            setEditableUsers((previous) => ({
+                              ...previous,
+                              [profile.id]: {
+                                ...(previous[profile.id] ?? {
+                                  firstName: "",
+                                  lastName: "",
+                                  displayName: "",
+                                  userRoles: getUserRoles(profile),
+                                  isActive: profile.is_active,
+                                }),
+                                lastName: event.target.value,
+                              },
+                            }));
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                          Display Name
+                        </span>
+                        <input
+                          value={editableUsers[profile.id]?.displayName ?? ""}
+                          onChange={(event) => {
+                            setEditableUsers((previous) => ({
+                              ...previous,
+                              [profile.id]: {
+                                ...(previous[profile.id] ?? {
+                                  firstName: "",
+                                  lastName: "",
+                                  displayName: "",
+                                  userRoles: getUserRoles(profile),
+                                  isActive: profile.is_active,
+                                }),
+                                displayName: event.target.value,
+                              },
+                            }));
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                    </div>
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                        onClick={() => {
+                          void saveProfileEdits(profile.id);
                         }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">
-                        Last Name
-                      </span>
-                      <input
-                        value={editableUsers[profile.id]?.lastName ?? ""}
-                        onChange={(event) => {
-                          setEditableUsers((previous) => ({
-                            ...previous,
-                            [profile.id]: {
-                              ...(previous[profile.id] ?? {
-                                firstName: "",
-                                lastName: "",
-                                displayName: "",
-                                userRoles: getUserRoles(profile),
-                                isActive: profile.is_active,
-                              }),
-                              lastName: event.target.value,
-                            },
-                          }));
-                        }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">
-                        Display Name
-                      </span>
-                      <input
-                        value={editableUsers[profile.id]?.displayName ?? ""}
-                        onChange={(event) => {
-                          setEditableUsers((previous) => ({
-                            ...previous,
-                            [profile.id]: {
-                              ...(previous[profile.id] ?? {
-                                firstName: "",
-                                lastName: "",
-                                displayName: "",
-                                userRoles: getUserRoles(profile),
-                                isActive: profile.is_active,
-                              }),
-                              displayName: event.target.value,
-                            },
-                          }));
-                        }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      />
-                    </label>
-                  </div>
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-                      onClick={() => {
-                        void saveProfileEdits(profile.id);
-                      }}
-                    >
-                      Save My Name
-                    </button>
+                      >
+                        Save Changes
+                      </button>
                   </div>
                 </section>
               ) : null}
 
               <section className="rounded-lg border border-slate-200 p-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Calendar & Dashboard Defaults
+                  Workspace Defaults
                 </h3>
-                <form className="mt-4 grid gap-3 md:grid-cols-3" onSubmit={saveSettings}>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Timezone
-                    </span>
-                    <select
-                      value={settings.timezone}
-                      onChange={(event) => {
-                        setSettings((previous) =>
-                          previous ? { ...previous, timezone: event.target.value } : previous
-                        );
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      disabled={!canEditAppSettings}
-                    >
-                      {TIMEZONE_OPTIONS.map((timezone) => (
-                        <option key={timezone} value={timezone}>
-                          {timezone}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Week Start
-                    </span>
-                    <select
-                      value={settings.week_start}
-                      onChange={(event) => {
-                        setSettings((previous) =>
-                          previous ? { ...previous, week_start: Number(event.target.value) } : previous
-                        );
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      disabled={!canEditAppSettings}
-                    >
-                      {WEEK_DAYS.map((day) => (
-                        <option key={day.value} value={day.value}>
-                          {day.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Stale Draft Days
-                    </span>
-                    <input
-                      min={1}
-                      max={120}
-                      type="number"
-                      value={settings.stale_draft_days}
-                      onChange={(event) => {
-                        setSettings((previous) =>
-                          previous
-                            ? {
-                                ...previous,
-                                stale_draft_days: Number(event.target.value) || 1,
-                              }
-                            : previous
-                        );
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      disabled={!canEditAppSettings}
-                    />
-                  </label>
-                  {canEditAppSettings ? (
-                    <div className="md:col-span-3">
-                      <button
-                        type="submit"
-                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                <p className="mt-1 text-sm text-slate-600">
+                  Set your timezone, preferred week start, and draft age thresholds.
+                </p>
+                  <form className="mt-4 grid gap-3 md:grid-cols-3" onSubmit={saveSettings}>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                        Timezone
+                      </span>
+                      <select
+                        value={settings.timezone}
+                        onChange={(event) => {
+                          setSettings((previous) =>
+                            previous ? { ...previous, timezone: event.target.value } : previous
+                          );
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        disabled={!canEditAppSettings}
                       >
-                        Save Settings
-                      </button>
-                    </div>
-                  ) : null}
-                </form>
+                        {TIMEZONE_OPTIONS.map((timezone) => (
+                          <option key={timezone} value={timezone}>
+                            {timezone}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                        Week Starts On
+                      </span>
+                      <select
+                        value={settings.week_start}
+                        onChange={(event) => {
+                          setSettings((previous) =>
+                            previous ? { ...previous, week_start: Number(event.target.value) } : previous
+                          );
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        disabled={!canEditAppSettings}
+                      >
+                        {WEEK_DAYS.map((day) => (
+                          <option key={day.value} value={day.value}>
+                            {day.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                        Mark Drafts as Stale After (days)
+                      </span>
+                      <input
+                        min={1}
+                        max={120}
+                        type="number"
+                        value={settings.stale_draft_days}
+                        onChange={(event) => {
+                          setSettings((previous) =>
+                            previous
+                              ? {
+                                  ...previous,
+                                  stale_draft_days: Number(event.target.value) || 1,
+                                }
+                              : previous
+                          );
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        disabled={!canEditAppSettings}
+                      />
+                    </label>
+                    {canEditAppSettings ? (
+                      <div className="md:col-span-3">
+                        <button
+                          type="submit"
+                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    ) : null}
+                  </form>
               </section>
               {isAdminUser ? (
                 <section className="rounded-lg border border-rose-200 bg-rose-50/40 p-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-rose-700">
+                  <h3 className="text-base font-semibold text-rose-900">
                     Activity History Cleanup
                   </h3>
-                  <p className="mt-1 text-sm text-rose-700/90">
-                    Admin-only maintenance tool. This permanently deletes audit trail records.
+                  <p className="mt-1 text-sm text-rose-800/90">
+                    Clean up activity history and records. Useful for removing test data or reducing noise.
                   </p>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -1205,7 +1203,7 @@ export default function SettingsPage() {
                       <span>
                         <span className="font-medium text-slate-900">Delete all history</span>
                         <span className="mt-0.5 block text-xs text-slate-500">
-                          Clears activity records for all users.
+                          Remove activity records for everyone.
                         </span>
                       </span>
                     </label>
@@ -1224,7 +1222,7 @@ export default function SettingsPage() {
                           Delete selected users only
                         </span>
                         <span className="mt-0.5 block text-xs text-slate-500">
-                          Removes records where selected users are the actor.
+                          Remove activity records for specific team members.
                         </span>
                       </span>
                     </label>
@@ -1240,8 +1238,7 @@ export default function SettingsPage() {
                     </div>
                   ) : null}
                   <p className="mt-3 text-xs text-rose-700/90">
-                    Deletes from blog assignment history, social post activity history, and
-                    permission audit logs. This action cannot be undone.
+                    Removes activity from blogs, social posts, and permissions. This action cannot be undone.
                   </p>
                   <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-700">
                     <input
@@ -1251,7 +1248,7 @@ export default function SettingsPage() {
                         setActivityCleanupIncludeComments(event.target.checked);
                       }}
                     />
-                    Also delete comments activity (blog + social comments)
+                    Also remove comments and comment activity
                   </label>
                   {isTargetedCleanupWithoutUsers ? (
                     <p className="mt-2 text-xs text-rose-700">
@@ -1259,53 +1256,63 @@ export default function SettingsPage() {
                     </p>
                   ) : null}
                   <div className="mt-4">
-                    <button
-                      type="button"
-                      disabled={isDeletingActivityHistory || isTargetedCleanupWithoutUsers}
-                      className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
-                      onClick={() => {
-                        setIsDeleteHistoryModalOpen(true);
-                      }}
-                    >
-                      Delete Activity History
-                    </button>
+                      <button
+                        type="button"
+                        disabled={isDeletingActivityHistory || isTargetedCleanupWithoutUsers}
+                        className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                          setIsDeleteHistoryModalOpen(true);
+                        }}
+                      >
+                        Delete Activity History
+                      </button>
                   </div>
                 </section>
               ) : null}
               {isAdminUser && canDeleteUsers ? (
                 <section className="rounded-lg border border-rose-300 bg-rose-100/50 p-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-rose-800">
-                    WIPE APP CLEAN
+                  <h3 className="text-base font-semibold text-rose-900">
+                    Danger Zone: Wipe App Clean
                   </h3>
                   <p className="mt-1 text-sm text-rose-800/90">
-                    Full factory reset. Permanently deletes all non-admin users plus
-                    blogs, social posts, ideas, comments, activity history, permission
-                    logs, and import history. Your currently signed-in admin account is
-                    always preserved.
+                    Factory reset the entire app. Removes all content, users, and history—except your admin account.
                   </p>
                   <p className="mt-2 text-xs font-medium text-rose-900">
                     This action cannot be undone.
                   </p>
                   <div className="mt-4">
-                    <button
-                      type="button"
-                      disabled={isWipingAppClean}
-                      className="rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
-                      onClick={() => {
-                        setWipeAppCleanRemoveOtherAdminProfiles(false);
-                        setIsWipeAppCleanModalOpen(true);
-                      }}
-                    >
-                      WIPE APP CLEAN
-                    </button>
+                      <button
+                        type="button"
+                        disabled={isWipingAppClean}
+                        className="rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                          setWipeAppCleanRemoveOtherAdminProfiles(false);
+                          setIsWipeAppCleanModalOpen(true);
+                        }}
+                      >
+                        Wipe App Clean
+                      </button>
                   </div>
                 </section>
               ) : null}
               {isAdminUser || isQuickViewActive ? (
                 <section className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">
-                    Quick View As User
+                  <h3 className="text-base font-semibold text-indigo-900">
+                    Access & Oversight
                   </h3>
+                  <p className="mt-1 text-sm text-indigo-900/80">
+                    Manage role permissions or temporarily view the app as another user.
+                  </p>
+                  {canManagePermissions ? (
+                    <div className="mt-3">
+                      <Link
+                        href="/settings/permissions"
+                        className="inline-flex rounded-md border border-indigo-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+                      >
+                        Open Permissions Panel
+                      </Link>
+                    </div>
+                  ) : null}
                   {isQuickViewActive && quickViewSnapshot ? (
                     <div className="mt-2 rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-700">
                       <p>
@@ -1335,7 +1342,7 @@ export default function SettingsPage() {
                     <form className="mt-3 grid gap-3 md:grid-cols-3" onSubmit={startQuickViewAsUser}>
                       <label className="block md:col-span-2">
                         <span className="mb-1 block text-sm font-medium text-slate-700">
-                          Choose user
+                          Quick view as
                         </span>
                         <select
                           className="w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm"
@@ -1372,8 +1379,11 @@ export default function SettingsPage() {
                   {canManageUsers && canManageRoles ? (
                     <section className="rounded-lg border border-slate-200 p-4">
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Create Internal User
+                        Create User Account
                       </h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Add a new team member to the app.
+                      </p>
                       <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={createUser}>
                       <label className="block">
                         <span className="mb-1 block text-sm font-medium text-slate-700">
@@ -1448,15 +1458,15 @@ export default function SettingsPage() {
                   {canReassignAssignments ? (
                     <section className="rounded-lg border border-slate-200 p-4">
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Reassign Everything From User
+                        Reassign User Work
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        Transfer all writer/publisher assignments from one user to another.
+                        Transfer all writer and publisher work from one team member to another.
                       </p>
                       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={reassignEverythingFromUser}>
                       <label className="block">
                         <span className="mb-1 block text-sm font-medium text-slate-700">
-                          From User
+                          From
                         </span>
                         <select
                           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -1476,7 +1486,7 @@ export default function SettingsPage() {
                       </label>
                       <label className="block">
                         <span className="mb-1 block text-sm font-medium text-slate-700">
-                          To User
+                          To
                         </span>
                         <select
                           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -1535,40 +1545,50 @@ export default function SettingsPage() {
                   {canManageUserDirectory ? (
                     <section className="rounded-lg border border-slate-200 p-4">
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Users
+                        User Directory
                       </h3>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Compact list view. Click Edit to update user details.
-                    </p>
-                    <div className="mt-4 grid gap-2 md:grid-cols-2">
-                      <select
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        value={userRoleFilter}
-                        onChange={(event) => {
-                          setUserRoleFilter(event.target.value as AppRole | "all");
-                        }}
-                      >
-                        <option value="all">All Roles</option>
-                        {ALL_ROLES.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        value={userActiveFilter}
-                        onChange={(event) => {
-                          setUserActiveFilter(
-                            event.target.value as "all" | "active" | "inactive"
-                          );
-                        }}
-                      >
-                        <option value="all">All Activity</option>
-                        <option value="active">Active Only</option>
-                        <option value="inactive">Inactive Only</option>
-                      </select>
-                    </div>
+                      <p className="mt-1 text-sm text-slate-600">
+                        View all team members, edit their details, or deactivate accounts.
+                      </p>
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Role Filter
+                          </span>
+                          <select
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            value={userRoleFilter}
+                            onChange={(event) => {
+                              setUserRoleFilter(event.target.value as AppRole | "all");
+                            }}
+                          >
+                            <option value="all">All Roles</option>
+                            {ALL_ROLES.map((role) => (
+                              <option key={role} value={role}>
+                                {role}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Status Filter
+                          </span>
+                          <select
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            value={userActiveFilter}
+                            onChange={(event) => {
+                              setUserActiveFilter(
+                                event.target.value as "all" | "active" | "inactive"
+                              );
+                            }}
+                          >
+                            <option value="all">All Activity</option>
+                            <option value="active">Active Only</option>
+                            <option value="inactive">Inactive Only</option>
+                          </select>
+                        </label>
+                      </div>
                     {canDeleteUsers ? (
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2">
                         <p className="text-xs text-rose-800">

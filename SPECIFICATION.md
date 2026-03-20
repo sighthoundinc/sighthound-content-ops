@@ -173,12 +173,15 @@ Key behavior:
   - in review complete → `Mark Published`
 
 ### Settings (`/settings`)
-- profile fields
-- admin user/role management
-- timezone configuration
+- `My Profile` section for first name, last name, and display name updates
+- `Workspace Defaults` section for timezone, week start, and stale draft threshold
+- `Access & Oversight` section for quick-view session switching and permissions panel entry
+- team administration sections:
+  - `Create User Account`
+  - `Reassign User Work`
+  - `User Directory` with role and status filters
 - admin-only activity history cleanup (global or user-scoped)
 - optional comments cleanup during history purge
-- admin quick-view as non-admin user, with return-to-admin flow
 - admin-only wipe app clean (full factory reset)
   - always preserves currently signed-in admin account
   - optional checkbox can remove all other admin profiles/accounts

@@ -223,6 +223,14 @@ Error types you may see:
 ## 12. Permissions and sensitive actions
 Permissions are role-based and strictly enforced.
 
+Settings page organization:
+- `My Profile` — update first name, last name, and display name
+- `Workspace Defaults` — timezone, week start, and stale draft threshold
+- `Access & Oversight` — open the Permissions panel and run Quick View as a non-admin user
+- `Create User Account` + `Reassign User Work` — team admin actions
+- `User Directory` — role/status filters and per-user edit/delete controls
+- `Activity History Cleanup` + `Danger Zone: Wipe App Clean` — destructive admin maintenance tools
+
 Critical rule:
 - only an admin can run `Wipe App Clean`
 - this reset removes operational data across the app while preserving the initiating admin account itself

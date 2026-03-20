@@ -68,35 +68,16 @@ export async function DELETE(request: NextRequest) {
     const adminClient = auth.context.adminClient;
 
     const deleteForTable = async (table: ActivityHistoryTable) => {
-      console.log(`[Activity History] Counting rows in ${table}`, {
+      console.log(`[Activity History] Deleting from ${table}`, {
         scope: parsed.data.scope,
         targetUserIds,
       });
-      let countQuery = adminClient
-        .from(table)
-        .select("*", { count: "exact", head: true });
-      if (targetUserIds && targetUserIds.length > 0) {
-        countQuery = countQuery.in("changed_by", targetUserIds);
-      } else {
-        // For delete all, we need to add a condition that's always true
-        // to satisfy Supabase's requirement for WHERE clause
-        countQuery = countQuery.neq("id", null);
-      }
-      const { count, error: countError } = await countQuery;
-      if (countError) {
-        console.error(`[Activity History] Error counting ${table}:`, countError);
-        throw new Error(`${table}: ${countError.message}`);
-      }
-      console.log(`[Activity History] Found ${count} rows in ${table} to delete`);
 
-      let deleteQuery = adminClient.from(table).delete();
+      let deleteQuery = adminClient.from(table).delete().gt("id", "00000000-0000-0000-0000-000000000000");
       if (targetUserIds && targetUserIds.length > 0) {
         deleteQuery = deleteQuery.in("changed_by", targetUserIds);
-      } else {
-        // For delete all, we need to add a condition that's always true
-        deleteQuery = deleteQuery.neq("id", null);
       }
-      const { error: deleteError } = await deleteQuery;
+      const { count, error: deleteError } = await deleteQuery;
       if (deleteError) {
         console.error(`[Activity History] Error deleting from ${table}:`, deleteError);
         throw new Error(`${table}: ${deleteError.message}`);
@@ -106,40 +87,18 @@ export async function DELETE(request: NextRequest) {
       return count ?? 0;
     };
     const deleteCommentActivityForTable = async (table: CommentActivityTable) => {
-      console.log(`[Comments] Counting rows in ${table}`, {
+      console.log(`[Comments] Deleting from ${table}`, {
         scope: parsed.data.scope,
         targetUserIds,
       });
-      let countQuery = adminClient
-        .from(table)
-        .select("*", { count: "exact", head: true });
-      if (targetUserIds && targetUserIds.length > 0) {
-        const filterStr = `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`;
-        console.log(`[Comments] Applying filter: ${filterStr}`);
-        countQuery = countQuery.or(filterStr);
-      } else {
-        // For delete all, we need to add a condition that's always true
-        console.log(`[Comments] Applying delete-all condition for ${table}`);
-        countQuery = countQuery.neq("id", null);
-      }
-      const { count, error: countError } = await countQuery;
-      if (countError) {
-        console.error(`[Comments] Error counting ${table}:`, countError);
-        throw new Error(`${table}: ${countError.message}`);
-      }
-      console.log(`[Comments] Found ${count} rows in ${table} to delete`);
 
-      let deleteQuery = adminClient.from(table).delete();
+      let deleteQuery = adminClient.from(table).delete().gt("id", "00000000-0000-0000-0000-000000000000");
       if (targetUserIds && targetUserIds.length > 0) {
         const filterStr = `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`;
         console.log(`[Comments] Applying delete filter: ${filterStr}`);
         deleteQuery = deleteQuery.or(filterStr);
-      } else {
-        // For delete all, we need to add a condition that's always true
-        console.log(`[Comments] Applying delete-all condition for ${table}`);
-        deleteQuery = deleteQuery.neq("id", null);
       }
-      const { error: deleteError } = await deleteQuery;
+      const { count, error: deleteError } = await deleteQuery;
       if (deleteError) {
         console.error(`[Comments] Error deleting from ${table}:`, deleteError);
         throw new Error(`${table}: ${deleteError.message}`);

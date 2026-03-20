@@ -152,6 +152,7 @@ Keep commit messages short and direct:
 2. **Rationale**: Short messages force clarity and are easier to scan in logs
 3. **Body**: Only include detailed explanations if truly necessary (most changes don't need them)
 4. **Multi-file changes**: Use a single, consolidated commit message covering the whole feature
+5. **Always ask before committing**: Never automatically commit and push without explicit user approval. Summarize changes, show the proposed commit message, and wait for confirmation before proceeding.
 
 ## Definition of Done (MUST)
 

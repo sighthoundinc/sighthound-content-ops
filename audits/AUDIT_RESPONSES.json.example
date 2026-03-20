@@ -1,0 +1,65 @@
+{
+  "audit_metadata": {
+    "tester_name": "Your Name",
+    "tester_role": "admin/writer/publisher/editor",
+    "test_date": "2026-03-20",
+    "environment": "localhost",
+    "duration_minutes": 30
+  },
+  "findings": [
+    {
+      "id": "DASHBOARD_001",
+      "module": "Dashboard",
+      "rule_violated": "Feedback & System Status (MUST)",
+      "short_title": "Status dropdown change shows no loading state",
+      "what_happened": "Clicked inline status dropdown, changed from 'In Progress' to 'Completed'. Button greyed out but no loading spinner appeared. After 2-3 seconds, table updated silently.",
+      "expected_behavior": "Should show 'Saving...' spinner or similar loading state while API request completes. User shouldn't be uncertain if action succeeded.",
+      "steps_to_reproduce": [
+        "1. Navigate to Dashboard",
+        "2. Click inline status dropdown on any blog row",
+        "3. Select new status",
+        "4. Observe: No loading state visible"
+      ],
+      "impact": "UX confusion (user unsure if action succeeded)",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "Happens on writer_status and publisher_status dropdowns"
+    },
+    {
+      "id": "BLOGS_001",
+      "module": "Blogs",
+      "rule_violated": "Error Handling (MUST)",
+      "short_title": "Copy URL on row without URL silently copies 'null'",
+      "what_happened": "Clicked copy URL button on a blog that has no Live URL set. Toast appeared 'Copied!' but actual clipboard value is 'null' (the string).",
+      "expected_behavior": "Should either: (a) disable copy button if URL missing, or (b) show error 'URL not available, cannot copy'",
+      "steps_to_reproduce": [
+        "1. Navigate to Blogs library",
+        "2. Find a blog row without Live URL",
+        "3. Click copy URL button",
+        "4. Paste clipboard → shows 'null'"
+      ],
+      "impact": "Data confusion (user thinks URL copied but gets 'null')",
+      "priority": "Medium",
+      "code_quality_issue": true,
+      "optional_context": "Affects user trust in copy functionality"
+    },
+    {
+      "id": "SOCIAL_POSTS_001",
+      "module": "Social Posts",
+      "rule_violated": "Forms & Input Behavior (MUST)",
+      "short_title": "Editor Step 1: Can progress to Step 2 without selecting Platform",
+      "what_happened": "In social post editor Setup step, Platform field is required (marked with *). Left it blank, clicked 'Next Step'. No error appeared, progressed to Step 2.",
+      "expected_behavior": "Should block progression and show inline error 'Platform is required' near the field.",
+      "steps_to_reproduce": [
+        "1. Click create social post",
+        "2. Fill Title and Publish Date only",
+        "3. Leave Platform empty",
+        "4. Click 'Next Step' → progresses without error"
+      ],
+      "impact": "Incomplete data enters workflow",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "This violates Forms & Input Behavior rule — required fields must be enforced before submit"
+    }
+  ]
+}

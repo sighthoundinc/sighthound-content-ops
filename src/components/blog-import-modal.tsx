@@ -5,6 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/button";
 import {
+  NameResolutionModal,
+  type NameResolutionState,
+} from "@/components/name-resolution-modal";
+import type { NameResolutionResult } from "@/lib/user-matching";
+import {
   TABLE_BASE_CLASS,
   TABLE_BODY_CLASS,
   TABLE_HEAD_CLASS,
@@ -306,6 +311,11 @@ export function BlogImportModal({
   const [error, setError] = useState<string | null>(null);
   const [detectedColumns, setDetectedColumns] = useState<Map<string, string>>(new Map());
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set([...REQUIRED_COLUMNS_SET]));
+  const [isResolvingNames, setIsResolvingNames] = useState(false);
+  const [showNameResolutionModal, setShowNameResolutionModal] = useState(false);
+  const [nameResolutions, setNameResolutions] = useState<NameResolutionResult[]>([]);
+  const [selectedNameResolutions, setSelectedNameResolutions] = useState<NameResolutionState>({});
+  const [isNameResolutionAccepted, setIsNameResolutionAccepted] = useState(false);
   const autoOpenedRef = useRef(false);
   const previewRows = useMemo(() => rows, [rows]);
   const rowErrorMap = useMemo(() => {
@@ -321,6 +331,23 @@ export function BlogImportModal({
   const selectedRows = useMemo(
     () => rows.filter((row) => selectedRowSet.has(row.rowNumber)),
     [rows, selectedRowSet]
+  );
+  const uniqueSelectedNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          selectedRows
+            .flatMap((row) => [row.writer.trim(), row.publisher.trim()])
+            .filter(Boolean)
+        )
+      ),
+    [selectedRows]
+  );
+  const isNameResolutionComplete = useMemo(
+    () =>
+      uniqueSelectedNames.length > 0 &&
+      uniqueSelectedNames.every((name) => Boolean(selectedNameResolutions[name])),
+    [uniqueSelectedNames, selectedNameResolutions]
   );
   const selectedRowsWithErrors = useMemo(
     () => selectedRows.filter((row) => rowErrorMap.has(row.rowNumber)),
@@ -358,6 +385,66 @@ export function BlogImportModal({
     };
   }, [isOpen]);
 
+  // Auto-trigger name resolution after rows are available (silent Step 1.75)
+  useEffect(() => {
+    if (
+      rows.length > 0 &&
+      selectedRows.length > 0 &&
+      !isResolvingNames &&
+      nameResolutions.length === 0 &&
+      Object.keys(selectedNameResolutions).length === 0 &&
+      session?.access_token
+    ) {
+      const autoResolve = async () => {
+        if (selectedRows.length === 0 || !session?.access_token) return;
+        setIsResolvingNames(true);
+        try {
+          // Only resolve names from valid rows (no validation errors)
+          const validRows = selectedRows.filter((row) => !rowErrorMap.has(row.rowNumber));
+          const uniqueNames = Array.from(
+            new Set(
+              validRows.flatMap((row) => [row.writer.trim(), row.publisher.trim()]).filter(Boolean)
+            )
+          );
+          
+          // Skip if no valid rows have names to resolve
+          if (uniqueNames.length === 0) {
+            setIsResolvingNames(false);
+            return;
+          }
+          const response = await fetch("/api/users/resolve-names", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ names: uniqueNames }),
+          });
+          const payload = (await response.json()) as { resolutions: NameResolutionResult[] } & { error?: string };
+          if (!response.ok) throw new Error(payload.error ?? "Failed to resolve names");
+          setNameResolutions(payload.resolutions);
+          const autoResolved: NameResolutionState = {};
+          for (const resolution of payload.resolutions) {
+            if (resolution.bestMatch) {
+              autoResolved[resolution.inputName] = {
+                action: "use_existing",
+                selectedUserId: resolution.bestMatch.id,
+              };
+            } else {
+              autoResolved[resolution.inputName] = { action: "create_new" };
+            }
+          }
+          setSelectedNameResolutions(autoResolved);
+        } catch (err) {
+          console.error("Auto-resolution failed:", err);
+        } finally {
+          setIsResolvingNames(false);
+        }
+      };
+      void autoResolve();
+    }
+  }, [rows.length, selectedRows, isResolvingNames, nameResolutions.length, selectedNameResolutions, session?.access_token, rowErrorMap]);
+
   const resetState = () => {
     setIsParsing(false);
     setIsImporting(false);
@@ -366,9 +453,19 @@ export function BlogImportModal({
     setSelectedRowNumbers([]);
     setParseErrors([]);
     setResult(null);
+    if (!isNameResolutionAccepted || !isNameResolutionComplete) {
+      setError("Please review and accept automatic name resolution before importing.");
+      setShowNameResolutionModal(true);
+      return;
+    }
     setError(null);
     setDetectedColumns(new Map());
     setSelectedColumns(new Set([...REQUIRED_COLUMNS_SET]));
+    setIsResolvingNames(false);
+    setShowNameResolutionModal(false);
+    setNameResolutions([]);
+    setSelectedNameResolutions({});
+    setIsNameResolutionAccepted(false);
   };
 
   const closeModal = () => {
@@ -387,6 +484,9 @@ export function BlogImportModal({
     setFileName(file.name);
     setDetectedColumns(new Map());
     setSelectedColumns(new Set([...REQUIRED_COLUMNS_SET]));
+    setNameResolutions([]);
+    setSelectedNameResolutions({});
+    setIsNameResolutionAccepted(false);
 
     const lower = file.name.toLowerCase();
     if (!lower.endsWith(".csv") && !lower.endsWith(".xlsx")) {
@@ -442,6 +542,7 @@ export function BlogImportModal({
           fileName,
           rows: rowsToImport,
           selectedColumns: Array.from(selectedColumns),
+          nameResolutions: selectedNameResolutions,
         }),
       });
       const payload = (await response.json()) as ImportResponse & { error?: string };
@@ -467,6 +568,51 @@ export function BlogImportModal({
         ? previous.filter((value) => value !== rowNumber)
         : [...previous, rowNumber]
     );
+  };
+
+  const triggerNameResolution = async () => {
+    if (selectedRows.length === 0 || !session?.access_token) {
+      return;
+    }
+    setIsResolvingNames(true);
+    setIsNameResolutionAccepted(false);
+    try {
+      const uniqueNames = Array.from(
+        new Set(
+          selectedRows.flatMap((row) => [row.writer.trim(), row.publisher.trim()]).filter(Boolean)
+        )
+      );
+      const response = await fetch("/api/users/resolve-names", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ names: uniqueNames }),
+      });
+      const payload = (await response.json()) as { resolutions: NameResolutionResult[] } & { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to resolve names");
+      }
+      setNameResolutions(payload.resolutions);
+      const autoResolved: NameResolutionState = {};
+      for (const resolution of payload.resolutions) {
+        if (resolution.bestMatch) {
+          autoResolved[resolution.inputName] = {
+            action: "use_existing",
+            selectedUserId: resolution.bestMatch.id,
+          };
+        } else {
+          autoResolved[resolution.inputName] = { action: "create_new" };
+        }
+      }
+      setSelectedNameResolutions(autoResolved);
+      setShowNameResolutionModal(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resolve names");
+    } finally {
+      setIsResolvingNames(false);
+    }
   };
 
   const downloadFailedRows = () => {
@@ -644,6 +790,42 @@ export function BlogImportModal({
                       </label>
                     );
                   })}
+                </div>
+              </div>
+            ) : null}
+
+            {rows.length > 0 && selectedRows.length > 0 ? (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  Step 1.75 · Name Resolution (Automatic)
+                </p>
+                <p className="mt-1 text-slate-700">
+                  {isResolvingNames
+                    ? "Resolving writer/publisher names in the background..."
+                    : isNameResolutionAccepted
+                      ? "Resolved and accepted. You can continue."
+                      : "Auto-resolved. Please review and accept before importing."}
+                </p>
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={triggerNameResolution}
+                    disabled={isResolvingNames || selectedRows.length === 0}
+                  >
+                    Re-run Resolution
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="xs"
+                    className="ml-2"
+                    onClick={() => setShowNameResolutionModal(true)}
+                    disabled={isResolvingNames || nameResolutions.length === 0}
+                  >
+                    Review Resolutions
+                  </Button>
                 </div>
               </div>
             ) : null}
@@ -868,6 +1050,9 @@ export function BlogImportModal({
                       selectedRows.length === 0 ||
                       selectedValidCount === 0 ||
                       hasSelectedValidationErrors ||
+                      !isNameResolutionAccepted ||
+                      !isNameResolutionComplete ||
+                      isResolvingNames ||
                       isImporting ||
                       loading ||
                       !session
@@ -881,6 +1066,23 @@ export function BlogImportModal({
           </div>
         </div>
       ) : null}
+      <NameResolutionModal
+        isOpen={showNameResolutionModal}
+        isLoading={isResolvingNames}
+        resolutions={nameResolutions}
+        selectedResolutions={selectedNameResolutions}
+        onResolutionsChange={setSelectedNameResolutions}
+        onConfirm={() => {
+          setIsNameResolutionAccepted(true);
+          setShowNameResolutionModal(false);
+        }}
+        onClose={() => {
+          if (!isNameResolutionAccepted) {
+            setError("Name resolution is required before importing.");
+          }
+          setShowNameResolutionModal(false);
+        }}
+      />
     </>
   );
 }

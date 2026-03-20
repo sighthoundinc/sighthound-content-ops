@@ -11,6 +11,9 @@ type WipeAppCleanRpcResult = {
   fallback_used?: boolean;
   fallback_reason?: string;
 };
+type WipeAppCleanRequestBody = {
+  removeOtherAdminProfiles?: boolean;
+};
 type PostgrestLikeError = {
   code?: string | null;
   message?: string | null;
@@ -28,6 +31,8 @@ type PreservedAdminProfile = {
   user_roles?: Array<"admin" | "writer" | "publisher" | "editor"> | null;
   is_active: boolean;
 };
+const PRESERVED_ADMIN_PROFILE_SELECT =
+  "id,email,full_name,first_name,last_name,display_name,role,user_roles,is_active";
 
 const FULL_WIPE_TABLES: Array<{ table: string; markerColumn: string }> = [
   { table: "social_post_comments", markerColumn: "id" },
@@ -108,7 +113,7 @@ async function readPreservedAdminProfile(
 ) {
   const { data, error } = await adminClient
     .from("profiles")
-    .select("id,email,full_name,first_name,last_name,display_name,role,user_roles,is_active")
+    .select(PRESERVED_ADMIN_PROFILE_SELECT)
     .eq("id", userId)
     .maybeSingle();
   if (error || !data) {
@@ -116,13 +121,34 @@ async function readPreservedAdminProfile(
   }
   return data as PreservedAdminProfile;
 }
-
-async function restorePreservedAdminProfile(
+async function readOtherAdminProfiles(
   adminClient: ReturnType<typeof createAdminClient>,
-  profile: PreservedAdminProfile
+  userId: string
 ) {
+  const { data, error } = await adminClient
+    .from("profiles")
+    .select(PRESERVED_ADMIN_PROFILE_SELECT)
+    .neq("id", userId);
+  if (error) {
+    throw new Error("Could not load other admin profiles before wipe.");
+  }
+  const profiles = (data ?? []) as PreservedAdminProfile[];
+  return profiles.filter((nextProfile) =>
+    nextProfile.user_roles?.length
+      ? nextProfile.user_roles.includes("admin")
+      : nextProfile.role === "admin"
+  );
+}
+
+async function restorePreservedAdminProfiles(
+  adminClient: ReturnType<typeof createAdminClient>,
+  profiles: PreservedAdminProfile[]
+) {
+  if (profiles.length === 0) {
+    return;
+  }
   const { error } = await adminClient.from("profiles").upsert(
-    {
+    profiles.map((profile) => ({
       id: profile.id,
       email: profile.email,
       full_name: profile.full_name,
@@ -132,11 +158,11 @@ async function restorePreservedAdminProfile(
       role: "admin",
       user_roles: ["admin"],
       is_active: true,
-    },
+    })),
     { onConflict: "id" }
   );
   if (error) {
-    throw new Error(`Failed to restore acting admin profile: ${error.message}`);
+    throw new Error(`Failed to restore preserved admin profile(s): ${error.message}`);
   }
 }
 
@@ -204,6 +230,13 @@ async function wipePublicDataWithFallback(
 
 export async function DELETE(request: NextRequest) {
   try {
+    let removeOtherAdminProfiles = false;
+    try {
+      const requestBody = (await request.json()) as WipeAppCleanRequestBody;
+      removeOtherAdminProfiles = requestBody?.removeOtherAdminProfiles === true;
+    } catch {
+      removeOtherAdminProfiles = false;
+    }
     const auth = await requirePermission(request, "delete_user");
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -222,8 +255,18 @@ export async function DELETE(request: NextRequest) {
       adminClient,
       auth.context.userId
     );
+    const otherAdminProfiles = removeOtherAdminProfiles
+      ? []
+      : await readOtherAdminProfiles(adminClient, auth.context.userId);
+    const preservedAdminUserIds = new Set<string>([
+      auth.context.userId,
+      ...otherAdminProfiles.map((nextProfile) => nextProfile.id),
+    ]);
     const wipeData = await wipePublicDataWithFallback(adminClient, auth.context.userId);
-    await restorePreservedAdminProfile(adminClient, preservedAdminProfile);
+    await restorePreservedAdminProfiles(adminClient, [
+      preservedAdminProfile,
+      ...otherAdminProfiles,
+    ]);
 
     const userIds = await listAllAuthUserIds(adminClient);
     const failedUserDeletes: Array<{ userId: string; error: string }> = [];
@@ -231,7 +274,7 @@ export async function DELETE(request: NextRequest) {
     let preservedAuthUsers = 0;
 
     for (const userId of userIds) {
-      if (userId === auth.context.userId) {
+      if (preservedAdminUserIds.has(userId)) {
         preservedAuthUsers += 1;
         continue;
       }
@@ -252,6 +295,8 @@ export async function DELETE(request: NextRequest) {
           deletedAuthUsers,
           preservedAuthUsers,
           preservedAdminUserId: auth.context.userId,
+          removedOtherAdminProfiles: removeOtherAdminProfiles,
+          preservedOtherAdminProfiles: otherAdminProfiles.length,
           failedUserDeletes,
           wipeSummary: normalizedWipeData,
         },
@@ -263,6 +308,8 @@ export async function DELETE(request: NextRequest) {
       deletedAuthUsers,
       preservedAuthUsers,
       preservedAdminUserId: auth.context.userId,
+      removedOtherAdminProfiles: removeOtherAdminProfiles,
+      preservedOtherAdminProfiles: otherAdminProfiles.length,
       failedUserDeletes,
       wipeSummary: normalizedWipeData,
     });

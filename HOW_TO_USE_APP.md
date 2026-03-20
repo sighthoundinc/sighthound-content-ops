@@ -1,261 +1,238 @@
 # Sighthound Content Ops — User Guide
 
 ## 1. What this app is
-This is your content operations system.
+This is your content operations system for blogs and social posts.
 
 It helps you:
-- track blog progress
-- manage assignments
-- schedule publishing
-- manage social posts
-- maintain history and accountability
+- track writing and publishing progress
+- manage assignments and ownership
+- coordinate social post production and review
+- keep a clear activity trail
 
 It does NOT:
-- write or edit content (use Google Docs)
-- publish directly to websites
+- write full content for you
+- publish to your website or social channels automatically
 
-## 2. Get productive in 5 minutes (by role)
-### Writer — start here
-Goal: Move blogs from “Not Started” → “Completed”.
+## 2. Navigation and layout standards
+The sidebar order is fixed and consistent:
+1. Dashboard
+2. My Tasks
+3. Ideas
+4. Blogs
+5. Social Posts
+6. Calendar
+7. CardBoard
+8. User Manual
+9. Settings
+10. Permissions
 
-Do this daily:
-1. Open My Tasks
-2. Start assigned blog → set In Progress
-3. Work in Google Doc
-4. If changes needed → Needs Revision
-5. When done → Completed
+Filter groups in the left sidebar:
+- `Writer Filters`
+- `Publisher Filters`
 
-Watch-outs:
-- Don’t mark complete early
-- Don’t leave items stuck in progress
+Behavior:
+- both filter groups are collapsed by default
+- each group toggles independently (opening one does not open/close the other)
 
-### Publisher — start here
-Goal: Turn completed drafts into live content.
+## 3. Quick role-based start
+### Writer
+Goal: move assigned blogs to approved writing states.
 
-Do this daily:
-1. Go to Dashboard → Ready for Publishing
-2. Open blog
-3. Review doc
-4. Publish in CMS
-5. Add Live URL
-6. Mark Completed
+Daily flow:
+1. Open `My Tasks`
+2. Start assigned work
+3. Write in your document workflow
+4. Submit/advance when complete
 
-Watch-outs:
-- Cannot publish before writer completes
-- Always add URL (critical for tracking)
+### Publisher
+Goal: move approved writing to published outcomes.
 
-### Editor (if used)
-Goal: Improve quality, not manage workflow.
-
-Do:
-- Review during Needs Revision
-- Leave comments
-
-Avoid:
-- Changing workflow states unless assigned
-
-### Admin — start here
-Goal: Keep system clean and reliable.
-
-You handle:
-- users and roles
-- permissions
-- cleanup (history/comments)
-- reassignment
-- quick-view (simulate user)
-
-## 3. Core workflows (step-by-step)
-### A. Write a blog
-1. Blog assigned to you
-2. Set In Progress
-3. Write in Google Doc
-4. Update status as needed
-5. Mark Completed
-
-### B. Publish a blog
-1. Open blog in Ready for Publishing
-2. Review content
+Daily flow:
+1. Open publishing-ready work from Dashboard or Blogs
+2. Review content and publishing assets
 3. Publish in CMS
-4. Paste Live URL
-5. Mark Completed
+4. Add live URL and finalize status
 
-### C. Convert idea → blog
-1. Go to Ideas
-2. Click Convert to Blog
-3. Assign writer
-4. Start workflow
+### Admin
+Goal: keep workflow, permissions, and data health clean.
 
-### D. Create a social post
-1. Go to Social Posts
-2. Click create (or press C)
-3. Complete:
-   - Setup
-   - (Optional) Link blog
-   - Caption
-   - Review
-   - Publish
+Admin responsibilities:
+- user/role management
+- permission control
+- cleanup and recovery workflows
+- high-impact controls (including app reset)
 
-### E. Bulk actions
-1. Select rows
-2. Choose action
-3. Confirm
+## 4. Tables, sorting, and action bars
+Global table behavior:
+- sort directly from column headers (no separate Sort By dropdown)
+- click a header once for ascending, click again for descending
+- clicking a different header starts ascending on that column
+- `site` is also sortable from table headers
 
-You’ll see:
-- success count
-- failed rows (if any)
+Sort indicators:
+- `↕` unsorted
+- `↑` ascending
+- `↓` descending
 
-## 4. Pages and how to use them
-### Dashboard
-Your main workspace:
-- see queues (writing, publishing)
-- apply filters
-- act quickly
+Status updates:
+- the `Updating results...` message appears below pagination controls for stable layout
 
-### My Tasks
-Your personal task list:
-- prioritized work
-- quick access to assigned items
+Action order is consistent across pages:
+- `Copy` → `Customize` → `Import` → `Export`
 
-### Blogs
-Library view:
-- search past content
-- copy URLs/titles
-- export data
+View toggles (such as Table/Pipeline):
+- stay aligned on the far right
+- related buttons appear on the left side of the toggle
 
-### CardBoard
-Kanban view:
-- drag between stages
-- fast pipeline visibility
-
-### Calendar
-Scheduling view:
-- see what’s going live
-- drag to reschedule (if allowed)
-
-### Ideas
-Capture and convert:
-- store ideas
-- convert into blogs or posts
-
-### Social Posts
-Manage content for social:
-- plan, write, publish posts
-
-## 5. Search and filters (how they behave)
+## 5. Search and filter behavior
 Search is:
 - case-insensitive
-- partial match
-
-Works on:
-- title
-- URL (where available)
+- partial-match friendly
 
 Filters:
-- combine together
-- stay active until cleared
+- can be combined
+- persist until changed/cleared
+- are designed to behave consistently across pages
 
-If no results:
-- you’ll see a clear empty state (not a broken screen)
+If no results are found, you should see a clear empty state.
 
-## 6. Keyboard shortcuts & power usage
-### Global
-- ⌘K / Ctrl+K → Command palette
-- C → Quick create
+## 6. Import workflow (columns + rows)
+Imports support both column-level and row-level control before final submit.
 
-### Power tips
-- Use filters instead of scrolling
-- Use bulk select for repeated actions
-- Use command palette to jump between pages
+You can:
+- unselect non-required columns
+- select/unselect specific rows in sheet preview
+- exclude error rows or unwanted rows before import
 
-## 7. Errors and troubleshooting
-This system is designed so:
-- every action responds
-- every error is visible
+Required key columns for blog-style imports:
+- `SH` or `RED`
+- `Full blog title`
+- `Full published blog URL`
+- `Blog writer name`
+- `Person who published`
+- `Date shown on blog (YYYY-MM-DD)`
 
-If it doesn’t, it’s a bug.
+Notes:
+- non-key fields can be completed later
+- validation errors are shown clearly so you can correct and retry
 
-### Common errors
-#### “You don’t have permission”
-What it means:
-- You’re not allowed to perform this action
+## 6.5. Automatic name resolution (Step 1.75)
+When you import blogs with writer/publisher names, the system automatically matches those names against existing users to prevent duplicate user creation.
 
-Fix:
-- Check your role
-- Contact admin if needed
+**How it works:**
+1. After uploading your file and selecting columns, name resolution runs automatically in the background
+2. A confirmation modal appears showing all resolved names
+3. The system shows:
+   - Which existing user was matched (if found)
+   - Match confidence (e.g., "First & Last Name: 95%")
+   - A "Recommended" indicator for the best match
+4. You can:
+   - Accept all resolutions → proceed to preview
+   - Change specific matches manually → re-confirm
+   - Click "Re-run Resolution" → match names again
 
-#### “Invalid input”
-Examples:
-- missing required field
-- invalid date or URL
+**Matching logic:**
+The system matches against:
+- exact full names
+- exact display names
+- exact usernames
+- first name + last name combinations
+- first name only
+- last name only
 
-Fix:
-- correct highlighted field
-- try again
+If no matches are found, the system marks the name to create a new user.
 
-#### Action failed
-What it means:
-- system or network issue
+**Important:**
+- Only valid rows (no errors) participate in name resolution
+- You MUST review and accept the automatic resolution before importing
+- This prevents accidental duplicate user creation during import
 
-Fix:
-- retry
-- if persistent, report
+## 7. Ideas workflow rules
+On the Ideas page:
+- comments and references are visible by default
+- inline editing for comments/references is not used in idea cards
+- use `Edit Idea` for changes to title/site/comments/references
+- ideas can be converted to both blogs and social posts
 
-#### Bulk action partial failure
-What it means:
-- some rows failed
+## 8. Blog status language
+Status labels are user-facing and standardized for clarity.
 
-Fix:
-- check row-level errors
-- fix and retry
+Writer-side labels include:
+- `Awaiting Editorial Review`
+- `Writing Approved`
 
-### Important system behavior
-- Failed actions do NOT partially apply
-- UI should not change unless action succeeds
-- You should always see feedback
+Publisher-side status progression:
+- `Not Started` → `Publishing in Progress` → `Waiting for Approval` → `Publishing Approved` → `Published`
 
-If any of this doesn’t happen → report it.
+## 9. Social posts: editor flow and completion rules
+Dedicated social editor flow:
+1. Setup
+2. Link Context (optional)
+3. Write Caption
+4. Review & Publish
 
-## 8. Permissions (quick reference)
-- Writer:
-  - edit blog fields: Yes
-  - change writer status: Yes
-  - change publisher status: No
-  - publish blog: No
-  - manage users/permissions: No
-- Publisher:
-  - edit blog fields: Limited
-  - change writer status: No
-  - change publisher status: Yes
-  - publish blog: Yes
-  - manage users/permissions: No
-- Admin:
-  - edit blog fields: Yes
-  - change writer status: Yes
-  - change publisher status: Yes
-  - publish blog: Yes
-  - manage users/permissions: Yes
+Social status model:
+- `Draft`
+- `In Review`
+- `Changes Requested`
+- `Creative Approved`
+- `Ready to Publish`
+- `Awaiting Live Link`
+- `Published`
 
-## 9. Good habits (keeps system clean)
-- Update status as you work
-- Add live URL after publishing
-- Don’t leave items stuck
-- Use filters instead of scrolling
-- Link social posts to blogs
+Next-action cues:
+- Draft → Submit for Review
+- In Review → Admin Review Needed
+- Changes Requested → Apply Changes
+- Creative Approved → Add Caption & Schedule
+- Ready to Publish → Publish Post
+- Awaiting Live Link → Submit Link
+- Published → Done
 
-## 10. When something feels off
-If:
-- nothing happens after an action
-- UI looks wrong
-- data doesn’t update
+Important:
+- social editors can collaborate concurrently on the same post
+- at least one public live link (LinkedIn, Facebook, or Instagram) is required before final completion
+- if live link is missing, keep the post in `Awaiting Live Link`
 
-That’s not expected behavior.
+## 10. Keyboard shortcuts and quick create
+Shortcuts are shown as clickable `Shortcut` text in the UI.
 
-Report it.
+When clicked, `Shortcut` opens a modal with key combinations.
 
-## 11. How this connects to system rules (for context)
-- Workflow logic is enforced by the system (not manual)
-- Permissions are strictly controlled
-- Actions should never silently fail
-- Data should always stay consistent
+Shortcut visibility:
+- shown alongside core actions in dropdowns (for example Dashboard, Add New Idea, New Blog, New Social Post)
 
-You don’t need to manage this manually, but this is why the system behaves the way it does.
+Quick Create keyboard behavior:
+- `↑` / `↓` to move through options
+- `Enter` to select
+- `Esc` to close
+- active option uses a clear visible focus state
+
+## 11. Feedback, validation, and errors
+System behavior standards:
+- every action should show visible feedback (loading/success/error)
+- inline field validation is shown near the field
+- errors are written in actionable language
+- failed actions should not leave partially applied updates
+
+Error types you may see:
+- validation errors (fix input and retry)
+- permission errors (check role/access)
+- system errors (retry, then report if persistent)
+
+## 12. Permissions and sensitive actions
+Permissions are role-based and strictly enforced.
+
+Critical rule:
+- only an admin can run `Wipe App Clean`
+- this reset removes operational data across the app while preserving the initiating admin account itself
+- the initiating admin’s own content/activity records are also wiped as part of the reset behavior
+- optional: enable `Also remove all other admin profiles and auth accounts` in the wipe confirmation modal to delete other admin accounts; leave it unchecked to preserve them
+
+## 13. Interaction consistency expectations
+For consistent UX:
+- dropdowns and modals close when focus is lost (click outside)
+- copy actions in Quick Actions show a global visual confirmation
+- table layout remains stable during sorting, filtering, and pagination updates
+
+If these behaviors are missing, report it as a bug.

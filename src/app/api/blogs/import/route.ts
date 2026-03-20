@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/server-permissions";
 import { createAdminClient } from "@/lib/supabase/server";
-import type { AppRole, BlogSite, ProfileRecord } from "@/lib/types";
+import type { AppRole, BlogSite } from "@/lib/types";
 
 const importRowSchema = z.object({
   rowNumber: z.number().int().min(1),
@@ -23,6 +23,13 @@ const importRequestSchema = z.object({
   fileName: z.string().optional(),
   rows: z.array(importRowSchema).min(1),
   selectedColumns: z.array(z.string()).optional(),
+  nameResolutions: z.record(
+    z.string(),
+    z.object({
+      action: z.enum(["use_existing", "create_new"]),
+      userId: z.string().optional(),
+    })
+  ).optional(),
 });
 
 type ImportFailure = {
@@ -48,6 +55,13 @@ type ValidatedImportRow = {
 
 type ProfileCache = {
   byNormalizedName: Map<string, string>;
+  profiles: Array<{
+    id: string;
+    full_name: string;
+    display_name: string | null;
+    username: string | null;
+    email: string;
+  }>;
 };
 
 function normalizeName(value: string) {
@@ -195,10 +209,19 @@ function buildImportEmail(name: string) {
   return `${safeLocal}.${randomUUID().slice(0, 8)}@bulk-import.local`;
 }
 
+function getFirstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? "";
+}
+
+function getLastName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  return parts.length > 1 ? parts[parts.length - 1] : "";
+}
+
 async function loadProfileCache(adminClient: ReturnType<typeof createAdminClient>) {
   const { data, error } = await adminClient
     .from("profiles")
-    .select("id,full_name,display_name")
+    .select("id,full_name,display_name,username,email")
     .eq("is_active", true);
 
   if (error) {
@@ -207,11 +230,17 @@ async function loadProfileCache(adminClient: ReturnType<typeof createAdminClient
 
   const cache: ProfileCache = {
     byNormalizedName: new Map(),
+    profiles: (data ?? []) as Array<{
+      id: string;
+      full_name: string;
+      display_name: string | null;
+      username: string | null;
+      email: string;
+    }>,
   };
 
-  for (const profile of (data ?? []) as Array<
-    Pick<ProfileRecord, "id" | "full_name" | "display_name">
-  >) {
+  for (const profile of cache.profiles) {
+    // Exact matches: full_name, display_name, username, email
     const fullName = normalizeName(profile.full_name);
     if (fullName) {
       cache.byNormalizedName.set(fullName, profile.id);
@@ -219,6 +248,25 @@ async function loadProfileCache(adminClient: ReturnType<typeof createAdminClient
     const displayName = normalizeName(profile.display_name ?? "");
     if (displayName) {
       cache.byNormalizedName.set(displayName, profile.id);
+    }
+    const username = normalizeName(profile.username ?? "");
+    if (username) {
+      cache.byNormalizedName.set(username, profile.id);
+    }
+    const emailLocal = normalizeName(profile.email.split("@")[0] ?? "");
+    if (emailLocal) {
+      cache.byNormalizedName.set(emailLocal, profile.id);
+    }
+    
+    // First/last name matches
+    const firstName = normalizeName(getFirstName(profile.full_name));
+    if (firstName) {
+      // Store with a prefix to distinguish from full matches
+      cache.byNormalizedName.set(`_first:${firstName}`, profile.id);
+    }
+    const lastName = normalizeName(getLastName(profile.full_name));
+    if (lastName) {
+      cache.byNormalizedName.set(`_last:${lastName}`, profile.id);
     }
   }
 
@@ -229,17 +277,61 @@ async function resolveOrCreateProfileId(
   adminClient: ReturnType<typeof createAdminClient>,
   cache: ProfileCache,
   name: string,
-  defaultRole: AppRole
+  defaultRole: AppRole,
+  nameResolutions?: Record<string, { action: 'use_existing' | 'create_new'; userId?: string }>
 ) {
+  // Check if user provided explicit resolution for this name
+  if (nameResolutions) {
+    const resolution = nameResolutions[name];
+    if (resolution) {
+      if (resolution.action === 'use_existing' && resolution.userId) {
+        return resolution.userId;
+      }
+      // If action is 'create_new', fall through to creation logic
+    }
+  }
+
   const normalized = normalizeName(name);
   if (!normalized) {
     return null;
   }
+  
+  // Try exact match first
   const existing = cache.byNormalizedName.get(normalized);
   if (existing) {
     return existing;
   }
+  
+  // Try first+last name match
+  const inputFirst = normalizeName(getFirstName(name));
+  const inputLast = normalizeName(getLastName(name));
+  if (inputFirst && inputLast) {
+    for (const profile of cache.profiles) {
+      const profileFirst = normalizeName(getFirstName(profile.full_name));
+      const profileLast = normalizeName(getLastName(profile.full_name));
+      if (profileFirst === inputFirst && profileLast === inputLast) {
+        return profile.id;
+      }
+    }
+  }
+  
+  // Try first name only match
+  if (inputFirst) {
+    const firstNameMatch = cache.byNormalizedName.get(`_first:${inputFirst}`);
+    if (firstNameMatch) {
+      return firstNameMatch;
+    }
+  }
+  
+  // Try last name only match
+  if (inputLast) {
+    const lastNameMatch = cache.byNormalizedName.get(`_last:${inputLast}`);
+    if (lastNameMatch) {
+      return lastNameMatch;
+    }
+  }
 
+  // No match found, create new user
   const email = buildImportEmail(name);
   const password = `${randomUUID()}Aa1!`;
   const { data: created, error: createUserError } = await adminClient.auth.admin.createUser({
@@ -364,13 +456,15 @@ export async function POST(request: NextRequest) {
           adminClient,
           profileCache,
           row.writer,
-          "writer"
+          "writer",
+          parsed.data.nameResolutions
         );
         const publisherId = await resolveOrCreateProfileId(
           adminClient,
           profileCache,
           row.publisher,
-          "publisher"
+          "publisher",
+          parsed.data.nameResolutions
         );
         const actualPublishedAt = row.actualPublishDate
           ? `${row.actualPublishDate}T00:00:00.000Z`

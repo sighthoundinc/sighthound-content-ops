@@ -129,6 +129,7 @@ Before considering a task complete:
 3. Confirm documentation updates from the rule above are applied when applicable.
 4. Prefer small, reversible changes over broad rewrites unless the task explicitly requires larger refactoring.
 5. Apply risk-based validation from **Change Risk Classification** where applicable.
+6. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
 
 ## Definition of Done (MUST)
 

@@ -179,6 +179,10 @@ Key behavior:
 - admin-only activity history cleanup (global or user-scoped)
 - optional comments cleanup during history purge
 - admin quick-view as non-admin user, with return-to-admin flow
+- admin-only wipe app clean (full factory reset)
+  - always preserves currently signed-in admin account
+  - optional checkbox can remove all other admin profiles/accounts
+  - when unchecked, other admin profiles are preserved
 
 ### Permissions (`/settings/permissions`)
 - role-level configurable permission matrix
@@ -278,6 +282,7 @@ Highlights:
 - `/api/admin/reassign-assignments` — assignment transfer
 - `/api/admin/activity-history` — activity cleanup, optional comments cleanup
 - `/api/admin/quick-view` — admin quick-view token generation/session switch support
+- `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion flag
 ## 11) Integrations
 Slack via Supabase Edge Function:
 - `supabase/functions/slack-notify/index.ts`
@@ -352,6 +357,33 @@ A feature is considered complete only if all of the following are satisfied:
 ### Permissions
 - Supabase RLS policies implemented and verified
 - access rules enforced independently of UI
+## 17) Blog import name resolution (Step 1.75) (MUST)
+This step is mandatory for blog import and exists to prevent duplicate profile creation.
+### Functional behavior
+- After Step 1.5 (column selection), name resolution runs automatically in the background.
+- Resolution processes only valid rows (rows without validation errors).
+- Writer and publisher names are deduplicated before resolution request.
+- A confirmation modal displays auto-resolved mappings and alternatives.
+- Import remains blocked until the user confirms/accepts resolutions.
+### Matching fields and priority
+Matching attempts against active profiles use this priority:
+1. exact `full_name` (100)
+2. exact `display_name` (100)
+3. exact `username` (100)
+4. first+last name match (95)
+5. first-name only (70)
+6. last-name only (60)
+7. none (fallback to create new)
+### Data contract updates
+- `POST /api/users/resolve-names`
+  - input: `{ names: string[] }`
+  - output: `{ resolutions: NameResolutionResult[] }`
+- `POST /api/blogs/import`
+  - accepts `nameResolutions`:
+    - `{ [name]: { action: 'use_existing' | 'create_new', userId?: string } }`
+### DB support
+- `profiles.username` added as unique indexed column for matching.
+- Existing profiles can be backfilled from email local-part during migration.
 
 ### UI & UX
 - UI reflects correct loading/success/error states

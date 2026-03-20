@@ -97,6 +97,7 @@ Internal content operations platform for Sighthound marketing workflows across `
 - Admin-only activity history cleanup (global or user-scoped)
 - Optional comments cleanup during history purge
 - Admin quick-view as non-admin user with return-to-admin workflow
+- Admin-only Wipe App Clean reset with optional checkbox to remove other admin profiles/accounts (signed-in admin is always preserved)
 
 ### Social Post Editor (`/social-posts/[id]`)
 - Guided 4-step single-post workflow:
@@ -149,6 +150,7 @@ npm run dev
 - `/api/admin/activity-history` — admin activity/audit cleanup
 - `/api/admin/quick-view` — admin quick-view session switch
 - `/api/admin/users` — admin user operations
+- `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion
 - `/api/users/profile` — current user profile operations
 
 ## Supabase migrations

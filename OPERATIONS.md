@@ -188,7 +188,85 @@ Deploy/update:
 supabase functions deploy slack-notify --project-ref <PROJECT_REF>
 ```
 
-## 11) Legacy import operations
+## 11) Blog import name resolution (Step 1.75)
+### Overview
+The system automatically matches imported writer/publisher names against existing users to prevent duplicate user creation. This runs as a mandatory step before final import.
+
+### Matching algorithm
+Matches are scored by confidence level (highest to lowest priority):
+1. **Exact full name** (100%) - normalized case-insensitive comparison
+2. **Exact display name** (100%) - if user has a custom display name
+3. **Exact username** (100%) - if imported name matches user account username
+4. **First + Last name match** (95%) - first and last word of imported name match user's name parts
+5. **First name only** (70%) - first word matches first name part
+6. **Last name only** (60%) - last word matches last name part
+7. **No match** - system marks for new user creation
+
+### Resolution flow
+1. **Background auto-trigger** (after column selection, Step 1.75):
+   - Only processes valid rows (no validation errors)
+   - Extracts unique writer + publisher names
+   - Calls `/api/users/resolve-names` API endpoint
+
+2. **Auto-resolution**:
+   - If `bestMatch` found → uses that user (action: `use_existing`, userId)
+   - If no match → marks for new user creation (action: `create_new`)
+
+3. **Confirmation modal**:
+   - Shows all resolved names with match type + confidence
+   - Recommends best matches (★ Recommended indicator)
+   - User can:
+     - Accept all → proceeds to Step 2 (preview)
+     - Modify individual resolutions → changes mapping
+     - Re-run resolution → triggers fresh matching
+   - User must explicitly accept before import is allowed
+
+4. **Import with resolutions**:
+   - `nameResolutions` map is passed to `/api/blogs/import`
+   - Backend respects user's selections (no re-matching)
+
+### Database schema
+- `profiles.username` - unique text field, indexed for fast lookup
+- Populated from email local-part for existing users during migration
+
+### API details
+**POST /api/users/resolve-names**
+- Input: `{ names: string[] }`
+- Output: `{ resolutions: NameResolutionResult[] }`
+- Where `NameResolutionResult` contains:
+  - `inputName`: original imported name
+  - `candidates`: array of matching users with matchType + confidence
+  - `bestMatch`: highest-confidence candidate (null if no matches)
+
+**POST /api/blogs/import** (updated)
+- Input includes: `nameResolutions: Record<string, { action: 'use_existing' | 'create_new', userId?: string }>`
+- Backend uses provided resolutions instead of re-matching
+
+### Troubleshooting
+**"Names don't match expected users"**
+1. Check that `profiles.username` is populated
+2. Verify user full_name, display_name, and username values
+3. Ensure imported names are not misspelled (e.g., "John Doe" vs "Jon Doe")
+4. Try Re-run Resolution to see fresh candidates
+
+**"Modal doesn't appear"**
+1. Check browser console for fetch errors
+2. Verify `/api/users/resolve-names` is returning data
+3. Confirm valid rows exist (rows with validation errors are skipped)
+4. If all rows have validation errors, resolution is automatically skipped (no API call)
+
+**"Import blocked after resolution"**
+- You must click "Confirm" in the resolution modal to accept matches
+- The import button remains disabled until acceptance
+
+### Edge case behavior
+**Empty name set (all rows have validation errors)**
+- Auto-resolution safely skips if there are no valid rows with extractable names
+- No API call is made (guard clause prevents empty array validation error)
+- User is then forced to fix validation errors before import can proceed
+- This is correct behavior since unparseable rows should not advance
+
+## 12) Legacy import operations
 Dry run:
 ```bash
 npm run import:legacy -- --dry-run
@@ -300,13 +378,15 @@ For legacy XLSX import script (`npm run import:legacy`):
 - For authored content continuity during delete/purge, APIs attempt reassignment of `created_by` ownership before removal.
 
 ### Data cleanup
-- Activity history cleanup: `/api/admin/activity-history`
+|- Activity history cleanup: `/api/admin/activity-history`
   - scope: all users or selected users
   - optional comments cleanup for `blog_comments` and `social_post_comments`
-- Factory reset: `/api/admin/wipe-app-clean`
+|- Factory reset: `/api/admin/wipe-app-clean`
   - admin-only
-  - preserves only currently signed-in admin auth/profile context
-  - clears content, logs, permissions, and related operational data
+  - always preserves currently signed-in admin auth/profile context
+  - optional: delete all other admin profiles and auth accounts (checkbox in confirmation modal)
+  - if unchecked, other admin profiles are preserved alongside signed-in admin
+  - clears all non-admin users, content, logs, permissions, and related operational data
 
 ## 16) Admin workflows (current state)
 ### Activity history cleanup

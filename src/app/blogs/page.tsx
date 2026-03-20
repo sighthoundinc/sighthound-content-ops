@@ -165,7 +165,7 @@ const STATUS_FILTER_OPTIONS: Array<{ value: LibraryStatusFilter; label: string }
 ];
 
 const SITE_FILTER_OPTIONS: Array<{ value: LibrarySiteFilter; label: string }> = [
-  { value: "all", label: "All Sites" },
+  { value: "all", label: "Sites" },
   { value: "sighthound.com", label: "SH" },
   { value: "redactor.com", label: "RED" },
 ];
@@ -173,7 +173,7 @@ const WRITER_STATUS_FILTER_OPTIONS: Array<{
   value: LibraryWriterStatusFilter;
   label: string;
 }> = [
-  { value: "all", label: "All Writer Statuses" },
+  { value: "all", label: "Writer Status" },
   { value: "not_started", label: WRITER_STATUS_LABELS.not_started },
   { value: "in_progress", label: WRITER_STATUS_LABELS.in_progress },
   { value: "needs_revision", label: WRITER_STATUS_LABELS.needs_revision },
@@ -183,7 +183,7 @@ const PUBLISHER_STATUS_FILTER_OPTIONS: Array<{
   value: LibraryPublisherStatusFilter;
   label: string;
 }> = [
-  { value: "all", label: "All Publisher Statuses" },
+  { value: "all", label: "Publisher Status" },
   { value: "not_started", label: PUBLISHER_STATUS_LABELS.not_started },
   { value: "in_progress", label: PUBLISHER_STATUS_LABELS.in_progress },
   { value: "pending_review", label: PUBLISHER_STATUS_LABELS.pending_review },
@@ -923,18 +923,6 @@ function BlogLibraryPageContent() {
         event.preventDefault();
         handleOpenBlogPanel(focusedBlogId);
         return;
-      }
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key.toLowerCase() === "c" &&
-        focusedBlogId
-      ) {
-        const focusedBlog = pagedBlogs.find((blog) => blog.id === focusedBlogId);
-        if (!focusedBlog) {
-          return;
-        }
-        event.preventDefault();
-        void copyToClipboard(focusedBlog.title, focusedBlog.id, "title");
       }
     };
     window.addEventListener("keydown", handleKeyboardNavigation);

@@ -7,6 +7,7 @@ import { format, formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
+import { BlogImportModal } from "@/components/blog-import-modal";
 import { Button } from "@/components/button";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
@@ -25,8 +26,8 @@ import {
   DataPageTableFeedback,
   DataPageToolbar,
 } from "@/components/data-page";
-import { KbdShortcut } from "@/components/kbd-shortcut";
 import { ExternalLink } from "@/components/external-link";
+import { KbdShortcut } from "@/components/kbd-shortcut";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   PublisherStatusBadge,
@@ -77,6 +78,7 @@ import {
   type TableRowLimit,
 } from "@/lib/table";
 import { getSiteBadgeClasses, getSiteLabel, getSiteShortLabel } from "@/lib/site";
+import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
 import type {
   BlogSite,
   BlogHistoryRecord,
@@ -2216,16 +2218,6 @@ export default function DashboardPage() {
         return;
       }
       if (
-        updates.writer_status !== undefined &&
-        updates.writer_status !== "not_started" &&
-        updates.writer_status !== "in_progress" &&
-        !blog.google_doc_url
-      ) {
-        setError("Google Doc link required to advance writer stage beyond drafting.");
-        setSuccessMessage(null);
-        return;
-      }
-      if (
         updates.publisher_status !== undefined &&
         !canTransitionPublisherStatus(
           blog.publisher_status,
@@ -2234,15 +2226,6 @@ export default function DashboardPage() {
         )
       ) {
         setError("You do not have permission to apply that publisher status change.");
-        setSuccessMessage(null);
-        return;
-      }
-      if (
-        updates.publisher_status !== undefined &&
-        updates.publisher_status !== "not_started" &&
-        !blog.google_doc_url
-      ) {
-        setError("Google Doc link required to advance publisher status.");
         setSuccessMessage(null);
         return;
       }
@@ -2323,7 +2306,20 @@ export default function DashboardPage() {
           previousBlog.id === blog.id ? nextBlog : previousBlog
         )
       );
-      setSuccessMessage(message);
+      
+      // Warn if advancing writer status without Google Doc link
+      if (
+        updates.writer_status !== undefined &&
+        updates.writer_status !== "not_started" &&
+        updates.writer_status !== "in_progress" &&
+        !nextBlog.google_doc_url
+      ) {
+        setSuccessMessage(
+          `${message} (Note: Please add a Google Doc link when available)`
+        );
+      } else {
+        setSuccessMessage(message);
+      }
     },
     [
       canChangePublisherAssignment,
@@ -2558,18 +2554,27 @@ export default function DashboardPage() {
                               router.push("/ideas");
                             }}
                           >
-                            New Idea
+                            <span className="flex items-center justify-between gap-3">
+                              <span>New Idea</span>
+                              <KbdShortcut className="border-slate-200 bg-slate-50 text-slate-500">
+                                {MAIN_CREATE_SHORTCUTS.newIdea}
+                              </KbdShortcut>
+                            </span>
                           </button>
                           <button
                             type="button"
-                            className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
                             onClick={() => {
                               closeOpenDashboardMenus();
                               router.push("/blogs/new");
                             }}
                           >
-                            <span>New Blog</span>
-                            <KbdShortcut className="bg-slate-50">N</KbdShortcut>
+                            <span className="flex items-center justify-between gap-3">
+                              <span>New Blog</span>
+                              <KbdShortcut className="border-slate-200 bg-slate-50 text-slate-500">
+                                {MAIN_CREATE_SHORTCUTS.newBlog}
+                              </KbdShortcut>
+                            </span>
                           </button>
                         </>
                       ) : null}
@@ -2582,7 +2587,12 @@ export default function DashboardPage() {
                             router.push("/social-posts?create=1");
                           }}
                         >
-                          New Social Post
+                          <span className="flex items-center justify-between gap-3">
+                            <span>New Social Post</span>
+                            <KbdShortcut className="border-slate-200 bg-slate-50 text-slate-500">
+                              {MAIN_CREATE_SHORTCUTS.newSocialPost}
+                            </KbdShortcut>
+                          </span>
                         </button>
                       ) : null}
                     </div>
@@ -2592,13 +2602,8 @@ export default function DashboardPage() {
             }
           />
           <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Highlights (click to view)
-              </p>
-              <p className="text-[11px] text-slate-500">Counts reflect the full dataset</p>
-            </div>
-            <div className="mt-2 grid gap-2 text-sm md:grid-cols-3">
+            <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
+            <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
               <button
                 type="button"
                 className={`rounded-lg border px-3 py-3 text-left transition ${
@@ -2613,10 +2618,10 @@ export default function DashboardPage() {
                   setActiveQuickQueue(null);
                 }}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                <p className="text-xs font-semibold text-slate-700">
                   Scheduled This Week
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {focusStripMetrics.scheduledThisWeek}
                 </p>
               </button>
@@ -2634,10 +2639,10 @@ export default function DashboardPage() {
                   setActiveQuickQueue(null);
                 }}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wide">
-                  Currently Writing
+                <p className="text-xs font-semibold text-slate-700">
+                  Writing in Progress
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {focusStripMetrics.currentlyWriting}
                 </p>
               </button>
@@ -2655,10 +2660,10 @@ export default function DashboardPage() {
                   setActiveQuickQueue(null);
                 }}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                <p className="text-xs font-semibold text-slate-700">
                   Under Review
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {focusStripMetrics.underReview}
                 </p>
               </button>
@@ -2676,10 +2681,10 @@ export default function DashboardPage() {
                   setActiveQuickQueue(null);
                 }}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                <p className="text-xs font-semibold text-slate-700">
                   Needs Revision
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {focusStripMetrics.needsRevision}
                 </p>
               </button>
@@ -2697,10 +2702,10 @@ export default function DashboardPage() {
                   setActiveQuickQueue(null);
                 }}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wide">
+                <p className="text-xs font-semibold text-slate-700">
                   Ready to Publish
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {focusStripMetrics.readyToPublish}
                 </p>
               </button>
@@ -2718,10 +2723,10 @@ export default function DashboardPage() {
                   setActiveQuickQueue(null);
                 }}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wide">
-                  Publishing In Progress
+                <p className="text-xs font-semibold text-slate-700">
+                  Publishing in Progress
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {focusStripMetrics.publishingInProgress}
                 </p>
               </button>
@@ -2743,53 +2748,54 @@ export default function DashboardPage() {
             }
             filters={
               <div className="md:col-span-2 xl:col-span-4 grid gap-3">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <CheckboxMultiSelect
-                    label="All Sites"
-                    options={siteFilterOptions}
-                    selectedValues={siteFilters}
-                    onChange={(nextValues) => {
-                      setSiteFilters(nextValues as BlogSite[]);
-                    }}
-                  />
-                  <CheckboxMultiSelect
-                    label="All Writers"
-                    options={writerFilterOptions}
-                    selectedValues={writerFilters}
-                    onChange={setWriterFilters}
-                  />
-                  <CheckboxMultiSelect
-                    label="All Publishers"
-                    options={publisherFilterOptions}
-                    selectedValues={publisherFilters}
-                    onChange={setPublisherFilters}
-                  />
-                </div>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <CheckboxMultiSelect
-                    label="All Writer Status"
-                    options={writerStatusFilterOptions}
-                    selectedValues={writerStatusFilters}
-                    onChange={(nextValues) => {
-                      setWriterStatusFilters(nextValues as WriterStageStatus[]);
-                    }}
-                  />
-                  <CheckboxMultiSelect
-                    label="All Publisher Status"
-                    options={publisherStatusFilterOptions}
-                    selectedValues={publisherStatusFilters}
-                    onChange={(nextValues) => {
-                      setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-                    }}
-                  />
-                  <CheckboxMultiSelect
-                    label="All Overall Status"
-                    options={overallStatusFilterOptions}
-                    selectedValues={statusFilters}
-                    onChange={(nextValues) => {
-                      setStatusFilters(nextValues as OverallBlogStatus[]);
-                    }}
-                  />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">Filter by</p>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <CheckboxMultiSelect
+                      label="Sites"
+                      options={siteFilterOptions}
+                      selectedValues={siteFilters}
+                      onChange={(nextValues) => {
+                        setSiteFilters(nextValues as BlogSite[]);
+                      }}
+                    />
+                    <CheckboxMultiSelect
+                      label="Writers"
+                      options={writerFilterOptions}
+                      selectedValues={writerFilters}
+                      onChange={setWriterFilters}
+                    />
+                    <CheckboxMultiSelect
+                      label="Publishers"
+                      options={publisherFilterOptions}
+                      selectedValues={publisherFilters}
+                      onChange={setPublisherFilters}
+                    />
+                    <CheckboxMultiSelect
+                      label="Writer Status"
+                      options={writerStatusFilterOptions}
+                      selectedValues={writerStatusFilters}
+                      onChange={(nextValues) => {
+                        setWriterStatusFilters(nextValues as WriterStageStatus[]);
+                      }}
+                    />
+                    <CheckboxMultiSelect
+                      label="Publisher Status"
+                      options={publisherStatusFilterOptions}
+                      selectedValues={publisherStatusFilters}
+                      onChange={(nextValues) => {
+                        setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
+                      }}
+                    />
+                    <CheckboxMultiSelect
+                      label="Stage"
+                      options={overallStatusFilterOptions}
+                      selectedValues={statusFilters}
+                      onChange={(nextValues) => {
+                        setStatusFilters(nextValues as OverallBlogStatus[]);
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             }
@@ -3045,15 +3051,18 @@ export default function DashboardPage() {
                       Customize
                     </button>
                     {canRunDataImport ? (
-                      <button
-                        type="button"
-                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-slate-900 bg-slate-900 text-white hover:bg-slate-700`}
-                        onClick={() => {
-                          router.push("/blogs?import=1");
+                      <BlogImportModal
+                        triggerLabel="Import"
+                        triggerVariant="primary"
+                        triggerSize="sm"
+                        triggerClassName={DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS}
+                        onImported={async (summary) => {
+                          await loadData();
+                          showSuccess(
+                            `Import complete: ${summary.created} created, ${summary.updated} updated, ${summary.failed} failed.`
+                          );
                         }}
-                      >
-                        Import
-                      </button>
+                      />
                     ) : null}
                     {canExportCsv || canExportSelectedCsv ? (
                       <details className="relative">

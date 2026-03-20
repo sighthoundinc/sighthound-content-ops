@@ -42,6 +42,7 @@ import {
 import { ProtectedPage } from "@/components/protected-page";
 import { WorkflowStageBadge } from "@/components/status-badge";
 import { TablePaginationControls, TableRowLimitSelect } from "@/components/table-controls";
+import { KbdShortcut } from "@/components/kbd-shortcut";
 import {
   BLOG_SELECT_LEGACY,
   BLOG_SELECT_LEGACY_WITH_RELATIONS,
@@ -65,6 +66,7 @@ import {
   getWorkflowStage,
 } from "@/lib/status";
 import { getSiteLabel, getSiteShortLabel } from "@/lib/site";
+import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -1162,7 +1164,7 @@ export default function CalendarPage() {
                 }}
                 className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
               >
-                <option value="all">All Writers</option>
+                <option value="all">Writers</option>
                 {writerOptions.map(([writerId, writerName]) => (
                   <option key={writerId} value={writerId}>
                     {writerName}
@@ -1309,7 +1311,12 @@ export default function CalendarPage() {
                                   setQuickCreateDateKey(null);
                                 }}
                               >
-                                New Blog
+                                <span className="flex items-center justify-between gap-2">
+                                  <span>New Blog</span>
+                                  <KbdShortcut className="text-[10px]">
+                                    {MAIN_CREATE_SHORTCUTS.newBlog}
+                                  </KbdShortcut>
+                                </span>
                               </Link>
                               <Link
                                 href={`/social-posts?view=calendar&create=1&scheduled_date=${key}`}
@@ -1318,7 +1325,12 @@ export default function CalendarPage() {
                                   setQuickCreateDateKey(null);
                                 }}
                               >
-                                New Social Post
+                                <span className="flex items-center justify-between gap-2">
+                                  <span>New Social Post</span>
+                                  <KbdShortcut className="text-[10px]">
+                                    {MAIN_CREATE_SHORTCUTS.newSocialPost}
+                                  </KbdShortcut>
+                                </span>
                               </Link>
                             </div>
                           ) : null}

@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
+import { QUICK_CREATE_SHORTCUT_KEY } from "@/lib/shortcuts";
+import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 
 export interface UseGlobalQuickCreateReturn {
   isOpen: boolean;
@@ -11,13 +13,15 @@ export function useGlobalQuickCreate(): UseGlobalQuickCreateReturn {
 
   const open = useCallback(() => {
     setIsOpen(true);
+    setActiveModal("global-quick-create");
   }, []);
 
   const close = useCallback(() => {
     setIsOpen(false);
+    setActiveModal(null);
   }, []);
 
-  // Global keyboard listener for C key
+  // Global keyboard listener for Q key
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) {
@@ -35,16 +39,29 @@ export function useGlobalQuickCreate(): UseGlobalQuickCreateReturn {
         return;
       }
 
-      // C key to open quick create
-      if (e.key.toLowerCase() === "c") {
+      // Quick create key to open quick create
+      if (e.key.toLowerCase() === QUICK_CREATE_SHORTCUT_KEY.toLowerCase()) {
+        const activeModal = getActiveModal();
+        if (activeModal && activeModal !== "global-quick-create") {
+          return; // Don't open if another modal is already open
+        }
         e.preventDefault();
-        setIsOpen((prev) => !prev);
+        setIsOpen((prev) => {
+          const nextIsOpen = !prev;
+          if (nextIsOpen) {
+            setActiveModal("global-quick-create");
+          } else {
+            setActiveModal(null);
+          }
+          return nextIsOpen;
+        });
       }
 
       // ESC to close
       if (e.key === "Escape" && isOpen) {
         e.preventDefault();
         setIsOpen(false);
+        setActiveModal(null);
       }
     };
 

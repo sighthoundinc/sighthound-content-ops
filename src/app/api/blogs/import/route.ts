@@ -7,8 +7,6 @@ import { requirePermission } from "@/lib/server-permissions";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { AppRole, BlogSite, ProfileRecord } from "@/lib/types";
 
-const MAX_IMPORT_ROWS = 500;
-
 const importRowSchema = z.object({
   rowNumber: z.number().int().min(1),
   site: z.string(),
@@ -23,7 +21,8 @@ const importRowSchema = z.object({
 
 const importRequestSchema = z.object({
   fileName: z.string().optional(),
-  rows: z.array(importRowSchema).min(1).max(MAX_IMPORT_ROWS),
+  rows: z.array(importRowSchema).min(1),
+  selectedColumns: z.array(z.string()).optional(),
 });
 
 type ImportFailure = {
@@ -44,7 +43,7 @@ type ValidatedImportRow = {
   publisher: string;
   draftDocLink: string | null;
   displayPublishDate: string;
-  actualPublishDate: string;
+  actualPublishDate: string | null;
 };
 
 type ProfileCache = {
@@ -112,7 +111,7 @@ function isValidHttpUrl(value: string) {
   }
 }
 
-function validateRow(row: z.infer<typeof importRowSchema>) {
+function validateRow(row: z.infer<typeof importRowSchema>, selectedColumns?: Set<string>) {
   const failures: string[] = [];
   const site = normalizeSite(row.site);
   if (!site) {
@@ -149,15 +148,17 @@ function validateRow(row: z.infer<typeof importRowSchema>) {
   }
 
   const actualPublishDate = row.actualPublishDate.trim();
-  if (!actualPublishDate) {
-    failures.push("Missing Actual Publish Date");
-  } else if (!isValidDate(actualPublishDate)) {
-    failures.push("Invalid date format for Actual Publish Date");
+  if (selectedColumns?.has("actualPublishDate")) {
+    if (actualPublishDate && !isValidDate(actualPublishDate)) {
+      failures.push("Invalid date format for Actual Publish Date");
+    }
   }
 
   const draftDocLink = row.draftDocLink.trim();
-  if (draftDocLink && !isValidHttpUrl(draftDocLink)) {
-    failures.push("Invalid URL format for Draft Doc Link");
+  if (selectedColumns?.has("draftDocLink")) {
+    if (draftDocLink && !isValidHttpUrl(draftDocLink)) {
+      failures.push("Invalid URL format for Draft Doc Link");
+    }
   }
 
   if (failures.length > 0 || !site || !normalizedLiveUrl) {
@@ -178,7 +179,7 @@ function validateRow(row: z.infer<typeof importRowSchema>) {
       publisher,
       draftDocLink: draftDocLink || null,
       displayPublishDate,
-      actualPublishDate,
+      actualPublishDate: actualPublishDate || null,
     } satisfies ValidatedImportRow,
   };
 }
@@ -296,9 +297,19 @@ export async function POST(request: NextRequest) {
     const validRows: ValidatedImportRow[] = [];
     const rawRowsByNumber = new Map<number, z.infer<typeof importRowSchema>>();
 
+    const selectedColumnsSet = parsed.data.selectedColumns
+      ? new Set(parsed.data.selectedColumns)
+      : undefined;
+
     for (const row of parsed.data.rows) {
       rawRowsByNumber.set(row.rowNumber, row);
-      const validation = validateRow(row);
+      // Convert empty strings to empty strings for validation (will be converted to null later)
+      const normalizedRow = {
+        ...row,
+        actualPublishDate: row.actualPublishDate?.trim() || "",
+        draftDocLink: row.draftDocLink?.trim() || "",
+      };
+      const validation = validateRow(normalizedRow, selectedColumnsSet);
       if (!validation.valid) {
         validation.failures.forEach((message) => {
           failures.push({ rowNumber: row.rowNumber, message });
@@ -361,20 +372,27 @@ export async function POST(request: NextRequest) {
           row.publisher,
           "publisher"
         );
-        const actualPublishedAt = `${row.actualPublishDate}T00:00:00.000Z`;
+        const actualPublishedAt = row.actualPublishDate
+          ? `${row.actualPublishDate}T00:00:00.000Z`
+          : null;
 
         const existing = existingByLiveUrl.get(row.liveUrl);
         if (existing) {
+          const updateData: Record<string, unknown> = {
+            writer_id: writerId,
+            publisher_id: publisherId,
+            display_published_date: row.displayPublishDate,
+          };
+          if (row.draftDocLink) {
+            updateData.google_doc_url = row.draftDocLink;
+          }
+          if (actualPublishedAt) {
+            updateData.actual_published_at = actualPublishedAt;
+            updateData.published_at = actualPublishedAt;
+          }
           const { error: updateError } = await adminClient
             .from("blogs")
-            .update({
-              writer_id: writerId,
-              publisher_id: publisherId,
-              google_doc_url: row.draftDocLink,
-              display_published_date: row.displayPublishDate,
-              actual_published_at: actualPublishedAt,
-              published_at: actualPublishedAt,
-            })
+            .update(updateData)
             .eq("id", existing.id);
           if (updateError) {
             failures.push({ rowNumber: row.rowNumber, message: updateError.message });
@@ -388,24 +406,30 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        const insertData: Record<string, unknown> = {
+          site: row.site,
+          title: row.title,
+          live_url: row.liveUrl,
+          writer_id: writerId,
+          publisher_id: publisherId,
+          // Imported blogs with live_url are already published, so mark both as completed
+          writer_status: "completed",
+          publisher_status: "completed",
+          target_publish_date: row.displayPublishDate,
+          scheduled_publish_date: row.displayPublishDate,
+          display_published_date: row.displayPublishDate,
+          created_by: auth.context.userId,
+        };
+        if (row.draftDocLink) {
+          insertData.google_doc_url = row.draftDocLink;
+        }
+        if (actualPublishedAt) {
+          insertData.actual_published_at = actualPublishedAt;
+          insertData.published_at = actualPublishedAt;
+        }
         const { data: inserted, error: insertError } = await adminClient
           .from("blogs")
-          .insert({
-            site: row.site,
-            title: row.title,
-            live_url: row.liveUrl,
-            writer_id: writerId,
-            publisher_id: publisherId,
-            writer_status: "completed",
-            publisher_status: "completed",
-            google_doc_url: row.draftDocLink,
-            target_publish_date: row.displayPublishDate,
-            scheduled_publish_date: row.displayPublishDate,
-            display_published_date: row.displayPublishDate,
-            actual_published_at: actualPublishedAt,
-            published_at: actualPublishedAt,
-            created_by: auth.context.userId,
-          })
+          .insert(insertData)
           .select("id,live_url")
           .single();
         if (insertError || !inserted) {

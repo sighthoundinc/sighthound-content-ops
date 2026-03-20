@@ -12,9 +12,18 @@ import {
 } from "@/lib/table";
 import { useAuth } from "@/providers/auth-provider";
 
-const MAX_IMPORT_ROWS = 500;
+const REQUIRED_COLUMNS_SET = new Set([
+  "site",
+  "title",
+  "liveUrl",
+  "writer",
+  "publisher",
+  "displayPublishDate",
+]);
 
-const REQUIRED_COLUMNS = {
+const OPTIONAL_COLUMNS_SET = new Set(["draftDocLink", "actualPublishDate"]);
+
+const ALL_COLUMNS = {
   site: "Site",
   title: "Blog Title",
   liveUrl: "Live URL",
@@ -106,7 +115,7 @@ function isValidUrl(value: string) {
   }
 }
 
-function validateRows(rows: ImportRow[]) {
+function validateRows(rows: ImportRow[], selectedColumns: Set<string>) {
   const errors: ParseError[] = [];
   for (const row of rows) {
     const site = row.site.trim().toLowerCase();
@@ -142,25 +151,34 @@ function validateRows(rows: ImportRow[]) {
         message: "Invalid date format for Display Publish Date",
       });
     }
-    if (!row.actualPublishDate.trim()) {
-      errors.push({ rowNumber: row.rowNumber, message: "Missing Actual Publish Date" });
-    } else if (!isValidDate(row.actualPublishDate.trim())) {
-      errors.push({
-        rowNumber: row.rowNumber,
-        message: "Invalid date format for Actual Publish Date",
-      });
+    if (selectedColumns.has("actualPublishDate")) {
+      if (!row.actualPublishDate.trim()) {
+        errors.push({ rowNumber: row.rowNumber, message: "Missing Actual Publish Date" });
+      } else if (!isValidDate(row.actualPublishDate.trim())) {
+        errors.push({
+          rowNumber: row.rowNumber,
+          message: "Invalid date format for Actual Publish Date",
+        });
+      }
     }
-    if (row.draftDocLink.trim() && !isValidUrl(row.draftDocLink.trim())) {
-      errors.push({
-        rowNumber: row.rowNumber,
-        message: "Invalid URL format for Draft Doc Link",
-      });
+    if (selectedColumns.has("draftDocLink")) {
+      if (row.draftDocLink.trim() && !isValidUrl(row.draftDocLink.trim())) {
+        errors.push({
+          rowNumber: row.rowNumber,
+          message: "Invalid URL format for Draft Doc Link",
+        });
+      }
     }
   }
   return errors;
 }
 
-function parseRowsFromBuffer(buffer: ArrayBuffer) {
+type ParseResult = {
+  rows: ImportRow[];
+  detectedColumns: Map<string, string>;
+};
+
+function parseRowsFromBuffer(buffer: ArrayBuffer): ParseResult {
   const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) {
@@ -178,6 +196,7 @@ function parseRowsFromBuffer(buffer: ArrayBuffer) {
 
   const headers = rows[0].map((value) => normalizeHeader(String(value ?? "")));
   const indexByHeader = new Map<string, number>();
+  const detectedColumns = new Map<string, string>();
   headers.forEach((header, index) => {
     if (header) {
       indexByHeader.set(header, index);
@@ -185,22 +204,28 @@ function parseRowsFromBuffer(buffer: ArrayBuffer) {
   });
 
   const columnIndexes = {
-    site: indexByHeader.get(normalizeHeader(REQUIRED_COLUMNS.site)),
-    title: indexByHeader.get(normalizeHeader(REQUIRED_COLUMNS.title)),
-    liveUrl: indexByHeader.get(normalizeHeader(REQUIRED_COLUMNS.liveUrl)),
-    writer: indexByHeader.get(normalizeHeader(REQUIRED_COLUMNS.writer)),
-    publisher: indexByHeader.get(normalizeHeader(REQUIRED_COLUMNS.publisher)),
-    draftDocLink: indexByHeader.get(normalizeHeader(REQUIRED_COLUMNS.draftDocLink)),
-    displayPublishDate: indexByHeader.get(normalizeHeader(REQUIRED_COLUMNS.displayPublishDate)),
-    actualPublishDate: indexByHeader.get(normalizeHeader(REQUIRED_COLUMNS.actualPublishDate)),
+    site: indexByHeader.get(normalizeHeader(ALL_COLUMNS.site)),
+    title: indexByHeader.get(normalizeHeader(ALL_COLUMNS.title)),
+    liveUrl: indexByHeader.get(normalizeHeader(ALL_COLUMNS.liveUrl)),
+    writer: indexByHeader.get(normalizeHeader(ALL_COLUMNS.writer)),
+    publisher: indexByHeader.get(normalizeHeader(ALL_COLUMNS.publisher)),
+    draftDocLink: indexByHeader.get(normalizeHeader(ALL_COLUMNS.draftDocLink)),
+    displayPublishDate: indexByHeader.get(normalizeHeader(ALL_COLUMNS.displayPublishDate)),
+    actualPublishDate: indexByHeader.get(normalizeHeader(ALL_COLUMNS.actualPublishDate)),
   } as const;
 
-  const missing = Object.entries(columnIndexes)
-    .filter(([, index]) => index === undefined)
-    .map(([key]) => REQUIRED_COLUMNS[key as keyof typeof REQUIRED_COLUMNS]);
-  if (missing.length > 0) {
-    throw new Error(`Missing required columns: ${missing.join(", ")}`);
+  const missingRequired = Object.entries(columnIndexes)
+    .filter(([key, index]) => REQUIRED_COLUMNS_SET.has(key) && index === undefined)
+    .map(([key]) => ALL_COLUMNS[key as keyof typeof ALL_COLUMNS]);
+  if (missingRequired.length > 0) {
+    throw new Error(`Missing required columns: ${missingRequired.join(", ")}`);
   }
+
+  Object.entries(columnIndexes).forEach(([key, index]) => {
+    if (index !== undefined) {
+      detectedColumns.set(key, ALL_COLUMNS[key as keyof typeof ALL_COLUMNS]);
+    }
+  });
 
   const parsedRows: ImportRow[] = [];
   for (let i = 1; i < rows.length; i += 1) {
@@ -243,11 +268,7 @@ function parseRowsFromBuffer(buffer: ArrayBuffer) {
   if (parsedRows.length === 0) {
     throw new Error("No importable rows were found");
   }
-  if (parsedRows.length > MAX_IMPORT_ROWS) {
-    throw new Error(`File has ${parsedRows.length} rows. Maximum allowed is ${MAX_IMPORT_ROWS}.`);
-  }
-
-  return parsedRows;
+  return { rows: parsedRows, detectedColumns };
 }
 
 function escapeCsvCell(value: string) {
@@ -273,7 +294,7 @@ export function BlogImportModal({
     failed: number;
   }) => Promise<void> | void;
 }) {
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -283,6 +304,8 @@ export function BlogImportModal({
   const [parseErrors, setParseErrors] = useState<ParseError[]>([]);
   const [result, setResult] = useState<ImportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [detectedColumns, setDetectedColumns] = useState<Map<string, string>>(new Map());
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set([...REQUIRED_COLUMNS_SET]));
   const autoOpenedRef = useRef(false);
   const previewRows = useMemo(() => rows, [rows]);
   const rowErrorMap = useMemo(() => {
@@ -344,6 +367,8 @@ export function BlogImportModal({
     setParseErrors([]);
     setResult(null);
     setError(null);
+    setDetectedColumns(new Map());
+    setSelectedColumns(new Set([...REQUIRED_COLUMNS_SET]));
   };
 
   const closeModal = () => {
@@ -360,6 +385,8 @@ export function BlogImportModal({
     setRows([]);
     setParseErrors([]);
     setFileName(file.name);
+    setDetectedColumns(new Map());
+    setSelectedColumns(new Set([...REQUIRED_COLUMNS_SET]));
 
     const lower = file.name.toLowerCase();
     if (!lower.endsWith(".csv") && !lower.endsWith(".xlsx")) {
@@ -370,10 +397,18 @@ export function BlogImportModal({
     try {
       setIsParsing(true);
       const buffer = await file.arrayBuffer();
-      const parsedRows = parseRowsFromBuffer(buffer);
-      setRows(parsedRows);
-      setSelectedRowNumbers(parsedRows.map((row) => row.rowNumber));
-      setParseErrors(validateRows(parsedRows));
+      const parseResult = parseRowsFromBuffer(buffer);
+      const nextSelectedColumns = new Set([...REQUIRED_COLUMNS_SET]);
+      for (const key of OPTIONAL_COLUMNS_SET) {
+        if (parseResult.detectedColumns.has(key)) {
+          nextSelectedColumns.add(key);
+        }
+      }
+      setRows(parseResult.rows);
+      setSelectedRowNumbers(parseResult.rows.map((row) => row.rowNumber));
+      setDetectedColumns(parseResult.detectedColumns);
+      setSelectedColumns(nextSelectedColumns);
+      setParseErrors(validateRows(parseResult.rows, nextSelectedColumns));
     } catch (parseError) {
       setError(parseError instanceof Error ? parseError.message : "Failed to parse file");
     } finally {
@@ -386,12 +421,17 @@ export function BlogImportModal({
       return;
     }
     if (!session?.access_token) {
-      setError("Missing access token");
+      setError("Authentication required. Please ensure you are logged in.");
       return;
     }
     setError(null);
     setIsImporting(true);
     try {
+      const rowsToImport = selectedRows.map((row) => ({
+        ...row,
+        actualPublishDate: selectedColumns.has("actualPublishDate") ? row.actualPublishDate : "",
+        draftDocLink: selectedColumns.has("draftDocLink") ? row.draftDocLink : "",
+      }));
       const response = await fetch("/api/blogs/import", {
         method: "POST",
         headers: {
@@ -400,7 +440,8 @@ export function BlogImportModal({
         },
         body: JSON.stringify({
           fileName,
-          rows: selectedRows,
+          rows: rowsToImport,
+          selectedColumns: Array.from(selectedColumns),
         }),
       });
       const payload = (await response.json()) as ImportResponse & { error?: string };
@@ -498,36 +539,34 @@ export function BlogImportModal({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Import Blogs</h2>
-                <p className="text-sm text-slate-600">
-                  Upload CSV/XLSX, preview first 10 rows, validate, then import.
-                </p>
+                <p className="text-sm text-slate-600">Upload file → review rows → import.</p>
               </div>
               <Button type="button" variant="ghost" size="sm" onClick={closeModal}>
-                Close
+                ✕
               </Button>
             </div>
 
             <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-                <span className="font-semibold uppercase tracking-wide text-slate-600">
-                  Download Template
-                </span>
+                <span className="text-slate-500">Need a template?</span>
                 <a
                   href="/templates/blog-import-template.xlsx"
-                  className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100"
+                  className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-blue-700 hover:bg-slate-100"
                 >
-                  XLSX (recommended)
+                  XLSX
                 </a>
                 <a
                   href="/templates/blog-import-template.csv"
-                  className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100"
+                  className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-blue-700 hover:bg-slate-100"
                 >
                   CSV
                 </a>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Step 1</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                Step 1 · Upload file
+              </p>
               <label className="mt-2 block text-sm text-slate-700">
-                <span className="mb-2 block">Upload a `.csv` or `.xlsx` file</span>
+                <span className="mb-2 block">Choose a `.csv` or `.xlsx` file</span>
                 <input
                   type="file"
                   accept=".csv,.xlsx"
@@ -540,11 +579,74 @@ export function BlogImportModal({
               </label>
               {fileName ? (
                 <p className="mt-2 text-xs text-slate-600">
-                  Selected file: <span className="font-medium text-slate-800">{fileName}</span>
+                  <span className="font-medium text-slate-800">{fileName}</span> selected
                 </p>
               ) : null}
               {isParsing ? <p className="mt-2 text-xs text-slate-600">Parsing file…</p> : null}
             </div>
+
+            {rows.length > 0 && detectedColumns.size > 0 ? (
+              <div className="mt-4 rounded-lg border border-slate-200 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  Step 1.5 · Select Columns
+                </p>
+                <p className="mt-2 text-sm text-slate-700">
+                  Required columns are locked. Optional columns can be included or skipped.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {Array.from(REQUIRED_COLUMNS_SET).map((key) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 rounded px-2 py-2 text-sm text-slate-700 bg-slate-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled={true}
+                        className="cursor-not-allowed"
+                      />
+                      <span>
+                        <strong>{ALL_COLUMNS[key as keyof typeof ALL_COLUMNS]}</strong> (required)
+                      </span>
+                    </label>
+                  ))}
+                  {Array.from(OPTIONAL_COLUMNS_SET).map((key) => {
+                    const isDetected = detectedColumns.has(key);
+                    return (
+                      <label
+                        key={key}
+                        className={`flex items-center gap-2 rounded px-2 py-2 text-sm ${
+                          isDetected
+                            ? "text-slate-700 hover:bg-slate-50"
+                            : "text-slate-500 bg-slate-50 cursor-not-allowed"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedColumns.has(key)}
+                          disabled={!isDetected}
+                          onChange={() => {
+                            const next = new Set(selectedColumns);
+                            if (next.has(key)) {
+                              next.delete(key);
+                            } else {
+                              next.add(key);
+                            }
+                            setSelectedColumns(next);
+                            setParseErrors(validateRows(rows, next));
+                          }}
+                          className={isDetected ? "cursor-pointer" : "cursor-not-allowed"}
+                        />
+                        <span>
+                          {ALL_COLUMNS[key as keyof typeof ALL_COLUMNS]}
+                          {!isDetected ? " (not found in file)" : " (optional)"}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             {rows.length > 0 ? (
               <div className="mt-4 space-y-4">
@@ -562,7 +664,7 @@ export function BlogImportModal({
                       }}
                       disabled={rows.length === 0 || allSelected}
                     >
-                      Select all
+                      All
                     </Button>
                     <Button
                       type="button"
@@ -573,7 +675,7 @@ export function BlogImportModal({
                       }}
                       disabled={selectedRowNumbers.length === 0}
                     >
-                      Unselect all
+                      None
                     </Button>
                     <Button
                       type="button"
@@ -588,10 +690,10 @@ export function BlogImportModal({
                       }}
                       disabled={rows.length === 0}
                     >
-                      Select valid rows
+                      Valid only
                     </Button>
                     <span className="text-slate-600">
-                      Selected: <span className="font-semibold text-slate-900">{selectedRows.length}</span>
+                      Selected <span className="font-semibold text-slate-900">{selectedRows.length}</span>
                     </span>
                   </div>
                   <div className="mt-2 overflow-auto rounded-md border border-slate-200">
@@ -665,29 +767,27 @@ export function BlogImportModal({
 
                 <div className="rounded-lg border border-slate-200 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Step 3 · Validation
+                    Step 3 · Review
                   </p>
                   {selectedValidationErrors.length === 0 ? (
-                    <p className="mt-2 text-sm text-emerald-700">No validation errors found.</p>
+                    <p className="mt-2 text-sm text-emerald-700">✓ All selected rows look good.</p>
                   ) : (
-                    <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-sm text-rose-700">
-                      {selectedValidationErrors.map((validationError, index) => (
-                        <li key={`${validationError.rowNumber}-${validationError.message}-${index}`}>
-                          Row {validationError.rowNumber}: {validationError.message}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-2">
+                      <p className="text-sm text-rose-700 font-semibold mb-1">⚠ {selectedInvalidCount} row(s) with errors:</p>
+                      <ul className="max-h-32 space-y-1 overflow-auto text-xs text-rose-700">
+                        {selectedValidationErrors.slice(0, 5).map((validationError, index) => (
+                          <li key={`${validationError.rowNumber}-${validationError.message}-${index}`}>
+                            Row {validationError.rowNumber}: {validationError.message}
+                          </li>
+                        ))}
+                        {selectedValidationErrors.length > 5 ? (
+                          <li className="text-slate-600">... and {selectedValidationErrors.length - 5} more</li>
+                        ) : null}
+                      </ul>
+                    </div>
                   )}
-                  <p className="mt-2 text-xs text-slate-600">
-                    Selected rows ready to import:{" "}
-                    <span className="font-semibold text-slate-900">{selectedValidCount}</span>
-                    {selectedInvalidCount > 0 ? (
-                      <>
-                        {" "}
-                        · Selected rows with errors:{" "}
-                        <span className="font-semibold text-rose-700">{selectedInvalidCount}</span>
-                      </>
-                    ) : null}
+                  <p className="mt-3 text-xs text-slate-600">
+                    <strong>{selectedValidCount} blog(s)</strong> ready to import{selectedInvalidCount > 0 ? ` (${selectedInvalidCount} with errors)` : ''}
                   </p>
                 </div>
               </div>
@@ -700,20 +800,40 @@ export function BlogImportModal({
             ) : null}
 
             {result ? (
-              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                <p className="font-semibold text-slate-900">Import complete</p>
-                <p className="mt-1">
-                  Created: <span className="font-semibold">{result.created}</span> · Updated:{" "}
-                  <span className="font-semibold">{result.updated}</span> · Failed:{" "}
-                  <span className="font-semibold">{result.failed}</span>
-                </p>
-                {result.failed > 0 ? (
-                  <div className="mt-2">
-                    <Button type="button" variant="secondary" size="xs" onClick={downloadFailedRows}>
-                      Download failed rows CSV
-                    </Button>
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                {result.failed === 0 ? (
+                  <div>
+                    <p className="text-emerald-700 font-semibold">✓ All {result.created + result.updated} blog(s) imported successfully!</p>
+                    {result.created > 0 && <p className="mt-1 text-xs text-slate-600">Created: {result.created}</p>}
+                    {result.updated > 0 && <p className="text-xs text-slate-600">Updated: {result.updated}</p>}
                   </div>
-                ) : null}
+                ) : (
+                  <div>
+                    <p className="text-slate-900 font-semibold">Import summary</p>
+                    <p className="mt-2 text-sm space-y-1">
+                      {result.created > 0 && <div className="text-emerald-700">✓ Created {result.created}</div>}
+                      {result.updated > 0 && <div className="text-blue-700">↻ Updated {result.updated}</div>}
+                      {result.failed > 0 && <div className="text-rose-700 font-semibold">✗ Failed {result.failed}</div>}
+                    </p>
+                    {result.failed > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-600 mb-2">Error details (first 10):</p>
+                          <ul className="max-h-40 space-y-1 overflow-auto rounded bg-white p-2 text-xs border border-slate-300">
+                            {result.failures?.slice(0, 10).map((failure, idx) => (
+                              <li key={idx} className="text-rose-700">
+                                Row {failure.rowNumber}: {failure.message}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <Button type="button" variant="secondary" size="xs" onClick={downloadFailedRows}>
+                          Download failed rows
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
             ) : null}
 
@@ -748,7 +868,9 @@ export function BlogImportModal({
                       selectedRows.length === 0 ||
                       selectedValidCount === 0 ||
                       hasSelectedValidationErrors ||
-                      isImporting
+                      isImporting ||
+                      loading ||
+                      !session
                     }
                   >
                     {isImporting ? "Importing..." : `Import ${selectedValidCount} Blogs`}

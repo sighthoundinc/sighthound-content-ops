@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { getUserRoles } from "@/lib/roles";
 
@@ -14,6 +14,12 @@ import {
   readQuickViewSnapshot,
   type QuickViewSnapshot,
 } from "@/lib/quick-view";
+import {
+  MAIN_CREATE_SHORTCUTS,
+  NEW_BLOG_SHORTCUT_KEY,
+  QUICK_CREATE_SHORTCUT_KEY,
+} from "@/lib/shortcuts";
+import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
@@ -42,6 +48,13 @@ type ShortcutDefinition = {
   id: string;
   label: string;
   keys: string[];
+};
+type QuickCreateItem = {
+  id: "new-blog" | "new-idea" | "new-social-post";
+  label: "New Blog" | "New Idea" | "New Social Post";
+  href: "/blogs/new" | "/ideas" | "/social-posts?create=1";
+  shortcut: string;
+  isDirectShortcut: boolean;
 };
 
 function formatNotificationAge(createdAt: number) {
@@ -79,12 +92,14 @@ export function AppShell({
   } = useSystemFeedback();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [activeQuickCreateIndex, setActiveQuickCreateIndex] = useState(0);
   const [isShortcutModalOpen, setIsShortcutModalOpen] = useState(false);
   const [quickViewSnapshot, setQuickViewSnapshot] = useState<QuickViewSnapshot | null>(
     null
   );
   const [quickViewError, setQuickViewError] = useState<string | null>(null);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
+  const quickCreateItemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -122,7 +137,7 @@ export function AppShell({
       shortcuts.push({
         id: "global-quick-create",
         label: "Quick create",
-        keys: ["C"],
+        keys: [QUICK_CREATE_SHORTCUT_KEY],
       });
     }
     return shortcuts;
@@ -163,11 +178,40 @@ export function AppShell({
       shortcuts.push({
         id: "page-create-blog",
         label: "New Blog",
-        keys: ["N"],
+        keys: [NEW_BLOG_SHORTCUT_KEY],
       });
     }
     return shortcuts;
   }, [canCreateBlogs, pathname]);
+  const quickCreateItems = useMemo<QuickCreateItem[]>(() => {
+    const items: QuickCreateItem[] = [];
+    if (canCreateBlogs) {
+      items.push({
+        id: "new-blog",
+        label: "New Blog",
+        href: "/blogs/new",
+        shortcut: MAIN_CREATE_SHORTCUTS.newBlog,
+        isDirectShortcut: true,
+      });
+      items.push({
+        id: "new-idea",
+        label: "New Idea",
+        href: "/ideas",
+        shortcut: MAIN_CREATE_SHORTCUTS.newIdea,
+        isDirectShortcut: false,
+      });
+    }
+    if (canManageSocialPosts) {
+      items.push({
+        id: "new-social-post",
+        label: "New Social Post",
+        href: "/social-posts?create=1",
+        shortcut: MAIN_CREATE_SHORTCUTS.newSocialPost,
+        isDirectShortcut: false,
+      });
+    }
+    return items;
+  }, [canCreateBlogs, canManageSocialPosts]);
   const isQuickViewActive = Boolean(
     quickViewSnapshot &&
       user?.id &&
@@ -176,6 +220,25 @@ export function AppShell({
   );
 
 
+  useEffect(() => {
+    if (!isQuickCreateOpen) {
+      return;
+    }
+    setActiveQuickCreateIndex(0);
+  }, [isQuickCreateOpen, quickCreateItems.length]);
+  useEffect(() => {
+    if (!isQuickCreateOpen) {
+      return;
+    }
+    quickCreateItemRefs.current[activeQuickCreateIndex]?.focus();
+  }, [activeQuickCreateIndex, isQuickCreateOpen]);
+  const executeQuickCreateItem = useCallback(
+    (item: QuickCreateItem) => {
+      setIsQuickCreateOpen(false);
+      router.push(item.href);
+    },
+    [router]
+  );
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) {
@@ -190,6 +253,7 @@ export function AppShell({
         if (isQuickCreateOpen) {
           event.preventDefault();
           setIsQuickCreateOpen(false);
+          setActiveModal(null);
           return;
         }
       }
@@ -215,6 +279,30 @@ export function AppShell({
       if (isTypingField) {
         return;
       }
+      if (isQuickCreateOpen) {
+        if (quickCreateItems.length === 0) {
+          return;
+        }
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          const delta = event.key === "ArrowDown" ? 1 : -1;
+          setActiveQuickCreateIndex((previous) => {
+            const next = (previous + delta + quickCreateItems.length) % quickCreateItems.length;
+            return next;
+          });
+          return;
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          const activeItem =
+            quickCreateItems[activeQuickCreateIndex] ?? quickCreateItems[0];
+          if (activeItem) {
+            executeQuickCreateItem(activeItem);
+          }
+          return;
+        }
+        return;
+      }
 
       if (event.key.toLowerCase() === "d" && pathname !== "/dashboard") {
         event.preventDefault();
@@ -222,9 +310,24 @@ export function AppShell({
         return;
       }
 
-      if (event.key.toLowerCase() === "c" && (canCreateBlogs || canManageSocialPosts)) {
+      if (
+        event.key.toLowerCase() === QUICK_CREATE_SHORTCUT_KEY.toLowerCase() &&
+        (canCreateBlogs || canManageSocialPosts)
+      ) {
+        const activeModal = getActiveModal();
+        if (activeModal && activeModal !== "app-shell-quick-create") {
+          return; // Don't open if another modal is already open
+        }
         event.preventDefault();
-        setIsQuickCreateOpen(true);
+        setIsQuickCreateOpen((prev) => {
+          const nextIsOpen = !prev;
+          if (nextIsOpen) {
+            setActiveModal("app-shell-quick-create");
+          } else {
+            setActiveModal(null);
+          }
+          return nextIsOpen;
+        });
         return;
       }
 
@@ -234,7 +337,7 @@ export function AppShell({
         return;
       }
 
-      if (event.key.toLowerCase() === "n" && canCreateBlogs) {
+      if (event.key.toLowerCase() === NEW_BLOG_SHORTCUT_KEY.toLowerCase() && canCreateBlogs) {
         event.preventDefault();
         router.push("/blogs/new");
       }
@@ -247,11 +350,23 @@ export function AppShell({
   }, [
     canCreateBlogs,
     canManageSocialPosts,
+    executeQuickCreateItem,
+    activeQuickCreateIndex,
     isQuickCreateOpen,
     isShortcutModalOpen,
     pathname,
+    quickCreateItems,
     router,
   ]);
+  useEffect(() => {
+    const handleOpenShortcutModal = () => {
+      setIsShortcutModalOpen(true);
+    };
+    window.addEventListener("open-shortcuts-modal", handleOpenShortcutModal);
+    return () => {
+      window.removeEventListener("open-shortcuts-modal", handleOpenShortcutModal);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isNotificationPanelOpen) {
@@ -321,23 +436,12 @@ export function AppShell({
           </Link>
 
           <div className="flex items-center gap-4">
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              onClick={() => {
-                setIsShortcutModalOpen(true);
-              }}
-            >
-              Shortcuts
-            </Button>
+            {/* Notifications - Plain icon with badge */}
             <div className="relative" ref={notificationPanelRef}>
-              <Button
+              <button
                 type="button"
+                className="text-lg transition hover:opacity-70"
                 aria-label="Notifications"
-                variant="secondary"
-                size="md"
-                className="relative"
                 onClick={() => {
                   setIsNotificationPanelOpen((previous) => !previous);
                 }}
@@ -348,7 +452,7 @@ export function AppShell({
                     {unreadCount}
                   </span>
                 ) : null}
-              </Button>
+              </button>
               {isNotificationPanelOpen ? (
                 <div className="absolute right-0 z-40 mt-2 w-[360px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
                   <div className="flex items-center justify-between gap-2">
@@ -403,11 +507,29 @@ export function AppShell({
                 </div>
               ) : null}
             </div>
-            <div className="text-right text-sm">
-              <p className="font-medium text-slate-900">
-                {profile?.display_name || profile?.full_name}
-              </p>
-            </div>
+
+            {/* Shortcuts - Plain text link */}
+            <button
+              type="button"
+              className="text-sm text-slate-700 transition hover:text-slate-900"
+              onClick={() => {
+                setIsShortcutModalOpen(true);
+              }}
+              aria-label="View keyboard shortcuts"
+            >
+              Shortcuts
+            </button>
+
+            {/* User name - Clickable link to settings */}
+            <Link
+              href="/settings"
+              className="text-sm text-slate-700 transition hover:text-slate-900"
+              title="Go to settings"
+            >
+              {profile?.display_name || profile?.full_name}
+            </Link>
+
+            {/* Sign out - Button */}
             <Button
               type="button"
               variant="secondary"
@@ -638,42 +760,60 @@ export function AppShell({
               </Button>
             </div>
             <div className="mt-4 grid gap-2">
-              {canCreateBlogs ? (
-                <Link
-                  href="/blogs/new"
-                  className="pressable rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
-                  onClick={() => {
-                    setIsQuickCreateOpen(false);
-                  }}
-                >
-                  New Blog
-                </Link>
-              ) : null}
-              {canCreateBlogs ? (
-                <Link
-                  href="/ideas"
-                  className="pressable rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
-                  onClick={() => {
-                    setIsQuickCreateOpen(false);
-                  }}
-                >
-                  New Idea
-                </Link>
-              ) : null}
-              {canManageSocialPosts ? (
-                <Link
-                  href="/social-posts?create=1"
-                  className="pressable rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
-                  onClick={() => {
-                    setIsQuickCreateOpen(false);
-                  }}
-                >
-                  New Social Post
-                </Link>
-              ) : null}
+              <div role="listbox" aria-label="Quick create actions">
+                {quickCreateItems.map((item, index) => (
+                  <Link
+                    key={item.id}
+                    ref={(node) => {
+                      quickCreateItemRefs.current[index] = node;
+                    }}
+                    href={item.href}
+                    role="option"
+                    aria-selected={index === activeQuickCreateIndex}
+                    aria-label={
+                      item.isDirectShortcut
+                        ? `${item.label}. Direct shortcut ${item.shortcut}.`
+                        : `${item.label}. Open Quick Create first with ${QUICK_CREATE_SHORTCUT_KEY}, then select this action.`
+                    }
+                    aria-keyshortcuts={item.isDirectShortcut ? item.shortcut : undefined}
+                    className={cn(
+                      "pressable mt-2 block rounded-md border px-3 py-2 text-sm font-medium text-slate-800 transition",
+                      index === activeQuickCreateIndex
+                        ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200"
+                        : "border-slate-300 bg-white hover:bg-slate-50"
+                    )}
+                    onMouseEnter={() => {
+                      setActiveQuickCreateIndex(index);
+                    }}
+                    onFocus={() => {
+                      setActiveQuickCreateIndex(index);
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      executeQuickCreateItem(item);
+                    }}
+                  >
+                    <span className="flex items-center justify-between gap-3">
+                      <span>{item.label}</span>
+                      <KbdShortcut>{item.shortcut}</KbdShortcut>
+                    </span>
+                  </Link>
+                ))}
+              </div>
             </div>
             <p className="mt-4 text-xs text-slate-500">
-              Shortcut: press <KbdShortcut>C</KbdShortcut> outside form fields.
+              Use ↑/↓ to move and Enter to select.{" "}
+              <button
+                type="button"
+                className="font-medium text-slate-700 underline-offset-2 hover:underline"
+                onClick={() => {
+                  setIsQuickCreateOpen(false);
+                  setIsShortcutModalOpen(true);
+                }}
+              >
+                Shortcut
+              </button>{" "}
+              details
             </p>
           </section>
         </div>
@@ -707,26 +847,54 @@ export function AppShell({
                 Close
               </Button>
             </div>
-            <div className="mt-4 space-y-3 text-xs text-slate-700">
+            <div className="mt-4 space-y-4 text-xs text-slate-700">
               <div>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Global shortcuts
+                  Navigation
                 </p>
                 <div className="space-y-2">
-                  {globalShortcuts.map((shortcut) => (
-                    <div
-                      key={shortcut.id}
-                      className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2"
-                    >
-                      <span>{shortcut.label}</span>
-                      <div className="flex items-center gap-1">
-                        {shortcut.keys.map((key) => (
-                          <KbdShortcut key={`${shortcut.id}-${key}`}>{key}</KbdShortcut>
-                        ))}
+                  {globalShortcuts
+                    .filter((s) => !s.id.includes("create"))
+                    .map((shortcut) => (
+                      <div
+                        key={shortcut.id}
+                        className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <span>{shortcut.label}</span>
+                        <div className="flex items-center gap-1">
+                          {shortcut.keys.map((key) => (
+                            <KbdShortcut key={`${shortcut.id}-${key}`}>{key}</KbdShortcut>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
+              </div>
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Create
+                </p>
+                <div className="space-y-2">
+                  <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>New Blog</span>
+                      <KbdShortcut>N</KbdShortcut>
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-500">Direct shortcut</p>
+                  </div>
+                  <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>New Idea / Social Post</span>
+                      <KbdShortcut>Q</KbdShortcut>
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-500">
+                      Opens Quick Create. Use ↑/↓ and Enter to select.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[10px] text-amber-800">
+                <p className="font-medium">💡 Tip: Press Q, then ↑/↓ to navigate, Enter to select action</p>
               </div>
               <div>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">

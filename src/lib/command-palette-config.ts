@@ -1,3 +1,4 @@
+import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
 export interface Command {
   id: string;
   label: string;
@@ -84,6 +85,7 @@ export const allCommands: Command[] = [
     category: "create",
     actionType: "create",
     icon: "Plus",
+    keyboard: MAIN_CREATE_SHORTCUTS.newBlog,
   },
   {
     id: "create-social-post",
@@ -92,6 +94,7 @@ export const allCommands: Command[] = [
     category: "create",
     actionType: "create",
     icon: "Plus",
+    keyboard: MAIN_CREATE_SHORTCUTS.newSocialPost,
   },
   {
     id: "create-idea",
@@ -100,6 +103,7 @@ export const allCommands: Command[] = [
     category: "create",
     actionType: "create",
     icon: "Plus",
+    keyboard: MAIN_CREATE_SHORTCUTS.newIdea,
   },
   // Global Action Commands
   {

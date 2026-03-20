@@ -1192,7 +1192,7 @@ export default function MyTasksPage() {
                   }}
                   className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
-                  <option value="all">All Sites</option>
+                  <option value="all">Sites</option>
                   <option value="sighthound.com">SH</option>
                   <option value="redactor.com">RED</option>
                 </select>

@@ -1,11 +1,25 @@
 "use client";
 
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGlobalQuickCreate } from "@/hooks/use-global-quick-create";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { KbdShortcut } from "@/components/kbd-shortcut";
+import { MAIN_CREATE_SHORTCUTS, QUICK_CREATE_SHORTCUT_KEY } from "@/lib/shortcuts";
+type QuickCreateAction = {
+  id: "new-blog" | "new-idea" | "new-social-post";
+  label: "New Blog" | "New Idea" | "New Social Post";
+  emoji: string;
+  description: string;
+  onClick: () => void;
+  shortcut: string;
+  isDirectShortcut: boolean;
+};
 
 export function GlobalQuickCreate() {
   const { isOpen, close } = useGlobalQuickCreate();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const actionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const router = useRouter();
 
   const handleCreateBlog = useCallback(() => {
@@ -22,6 +36,51 @@ export function GlobalQuickCreate() {
     router.push("/ideas");
     close();
   }, [close, router]);
+  const actions = useMemo<QuickCreateAction[]>(
+    () => [
+      {
+        id: "new-blog",
+        label: "New Blog",
+        emoji: "📖",
+        description: "Create a new blog post",
+        onClick: handleCreateBlog,
+        shortcut: MAIN_CREATE_SHORTCUTS.newBlog,
+        isDirectShortcut: true,
+      },
+      {
+        id: "new-social-post",
+        label: "New Social Post",
+        emoji: "📤",
+        description: "Create a new social media post",
+        onClick: handleCreateSocialPost,
+        shortcut: MAIN_CREATE_SHORTCUTS.newSocialPost,
+        isDirectShortcut: false,
+      },
+      {
+        id: "new-idea",
+        label: "New Idea",
+        emoji: "💡",
+        description: "Add a new content idea",
+        onClick: handleCreateIdea,
+        shortcut: MAIN_CREATE_SHORTCUTS.newIdea,
+        isDirectShortcut: false,
+      },
+    ],
+    [handleCreateBlog, handleCreateIdea, handleCreateSocialPost]
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    setActiveIndex(0);
+  }, [isOpen]);
+  useEffect(() => {
+    if (!isOpen || actions.length === 0) {
+      return;
+    }
+    actionRefs.current[activeIndex]?.focus();
+  }, [actions.length, activeIndex, isOpen]);
 
   useEffect(() => {
     const handleCreateCommand = (event: Event) => {
@@ -44,6 +103,30 @@ export function GlobalQuickCreate() {
       window.removeEventListener("create-command", handleCreateCommand as EventListener);
     };
   }, [handleCreateBlog, handleCreateIdea, handleCreateSocialPost]);
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (!isOpen || actions.length === 0) {
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        setActiveIndex((previous) => (previous + delta + actions.length) % actions.length);
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const selectedAction = actions[activeIndex];
+        if (selectedAction) {
+          selectedAction.onClick();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeydown);
+    return () => {
+      window.removeEventListener("keydown", handleKeydown);
+    };
+  }, [actions, activeIndex, isOpen]);
 
   if (!isOpen) return null;
 
@@ -73,67 +156,67 @@ export function GlobalQuickCreate() {
               Create New
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Press C to open, ESC to close
+              Press {QUICK_CREATE_SHORTCUT_KEY} to open, ESC to close
             </p>
           </div>
 
           {/* Actions */}
-          <div className="divide-y divide-gray-100">
-            <button
-              onClick={handleCreateBlog}
-              className="w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors"
-              aria-label="Create new blog post"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">📖</span>
-                <div>
-                  <div className="font-medium text-gray-900">New Blog</div>
-                  <div className="text-sm text-gray-500">
-                    Create a new blog post
+          <div className="divide-y divide-gray-100" role="listbox" aria-label="Quick create actions">
+            {actions.map((action, index) => (
+              <button
+                key={action.id}
+                ref={(node) => {
+                  actionRefs.current[index] = node;
+                }}
+                type="button"
+                onClick={action.onClick}
+                onMouseEnter={() => {
+                  setActiveIndex(index);
+                }}
+                onFocus={() => {
+                  setActiveIndex(index);
+                }}
+                role="option"
+                aria-selected={index === activeIndex}
+                aria-label={
+                  action.isDirectShortcut
+                    ? `${action.label}. Direct shortcut ${action.shortcut}.`
+                    : `${action.label}. Open Quick Create first with ${QUICK_CREATE_SHORTCUT_KEY}, then select this action.`
+                }
+                aria-keyshortcuts={action.isDirectShortcut ? action.shortcut : undefined}
+                className={cn(
+                  "w-full px-6 py-4 text-left transition-colors",
+                  index === activeIndex
+                    ? "bg-indigo-50 ring-2 ring-inset ring-indigo-200"
+                    : "hover:bg-gray-50"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{action.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3 font-medium text-gray-900">
+                      <span>{action.label}</span>
+                      <KbdShortcut>{action.shortcut}</KbdShortcut>
+                    </div>
+                    <div className="text-sm text-gray-500">{action.description}</div>
                   </div>
                 </div>
-              </div>
-            </button>
-
-            <button
-              onClick={handleCreateSocialPost}
-              className="w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors"
-              aria-label="Create new social post"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">📤</span>
-                <div>
-                  <div className="font-medium text-gray-900">New Social Post</div>
-                  <div className="text-sm text-gray-500">
-                    Create a new social media post
-                  </div>
-                </div>
-              </div>
-            </button>
-
-            <button
-              onClick={handleCreateIdea}
-              className="w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors"
-              aria-label="Create new idea"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">💡</span>
-                <div>
-                  <div className="font-medium text-gray-900">New Idea</div>
-                  <div className="text-sm text-gray-500">
-                    Add a new content idea
-                  </div>
-                </div>
-              </div>
-            </button>
+              </button>
+            ))}
           </div>
 
           {/* Footer */}
           <div className="border-t border-gray-200 px-6 py-3 bg-gray-50 text-xs text-gray-500">
-            <kbd className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-semibold">
-              C
-            </kbd>
-            <span className="ml-2">to create</span>
+            <button
+              type="button"
+              className="font-medium text-gray-700 underline-offset-2 hover:underline"
+              onClick={() => {
+                close();
+                window.dispatchEvent(new CustomEvent("open-shortcuts-modal"));
+              }}
+            >
+              Shortcut
+            </button>
           </div>
         </div>
       </div>

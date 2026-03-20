@@ -73,7 +73,10 @@ function toIsoDateString(value: unknown) {
     if (Number.isNaN(value.getTime())) {
       return "";
     }
-    return value.toISOString().slice(0, 10);
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
   if (typeof value === "number") {
     const parsed = XLSX.SSF.parse_date_code(value);
@@ -91,11 +94,55 @@ function toIsoDateString(value: unknown) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
     return text;
   }
+  const dmyMatch = text.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+  // Parse all dates as Eastern Time (US) to ensure consistency
+  // regardless of where the import is run from.
+  // This treats the input date string as if it were entered in ET/EDT.
+  
+  // Try parsing as YYYY-MM-DD (with optional slashes)
+  const isoMatch = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (isoMatch) {
+    const [, year, monthStr, dayStr] = isoMatch;
+    const month = String(monthStr).padStart(2, "0");
+    const day = String(dayStr).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  // Try parsing as MM/DD/YYYY or M/D/YYYY (common US format)
+  const usMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (usMatch) {
+    const [, monthStr, dayStr, year] = usMatch;
+    const month = String(monthStr).padStart(2, "0");
+    const day = String(dayStr).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  // Fallback: use Date.parse with Eastern Time offset
+  // This is a last resort for non-standard date formats
   const parsedTime = Date.parse(text);
   if (Number.isNaN(parsedTime)) {
     return text;
   }
-  return new Date(parsedTime).toISOString().slice(0, 10);
+  // Convert to Eastern Time by creating a date object
+  // and using toLocaleString to read it as if in Eastern timezone
+  const date = new Date(parsedTime);
+  // Use en-US locale with Eastern timezone to extract date components
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(date);
+  const yearPart = parts.find(p => p.type === 'year')?.value;
+  const monthPart = parts.find(p => p.type === 'month')?.value;
+  const dayPart = parts.find(p => p.type === 'day')?.value;
+  if (yearPart && monthPart && dayPart) {
+    return `${yearPart}-${monthPart}-${dayPart}`;
+  }
+  return text;
 }
 
 function isValidDate(value: string) {

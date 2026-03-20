@@ -139,6 +139,20 @@ Before considering a task complete:
 5. Apply risk-based validation from **Change Risk Classification** where applicable.
 6. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
 
+## Git Commits (MUST)
+
+Keep commit messages short and direct:
+
+1. **Format**: `type(scope): short description` (max 50 chars)
+   - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`
+   - Examples:
+     - `feat: add daily standup home page`
+     - `fix: filter publisher queue by assignment`
+     - `docs: update SPECIFICATION.md`
+2. **Rationale**: Short messages force clarity and are easier to scan in logs
+3. **Body**: Only include detailed explanations if truly necessary (most changes don't need them)
+4. **Multi-file changes**: Use a single, consolidated commit message covering the whole feature
+
 ## Definition of Done (MUST)
 
 A feature is complete only if:

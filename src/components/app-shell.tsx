@@ -584,16 +584,16 @@ export function AppShell({
                     key={`${item.href}-${item.label}`}
                     href={item.href}
                     className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
+                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
                       isActive
-                        ? "bg-slate-100 text-slate-900 font-medium"
-                        : "text-slate-700 hover:bg-slate-50"
+                        ? "bg-slate-900 text-white font-semibold"
+                        : "text-slate-700 font-medium hover:bg-slate-50"
                     )}
                   >
                     <span
                       className={cn(
                         "inline-block h-2 w-2 rounded-full",
-                        isActive ? "bg-slate-900" : "bg-slate-300 group-hover:bg-slate-500"
+                        isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
                       )}
                     />
                     {item.label}
@@ -602,7 +602,7 @@ export function AppShell({
               })}
             </div>
             <div className="space-y-1">
-              <div className="my-2 border-t border-slate-200/70" />
+              <div className="my-2 border-t border-slate-200" />
               {CONTENT_WORKFLOW_NAV_ITEMS.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -610,16 +610,16 @@ export function AppShell({
                     key={`${item.href}-${item.label}`}
                     href={item.href}
                     className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
+                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
                       isActive
-                        ? "bg-slate-100 text-slate-900 font-medium"
-                        : "text-slate-700 hover:bg-slate-50"
+                        ? "bg-slate-900 text-white font-semibold"
+                        : "text-slate-700 font-medium hover:bg-slate-50"
                     )}
                   >
                     <span
                       className={cn(
                         "inline-block h-2 w-2 rounded-full",
-                        isActive ? "bg-slate-900" : "bg-slate-300 group-hover:bg-slate-500"
+                        isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
                       )}
                     />
                     {item.label}
@@ -628,7 +628,7 @@ export function AppShell({
               })}
             </div>
             <div className="space-y-1">
-              <div className="my-2 border-t border-slate-200/70" />
+              <div className="my-2 border-t border-slate-200" />
               {SECONDARY_NAV_ITEMS.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -636,16 +636,16 @@ export function AppShell({
                     key={`${item.href}-${item.label}`}
                     href={item.href}
                     className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
+                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
                       isActive
-                        ? "bg-slate-100 text-slate-900 font-medium"
-                        : "text-slate-700 hover:bg-slate-50"
+                        ? "bg-slate-900 text-white font-semibold"
+                        : "text-slate-700 font-medium hover:bg-slate-50"
                     )}
                   >
                     <span
                       className={cn(
                         "inline-block h-2 w-2 rounded-full",
-                        isActive ? "bg-slate-900" : "bg-slate-300 group-hover:bg-slate-500"
+                        isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
                       )}
                     />
                     {item.label}
@@ -654,7 +654,7 @@ export function AppShell({
               })}
             </div>
             <div className="space-y-1">
-              <div className="my-2 border-t border-slate-200/70" />
+              <div className="my-2 border-t border-slate-200" />
               {SUPPORTING_TOOLS_NAV_ITEMS.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -662,37 +662,37 @@ export function AppShell({
                     key={`${item.href}-${item.label}`}
                     href={item.href}
                     className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
+                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
                       isActive
-                        ? "bg-slate-100 text-slate-900 font-medium"
-                        : "text-slate-700 hover:bg-slate-50"
+                        ? "bg-slate-900 text-white font-semibold"
+                        : "text-slate-700 font-medium hover:bg-slate-50"
                     )}
                   >
                     <span
                       className={cn(
                         "inline-block h-2 w-2 rounded-full",
-                        isActive ? "bg-slate-900" : "bg-slate-300 group-hover:bg-slate-500"
+                        isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
                       )}
                     />
                     {item.label}
                   </Link>
                 );
               })}
-              <div className="my-2 border-t border-slate-200/70" />
+              <div className="my-2 border-t border-slate-200" />
               <Link
                 href="/settings"
                 className={cn(
-                  "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
+                  "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
                   pathname === "/settings"
-                    ? "bg-slate-100 text-slate-900 font-medium"
-                    : "text-slate-700 hover:bg-slate-50"
+                    ? "bg-slate-900 text-white font-semibold"
+                    : "text-slate-700 font-medium hover:bg-slate-50"
                 )}
               >
                 <span
                   className={cn(
                     "inline-block h-2 w-2 rounded-full",
                     pathname === "/settings"
-                      ? "bg-slate-900"
+                      ? "bg-white"
                       : "bg-slate-300 group-hover:bg-slate-500"
                   )}
                 />
@@ -702,17 +702,17 @@ export function AppShell({
                 <Link
                   href="/settings/permissions"
                   className={cn(
-                    "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
+                    "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
                     pathname === "/settings/permissions"
-                      ? "bg-slate-100 text-slate-900 font-medium"
-                      : "text-slate-700 hover:bg-slate-50"
+                      ? "bg-slate-900 text-white font-semibold"
+                      : "text-slate-700 font-medium hover:bg-slate-50"
                   )}
                 >
                   <span
                     className={cn(
                       "inline-block h-2 w-2 rounded-full",
                       pathname === "/settings/permissions"
-                        ? "bg-slate-900"
+                        ? "bg-white"
                         : "bg-slate-300 group-hover:bg-slate-500"
                     )}
                   />

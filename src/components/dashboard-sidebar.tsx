@@ -1,6 +1,7 @@
 "use client";
 
-import { format } from "date-fns";
+import { formatDateInTimezone } from "@/lib/format-date";
+
 
 import type { QuickQueueKey } from "@/app/dashboard/page";
 import {
@@ -29,6 +30,19 @@ type RecentlyPublishedItem = {
   published_at: string | null;
 };
 
+interface DashboardSidebarProps {
+  quickQueueCounts: QuickQueueCounts;
+  activeQuickQueue: QuickQueueKey | null;
+  recentlyPublished: RecentlyPublishedItem | null;
+  onApplyQuickQueueFilter: (queue: QuickQueueKey) => void;
+  onOpenBlog: (blogId: string) => void;
+  isWriterFilterOpen: boolean;
+  onWriterFilterToggle: (open: boolean) => void;
+  isPublisherFilterOpen: boolean;
+  onPublisherFilterToggle: (open: boolean) => void;
+  userTimezone?: string;
+}
+
 export function DashboardSidebar({
   quickQueueCounts,
   activeQuickQueue,
@@ -39,17 +53,8 @@ export function DashboardSidebar({
   onWriterFilterToggle,
   isPublisherFilterOpen,
   onPublisherFilterToggle,
-}: {
-  quickQueueCounts: QuickQueueCounts;
-  activeQuickQueue: QuickQueueKey | null;
-  recentlyPublished: RecentlyPublishedItem | null;
-  onApplyQuickQueueFilter: (queue: QuickQueueKey) => void;
-  onOpenBlog: (blogId: string) => void;
-  isWriterFilterOpen: boolean;
-  onWriterFilterToggle: (open: boolean) => void;
-  isPublisherFilterOpen: boolean;
-  onPublisherFilterToggle: (open: boolean) => void;
-}) {
+  userTimezone,
+}: DashboardSidebarProps) {
 
   const writingItems: Array<{ key: QuickQueueKey; label: string; count: number }> = [
     {
@@ -100,7 +105,7 @@ export function DashboardSidebar({
   const publishedAt =
     recentlyPublished?.actual_published_at ?? recentlyPublished?.published_at ?? null;
   const publishedDateLabel =
-    publishedAt ? format(new Date(publishedAt), "MMM d") : null;
+    publishedAt ? formatDateInTimezone(publishedAt, userTimezone, "MMM d") : null;
   const siteIndicator = recentlyPublished?.site
     ? getSiteShortLabel(recentlyPublished.site)
     : "";

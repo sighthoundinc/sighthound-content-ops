@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -33,6 +33,7 @@ import type {
   WriterStageStatus,
 } from "@/lib/types";
 import { formatDateInput, toTitleCase } from "@/lib/utils";
+import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 import { useNotifications } from "@/providers/notifications-provider";
@@ -767,7 +768,7 @@ export default function BlogDetailPage() {
             <div>
               <h2 className="text-2xl font-semibold text-slate-900">{blog.title}</h2>
               <p className="text-xs uppercase tracking-wide text-slate-500">
-                {blog.site} • Created {format(new Date(blog.created_at), "PPp")}
+                {blog.site} • Created {formatDateInTimezone(blog.created_at, profile?.timezone)}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1252,7 +1253,7 @@ export default function BlogDetailPage() {
                       {entry.old_value ?? "—"} → {entry.new_value ?? "—"}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {format(new Date(entry.changed_at), "PPp")}
+                      {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                     </p>
                   </li>
                 ))}

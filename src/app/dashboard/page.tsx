@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
@@ -90,6 +90,7 @@ import type {
   WriterStageStatus,
 } from "@/lib/types";
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
+import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 import { logDashboardVisitEvent } from "@/app/actions/log-dashboard-visit";
@@ -1673,7 +1674,7 @@ export default function DashboardPage() {
   );
 
   const saveCurrentFiltersAsView = useCallback(() => {
-    const baseName = `View ${format(new Date(), "MMM d yyyy, h:mm a")}`;
+    const baseName = `View ${formatDateInTimezone(new Date().toISOString(), profile?.timezone, "MMM d yyyy, h:mm a")}`;
     const existingNames = new Set(savedViews.map((view) => view.name.toLowerCase()));
     let trimmedName = baseName;
     if (existingNames.has(trimmedName.toLowerCase())) {
@@ -1873,7 +1874,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const generatedAt = format(new Date(), "MMM d yyyy, h:mm a");
+      const generatedAt = formatDateInTimezone(new Date().toISOString(), profile?.timezone, "MMM d yyyy, h:mm a");
       const headerMarkup = visibleColumnOrder
         .map((column) => `<th>${escapeHtmlValue(DASHBOARD_COLUMN_LABELS[column])}</th>`)
         .join("");
@@ -2517,6 +2518,7 @@ export default function DashboardPage() {
             onWriterFilterToggle={setIsWriterFilterSidebarOpen}
             isPublisherFilterOpen={isPublisherFilterSidebarOpen}
             onPublisherFilterToggle={setIsPublisherFilterSidebarOpen}
+            userTimezone={profile?.timezone}
           />
         }
       >
@@ -3671,7 +3673,7 @@ export default function DashboardPage() {
                           {entry.old_value ?? "—"} → {entry.new_value ?? "—"}
                         </p>
                         <p className="text-xs text-slate-400">
-                          {format(new Date(entry.changed_at), "PPp")}
+                          {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                         </p>
                       </li>
                     ))}

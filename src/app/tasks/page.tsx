@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateInTimezone } from "@/lib/format-date";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
@@ -755,7 +757,7 @@ export default function MyTasksPage() {
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = `my-tasks-${format(new Date(), "yyyyMMdd-HHmm")}.csv`;
+    link.download = `my-tasks-${formatDateInTimezone(new Date().toISOString(), profile?.timezone, "yyyyMMdd-HHmm")}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -790,7 +792,7 @@ export default function MyTasksPage() {
       showError("Popup blocked. Allow popups to export PDF");
       return;
     }
-    const generatedAt = format(new Date(), "MMM d yyyy, h:mm a");
+    const generatedAt = formatDateInTimezone(new Date().toISOString(), profile?.timezone, "MMM d yyyy, h:mm a");
 
     const headerMarkup = exportableColumns
       .map((column) => `<th>${escapeHtmlValue(TASK_TABLE_COLUMN_LABELS[column])}</th>`)

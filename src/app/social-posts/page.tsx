@@ -78,6 +78,7 @@ import type {
   SocialPostType,
 } from "@/lib/types";
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
+import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
@@ -344,7 +345,7 @@ function SocialStatusColumn({
 function SocialPostsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { showError, showSuccess } = useSystemFeedback();
   const requestedView = searchParams.get("view");
   const shouldOpenCreateModal = searchParams.get("create") === "1";
@@ -1438,8 +1439,8 @@ function SocialPostsPageContent() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">{activePost.title}</h3>
-                  <p className="text-sm text-slate-600">
-                    Created {format(new Date(activePost.created_at), "PPp")}
+              <p className="text-sm text-slate-600">
+                    Created {formatDateInTimezone(activePost.created_at, profile?.timezone)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1887,7 +1888,7 @@ function SocialPostsPageContent() {
                         </p>
                         <p className="text-xs text-slate-400">
                           {entry.actor?.full_name ?? "System"} •{" "}
-                          {format(new Date(entry.changed_at), "PPp")}
+                          {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                         </p>
                       </li>
                     ))}

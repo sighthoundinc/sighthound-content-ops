@@ -1,4 +1,6 @@
 "use client";
+
+import { formatDateInTimezone } from "@/lib/format-date";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -8,7 +10,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import { format } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
@@ -310,7 +311,7 @@ function isBoardStageQueryFilter(value: string | null): value is BoardStageQuery
 
 function BlogLibraryPageContent() {
   const searchParams = useSearchParams();
-  const { hasPermission } = useAuth();
+  const { hasPermission, profile } = useAuth();
   const { showSaving, showSuccess, showError, updateStatus, pushNotification } =
     useSystemFeedback();
   const permissionContract = useMemo(
@@ -1040,7 +1041,7 @@ function BlogLibraryPageContent() {
     }
     triggerDownload(
       `\uFEFF${buildCsv(rows)}`,
-      `blog-library-${scope}-${format(new Date(), "yyyyMMdd-HHmm")}.csv`,
+      `blog-library-${scope}-${formatDateInTimezone(new Date().toISOString(), profile?.timezone, "yyyyMMdd-HHmm")}.csv`,
       "text/csv;charset=utf-8;"
     );
     updateStatus(statusId, {
@@ -1096,7 +1097,7 @@ function BlogLibraryPageContent() {
       });
       return;
     }
-    const generatedAt = format(new Date(), "MMM d yyyy, h:mm a");
+    const generatedAt = formatDateInTimezone(new Date().toISOString(), profile?.timezone, "MMM d yyyy, h:mm a");
 
     const headerMarkup = visibleColumnOrder
       .map((column) => `<th>${escapeHtmlValue(LIBRARY_COLUMN_LABELS[column])}</th>`)

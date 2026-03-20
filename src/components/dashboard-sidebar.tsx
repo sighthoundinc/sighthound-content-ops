@@ -110,63 +110,69 @@ export function DashboardSidebar({
       <details
         open={isWriterFilterOpen}
         onToggle={(event) => {
-          onWriterFilterToggle(event.currentTarget.open);
+          event.preventDefault();
+          onWriterFilterToggle(!isWriterFilterOpen);
         }}
         className="rounded-md border border-slate-200 bg-slate-50"
       >
         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
           Writer Filters
         </summary>
-        <div className="space-y-1 border-t border-slate-200 p-2">
-          {writingItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition ${
-                activeQuickQueue === item.key
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-white"
-              }`}
-              onClick={() => {
-                onApplyQuickQueueFilter(item.key);
-              }}
-            >
-              <span>{item.label}</span>
-              <span className="tabular-nums">{item.count}</span>
-            </button>
-          ))}
-        </div>
+        {isWriterFilterOpen && (
+          <div className="space-y-1 border-t border-slate-200 p-2">
+            {writingItems.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition ${
+                  activeQuickQueue === item.key
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-700 hover:bg-white"
+                }`}
+                onClick={() => {
+                  onApplyQuickQueueFilter(item.key);
+                }}
+              >
+                <span>{item.label}</span>
+                <span className="tabular-nums">{item.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </details>
 
       <details
         open={isPublisherFilterOpen}
         onToggle={(event) => {
-          onPublisherFilterToggle(event.currentTarget.open);
+          event.preventDefault();
+          onPublisherFilterToggle(!isPublisherFilterOpen);
         }}
         className="rounded-md border border-slate-200 bg-slate-50"
       >
         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
           Publisher Filters
         </summary>
-        <div className="space-y-1 border-t border-slate-200 p-2">
-          {publishingItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition ${
-                activeQuickQueue === item.key
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-white"
-              }`}
-              onClick={() => {
-                onApplyQuickQueueFilter(item.key);
-              }}
-            >
-              <span>{item.label}</span>
-              <span className="tabular-nums">{item.count}</span>
-            </button>
-          ))}
-        </div>
+        {isPublisherFilterOpen && (
+          <div className="space-y-1 border-t border-slate-200 p-2">
+            {publishingItems.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition ${
+                  activeQuickQueue === item.key
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-700 hover:bg-white"
+                }`}
+                onClick={() => {
+                  onApplyQuickQueueFilter(item.key);
+                }}
+              >
+                <span>{item.label}</span>
+                <span className="tabular-nums">{item.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </details>
 
       <div className="rounded-md border border-slate-200 bg-slate-50 p-2">

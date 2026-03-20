@@ -40,10 +40,6 @@ const SECONDARY_NAV_ITEMS = [
   { href: "/calendar", label: "Calendar" },
   { href: "/blogs/cardboard", label: "CardBoard" },
 ];
-
-const SUPPORTING_TOOLS_NAV_ITEMS = [
-  { href: "/resources", label: "User Guide" },
-];
 type ShortcutDefinition = {
   id: string;
   label: string;
@@ -520,6 +516,15 @@ export function AppShell({
               Shortcuts
             </button>
 
+            {/* User Guide - Plain text link */}
+            <Link
+              href="/resources"
+              className="text-sm text-slate-700 transition hover:text-slate-900"
+              title="Go to User Guide"
+            >
+              User Guide
+            </Link>
+
             {/* User name - Clickable link to settings */}
             <Link
               href="/settings"
@@ -654,30 +659,6 @@ export function AppShell({
               })}
             </div>
             <div className="space-y-1">
-              <div className="my-2 border-t border-slate-200" />
-              {SUPPORTING_TOOLS_NAV_ITEMS.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={`${item.href}-${item.label}`}
-                    href={item.href}
-                    className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
-                      isActive
-                        ? "bg-slate-900 text-white font-semibold"
-                        : "text-slate-700 font-medium hover:bg-slate-50"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "inline-block h-2 w-2 rounded-full",
-                        isActive ? "bg-white" : "bg-slate-300 group-hover:bg-slate-500"
-                      )}
-                    />
-                    {item.label}
-                  </Link>
-                );
-              })}
               <div className="my-2 border-t border-slate-200" />
               <Link
                 href="/settings"

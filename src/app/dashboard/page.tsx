@@ -11,6 +11,7 @@ import { BlogImportModal } from "@/components/blog-import-modal";
 import { Button } from "@/components/button";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
+import { ColumnEditor } from "@/components/column-editor";
 import { DashboardTable } from "@/components/dashboard-table";
 import { DetailDrawerField } from "@/components/detail-drawer";
 import { FilterBar } from "@/components/filter-bar";
@@ -1503,26 +1504,6 @@ export default function DashboardPage() {
     setBulkPublisherId("");
     setBulkWriterStatus("");
     setBulkPublisherStatus("");
-  };
-  const moveColumn = (column: DashboardColumnKey, direction: -1 | 1) => {
-    setColumnOrder((previous) => {
-      const currentIndex = previous.indexOf(column);
-      if (currentIndex < 0) {
-        return previous;
-      }
-
-      const nextIndex = currentIndex + direction;
-      if (nextIndex < 0 || nextIndex >= previous.length) {
-        return previous;
-      }
-
-      const nextOrder = [...previous];
-      [nextOrder[currentIndex], nextOrder[nextIndex]] = [
-        nextOrder[nextIndex],
-        nextOrder[currentIndex],
-      ];
-      return nextOrder;
-    });
   };
   const toggleColumnVisibility = (column: DashboardColumnKey) => {
     setHiddenColumns((previous) => {
@@ -3153,8 +3134,8 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                    <div className="mt-2 grid gap-2 md:grid-cols-2">
-                      <div className="col-span-full flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+                    <div className="mt-2 space-y-3">
+                      <div className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
                         <span className="text-xs font-medium text-slate-600">Density</span>
                         <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
                           <button
@@ -3183,53 +3164,21 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </div>
-                      {columnOrder.map((column, index) => (
-                        <div
-                          key={column}
-                          className="inline-flex items-center justify-between gap-2 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-                        >
-                          <label className="inline-flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={!hiddenColumnSet.has(column)}
-                              disabled={
-                                !hiddenColumnSet.has(column) &&
-                                  visibleColumnOrder.length <= 1
-                              }
-                              onChange={() => {
-                                toggleColumnVisibility(column);
-                              }}
-                            />
-                            <span className="font-medium">
-                              {DASHBOARD_COLUMN_LABELS[column]}
-                            </span>
-                          </label>
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              type="button"
-                              aria-label={`Move ${DASHBOARD_COLUMN_LABELS[column]} left`}
-                              disabled={index === 0}
-                              className="rounded border border-slate-200 px-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                              onClick={() => {
-                                moveColumn(column, -1);
-                              }}
-                            >
-                              ←
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`Move ${DASHBOARD_COLUMN_LABELS[column]} right`}
-                              disabled={index === columnOrder.length - 1}
-                              className="rounded border border-slate-200 px-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                              onClick={() => {
-                                moveColumn(column, 1);
-                              }}
-                            >
-                              →
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                      <p className="text-[11px] text-slate-500">Drag columns to reorder, or use checkboxes to show/hide</p>
+                      <ColumnEditor
+                        columns={columnOrder.map((column) => ({
+                          id: column,
+                          label: DASHBOARD_COLUMN_LABELS[column],
+                          isVisible: !hiddenColumnSet.has(column),
+                        }))}
+                        onReorder={(reorderedColumns) => {
+                          setColumnOrder(reorderedColumns.map((col) => col.id as DashboardColumnKey));
+                        }}
+                        onToggleVisibility={(columnId) => {
+                          toggleColumnVisibility(columnId as DashboardColumnKey);
+                        }}
+                        minVisibleColumns={1}
+                      />
                     </div>
                   </div>
                 ) : null}

@@ -41,6 +41,14 @@ For every non-trivial UI or workflow change:
 4. Keep icons inside explicit bounding boxes to preserve vertical rhythm and cross-table alignment.
 5. Maintain consistent stroke weight and sizing patterns unless a component has a documented exception.
 
+## Timezone and Date Display (MUST)
+
+1. All date/time/timestamp UI in the app must display using the logged-in user's `profiles.timezone`.
+2. Default fallback timezone is `America/New_York` when no user timezone is set.
+3. Do not rely on system/browser timezone for user-facing timestamps.
+4. Use centralized timezone-aware formatters (`src/lib/format-date.ts`) for rendering date/time values.
+5. Apply this rule consistently across tables, badges, detail pages, history timelines, comments, notifications, and any date/time UI.
+
 ## State & Workflow Authority (MUST)
 
 1. Database is the source of truth for all statuses and transitions.

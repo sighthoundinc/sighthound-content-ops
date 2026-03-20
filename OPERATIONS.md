@@ -39,6 +39,7 @@ Content mutations (blogs, stages, comments, derived status) are DB-authoritative
 - `src/lib/permissions.ts` — permission definitions/templates/helpers
 - `src/lib/server-permissions.ts` — server-side permission resolution
 - `src/lib/access-logging.ts` — server-side utility for logging access events
+- `src/lib/format-date.ts` — timezone-aware date formatting utilities
 - `src/app/settings/permissions/` — permission management UI
 - `src/app/settings/access-logs/` — activity history page UI
 - `src/app/api/admin/permissions/` — permission CRUD/reset APIs

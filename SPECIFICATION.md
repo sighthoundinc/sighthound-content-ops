@@ -247,6 +247,14 @@ Key behavior:
 - reset managed role to defaults
 - permission audit log
 
+## 6.4) Timezone and Date Display (MUST)
+All timestamps and date displays throughout the app must respect the logged-in user's timezone preference from `profiles.timezone`.
+- **Default timezone**: US Eastern (`America/New_York`) if user has not set a preference
+- **Non-admin users**: All timestamps display in their personal timezone
+- **Admin users viewing other users**: Timestamps may display in UTC for consistency when appropriate
+- **Implementation**: Use centralized timezone-aware formatting utility (`formatDateInTimezone`, `formatShortDateInTimezone`, `formatTimeInTimezone` from `src/lib/format-date.ts`)
+- **Examples**: Blog creation timestamps, activity history, calendar dates, comment timestamps, history entry timestamps
+
 ## 6.5) Iconography and visual consistency (MUST)
 - UI iconography uses a single open-source line icon set (`lucide-react`)
 - emoji-based icons are not used for controls, statuses, or notifications

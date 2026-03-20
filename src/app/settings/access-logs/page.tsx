@@ -166,7 +166,9 @@ export default function AccessLogsPage() {
   const formatTimestamp = (iso8601: string): string => {
     try {
       const date = new Date(iso8601);
-      // Format in user's timezone
+      // For non-admins: use their timezone
+      // For admins: use UTC for consistency when viewing other users
+      const timezone = isAdmin ? "UTC" : (profile?.timezone ?? "America/New_York");
       return new Intl.DateTimeFormat("en-US", {
         year: "numeric",
         month: "short",
@@ -175,6 +177,7 @@ export default function AccessLogsPage() {
         minute: "2-digit",
         second: "2-digit",
         hour12: true,
+        timeZone: timezone,
         timeZoneName: "short",
       }).format(date);
     } catch {

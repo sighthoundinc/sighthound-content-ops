@@ -185,7 +185,73 @@ Key behavior:
 - reset managed role to defaults
 - permission audit log
 
-## 7) Data model (logical)
+## 7) Error Handling & Edge Cases (MUST)
+Defines how the system behaves outside the happy path. Applies to all modules.
+
+### Error categories
+Validation errors
+- shown inline at field level
+- must clearly state what is wrong and how to fix it
+- must block submission until resolved
+
+System errors
+- shown via toast with fallback message
+- must not expose raw errors or stack traces
+- must not break UI layout or navigation
+
+Permission errors
+- must clearly indicate lack of access
+- must not silently fail or hide action outcomes
+
+### Mutation failure behavior
+- failed mutations must not leave UI in partial or inconsistent state
+- UI must revert or remain unchanged if mutation fails
+- all failures must produce visible feedback
+
+### Edge cases (MUST be handled)
+- empty states (no blogs, no tasks, no results)
+- invalid inputs (dates, URLs, required fields)
+- permission denial mid-action
+- network/API failure
+- bulk action partial failures (must return row-level results)
+
+### Loading states
+- all async actions must show visible loading state
+- inputs/actions must be disabled during processing
+- no duplicate submissions allowed
+
+## 8) Search & Filter Consistency (MUST)
+Defines consistent behavior across all searchable/filterable modules:
+- Blogs
+- Social Posts
+- Ideas
+- Dashboard tables
+- Blog linking in Social Posts
+
+### Search behavior
+- case-insensitive matching
+- partial match support
+- real-time results with debounce
+- search must work on:
+  - title
+  - URL/slug (where applicable)
+
+### Filter behavior
+Filters must:
+- update results immediately
+- reflect active state visually
+- combine logically when multiple filters are selected (AND behavior)
+- support a clear-all action that resets to default dataset
+
+### Persistence
+- filters and sorting persist within session
+- navigation between pages should not unintentionally reset filters
+
+### Empty results
+- show clear no-results-found state
+- never show blank or broken UI
+
+## 9) Data model (logical)
 Core tables:
 - `profiles`
 - `blogs`
@@ -207,12 +273,12 @@ Highlights:
 - permission tables drive effective capability resolution
 - quick-view state is client-side snapshot state (browser local storage), not persisted in DB
 
-## 8) Admin control APIs (logical)
+## 10) Admin control APIs (logical)
 - `/api/admin/permissions` — permission matrix read/update/reset
 - `/api/admin/reassign-assignments` — assignment transfer
 - `/api/admin/activity-history` — activity cleanup, optional comments cleanup
 - `/api/admin/quick-view` — admin quick-view token generation/session switch support
-## 9) Integrations
+## 11) Integrations
 Slack via Supabase Edge Function:
 - `supabase/functions/slack-notify/index.ts`
 
@@ -225,7 +291,7 @@ Delivery:
 - configured channel
 - optional DM resolution by email
 - webhook fallback
-## 10) Environment requirements
+## 12) Environment requirements
 Frontend:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -240,20 +306,20 @@ Slack:
 - `SLACK_BOT_TOKEN`
 - `SLACK_MARKETING_CHANNEL`
 - `SLACK_WEBHOOK_URL`
-## 11) Migration and compatibility status
+## 13) Migration and compatibility status
 The project is migration-driven (`supabase/migrations`) with compatibility layers for:
 - legacy/expanded role model transitions
 - status trigger and enum transition safety
 - comments actor compatibility (`user_id` / `created_by`)
 - import collision prevention via deterministic hash
 - permission matrix introduction + expansion migrations
-## 12) Non-functional requirements
+## 14) Non-functional requirements
 - fast internal workflow execution
 - deterministic DB-level invariants for workflow integrity
 - high traceability (history + comments + permission audits)
 - low-cognitive-load UI for operational scanning
 - predictable filter/search behavior with immediate visual state feedback
-## 13) Implementation phases
+## 15) Implementation phases
 ### Phase 4A: UI Foundation ✅ COMPLETE
 1. AppShell layout and navigation patterns
 2. DataPageHeader, DataPageToolbar, DataPageFilterPills reusable components
@@ -274,13 +340,42 @@ The project is migration-driven (`supabase/migrations`) with compatibility layer
 6. Zero dead code, production-ready code quality
 7. TypeScript 0 errors, ESLint 0 errors on migrated pages
 
-## 14) Acceptance criteria (current)
-1. Permission-guarded workflows execute with DB-authoritative enforcement.
-2. Dashboard queues/pipelines are actionable and scan-friendly (Phase 4C DataTable).
-3. Tasks and Calendar prioritize execution clarity (Phase 4C DataTable).
-4. Comments/history and permission audit logs are available for traceability.
-5. Settings and Permissions pages support operational administration.
-6. Admin quick-view runs actions in selected non-admin user context and supports clean return flow.
-7. Admin cleanup controls can purge activity history with optional comments cleanup.
-8. Migration, lint, and typecheck workflows remain stable.
-9. All major pages use unified DataTable behavior with consistent sorting/filtering/pagination.
+## 16) Definition of Done (MUST)
+A feature is considered complete only if all of the following are satisfied:
+
+### Data & backend
+- database schema and constraints updated (if required)
+- all workflow rules enforced at DB level
+- API validates input data and permissions
+- all mutations are atomic (no partial updates)
+
+### Permissions
+- Supabase RLS policies implemented and verified
+- access rules enforced independently of UI
+
+### UI & UX
+- UI reflects correct loading/success/error states
+- no silent failures in any user flow
+- inline validation implemented for all required inputs
+- edge cases handled:
+  - empty states
+  - invalid input
+  - permission denial
+  - API failure
+
+### Tables, search, and interaction
+- tables follow layout invariants (fixed height, truncation, pagination)
+- search and filters follow consistency rules
+- bulk actions provide per-row success/failure results
+
+### Documentation
+Documentation updated:
+- `AGENTS.md` (if rules affected)
+- `SPECIFICATION.md` (this document)
+- `HOW_TO_USE_APP.md`
+- `OPERATIONS.md`
+- `README.md` (if applicable)
+
+### Validation
+- feature passes manual workflow validation:
+  - Create → Assign → Progress → Complete → Publish (if applicable)

@@ -92,6 +92,7 @@ import type {
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { logAccessEvent } from "@/lib/access-logging";
 
 type BlogCommentRecord = {
   id: string;
@@ -470,6 +471,12 @@ export default function DashboardPage() {
   const router = useRouter();
   const { hasPermission, profile, user } = useAuth();
   const { showError, showSuccess, showWarning } = useSystemFeedback();
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+    void logAccessEvent(user.id, "dashboard_visit");
+  }, [user?.id]);
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]

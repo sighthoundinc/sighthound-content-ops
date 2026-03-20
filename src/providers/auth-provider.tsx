@@ -15,6 +15,7 @@ import {
   resolvePermissionsForRoles,
 } from "@/lib/permissions";
 import { getUserRoles } from "@/lib/roles";
+import { logLoginEvent } from "@/app/actions/log-login";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { AppPermissionKey, ProfileRecord } from "@/lib/types";
@@ -92,6 +93,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const nextProfile = await fetchProfile(nextSession.user.id);
       setProfile(nextProfile);
       setPermissions(await resolvePermissionsForProfile(nextProfile));
+      
+      // Log login event when session is first established
+      // Use fire-and-forget to avoid blocking auth flow
+      void logLoginEvent(nextSession.user.id);
     } catch (error) {
       console.error(error);
       setProfile(null);

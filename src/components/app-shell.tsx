@@ -456,16 +456,29 @@ export function AppShell({
                 <div className="absolute right-0 z-40 mt-2 w-[360px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="xs"
-                      onClick={() => {
-                        clearAll();
-                      }}
-                    >
-                      Clear all
-                    </Button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNotificationPanelOpen(false);
+                          router.push("/settings/access-logs");
+                        }}
+                        className="text-xs text-slate-600 transition hover:text-slate-900"
+                        title="View full activity history"
+                      >
+                        View History
+                      </button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => {
+                          clearAll();
+                        }}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
                   </div>
                   {notifications.length === 0 ? (
                     <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
@@ -473,7 +486,7 @@ export function AppShell({
                     </p>
                   ) : (
                     <ul className="mt-2 space-y-1">
-                      {notifications.map((notification) => (
+                      {notifications.slice(0, 5).map((notification) => (
                         <li key={notification.id}>
                           <button
                             type="button"

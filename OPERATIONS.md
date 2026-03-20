@@ -1,6 +1,8 @@
 # Sighthound Content Ops — Operations Runbook
 This runbook is for maintainers and operators.  
+It describes how the system runs in practice today (deployment, monitoring, incident response, and admin maintenance).  
 For product behavior, see `SPECIFICATION.md`.  
+For implementation/build rules, see `AGENTS.md`.  
 For end-user instructions, see `HOW_TO_USE_APP.md`.
 
 ## 1) System overview
@@ -104,6 +106,16 @@ npm run check
 - `20260313193000_shared_non_admin_role_model.sql`
 - `20260313200000_role_permissions_and_audit.sql`
 - `20260313213000_expand_permission_matrix.sql`
+- `20260315143000_status_enum_replay_compat.sql`
+- `20260316195500_blog_import_logs.sql`
+- `20260316221500_add_delete_user_permission.sql`
+- `20260316224500_approval_audit_trail.sql`
+- `20260317141728_blog_idea_comments_and_updates.sql`
+- `20260317194000_blog_ideas_conversion_sync.sql`
+- `20260317194500_canonical_status_workflow.sql`
+- `20260318104000_wipe_app_clean_data.sql`
+- `20260318200000_create_task_assignments.sql`
+- `20260320164320_relax_writer_complete_google_doc_constraint.sql`
 
 ## 6) Permission operations
 Primary control plane:
@@ -224,8 +236,123 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 1. run `npm run check`
 2. verify env vars
 3. check Supabase logs + Next runtime logs
-## 13) Deployment baseline
-- deploy frontend on Vercel
-- set env vars in deployment target
-- ensure migrations are fully applied before release
-- run `npm run check` before merge/release
+## 13) Deployment pipeline (current state)
+### Environments
+- Local development: Next app + local env file (`.env.local`)
+- Hosted runtime: Vercel (Next.js app) + Supabase project (DB/Auth/Edge Functions)
+- This repository does not currently include in-repo CI workflow files (for example `.github/workflows/*`), so deployment orchestration lives in Vercel/Supabase project configuration.
+
+### Testing and release gates
+Before release/promotion, run these gates in order:
+1. `npm run check` (lint + typecheck)
+2. migration sanity sequence:
+   - `supabase ... migration list`
+   - `supabase ... db push --yes`
+   - `supabase ... migration list`
+3. verify environment variables are present in deployment target:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_APP_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+4. deploy frontend on Vercel (current config: `installCommand` = `npm install`, `buildCommand` = `npm run build`)
+
+### Rollback posture
+- Frontend rollback: redeploy last known-good Vercel deployment.
+- Data rollback: no single-click app-level rollback; use targeted data correction, or restore from DB backup strategy outside this repo.
+
+## 14) Monitoring, logging, and alerting
+### Logging sources used today
+- Next.js server/API logs (route handlers log via `console.log`/`console.error`)
+- Supabase logs:
+  - PostgREST/API errors
+  - Edge Function logs (including `slack-notify`)
+- Import telemetry:
+  - `blog_import_logs` tracks `rows_created`, `rows_updated`, `rows_failed`, `imported_at`
+- Audit/forensics tables:
+  - `blog_assignment_history`
+  - `social_post_activity_history`
+  - `permission_audit_logs`
+
+### Alerting reality today
+- No dedicated in-repo pager/incident integration is configured.
+- Operational alerting is log-driven via Vercel + Supabase dashboards and manual triage.
+- Slack notifications are workflow notifications (content events), not a full error-alerting system.
+
+## 15) Common failure handling playbooks
+### Import failures and rollback
+For `/api/blogs/import`:
+1. review returned `failures` and `failedRows` payload (row-level diagnostics)
+2. correct source data and re-import only corrected rows
+3. confirm counts in API response and in `blog_import_logs`
+
+Current-state rollback notes:
+- Import processing is row-by-row and can be partially successful; there is no single atomic rollback endpoint for an entire import batch.
+- For broad cleanup in non-production/test environments, use admin **Wipe App Clean**.
+- For production correction, use targeted cleanup/reassignment flows and controlled data repair.
+
+For legacy XLSX import script (`npm run import:legacy`):
+- run dry-run first: `npm run import:legacy -- --dry-run`
+- script relies on dedupe keys (`legacy_import_hash`, URL/key matching), so safe re-runs are the primary correction path
+
+### User recovery
+- Soft deactivation: admin can reactivate users by setting `isActive` back to `true` through profile edit flow (`/api/users/profile`).
+- If auth user was hard deleted/purged, recovery is recreate + reassignment (no undelete endpoint).
+- For authored content continuity during delete/purge, APIs attempt reassignment of `created_by` ownership before removal.
+
+### Data cleanup
+- Activity history cleanup: `/api/admin/activity-history`
+  - scope: all users or selected users
+  - optional comments cleanup for `blog_comments` and `social_post_comments`
+- Factory reset: `/api/admin/wipe-app-clean`
+  - admin-only
+  - preserves only currently signed-in admin auth/profile context
+  - clears content, logs, permissions, and related operational data
+
+## 16) Admin workflows (current state)
+### Activity history cleanup
+- Entry point: Settings → Activity History Cleanup
+- API: `DELETE /api/admin/activity-history`
+- Use when test data/noise in history blocks troubleshooting or demos.
+
+### Role and permission changes
+- User role/profile changes:
+  - UI: Settings user editor
+  - API: `PATCH /api/users/profile` (`userRoles`, `isActive`, profile names)
+- Permission matrix changes:
+  - UI: `/settings/permissions`
+  - API: `/api/admin/permissions` (`GET`/`PATCH`/`POST` reset)
+- Always verify effective permissions after change by refreshing session/profile.
+
+### Quick-view troubleshooting
+- Quick-view start API: `POST /api/admin/quick-view` (admin → non-admin only)
+- If attribution/logging looks wrong, first check whether quick-view is active.
+- Recovery sequence:
+  1. use **Return to Admin** in Settings
+  2. if restore fails, sign out/in as admin
+  3. clear stale local snapshot key `sighthound.quick_view_admin_session_v1` if needed
+
+## 17) Slack integration behavior and debugging
+### Current behavior
+- Caller: `src/lib/notifications.ts` invokes Supabase function `slack-notify`.
+- Events currently sent:
+  - `writer_assigned`
+  - `writer_completed`
+  - `ready_to_publish`
+  - `published`
+- Delivery order:
+  1. if `SLACK_BOT_TOKEN` exists → post to channel (`SLACK_MARKETING_CHANNEL` or `#marketing`) and optionally DM `targetEmail`
+  2. else if `SLACK_WEBHOOK_URL` exists → webhook post
+  3. else function returns configuration error
+- Notification send is best-effort; app flow continues even if Slack send fails.
+
+### Deployment and debug checklist
+1. confirm function deployment:
+   - `supabase functions deploy slack-notify --project-ref <PROJECT_REF>`
+2. verify secrets exist and are valid:
+   - `SLACK_BOT_TOKEN` and optional `SLACK_MARKETING_CHANNEL`
+   - or fallback `SLACK_WEBHOOK_URL`
+3. inspect Supabase Edge Function logs for:
+   - `Invalid payload`
+   - `No Slack credentials configured`
+   - Slack API errors (for example channel not found / invalid_auth / users.lookupByEmail failure)
+4. if channel posts succeed but DMs fail, verify `targetEmail` matches an actual Slack user email.

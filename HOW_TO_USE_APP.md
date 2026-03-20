@@ -1,205 +1,261 @@
-# How to Use Sighthound Content Ops (End-User Guide)
-Use this app to coordinate blog production across `sighthound.com` and `redactor.com`.
-It tracks workflow, ownership, dates, and publishing state. It is not a CMS.
+# Sighthound Content Ops — User Guide
 
-## 1) What this app does
-You can:
-- manage writing and publishing workflow status
-- see assignment queues and schedule priorities
-- update links/dates where your permissions allow
-- collaborate with comments
+## 1. What this app is
+This is your content operations system.
 
-You cannot:
-- write blog body content in-app
-- bypass permission rules without admin override capabilities
+It helps you:
+- track blog progress
+- manage assignments
+- schedule publishing
+- manage social posts
+- maintain history and accountability
 
-## 2) Main pages
-**Note**: Dashboard, Blogs, Tasks, and Social Posts now use the unified DataTable component for consistent sorting, filtering, and pagination across all pages (Phase 4C complete).
+It does NOT:
+- write or edit content (use Google Docs)
+- publish directly to websites
 
-### Dashboard (`/dashboard`)
-Use Dashboard for operations scanning and bulk coordination.
+## 2. Get productive in 5 minutes (by role)
+### Writer — start here
+Goal: Move blogs from “Not Started” → “Completed”.
 
-Highlights:
-- clickable pipeline sections that filter the table (writer and publisher lanes)
-- focus strip (`Today`) with:
-  - scheduled this week
-  - ready to publish
-  - delayed (scheduled publish date is in the past and overall status is not `Published`)
-- metrics are clickable and act as table filters
-- unified DataTable with:
-  - site badges (`SH`, `RED`)
-  - clamped titles for readability
-  - urgency row tones (overdue/ready/publishing)
-  - inline writer/publisher stage update dropdowns (permission-based)
-  - click column headers to sort by any column
-  - consistent pagination and density controls
-- active filter chips + one-click clear-all behavior
-- exports:
-  - Export View CSV
-  - Export Selected CSV (permission-based)
-- Edit Columns popover
-- bottom pagination controls
-- right-side blog detail panel
-### Blog Library (`/blogs`)
-Use Blog Library as a fast reference index for published and historical content.
+Do this daily:
+1. Open My Tasks
+2. Start assigned blog → set In Progress
+3. Work in Google Doc
+4. If changes needed → Needs Revision
+5. When done → Completed
 
-Default behavior:
-- published blogs only
-- sorted by display publish date, newest first
+Watch-outs:
+- Don’t mark complete early
+- Don’t leave items stuck in progress
 
-Key behavior:
-- minimal table for lookup/copy workflows:
-  - Sr #
-  - Blog Title
-  - Live URL
-  - Published Date
-  - Site badge (`SH`/`RED`)
-- copy interactions:
-  - row-level copy controls for title/URL (shown on row hover)
-  - copy-all titles
-  - copy-all URLs
-- filters:
-  - published / unpublished scope
-  - stage filter
-  - website filter
-- exports:
-  - View Export: CSV + PDF (`export_csv`)
-  - Selected Export: CSV (`export_selected_csv`)
+### Publisher — start here
+Goal: Turn completed drafts into live content.
 
-### CardBoard (`/blogs/cardboard`)
-Use CardBoard for kanban-style pipeline management.
-- drag cards between stages (`Idea`, `Writing`, `Reviewing`, `Publishing`, `Published`)
-- stage moves enforce workflow permissions and required fields
-- stage columns open corresponding table filters in `/blogs`
-- quick-add from `Idea` for fast backlog intake
-- card-level quick actions (open links, copy title/URL, edit)
+Do this daily:
+1. Go to Dashboard → Ready for Publishing
+2. Open blog
+3. Review doc
+4. Publish in CMS
+5. Add Live URL
+6. Mark Completed
 
-### Tasks (`/tasks`)
-Use Tasks for day-to-day execution.
-- Top 3 priority items shown first
-- Expand to full paginated list
-- Priority indicators:
-  - `⚠ Overdue`
-  - `Due Soon`
-  - `Upcoming`
+Watch-outs:
+- Cannot publish before writer completes
+- Always add URL (critical for tracking)
 
-### Calendar (`/calendar`)
-Use Calendar for schedule planning.
-- month/week calendar modes
-- month view grouped by week with blog lines beneath week row
-- drag-and-drop scheduling (permission-based, not allowed for published blogs)
-- unscheduled list for blogs with no publish date
+### Editor (if used)
+Goal: Improve quality, not manage workflow.
 
-### Blog detail (`/blogs/[id]`)
-Use detail pages for record-level edits:
-- assignment/status updates (permission-based)
-- schedule/display date edits (permission-based)
-- comments and activity history
+Do:
+- Review during Needs Revision
+- Leave comments
 
-### Ideas (`/ideas`)
-- manage blog idea backlog
-- comments and references are visible on cards by default
-- edit title/site/comments-references through **Edit Idea** (single edit path)
-- convert ideas directly into:
-  - blog records (`Convert to Blog`)
-  - social post records (`Convert to Social Post`)
+Avoid:
+- Changing workflow states unless assigned
 
-### Social Posts (`/social-posts`)
-- track social posting workflow linked to content operations
+### Admin — start here
+Goal: Keep system clean and reliable.
 
-### Social Post Editor (`/social-posts/[id]`)
-- guided 4-step editor flow for one social post at a time:
-  1. **Setup**: Post Title, Platform(s), Publish Date, Canva Link/Page, Product, Type
-  2. **Link Context (optional)**: Associated Blog lookup + linked blog actions (open/copy/clear)
-  3. **Write Caption**: large UTF-8 editor, formatting helpers, character counter, platform guidance, grouped Copy menu
-  4. **Review & Publish**: checklist validation, status transitions, and stage-based final action
-- autosave is active during editing, with explicit final stage action in Step 4
+You handle:
+- users and roles
+- permissions
+- cleanup (history/comments)
+- reassignment
+- quick-view (simulate user)
 
-### Settings (`/settings`)
-- self profile fields
-- admin-level user management and role assignments
-- admin-only activity cleanup:
-  - delete all activity history
-  - delete history for selected users
-  - optional comments cleanup (blog + social comments)
-- admin quick-view as non-admin user:
-  - switch into writer/publisher/editor perspective
-  - actions are executed/logged as selected user until return
+## 3. Core workflows (step-by-step)
+### A. Write a blog
+1. Blog assigned to you
+2. Set In Progress
+3. Write in Google Doc
+4. Update status as needed
+5. Mark Completed
 
-### Permissions (`/settings/permissions`) (Admin with manage permission)
-- role-by-role permission matrix
-- reset a role to defaults
-- permission change audit log
-- shown in sidebar only for admin users
+### B. Publish a blog
+1. Open blog in Ready for Publishing
+2. Review content
+3. Publish in CMS
+4. Paste Live URL
+5. Mark Completed
 
-## 3) Workflow basics
-Lifecycle used across CardBoard + filtering:
-- `Idea → Writing → Reviewing → Publishing → Published`
-### Writer
-1. Open queue/task/blog
-2. Update `writer_status`
-3. Maintain Google Doc URL
-4. Submit draft when complete
+### C. Convert idea → blog
+1. Go to Ideas
+2. Click Convert to Blog
+3. Assign writer
+4. Start workflow
 
-### Publisher
-1. Open queue/task/blog
-2. Update `publisher_status`
-3. Maintain live URL and publish metadata
-4. Complete publishing when done
+### D. Create a social post
+1. Go to Social Posts
+2. Click create (or press C)
+3. Complete:
+   - Setup
+   - (Optional) Link blog
+   - Caption
+   - Review
+   - Publish
 
-### Editor/Admin
-1. triage backlog and assignments
-2. manage schedule risk and delayed items
-3. monitor metrics and publish cadence
-4. adjust roles/permissions as needed
+### E. Bulk actions
+1. Select rows
+2. Choose action
+3. Confirm
 
-## 4) Queue behavior (Dashboard)
-Queue buttons are one-click filters (they do not mutate blog state).
+You’ll see:
+- success count
+- failed rows (if any)
 
-Writer queues:
-- Drafting
-- Needs Revision
-- Ready for Publishing
+## 4. Pages and how to use them
+### Dashboard
+Your main workspace:
+- see queues (writing, publishing)
+- apply filters
+- act quickly
 
-Backlog:
-- Backlog (unscheduled ideas)
+### My Tasks
+Your personal task list:
+- prioritized work
+- quick access to assigned items
 
-Publisher queues:
-- Not Started
-- In Progress
-- Final Review
-- Published
+### Blogs
+Library view:
+- search past content
+- copy URLs/titles
+- export data
 
-## 5) Comments and activity
-- comments are per-blog
-- social post comments and activity history are tracked in social workflow
-- activity log records assignment/status transitions and permission changes
-- use comments for operational context and handoff notes
+### CardBoard
+Kanban view:
+- drag between stages
+- fast pipeline visibility
 
-## 6) Troubleshooting (end user)
-### “I cannot update status or assignment”
-- your role may not have that permission
-- ask admin to review role permissions in `/settings/permissions`
+### Calendar
+Scheduling view:
+- see what’s going live
+- drag to reschedule (if allowed)
 
-### “I can’t export rows”
-- View Export requires `export_csv` (Dashboard view CSV, Blog Library view CSV/PDF)
-- Selected Export requires `export_selected_csv` (Dashboard selected CSV, Blog Library selected CSV)
+### Ideas
+Capture and convert:
+- store ideas
+- convert into blogs or posts
 
-### “My queue looks empty”
-- confirm assignment and stage
-- confirm active queue filter isn’t too narrow
+### Social Posts
+Manage content for social:
+- plan, write, publish posts
 
-### “Comments or profile updates fail”
-- refresh and retry once
-- if persistent, report to operator for migration/schema check
+## 5. Search and filters (how they behave)
+Search is:
+- case-insensitive
+- partial match
 
-### “I’m seeing actions under the wrong user”
-- check whether admin quick-view mode is active
-- use “Return to Admin” before continuing admin operations
+Works on:
+- title
+- URL (where available)
 
-## 7) Best practices
-- keep stage status current; it drives all operational views
-- use queue filters instead of manual searching first
-- keep scheduled dates realistic to reduce overdue noise
-- use comments for decisions and blockers, not side channels
-- use Blog Library (`/blogs`) for fast title/URL lookup and copy tasks
+Filters:
+- combine together
+- stay active until cleared
+
+If no results:
+- you’ll see a clear empty state (not a broken screen)
+
+## 6. Keyboard shortcuts & power usage
+### Global
+- ⌘K / Ctrl+K → Command palette
+- C → Quick create
+
+### Power tips
+- Use filters instead of scrolling
+- Use bulk select for repeated actions
+- Use command palette to jump between pages
+
+## 7. Errors and troubleshooting
+This system is designed so:
+- every action responds
+- every error is visible
+
+If it doesn’t, it’s a bug.
+
+### Common errors
+#### “You don’t have permission”
+What it means:
+- You’re not allowed to perform this action
+
+Fix:
+- Check your role
+- Contact admin if needed
+
+#### “Invalid input”
+Examples:
+- missing required field
+- invalid date or URL
+
+Fix:
+- correct highlighted field
+- try again
+
+#### Action failed
+What it means:
+- system or network issue
+
+Fix:
+- retry
+- if persistent, report
+
+#### Bulk action partial failure
+What it means:
+- some rows failed
+
+Fix:
+- check row-level errors
+- fix and retry
+
+### Important system behavior
+- Failed actions do NOT partially apply
+- UI should not change unless action succeeds
+- You should always see feedback
+
+If any of this doesn’t happen → report it.
+
+## 8. Permissions (quick reference)
+- Writer:
+  - edit blog fields: Yes
+  - change writer status: Yes
+  - change publisher status: No
+  - publish blog: No
+  - manage users/permissions: No
+- Publisher:
+  - edit blog fields: Limited
+  - change writer status: No
+  - change publisher status: Yes
+  - publish blog: Yes
+  - manage users/permissions: No
+- Admin:
+  - edit blog fields: Yes
+  - change writer status: Yes
+  - change publisher status: Yes
+  - publish blog: Yes
+  - manage users/permissions: Yes
+
+## 9. Good habits (keeps system clean)
+- Update status as you work
+- Add live URL after publishing
+- Don’t leave items stuck
+- Use filters instead of scrolling
+- Link social posts to blogs
+
+## 10. When something feels off
+If:
+- nothing happens after an action
+- UI looks wrong
+- data doesn’t update
+
+That’s not expected behavior.
+
+Report it.
+
+## 11. How this connects to system rules (for context)
+- Workflow logic is enforced by the system (not manual)
+- Permissions are strictly controlled
+- Actions should never silently fail
+- Data should always stay consistent
+
+You don’t need to manage this manually, but this is why the system behaves the way it does.

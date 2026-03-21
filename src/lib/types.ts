@@ -194,6 +194,17 @@ export interface AppSettingsRecord {
   updated_at: string;
 }
 
+export interface UserIntegrations {
+  id: string;
+  user_id: string;
+  google_connected: boolean;
+  google_connected_at: string | null;
+  slack_connected: boolean;
+  slack_connected_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface RolePermissionRecord {
   role: AppRole;
   permission_key: AppPermissionKey;

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ConfirmationModal } from "@/components/confirmation-modal";
+import { ConnectedServicesForm } from "@/components/connected-services-form";
 import { NotificationPreferencesForm } from "@/components/notification-preferences-form";
 import { ProtectedPage } from "@/components/protected-page";
 import {
@@ -1198,6 +1199,10 @@ export default function SettingsPage() {
                       </button>
                   </div>
                 </section>
+              ) : null}
+
+              {profile ? (
+                <ConnectedServicesForm />
               ) : null}
 
               {profile ? (

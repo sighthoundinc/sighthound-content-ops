@@ -442,6 +442,43 @@ Delivery:
 - configured channel
 - optional DM resolution by email
 - webhook fallback
+## 11b) Unified Events System
+The application uses a unified event emission system that consolidates notifications and activity history recording into single `emitEvent()` calls. This ensures a single source of truth for workflow events.
+### Architecture
+- **Event type definition**: `src/lib/unified-events.ts` defines supported event types (e.g., `blog_writer_status_changed`, `blog_publisher_status_changed`, `blog_writer_assigned`)
+- **Emission service**: `src/lib/emit-event.ts` handles both notification emission and activity history recording
+- **Preference enforcement**: Notifications respect user preferences via `src/lib/notification-helpers.ts`
+- **React components**: Dynamic imports of `emitEvent()` in handlers (React context requires async imports)
+### Event Types (Blog Workflow)
+- `blog_writer_status_changed` — Writer stage transition (triggers `stage_changed` notification type)
+- `blog_publisher_status_changed` — Publisher stage transition (triggers `stage_changed` notification type)
+- `blog_writer_assigned` — Writer assignment change (triggers `task_assigned` notification type)
+- `blog_publisher_assigned` — Publisher assignment change (triggers `task_assigned` notification type)
+### Implementation Example (Blog Detail Page)
+```typescript
+const unifiedEvent = {
+  type: "blog_writer_status_changed",
+  contentType: "blog",
+  contentId: blog.id,
+  oldValue: previousStatus,
+  newValue: form.writer_status,
+  fieldName: "writer_status",
+  actor: user?.id ?? "",
+  actorName: profile?.full_name ?? undefined,
+  contentTitle: blog.title,
+  timestamp: Date.now(),
+};
+
+const { emitEvent } = await import("@/lib/emit-event");
+const { getNotificationFromEvent } = await import("@/lib/emit-event");
+
+await emitEvent(unifiedEvent);  // Records activity history + validates notification
+pushNotification(getNotificationFromEvent(unifiedEvent));  // Emits in-app notification
+```
+### Activity History Recording
+All unified events are automatically recorded to `blog_assignment_history` or `social_post_activity_history` tables via `/api/events/record-activity` endpoint. This provides a complete audit trail without requiring separate logging logic.
+### Migration Path
+Legacy `pushNotification()` calls continue working. New code adopts `emitEvent()` incrementally. See `docs/UNIFIED_EVENTS_MIGRATION.md` for detailed migration guide and examples.
 ## 12) Environment requirements
 Frontend:
 - `NEXT_PUBLIC_SUPABASE_URL`

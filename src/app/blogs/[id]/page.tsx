@@ -42,7 +42,6 @@ import {
   blogPublisherStatusChangedNotification,
   blogSubmittedForReviewNotification,
   blogPublishedNotification,
-  blogAssignmentChangedNotification,
 } from "@/lib/notification-helpers";
 
 type BlogFormState = {
@@ -461,32 +460,66 @@ export default function BlogDetailPage() {
       });
     }
 
-    // Push in-app notifications for assignments
+    // Push in-app notifications for assignments (using unified events)
     if (writerChanged) {
       notifyCallbacks.push(async () => {
-        pushNotification(
-          blogAssignmentChangedNotification(
-            form.title,
-            "writer",
-            selectedWriter?.full_name ?? null,
-            profile?.full_name ?? null,
-            blog.id
-          )
-        );
+        const { emitEvent } = await import("@/lib/emit-event");
+        const { getNotificationFromEvent } = await import("@/lib/emit-event");
+        
+        const unifiedEvent = {
+          type: "blog_writer_assigned" as const,
+          contentType: "blog" as const,
+          contentId: blog.id,
+          oldValue: previousWriterId || undefined,
+          newValue: form.writer_id || undefined,
+          fieldName: "writer_id",
+          actor: user?.id ?? "",
+          actorName: profile?.full_name ?? undefined,
+          contentTitle: form.title,
+          metadata: {
+            role: "writer",
+            oldAssignee: users.find((u) => u.id === previousWriterId)?.full_name,
+            newAssignee: selectedWriter?.full_name,
+          },
+          timestamp: Date.now(),
+        };
+        
+        // Emit unified event (records activity history)
+        await emitEvent(unifiedEvent);
+        
+        // Push in-app notification from unified event
+        pushNotification(getNotificationFromEvent(unifiedEvent));
       });
     }
 
     if (publisherChanged) {
       notifyCallbacks.push(async () => {
-        pushNotification(
-          blogAssignmentChangedNotification(
-            form.title,
-            "publisher",
-            selectedPublisher?.full_name ?? null,
-            profile?.full_name ?? null,
-            blog.id
-          )
-        );
+        const { emitEvent } = await import("@/lib/emit-event");
+        const { getNotificationFromEvent } = await import("@/lib/emit-event");
+        
+        const unifiedEvent = {
+          type: "blog_publisher_assigned" as const,
+          contentType: "blog" as const,
+          contentId: blog.id,
+          oldValue: previousPublisherId || undefined,
+          newValue: form.publisher_id || undefined,
+          fieldName: "publisher_id",
+          actor: user?.id ?? "",
+          actorName: profile?.full_name ?? undefined,
+          contentTitle: form.title,
+          metadata: {
+            role: "publisher",
+            oldAssignee: users.find((u) => u.id === previousPublisherId)?.full_name,
+            newAssignee: selectedPublisher?.full_name,
+          },
+          timestamp: Date.now(),
+        };
+        
+        // Emit unified event (records activity history)
+        await emitEvent(unifiedEvent);
+        
+        // Push in-app notification from unified event
+        pushNotification(getNotificationFromEvent(unifiedEvent));
       });
     }
 
@@ -620,17 +653,29 @@ export default function BlogDetailPage() {
     const notifyCallbacks: Array<() => Promise<void>> = [];
 
     if (previousStatus !== form.writer_status) {
-      // Always emit status change notification
+      // Emit unified event for status change (single source of truth)
       notifyCallbacks.push(async () => {
-        pushNotification(
-          blogWriterStatusChangedNotification(
-            blog.title,
-            previousStatus,
-            form.writer_status,
-            profile?.full_name ?? null,
-            blog.id
-          )
-        );
+        const { emitEvent } = await import("@/lib/emit-event");
+        const { getNotificationFromEvent } = await import("@/lib/emit-event");
+        
+        const unifiedEvent = {
+          type: "blog_writer_status_changed" as const,
+          contentType: "blog" as const,
+          contentId: blog.id,
+          oldValue: previousStatus,
+          newValue: form.writer_status,
+          fieldName: "writer_status",
+          actor: user?.id ?? "",
+          actorName: profile?.full_name ?? undefined,
+          contentTitle: blog.title,
+          timestamp: Date.now(),
+        };
+        
+        // Emit unified event (records activity history + validates notification)
+        await emitEvent(unifiedEvent);
+        
+        // Push in-app notification from unified event
+        pushNotification(getNotificationFromEvent(unifiedEvent));
       });
 
       // Also emit specific "submitted for review" when transitioning to pending_review
@@ -688,17 +733,29 @@ export default function BlogDetailPage() {
     const notifyCallbacks: Array<() => Promise<void>> = [];
 
     if (previousStatus !== form.publisher_status) {
-      // Always emit status change notification
+      // Emit unified event for status change (single source of truth)
       notifyCallbacks.push(async () => {
-        pushNotification(
-          blogPublisherStatusChangedNotification(
-            blog.title,
-            previousStatus,
-            form.publisher_status,
-            profile?.full_name ?? null,
-            blog.id
-          )
-        );
+        const { emitEvent } = await import("@/lib/emit-event");
+        const { getNotificationFromEvent } = await import("@/lib/emit-event");
+        
+        const unifiedEvent = {
+          type: "blog_publisher_status_changed" as const,
+          contentType: "blog" as const,
+          contentId: blog.id,
+          oldValue: previousStatus,
+          newValue: form.publisher_status,
+          fieldName: "publisher_status",
+          actor: user?.id ?? "",
+          actorName: profile?.full_name ?? undefined,
+          contentTitle: blog.title,
+          timestamp: Date.now(),
+        };
+        
+        // Emit unified event (records activity history + validates notification)
+        await emitEvent(unifiedEvent);
+        
+        // Push in-app notification from unified event
+        pushNotification(getNotificationFromEvent(unifiedEvent));
       });
 
       // Emit specific "submitted for review" when transitioning to pending_review

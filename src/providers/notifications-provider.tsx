@@ -7,23 +7,13 @@ import {
   useMemo,
   useState,
 } from "react";
+import { shouldSendNotification } from "@/lib/notification-helpers";
+import { getUserNotificationPreferencesWithCache } from "@/lib/notification-preferences-cache";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import type { NotificationInput, NotificationType } from "@/lib/notification-types";
 
-type NotificationType =
-  | "task_assigned"
-  | "stage_changed"
-  | "awaiting_action"
-  | "mention"
-  | "submitted_for_review"
-  | "published"
-  | "assignment_changed";
-
-export type NotificationInput = {
-  type: NotificationType;
-  title: string;
-  message: string;
-  href?: string;
-  timestamp?: number;
-};
+// Re-export for convenience
+export type { NotificationInput, NotificationType } from "@/lib/notification-types";
 
 type NotificationItem = {
   id: string;
@@ -64,21 +54,78 @@ export function NotificationsProvider({
   children: React.ReactNode;
 }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [userIdCache, setUserIdCache] = useState<string | null>(null);
 
-  const pushNotification = useCallback((notification: NotificationInput) => {
-    const next: NotificationItem = {
-      id: createId(),
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      href: notification.href ?? null,
-      createdAt: notification.timestamp ?? Date.now(),
-      read: false,
-    };
-    setNotifications((previous) =>
-      [next, ...previous].slice(0, NOTIFICATION_LIMIT)
-    );
-  }, []);
+  /**
+   * Enhanced pushNotification with automatic preference enforcement.
+   * This is the ONLY place notifications enter the system.
+   * All emissions are automatically filtered by user preferences.
+   */
+  const pushNotification = useCallback(
+    async (notification: NotificationInput) => {
+      try {
+        // Get current user from Supabase session
+        const supabase = getSupabaseBrowserClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id || userIdCache;
+
+        if (userId && userId !== userIdCache) {
+          setUserIdCache(userId);
+        }
+
+        // Check preferences before emitting
+        if (userId) {
+          try {
+            const preferences =
+              await getUserNotificationPreferencesWithCache(userId);
+
+            // Enforce preferences - skip notification if not allowed
+            if (!shouldSendNotification(notification.type, preferences)) {
+              // Silently skip - user has disabled this notification type
+              return;
+            }
+          } catch (error) {
+            // On preference check failure, log but continue (fail-open)
+            console.warn(
+              "Could not check notification preferences, allowing notification",
+              error
+            );
+          }
+        }
+
+        // Create and emit notification
+        const next: NotificationItem = {
+          id: createId(),
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          href: notification.href ?? null,
+          createdAt: notification.timestamp ?? Date.now(),
+          read: false,
+        };
+        setNotifications((previous) =>
+          [next, ...previous].slice(0, NOTIFICATION_LIMIT)
+        );
+      } catch (error) {
+        // If anything goes wrong with enforcement, still allow notification
+        // (better to over-notify than under-notify)
+        console.error("Error in notification enforcement, proceeding", error);
+        const next: NotificationItem = {
+          id: createId(),
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          href: notification.href ?? null,
+          createdAt: notification.timestamp ?? Date.now(),
+          read: false,
+        };
+        setNotifications((previous) =>
+          [next, ...previous].slice(0, NOTIFICATION_LIMIT)
+        );
+      }
+    },
+    [userIdCache]
+  );
 
   const markAsRead = useCallback((id: string) => {
     setNotifications((previous) =>

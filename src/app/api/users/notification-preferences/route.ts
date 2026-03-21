@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { invalidateUserPreferencesCache } from "@/lib/notification-preferences-cache";
 
 interface NotificationPreferencesUpdate {
   notifications_enabled?: boolean;
@@ -166,12 +167,18 @@ export async function PATCH(request: NextRequest) {
         throw createError;
       }
 
+      // Invalidate cache after creation
+      invalidateUserPreferencesCache(user.id);
+
       return NextResponse.json(created);
     }
 
     if (updateError) {
       throw updateError;
     }
+
+    // Invalidate cache after update
+    invalidateUserPreferencesCache(user.id);
 
     return NextResponse.json(updated);
   } catch (error) {

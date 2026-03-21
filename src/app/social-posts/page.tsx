@@ -47,6 +47,7 @@ import {
 import {
   SOCIAL_PLATFORMS,
   SOCIAL_PLATFORM_LABELS,
+  SOCIAL_POST_ALLOWED_TRANSITIONS,
   SOCIAL_POST_PRODUCTS,
   SOCIAL_POST_PRODUCT_LABELS,
   SOCIAL_POST_STATUSES,
@@ -54,6 +55,7 @@ import {
   SOCIAL_POST_TYPES,
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
+import { getUserRoles } from "@/lib/roles";
 import {
   SEGMENTED_CONTROL_CLASS,
   segmentedControlItemClass,
@@ -124,6 +126,10 @@ function normalizeRelationObject<T>(value: unknown): T | null {
     return (value[0] ?? null) as T | null;
   }
   return (value ?? null) as T | null;
+}
+
+function isExecutionStage(status: SocialPostStatus) {
+  return status === "ready_to_publish" || status === "awaiting_live_link";
 }
 
 function normalizeSocialPostRows(rows: Array<Record<string, unknown>>) {
@@ -348,7 +354,9 @@ function SocialStatusColumn({
 function SocialPostsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, profile } = useAuth();
+  const { profile, session, user } = useAuth();
+  const userRoles = useMemo(() => getUserRoles(profile), [profile]);
+  const isAdmin = userRoles.includes("admin");
   const { showError, showSuccess } = useSystemFeedback();
   const requestedView = searchParams.get("view");
   const shouldOpenCreateModal = searchParams.get("create") === "1";
@@ -596,6 +604,7 @@ function SocialPostsPageContent() {
     () => posts.find((post) => post.id === activePostId) ?? null,
     [activePostId, posts]
   );
+  const panelExecutionLocked = activePost ? isExecutionStage(activePost.status) : false;
 
   const loadPanelDetails = async (postId: string) => {
     const supabase = getSupabaseBrowserClient();
@@ -863,6 +872,64 @@ function SocialPostsPageContent() {
     setIsCreating(false);
   };
 
+  const transitionPostStatus = async ({
+    postId,
+    currentStatus,
+    toStatus,
+  }: {
+    postId: string;
+    currentStatus: SocialPostStatus;
+    toStatus: SocialPostStatus;
+  }) => {
+    if (currentStatus === toStatus) {
+      return true;
+    }
+    const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[currentStatus] ?? [];
+    if (!allowedTransitions.includes(toStatus)) {
+      setError(
+        `Invalid status transition from ${SOCIAL_POST_STATUS_LABELS[currentStatus]} to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`
+      );
+      return false;
+    }
+    if (!session?.access_token) {
+      setError("Session expired. Refresh and try again.");
+      return false;
+    }
+
+    const requiresRollbackReason =
+      toStatus === "changes_requested" &&
+      (currentStatus === "ready_to_publish" ||
+        currentStatus === "awaiting_live_link");
+    let reason: string | null = null;
+    if (requiresRollbackReason) {
+      const raw = window.prompt(
+        "Provide a reason for sending this post back to Changes Requested:"
+      );
+      if (!raw || raw.trim().length === 0) {
+        setError("Rollback reason is required.");
+        return false;
+      }
+      reason = raw.trim();
+    }
+
+    const response = await fetch(`/api/social-posts/${postId}/transition`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ toStatus, reason }),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      setError(payload.error ?? "Couldn't change post status.");
+      return false;
+    }
+    return true;
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const overId = event.over ? String(event.over.id) : null;
     if (!overId || !overId.startsWith(STATUS_DROP_ZONE_PREFIX)) {
@@ -878,14 +945,12 @@ function SocialPostsPageContent() {
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
-    const { error: updateError } = await supabase
-      .from("social_posts")
-      .update({ status: nextStatus })
-      .eq("id", post.id);
-
-    if (updateError) {
-      setError(`Couldn't move post. ${updateError.message}`);
+    const transitioned = await transitionPostStatus({
+      postId: post.id,
+      currentStatus: post.status,
+      toStatus: nextStatus,
+    });
+    if (!transitioned) {
       return;
     }
 
@@ -923,45 +988,129 @@ function SocialPostsPageContent() {
         ? Math.max(1, Number(canvaPageRaw))
         : null;
     const normalizedPlatforms = Array.from(new Set(panelForm.platforms));
-    const supabase = getSupabaseBrowserClient();
+    const executionLocked = isExecutionStage(activePost.status);
+    const statusChanged = panelForm.status !== activePost.status;
+    const briefChanged =
+      trimmedTitle !== activePost.title ||
+      panelForm.product !== activePost.product ||
+      panelForm.type !== activePost.type ||
+      (panelForm.canva_url.trim() || null) !== activePost.canva_url ||
+      canvaPage !== activePost.canva_page ||
+      (panelForm.caption.trim() || null) !== activePost.caption ||
+      panelForm.scheduled_date !== formatDateInput(activePost.scheduled_date) ||
+      panelForm.associated_blog_id !== activePost.associated_blog_id ||
+      normalizedPlatforms.join(",") !== activePost.platforms.join(",");
 
-    const { data, error: updateError } = await supabase
-      .from("social_posts")
-      .update({
-        title: trimmedTitle,
-        product: panelForm.product,
-        type: panelForm.type,
-        canva_url: panelForm.canva_url.trim() || null,
-        canva_page: canvaPage,
-        caption: panelForm.caption.trim() || null,
-        platforms: normalizedPlatforms,
-        scheduled_date: panelForm.scheduled_date || null,
-        status: panelForm.status,
-        associated_blog_id: panelForm.associated_blog_id,
-      })
-      .eq("id", activePost.id)
-      .select(
-        "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,created_by,created_at,updated_at,associated_blog_id,associated_blog:associated_blog_id(id,title,slug,site),creator:created_by(id,full_name,email)"
-      )
-      .single();
-
-    if (updateError) {
-      setPanelError(`Couldn't save post. ${updateError.message}`);
+    if (executionLocked && briefChanged) {
+      setPanelError(
+        "Execution-stage brief fields are read-only. Use Edit Brief to reopen this post."
+      );
       setIsPanelSaving(false);
       return;
     }
+    const supabase = getSupabaseBrowserClient();
+    if (briefChanged) {
+      const { data, error: updateError } = await supabase
+        .from("social_posts")
+        .update({
+          title: trimmedTitle,
+          product: panelForm.product,
+          type: panelForm.type,
+          canva_url: panelForm.canva_url.trim() || null,
+          canva_page: canvaPage,
+          caption: panelForm.caption.trim() || null,
+          platforms: normalizedPlatforms,
+          scheduled_date: panelForm.scheduled_date || null,
+          associated_blog_id: panelForm.associated_blog_id,
+        })
+        .eq("id", activePost.id)
+        .select(
+          "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,created_by,created_at,updated_at,associated_blog_id,associated_blog:associated_blog_id(id,title,slug,site),creator:created_by(id,full_name,email)"
+        )
+        .single();
 
-    const [updatedPost] = normalizeSocialPostRows([
-      (data ?? {}) as Record<string, unknown>,
-    ]);
-    if (updatedPost) {
+      if (updateError) {
+        setPanelError(`Couldn't save post. ${updateError.message}`);
+        setIsPanelSaving(false);
+        return;
+      }
+
+      const [updatedPost] = normalizeSocialPostRows([
+        (data ?? {}) as Record<string, unknown>,
+      ]);
+      if (updatedPost) {
+        setPosts((previous) =>
+          previous.map((entry) => (entry.id === updatedPost.id ? updatedPost : entry))
+        );
+      }
+    }
+
+    if (statusChanged) {
+      const transitioned = await transitionPostStatus({
+        postId: activePost.id,
+        currentStatus: activePost.status,
+        toStatus: panelForm.status,
+      });
+      if (!transitioned) {
+        setIsPanelSaving(false);
+        return;
+      }
       setPosts((previous) =>
-        previous.map((entry) => (entry.id === updatedPost.id ? updatedPost : entry))
+        previous.map((entry) =>
+          entry.id === activePost.id ? { ...entry, status: panelForm.status } : entry
+        )
       );
     }
     showSuccess("Post saved");
     await loadPanelDetails(activePost.id);
     setIsPanelSaving(false);
+  };
+
+  const handleReopenBrief = async () => {
+    if (!activePost) {
+      return;
+    }
+    if (!session?.access_token) {
+      setPanelError("Session expired. Refresh and try again.");
+      return;
+    }
+    const reasonInput = window.prompt(
+      "Optional reason for reopening this post to Creative Approved:"
+    );
+    const response = await fetch(`/api/social-posts/${activePost.id}/reopen-brief`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        reason:
+          typeof reasonInput === "string" && reasonInput.trim().length > 0
+            ? reasonInput.trim()
+            : null,
+      }),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      setPanelError(payload.error ?? "Couldn't reopen brief.");
+      return;
+    }
+    setPosts((previous) =>
+      previous.map((entry) =>
+        entry.id === activePost.id
+          ? { ...entry, status: "creative_approved" as SocialPostStatus }
+          : entry
+      )
+    );
+    setPanelForm((previous) =>
+      previous
+        ? { ...previous, status: "creative_approved" as SocialPostStatus }
+        : previous
+    );
+    showSuccess("Post reopened to Creative Approved for brief edits.");
+    await loadPanelDetails(activePost.id);
   };
 
   const handleSaveLinks = async () => {
@@ -1185,7 +1334,7 @@ function SocialPostsPageContent() {
         <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
             title="Social Posts"
-            description="Keep each social post in one card from idea to published links."
+            description="Keep each social post in one card from Draft to Published."
             primaryAction={
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <Button
@@ -1482,6 +1631,26 @@ function SocialPostsPageContent() {
                   </h4>
                   <SocialPostStatusBadge status={panelForm.status} />
                 </div>
+                {panelExecutionLocked ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <span>
+                      Execution stage is read-only. Reopen to Creative Approved before editing brief
+                      fields.
+                    </span>
+                    {isAdmin ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => {
+                          void handleReopenBrief();
+                        }}
+                      >
+                        Edit Brief
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
@@ -1757,7 +1926,7 @@ function SocialPostsPageContent() {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    disabled={isPanelSaving}
+                    disabled={isPanelSaving || panelExecutionLocked}
                     className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleSavePostDetails();
@@ -1924,7 +2093,7 @@ function SocialPostsPageContent() {
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">New Social Post</h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    Create a single card and move it from Idea to Published.
+                    Create a single card and move it from Draft to Published.
                   </p>
                 </div>
                 <button

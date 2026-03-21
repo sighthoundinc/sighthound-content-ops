@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { UserNotificationPreferences } from "@/lib/notification-helpers";
+export type { UserNotificationPreferences } from "@/lib/notification-helpers";
 
 /**
  * In-memory cache for notification preferences during a request/session.

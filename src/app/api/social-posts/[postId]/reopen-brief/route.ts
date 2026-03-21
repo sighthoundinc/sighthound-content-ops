@@ -1,0 +1,48 @@
+import { NextRequest, NextResponse } from "next/server";
+
+import { getUserRoles } from "@/lib/roles";
+import { getNextActor } from "@/lib/status";
+import { authenticateRequest } from "@/lib/server-permissions";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ postId: string }> }
+) {
+  const auth = await authenticateRequest(request);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const roles = getUserRoles(auth.context.profile);
+  if (!roles.includes("admin")) {
+    return NextResponse.json(
+      { error: "Only admins can reopen execution stages for brief edits." },
+      { status: 403 }
+    );
+  }
+
+  const { postId } = await params;
+  const payload = (await request.json().catch(() => ({}))) as { reason?: unknown };
+  const reason =
+    typeof payload.reason === "string" && payload.reason.trim().length > 0
+      ? payload.reason.trim()
+      : null;
+
+  const { data: reopenedPost, error: reopenError } = await auth.context.adminClient.rpc(
+    "reopen_social_post_for_brief_edit",
+    {
+      p_social_post_id: postId,
+      p_actor_id: auth.context.userId,
+      p_reason: reason,
+    }
+  );
+
+  if (reopenError) {
+    return NextResponse.json({ error: reopenError.message }, { status: 400 });
+  }
+
+  return NextResponse.json({
+    post: reopenedPost,
+    nextActor: getNextActor("creative_approved"),
+  });
+}

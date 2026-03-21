@@ -9,7 +9,11 @@ import { format, parseISO } from "date-fns";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
+import {
+  PublisherStatusBadge,
+  SocialPostStatusBadge,
+  WriterStatusBadge,
+} from "@/components/status-badge";
 import {
   DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
   DATA_PAGE_CONTROL_ACTIONS_CLASS,
@@ -34,8 +38,17 @@ import {
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
-import { PUBLISHER_STATUSES, PUBLISHER_STATUS_LABELS, WRITER_STATUSES, WRITER_STATUS_LABELS } from "@/lib/status";
+import {
+  PUBLISHER_STATUSES,
+  PUBLISHER_STATUS_LABELS,
+  SOCIAL_POST_NEXT_ACTION_LABELS,
+  SOCIAL_POST_STATUS_LABELS,
+  WRITER_STATUSES,
+  WRITER_STATUS_LABELS,
+  getNextActor,
+} from "@/lib/status";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
+import { getUserRoles } from "@/lib/roles";
 import {
   SEGMENTED_CONTROL_CLASS,
   segmentedControlItemClass,
@@ -47,6 +60,7 @@ import type {
   BlogRecord,
   BlogSite,
   PublisherStageStatus,
+  SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
 import { formatDisplayDate, toTitleCase } from "@/lib/utils";
@@ -77,6 +91,15 @@ type TaskItem = {
     taskType: 'writer_review' | 'publisher_review';
     assignmentDate: string;
   };
+};
+type SocialTaskItem = {
+  id: string;
+  title: string;
+  status: SocialPostStatus;
+  scheduledDate: string | null;
+  createdAt: string;
+  nextActor: ReturnType<typeof getNextActor>;
+  nextAction: string;
 };
 type TaskTableColumnKey =
   | "site"
@@ -219,9 +242,12 @@ export default function MyTasksPage() {
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
   );
+  const userRoles = useMemo(() => getUserRoles(profile), [profile]);
+  const isAdmin = userRoles.includes("admin");
   const canExportCsv = permissionContract.canExportCsv;
   const canRunDataImport = hasPermission("run_data_import");
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
+  const [socialTasks, setSocialTasks] = useState<SocialTaskItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
@@ -330,8 +356,91 @@ export default function MyTasksPage() {
     }
 
     setBlogs(normalizeBlogRows((data ?? []) as Array<Record<string, unknown>>) as BlogRecord[]);
+
+    let socialQuery = supabase
+      .from("social_posts")
+      .select(
+        "id,title,status,scheduled_date,created_at,created_by,editor_user_id,admin_owner_id"
+      )
+      .neq("status", "published");
+    if (!isAdmin) {
+      socialQuery = socialQuery.or(
+        `created_by.eq.${user.id},editor_user_id.eq.${user.id},admin_owner_id.eq.${user.id}`
+      );
+    }
+    let { data: socialRows, error: socialError } = await socialQuery.order("scheduled_date", {
+      ascending: true,
+      nullsFirst: false,
+    });
+
+    if (
+      socialError &&
+      (socialError.message.includes("editor_user_id") ||
+        socialError.message.includes("admin_owner_id"))
+    ) {
+      const fallback = await supabase
+        .from("social_posts")
+        .select("id,title,status,scheduled_date,created_at,created_by")
+        .neq("status", "published")
+        .eq("created_by", user.id)
+        .order("scheduled_date", { ascending: true, nullsFirst: false });
+      socialRows = fallback.data?.map((row) => ({
+        ...row,
+        editor_user_id: row.created_by,
+        admin_owner_id: null,
+      })) as typeof socialRows;
+      socialError = fallback.error;
+    }
+
+    if (socialError) {
+      setError(socialError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    const derivedSocialTasks = ((socialRows ?? []) as Array<Record<string, unknown>>)
+      .map((row) => {
+        const status = row.status as SocialPostStatus;
+        if (!(status in SOCIAL_POST_STATUS_LABELS)) {
+          return null;
+        }
+        const nextActor = getNextActor(status);
+        const createdBy = typeof row.created_by === "string" ? row.created_by : null;
+        const editorUserId =
+          typeof row.editor_user_id === "string" ? row.editor_user_id : createdBy;
+        const adminOwnerId =
+          typeof row.admin_owner_id === "string" ? row.admin_owner_id : null;
+        const shouldInclude =
+          nextActor === "editor"
+            ? editorUserId === user.id || createdBy === user.id
+            : nextActor === "admin"
+              ? isAdmin || adminOwnerId === user.id
+              : false;
+        if (!shouldInclude) {
+          return null;
+        }
+        return {
+          id: String(row.id ?? ""),
+          title: String(row.title ?? "Untitled social post"),
+          status,
+          scheduledDate:
+            typeof row.scheduled_date === "string" ? row.scheduled_date : null,
+          createdAt: String(row.created_at ?? ""),
+          nextActor,
+          nextAction: SOCIAL_POST_NEXT_ACTION_LABELS[status],
+        } satisfies SocialTaskItem;
+      })
+      .filter((item): item is SocialTaskItem => item !== null)
+      .sort((left, right) => {
+        const dateCompare = comparePublishDatesAsc(left.scheduledDate, right.scheduledDate);
+        if (dateCompare !== 0) {
+          return dateCompare;
+        }
+        return left.createdAt.localeCompare(right.createdAt);
+      });
+    setSocialTasks(derivedSocialTasks);
     setIsLoading(false);
-  }, [user?.id]);
+  }, [isAdmin, user?.id]);
 
   useEffect(() => {
 
@@ -630,6 +739,7 @@ export default function MyTasksPage() {
   }, [filteredTaskItems, taskSortField, taskSortDirection]);
 
   const nextTasks = useMemo(() => sortedTaskItems.slice(0, 3), [sortedTaskItems]);
+  const nextSocialTasks = useMemo(() => socialTasks.slice(0, 5), [socialTasks]);
 
   const pageCount = useMemo(
     () => getTablePageCount(sortedTaskItems.length, FULL_LIST_PAGE_SIZE),
@@ -1243,6 +1353,34 @@ export default function MyTasksPage() {
                       </li>
                     ))}
                   </ol>
+                )}
+              </section>
+              <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                  Social Tasks
+                </h3>
+                {nextSocialTasks.length === 0 ? (
+                  <p className="text-sm text-slate-500">No social tasks assigned right now.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {nextSocialTasks.map((task) => (
+                      <li key={task.id}>
+                        <Link
+                          href={`/social-posts/${task.id}`}
+                          className="pressable block rounded-md border border-slate-200 bg-white px-3 py-2 hover:bg-slate-100"
+                        >
+                          <p className="truncate font-medium text-slate-900">{task.title}</p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <SocialPostStatusBadge status={task.status} />
+                            <span className="text-xs text-slate-600">{task.nextAction}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Publish Date: {formatDisplayDate(task.scheduledDate) || "Not scheduled"}
+                          </p>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </section>
 

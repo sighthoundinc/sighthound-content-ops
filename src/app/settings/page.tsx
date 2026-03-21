@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ConfirmationModal } from "@/components/confirmation-modal";
+import { NotificationPreferencesForm } from "@/components/notification-preferences-form";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   TablePaginationControls,
@@ -1197,6 +1198,10 @@ export default function SettingsPage() {
                       </button>
                   </div>
                 </section>
+              ) : null}
+
+              {profile ? (
+                <NotificationPreferencesForm />
               ) : null}
 
               {isAdminUser ? (

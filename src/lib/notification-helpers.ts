@@ -11,7 +11,8 @@
  * and specific event-type toggles.
  */
 
-import type { NotificationInput } from "@/providers/notifications-provider";
+import type { NotificationInput } from "@/lib/notification-types";
+export type { NotificationInput } from "@/lib/notification-types";
 import type {
   PublisherStageStatus,
   SocialPostStatus,

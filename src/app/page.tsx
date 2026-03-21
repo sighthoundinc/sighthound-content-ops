@@ -22,11 +22,23 @@ interface WorkBucket {
   priority: "high" | "normal";
 }
 
+const LOADING_MESSAGES = [
+  "Preparing your standup...",
+  "Gathering your work queue...",
+  "Loading your dashboard...",
+  "Setting up your workspace...",
+  "Syncing your tasks...",
+  "Getting you ready to go...",
+] as const;
+
 export default function HomePage() {
   const { session, profile, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessage] = useState(
+    () => LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]
+  );
 
   const getUserDisplayName = () => {
     return profile?.display_name || profile?.full_name || "there";
@@ -257,7 +269,7 @@ export default function HomePage() {
           </div>
           <p className="mt-3 max-w-2xl text-base text-slate-600 sm:text-lg">
             {isLoading
-              ? "Loading your work queue..."
+              ? loadingMessage
               : hasWork
               ? "Jump into what needs your attention now."
               : "All caught up—no pending work right now."}
@@ -339,7 +351,8 @@ export default function HomePage() {
         {isLoading && (
           <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center">
             <div className="inline-flex animate-spin rounded-full border-4 border-slate-300 border-t-slate-900 h-8 w-8" />
-            <p className="mt-4 text-sm text-slate-600">Loading your work queue...</p>
+            <p className="mt-4 text-sm text-slate-600">{loadingMessage}</p>
+            <p className="mt-1 text-xs text-slate-500">Welcome back.</p>
           </div>
         )}
 

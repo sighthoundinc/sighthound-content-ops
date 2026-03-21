@@ -240,6 +240,40 @@ To keep idea intake predictable and avoid split editing patterns:
 - **Trigger**: Workflow mutations (blog status changes, task assignments, submissions, publications)
 - **Provider**: `NotificationsProvider` in root layout
 
+### Notification Preferences Enforcement (MUST)
+
+**Automatic enforcement at emission point** ensures all notifications respect user preferences without requiring code changes throughout the codebase.
+
+#### Architecture
+- **Single Source of Truth**: `shouldSendNotification()` in `src/lib/notification-helpers.ts` enforces preferences
+- **Enforcement Point**: `pushNotification()` in `src/providers/notifications-provider.tsx` checks preferences before emitting
+- **Automatic Coverage**: All existing and future notification calls are automatically filtered
+- **Session-Level Caching**: Preferences cached per request via `getUserNotificationPreferencesWithCache()` to avoid N+1 DB queries
+- **Slack Integration**: `notifySlack()` respects preferences and treats Slack as optional delivery channel (failures don't propagate to in-app notifications)
+
+#### User Preferences
+- **Global Toggle**: `notifications_enabled` (master switch to disable all notifications)
+- **7 Notification Types**: Individual toggles for each notification category
+- **UI Location**: Settings → Notification Preferences
+- **Database**: `notification_preferences` table with RLS policies
+- **Auto-Provisioning**: New users get default preferences via trigger
+
+#### Database Schema
+- Table: `notification_preferences` in public schema
+- Columns: `user_id` (FK to auth.users), `notifications_enabled`, 7 type toggles, timestamps
+- RLS: Users see/edit only own preferences; admins can audit all
+- Trigger: Auto-creates preferences for new auth users
+
+#### API Endpoints
+- `GET /api/users/notification-preferences` — Fetch current user's preferences
+- `PATCH /api/users/notification-preferences` — Update preferences and invalidate cache
+
+#### Implementation Details
+- **Preference Check**: Called synchronously in `pushNotification()` before notification added to queue
+- **Failure Handling**: Preferences failures are logged but don't block notifications (fail-open)
+- **Backward Compatibility**: Defaults to all-enabled if preferences don't exist
+- **Cache Invalidation**: Called on PATCH to ensure subsequent emissions use fresh data
+
 ### Implementation
 - **No emoji icons**: All feedback uses `AppIcon` from `src/lib/icons.tsx`
 - **Backward compat**: Old `useSystemFeedback()` calls re-routed to `useAlerts()` via wrapper

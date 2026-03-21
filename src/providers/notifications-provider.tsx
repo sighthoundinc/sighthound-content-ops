@@ -80,7 +80,7 @@ export function NotificationsProvider({
               await getUserNotificationPreferencesWithCache(userId);
 
             // Enforce preferences - skip notification if not allowed
-            if (!shouldSendNotification(notification.type, preferences)) {
+            if (!shouldSendNotification(notification.type, preferences, userId)) {
               // Silently skip - user has disabled this notification type
               return;
             }
@@ -88,7 +88,7 @@ export function NotificationsProvider({
             // On preference check failure, log but continue (fail-open)
             console.warn(
               "Could not check notification preferences, allowing notification",
-              error
+              { userId, type: notification.type, error }
             );
           }
         }

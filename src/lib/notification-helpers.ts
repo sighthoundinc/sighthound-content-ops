@@ -69,13 +69,24 @@ export interface UserNotificationPreferences {
  * Returns false if:
  * - Global notifications_enabled is false, OR
  * - The specific notification type toggle is false
+ * - The notification type is invalid/unknown
  *
  * This is the single enforcement point for all notifications.
  */
 export function shouldSendNotification(
   notificationType: NotificationInput["type"],
-  preferences: UserNotificationPreferences | null
+  preferences: UserNotificationPreferences | null,
+  userId?: string
 ): boolean {
+  // Validate notification type is known
+  if (!NOTIFICATION_TYPE_TO_PREFERENCE_KEY[notificationType]) {
+    console.warn("Unknown notification type", {
+      type: notificationType,
+      userId,
+    });
+    return false; // Fail-safe: don't send unknown notification types
+  }
+
   // Default to sending if preferences don't exist (backward compatibility)
   if (!preferences) {
     return true;
@@ -83,12 +94,28 @@ export function shouldSendNotification(
 
   // If global notifications are disabled, don't send anything
   if (!preferences.notifications_enabled) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Notification skipped: global toggle disabled", {
+        userId,
+        type: notificationType,
+      });
+    }
     return false;
   }
 
   // Check the specific notification type toggle
   const preferenceKey = NOTIFICATION_TYPE_TO_PREFERENCE_KEY[notificationType];
-  return preferences[preferenceKey] !== false;
+  const isAllowed = preferences[preferenceKey] !== false;
+
+  if (!isAllowed && process.env.NODE_ENV === "development") {
+    console.log("Notification skipped: type toggle disabled", {
+      userId,
+      type: notificationType,
+      preferenceKey,
+    });
+  }
+
+  return isAllowed;
 }
 
 /**

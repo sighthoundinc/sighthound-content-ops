@@ -22,6 +22,7 @@ import {
 import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon, type AppIconName } from "@/lib/icons";
+import { socialPostAwaitingLiveLinkReminderNotification } from "@/lib/notification-helpers";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useNotifications } from "@/providers/notifications-provider";
@@ -86,6 +87,7 @@ export function AppShell({
   const {
     notifications,
     unreadCount,
+    pushNotification,
     markAsRead,
     clearAll,
   } = useNotifications();
@@ -391,7 +393,7 @@ export function AppShell({
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
-  }, [isAdmin, isNotificationPanelOpen, session?.access_token]);
+  }, [isNotificationPanelOpen]);
 
   useEffect(() => {
     setQuickViewSnapshot(readQuickViewSnapshot());
@@ -406,12 +408,27 @@ export function AppShell({
     const loadActivityFeed = async () => {
       try {
         if (isAdmin && session?.access_token) {
-          await fetch("/api/social-posts/reminders", {
+          const reminderResponse = await fetch("/api/social-posts/reminders", {
             method: "POST",
             headers: {
               authorization: `Bearer ${session.access_token}`,
             },
           });
+          if (reminderResponse.ok) {
+            const reminderPayload = (await reminderResponse
+              .json()
+              .catch(() => ({}))) as {
+              posts?: Array<{ id: string; title: string }>;
+            };
+            for (const reminderPost of reminderPayload.posts ?? []) {
+              pushNotification(
+                socialPostAwaitingLiveLinkReminderNotification(
+                  reminderPost.title,
+                  reminderPost.id
+                )
+              );
+            }
+          }
         }
         const response = await fetch("/api/activity-feed");
         if (response.ok) {
@@ -423,7 +440,7 @@ export function AppShell({
       }
     };
     void loadActivityFeed();
-  }, [isNotificationPanelOpen]);
+  }, [isAdmin, isNotificationPanelOpen, pushNotification, session?.access_token]);
 
   const returnToAdminFromQuickView = async () => {
     const snapshot = readQuickViewSnapshot();

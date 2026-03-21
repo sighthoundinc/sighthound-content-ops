@@ -8,6 +8,7 @@ type EventType =
   | "published"
   | "social_submitted_for_review"
   | "social_changes_requested"
+  | "social_creative_approved"
   | "social_ready_to_publish"
   | "social_awaiting_live_link"
   | "social_published"
@@ -36,6 +37,7 @@ const EVENT_LABELS: Record<EventType, string> = {
   published: "Published",
   social_submitted_for_review: "Social submitted for review",
   social_changes_requested: "Social changes requested",
+  social_creative_approved: "Social creative approved",
   social_ready_to_publish: "Social ready to publish",
   social_awaiting_live_link: "Social awaiting live link",
   social_published: "Social published",

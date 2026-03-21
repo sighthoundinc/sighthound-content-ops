@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (duePosts.length === 0) {
-    return NextResponse.json({ remindersSent: 0, updated: 0 });
+    return NextResponse.json({ remindersSent: 0, updated: 0, posts: [] });
   }
 
   let remindersSent = 0;
@@ -76,5 +76,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ remindersSent, updated: dueIds.length });
+  return NextResponse.json({
+    remindersSent,
+    updated: dueIds.length,
+    posts: duePosts.map((post) => ({
+      id: post.id,
+      title: post.title,
+    })),
+  });
 }

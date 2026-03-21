@@ -40,6 +40,35 @@ export async function POST(
   if (reopenError) {
     return NextResponse.json({ error: reopenError.message }, { status: 400 });
   }
+  if (reopenedPost) {
+    const reopenedRecord = reopenedPost as {
+      id: string;
+      title: string;
+      admin_owner_id: string | null;
+    };
+    let targetEmail: string | null = null;
+    if (reopenedRecord.admin_owner_id) {
+      const { data: targetProfile } = await auth.context.adminClient
+        .from("profiles")
+        .select("email")
+        .eq("id", reopenedRecord.admin_owner_id)
+        .maybeSingle();
+      targetEmail = targetProfile?.email ?? null;
+    }
+    await auth.context.adminClient.functions
+      .invoke("slack-notify", {
+        body: {
+          eventType: "social_creative_approved",
+          socialPostId: reopenedRecord.id,
+          title: reopenedRecord.title,
+          site: "social",
+          actorName: "Admin",
+          targetEmail,
+          appUrl: process.env.NEXT_PUBLIC_APP_URL,
+        },
+      })
+      .catch(() => null);
+  }
 
   return NextResponse.json({
     post: reopenedPost,

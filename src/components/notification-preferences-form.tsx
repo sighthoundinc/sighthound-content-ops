@@ -16,37 +16,37 @@ const NOTIFICATION_TYPES = [
   {
     key: "notify_on_task_assigned" as const,
     label: "Task Assignment",
-    description: "When you are assigned a new blog or social post",
+    description: "When you are assigned a new blog or social post (in-app + Slack if connected)",
   },
   {
     key: "notify_on_stage_changed" as const,
     label: "Stage Changes",
-    description: "When a content item moves to a new workflow stage",
+    description: "When a content item moves to a new workflow stage (in-app + Slack if connected)",
   },
   {
     key: "notify_on_awaiting_action" as const,
     label: "Awaiting Action",
-    description: "When content requires your immediate attention or revision",
+    description: "When content requires your immediate attention or revision (in-app + Slack if connected)",
   },
   {
     key: "notify_on_mention" as const,
     label: "Mentions",
-    description: "When you are mentioned in comments or discussions",
+    description: "When you are mentioned in comments or discussions (in-app + Slack if connected)",
   },
   {
     key: "notify_on_submitted_for_review" as const,
     label: "Submissions",
-    description: "When content is submitted for your review",
+    description: "When content is submitted for your review (in-app + Slack if connected)",
   },
   {
     key: "notify_on_published" as const,
     label: "Publications",
-    description: "When content you worked on is published",
+    description: "When content you worked on is published (in-app + Slack if connected)",
   },
   {
     key: "notify_on_assignment_changed" as const,
     label: "Assignment Changes",
-    description: "When your assignment on content changes",
+    description: "When your assignment on content changes (in-app + Slack if connected)",
   },
 ];
 
@@ -204,6 +204,9 @@ export function NotificationPreferencesForm({
       </h3>
       <p className="mt-1 text-sm text-slate-600">
         Control which notifications you receive across the app.
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        These preferences apply to in-app notifications and Slack delivery (when your Slack is connected).
       </p>
 
       <div className="mt-6 space-y-4">

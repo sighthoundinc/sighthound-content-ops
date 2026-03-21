@@ -13,6 +13,7 @@ const SLACK_EVENT_TO_NOTIFICATION_TYPE: Record<
   published: "published",
   social_submitted_for_review: "submitted_for_review",
   social_changes_requested: "awaiting_action",
+  social_creative_approved: "stage_changed",
   social_ready_to_publish: "stage_changed",
   social_awaiting_live_link: "awaiting_action",
   social_published: "published",
@@ -27,6 +28,7 @@ interface NotifySlackInput {
     | "published"
     | "social_submitted_for_review"
     | "social_changes_requested"
+    | "social_creative_approved"
     | "social_ready_to_publish"
     | "social_awaiting_live_link"
     | "social_published"

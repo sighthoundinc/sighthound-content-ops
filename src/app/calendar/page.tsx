@@ -128,7 +128,7 @@ function normalizeSocialCalendarRows(rows: Array<Record<string, unknown>>) {
       title: String(row.title ?? ""),
       product: (row.product as SocialPostRecord["product"]) ?? "general_company",
       type: (row.type as SocialPostType) ?? "image",
-      status: (row.status as SocialPostStatus) ?? "idea",
+      status: (row.status as SocialPostStatus) ?? "draft",
       scheduled_date:
         typeof row.scheduled_date === "string" ? row.scheduled_date : null,
       created_by: String(row.created_by ?? ""),
@@ -177,7 +177,13 @@ function getSocialStatusDotClass(status: SocialPostStatus) {
   if (status === "published") {
     return "bg-emerald-500";
   }
-  if (status === "review") {
+  if (status === "in_review" || status === "creative_approved") {
+    return "bg-blue-500";
+  }
+  if (status === "changes_requested") {
+    return "bg-orange-500";
+  }
+  if (status === "ready_to_publish" || status === "awaiting_live_link") {
     return "bg-amber-500";
   }
   return "bg-slate-400";

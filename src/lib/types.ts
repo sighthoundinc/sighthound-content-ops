@@ -107,7 +107,15 @@ export type OverallBlogStatus =
   | "published";
 
 export type WorkflowStage = "writing" | "ready" | "publishing" | "published";
-export type SocialPostStatus = "idea" | "review" | "published";
+export type SocialPostStatus =
+  | "draft"
+  | "in_review"
+  | "changes_requested"
+  | "creative_approved"
+  | "ready_to_publish"
+  | "awaiting_live_link"
+  | "published";
+export type SocialNextActor = "editor" | "admin" | "none";
 export type SocialPostProduct =
   | "alpr_plus"
   | "redactor"
@@ -235,6 +243,9 @@ export interface SocialPostRecord {
   scheduled_date: string | null;
   status: SocialPostStatus;
   created_by: string;
+  editor_user_id: string | null;
+  admin_owner_id: string | null;
+  last_live_link_reminder_at: string | null;
   associated_blog_id: string | null;
   created_at: string;
   updated_at: string;

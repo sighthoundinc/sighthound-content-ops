@@ -5,8 +5,15 @@ interface NotifySlackInput {
     | "writer_assigned"
     | "writer_completed"
     | "ready_to_publish"
-    | "published";
-  blogId: string;
+    | "published"
+    | "social_submitted_for_review"
+    | "social_changes_requested"
+    | "social_ready_to_publish"
+    | "social_awaiting_live_link"
+    | "social_published"
+    | "social_live_link_reminder";
+  blogId?: string;
+  socialPostId?: string;
   title: string;
   site: string;
   actorName: string;

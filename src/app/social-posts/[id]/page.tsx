@@ -131,7 +131,7 @@ function normalizePostRow(row: Record<string, unknown>): SocialPostEditorRecord 
       ? row.platforms.filter((platform): platform is SocialPlatform => typeof platform === "string")
       : [],
     scheduled_date: typeof row.scheduled_date === "string" ? row.scheduled_date : null,
-    status: (row.status as SocialPostStatus) ?? "idea",
+    status: (row.status as SocialPostStatus) ?? "draft",
     associated_blog_id: typeof row.associated_blog_id === "string" ? row.associated_blog_id : null,
     associated_blog: associatedBlog,
     updated_at: String(row.updated_at ?? ""),
@@ -292,9 +292,7 @@ export default function SocialPostEditorPage() {
   const isDraftComplete =
     hasTitle && hasCaption && hasPlatform && hasPublishDate && hasCanvaLink;
   const canTransitionToReview =
-    isDraftComplete || form?.status === "review" || form?.status === "published";
-  const canTransitionToPublished =
-    isDraftComplete && (form?.status === "review" || form?.status === "published");
+    isDraftComplete || form?.status === "in_review" || form?.status === "published";
 
   const checklistItems = useMemo(
     () => [
@@ -308,32 +306,74 @@ export default function SocialPostEditorPage() {
     [hasCanvaLink, hasCaption, hasLinkedBlog, hasPlatform, hasPublishDate, hasTitle]
   );
   const finalAction = useMemo(() => {
-    if (form?.status === "idea") {
+    if (form?.status === "draft") {
       if (!isDraftComplete) {
         return {
           label: "Save Draft",
-          nextStatus: "idea" as SocialPostStatus,
+          nextStatus: "draft" as SocialPostStatus,
           helper: "Complete required checklist items to move this to Review.",
         };
       }
       return {
-        label: "Move to Review",
-        nextStatus: "review" as SocialPostStatus,
+        label: "Submit for Review",
+        nextStatus: "in_review" as SocialPostStatus,
         helper: "Draft is complete. Move this post to Review.",
       };
     }
-    if (form?.status === "review") {
+    if (form?.status === "changes_requested") {
       if (!isDraftComplete) {
         return {
-          label: "Save Draft",
-          nextStatus: "idea" as SocialPostStatus,
-          helper: "Review requires all required items. Saving this back to Draft.",
+          label: "Save Changes",
+          nextStatus: "changes_requested" as SocialPostStatus,
+          helper: "Apply requested changes before re-submitting for review.",
         };
       }
       return {
-        label: "Mark Published",
+        label: "Re-submit for Review",
+        nextStatus: "in_review" as SocialPostStatus,
+        helper: "Changes are ready. Send this post back to review.",
+      };
+    }
+    if (form?.status === "creative_approved") {
+      return {
+        label: "Move to Ready to Publish",
+        nextStatus: "ready_to_publish" as SocialPostStatus,
+        helper: "Creative is approved. Handoff to execution.",
+      };
+    }
+    if (form?.status === "ready_to_publish") {
+      return {
+        label: "Mark Awaiting Live Link",
+        nextStatus: "awaiting_live_link" as SocialPostStatus,
+        helper: "Execution complete. Await final live link submission.",
+      };
+    }
+    if (form?.status === "awaiting_live_link") {
+      return {
+        label: "Save Changes",
+        nextStatus: "awaiting_live_link" as SocialPostStatus,
+        helper: "Add at least one live link before marking published.",
+      };
+    }
+    if (form?.status === "in_review") {
+      return {
+        label: "Await Admin Review",
+        nextStatus: "in_review" as SocialPostStatus,
+        helper: "An admin must approve or request changes in this stage.",
+      };
+    }
+    if (form?.status === "published") {
+      if (!isDraftComplete) {
+        return {
+          label: "Save Changes",
+          nextStatus: "published" as SocialPostStatus,
+          helper: "Published post has missing required setup fields.",
+        };
+      }
+      return {
+        label: "Save Changes",
         nextStatus: "published" as SocialPostStatus,
-        helper: "Review is complete. Mark this post as Published.",
+        helper: "Update details for this published post.",
       };
     }
     return {
@@ -888,41 +928,29 @@ export default function SocialPostEditorPage() {
                     Status Transition Controls
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant={form.status === "idea" ? "primary" : "secondary"}
-                      onClick={() => {
+                    <select
+                      value={form.status}
+                      onChange={(event) => {
+                        const nextStatus = event.target.value as SocialPostStatus;
+                        if (nextStatus === "in_review" && !canTransitionToReview) {
+                          return;
+                        }
                         setForm((previous) =>
-                          previous ? { ...previous, status: "idea" } : previous
+                          previous ? { ...previous, status: nextStatus } : previous
                         );
                       }}
+                      className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs"
                     >
-                      Draft
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={form.status === "review" ? "primary" : "secondary"}
-                      disabled={!canTransitionToReview}
-                      onClick={() => {
-                        setForm((previous) =>
-                          previous ? { ...previous, status: "review" } : previous
-                        );
-                      }}
-                    >
-                      Review
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={form.status === "published" ? "primary" : "secondary"}
-                      disabled={!canTransitionToPublished}
-                      onClick={() => {
-                        setForm((previous) =>
-                          previous ? { ...previous, status: "published" } : previous
-                        );
-                      }}
-                    >
-                      Published
-                    </Button>
+                      {Object.entries(SOCIAL_POST_STATUS_LABELS).map(([value, label]) => (
+                        <option
+                          key={value}
+                          value={value}
+                          disabled={value === "in_review" && !canTransitionToReview}
+                        >
+                          {label}
+                        </option>
+                      ))}
+                    </select>
                     <SocialPostStatusBadge status={form.status} />
                   </div>
                 </div>

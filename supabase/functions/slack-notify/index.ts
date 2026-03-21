@@ -5,11 +5,18 @@ type EventType =
   | "writer_assigned"
   | "writer_completed"
   | "ready_to_publish"
-  | "published";
+  | "published"
+  | "social_submitted_for_review"
+  | "social_changes_requested"
+  | "social_ready_to_publish"
+  | "social_awaiting_live_link"
+  | "social_published"
+  | "social_live_link_reminder";
 
 interface NotifyPayload {
   eventType: EventType;
-  blogId: string;
+  blogId?: string;
+  socialPostId?: string;
   title: string;
   site: string;
   actorName: string;
@@ -27,16 +34,28 @@ const EVENT_LABELS: Record<EventType, string> = {
   writer_completed: "Writing complete",
   ready_to_publish: "Ready to publish",
   published: "Published",
+  social_submitted_for_review: "Social submitted for review",
+  social_changes_requested: "Social changes requested",
+  social_ready_to_publish: "Social ready to publish",
+  social_awaiting_live_link: "Social awaiting live link",
+  social_published: "Social published",
+  social_live_link_reminder: "Social live link reminder",
 };
 
 function buildMessage(payload: NotifyPayload) {
-  const blogLink = payload.appUrl ? `${payload.appUrl}/blogs/${payload.blogId}` : null;
+  const deepLink = payload.appUrl
+    ? payload.socialPostId
+      ? `${payload.appUrl}/social-posts/${payload.socialPostId}`
+      : payload.blogId
+        ? `${payload.appUrl}/blogs/${payload.blogId}`
+        : null
+    : null;
   const intro = `*${EVENT_LABELS[payload.eventType]}* • ${payload.title} (${payload.site})`;
   const actor = `Actor: ${payload.actorName}`;
-  if (!blogLink) {
+  if (!deepLink) {
     return `${intro}\n${actor}`;
   }
-  return `${intro}\n${actor}\n${blogLink}`;
+  return `${intro}\n${actor}\n${deepLink}`;
 }
 
 async function callSlackApi(token: string, endpoint: string, body: Record<string, unknown>) {
@@ -73,7 +92,12 @@ serve(async (request) => {
 
   try {
     const payload = (await request.json()) as NotifyPayload;
-    if (!payload?.eventType || !payload?.title || !payload?.site || !payload?.blogId) {
+    if (
+      !payload?.eventType ||
+      !payload?.title ||
+      !payload?.site ||
+      (!payload?.blogId && !payload?.socialPostId)
+    ) {
       return new Response(
         JSON.stringify({ error: "Invalid payload" }),
         {

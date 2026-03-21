@@ -95,9 +95,9 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white px-4 py-10 sm:px-6 lg:py-16">
       <div className="mx-auto grid w-full max-w-6xl items-stretch gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-sm backdrop-blur-sm sm:p-10">
-          <img src="/sighthound-badge-mark.svg" alt="Sighthound" className="mb-6 h-10 w-10" />
+          <img src="/sighthound-logo-with-text.svg" alt="Sighthound" className="mb-6 h-12 w-auto" />
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-            Sighthound Content Ops
+            Content Ops Dashboard
           </h1>
           <p className="mt-3 max-w-xl text-base text-slate-600 sm:text-lg">
             Manage your content calendar across blogs and social posts from one place,

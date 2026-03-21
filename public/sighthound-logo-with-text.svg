@@ -1,0 +1,28 @@
+<svg viewBox="0 0 1400 200" xmlns="http://www.w3.org/2000/svg" width="350" height="50">
+  <!-- Dog silhouette -->
+  <g fill="#001a33">
+    <!-- Head -->
+    <ellipse cx="50" cy="60" rx="22" ry="25"/>
+    <!-- Snout -->
+    <ellipse cx="32" cy="70" rx="12" ry="10"/>
+    <!-- Ear -->
+    <path d="M 55 35 Q 65 25 70 40 Z" fill="#001a33"/>
+    <!-- Neck -->
+    <rect x="45" y="80" width="15" height="20" rx="7"/>
+    <!-- Body -->
+    <ellipse cx="75" cy="100" rx="28" ry="32"/>
+    <!-- Front left leg -->
+    <rect x="55" y="125" width="10" height="45" rx="5"/>
+    <!-- Front right leg -->
+    <rect x="75" y="125" width="10" height="45" rx="5"/>
+    <!-- Back left leg -->
+    <rect x="85" y="125" width="10" height="45" rx="5"/>
+    <!-- Back right leg -->
+    <rect x="100" y="125" width="10" height="45" rx="5"/>
+    <!-- Tail -->
+    <path d="M 100 95 Q 120 80 125 60" stroke="#001a33" stroke-width="12" fill="none" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Text: sighthound -->
+  <text x="150" y="100" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#001a33" letter-spacing="-1">sighthound</text>
+</svg>

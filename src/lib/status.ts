@@ -1,6 +1,7 @@
 import type {
   OverallBlogStatus,
   PublisherStageStatus,
+  SocialNextActor,
   SocialPlatform,
   SocialPostProduct,
   SocialPostStatus,
@@ -11,8 +12,12 @@ import type {
 
 export const SITES = ["sighthound.com", "redactor.com"] as const;
 export const SOCIAL_POST_STATUSES: SocialPostStatus[] = [
-  "idea",
-  "review",
+  "draft",
+  "in_review",
+  "changes_requested",
+  "creative_approved",
+  "ready_to_publish",
+  "awaiting_live_link",
   "published",
 ];
 export const SOCIAL_POST_PRODUCTS: SocialPostProduct[] = [
@@ -64,9 +69,22 @@ export const STATUS_LABELS: Record<OverallBlogStatus, string> = {
   published: "Published",
 };
 export const SOCIAL_POST_STATUS_LABELS: Record<SocialPostStatus, string> = {
-  idea: "Idea",
-  review: "Review",
+  draft: "Draft",
+  in_review: "In Review",
+  changes_requested: "Changes Requested",
+  creative_approved: "Creative Approved",
+  ready_to_publish: "Ready to Publish",
+  awaiting_live_link: "Awaiting Live Link",
   published: "Published",
+};
+export const SOCIAL_POST_NEXT_ACTION_LABELS: Record<SocialPostStatus, string> = {
+  draft: "Submit for Review",
+  in_review: "Admin Review Needed",
+  changes_requested: "Apply Changes",
+  creative_approved: "Add Caption & Schedule",
+  ready_to_publish: "Publish Post",
+  awaiting_live_link: "Submit Link",
+  published: "Done",
 };
 export const SOCIAL_POST_PRODUCT_LABELS: Record<SocialPostProduct, string> = {
   alpr_plus: "ALPR+",
@@ -111,9 +129,36 @@ export const STATUS_COLORS: Record<OverallBlogStatus, string> = {
   ready_to_publish: "bg-purple-100 text-purple-700 border border-purple-200",
   published: "bg-green-100 text-green-700 border border-green-200",
 };
+export const SOCIAL_POST_ALLOWED_TRANSITIONS: Record<SocialPostStatus, SocialPostStatus[]> = {
+  draft: ["in_review"],
+  in_review: ["changes_requested", "creative_approved"],
+  changes_requested: ["in_review"],
+  creative_approved: ["ready_to_publish"],
+  ready_to_publish: ["awaiting_live_link", "changes_requested"],
+  awaiting_live_link: ["published", "changes_requested"],
+  published: [],
+};
+export function getNextActor(status: SocialPostStatus): SocialNextActor {
+  if (
+    status === "draft" ||
+    status === "changes_requested" ||
+    status === "ready_to_publish" ||
+    status === "awaiting_live_link"
+  ) {
+    return "editor";
+  }
+  if (status === "in_review" || status === "creative_approved") {
+    return "admin";
+  }
+  return "none";
+}
 export const SOCIAL_POST_STATUS_COLORS: Record<SocialPostStatus, string> = {
-  idea: "bg-slate-100 text-slate-700 border border-slate-200",
-  review: "bg-blue-100 text-blue-700 border border-blue-200",
+  draft: "bg-slate-100 text-slate-700 border border-slate-200",
+  in_review: "bg-blue-100 text-blue-700 border border-blue-200",
+  changes_requested: "bg-orange-100 text-orange-700 border border-orange-200",
+  creative_approved: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  ready_to_publish: "bg-violet-100 text-violet-700 border border-violet-200",
+  awaiting_live_link: "bg-amber-100 text-amber-700 border border-amber-200",
   published: "bg-green-100 text-green-700 border border-green-200",
 };
 

@@ -8,7 +8,7 @@ import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
-import { DataTable } from "@/components/data-table";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
@@ -215,7 +215,6 @@ function getTaskReason({
 export default function MyTasksPage() {
   const { user, hasPermission, profile } = useAuth();
   const { showSaving, showSuccess, showError, updateAlert } = useAlerts();
-  const { pushNotification } = useNotifications();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -985,7 +984,6 @@ export default function MyTasksPage() {
       return;
     }
 
-    const previousBlog = blogs.find((b) => b.id === task.blogId);
     setBlogs((previous) =>
       normalizeBlogRows(
         previous.map((blog) =>
@@ -994,31 +992,6 @@ export default function MyTasksPage() {
       ) as BlogRecord[]
     );
     setSavingTaskId(null);
-
-    // Emit workflow notification if status actually changed
-    if (previousBlog) {
-      if (task.kind === "writer" && previousBlog.writer_status !== nextStatus) {
-        pushNotification(
-          blogWriterStatusChangedNotification(
-            task.title,
-            previousBlog.writer_status,
-            nextStatus as WriterStageStatus,
-            profile?.full_name ?? null,
-            task.blogId
-          )
-        );
-      } else if (task.kind === "publisher" && previousBlog.publisher_status !== nextStatus) {
-        pushNotification(
-          blogPublisherStatusChangedNotification(
-            task.title,
-            previousBlog.publisher_status,
-            nextStatus as PublisherStageStatus,
-            profile?.full_name ?? null,
-            task.blogId
-          )
-        );
-      }
-    }
 
     updateAlert(statusId, {
       type: "success",

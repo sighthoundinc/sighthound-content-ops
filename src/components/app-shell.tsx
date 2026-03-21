@@ -82,7 +82,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { hasPermission, profile, signOut, user } = useAuth();
+  const { hasPermission, profile, session, signOut, user } = useAuth();
   const {
     notifications,
     unreadCount,
@@ -391,7 +391,7 @@ export function AppShell({
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
-  }, [isNotificationPanelOpen]);
+  }, [isAdmin, isNotificationPanelOpen, session?.access_token]);
 
   useEffect(() => {
     setQuickViewSnapshot(readQuickViewSnapshot());
@@ -405,6 +405,14 @@ export function AppShell({
     }
     const loadActivityFeed = async () => {
       try {
+        if (isAdmin && session?.access_token) {
+          await fetch("/api/social-posts/reminders", {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${session.access_token}`,
+            },
+          });
+        }
         const response = await fetch("/api/activity-feed");
         if (response.ok) {
           const data = await response.json();
@@ -987,7 +995,7 @@ export function AppShell({
                 </div>
               </div>
               <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[10px] text-amber-800">
-                <p className="font-medium">💡 Tip: Press Q, then ↑/↓ to navigate, Enter to select action</p>
+                <p className="font-medium">Tip: Press Q, then ↑/↓ to navigate, Enter to select action</p>
               </div>
               <div>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">

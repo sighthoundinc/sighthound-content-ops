@@ -156,8 +156,11 @@ function normalizeSocialPostRows(rows: Array<Record<string, unknown>>) {
       platforms,
       scheduled_date:
         typeof row.scheduled_date === "string" ? row.scheduled_date : null,
-      status: (row.status as SocialPostStatus) ?? "idea",
+      status: (row.status as SocialPostStatus) ?? "draft",
       created_by: String(row.created_by ?? ""),
+      editor_user_id: typeof row.editor_user_id === "string" ? row.editor_user_id : null,
+      admin_owner_id: typeof row.admin_owner_id === "string" ? row.admin_owner_id : null,
+      last_live_link_reminder_at: typeof row.last_live_link_reminder_at === "string" ? row.last_live_link_reminder_at : null,
       associated_blog_id:
         typeof row.associated_blog_id === "string" ? row.associated_blog_id : null,
       created_at: String(row.created_at ?? ""),
@@ -532,8 +535,12 @@ function SocialPostsPageContent() {
         return acc;
       },
       {
-        idea: [],
-        review: [],
+        draft: [],
+        in_review: [],
+        changes_requested: [],
+        creative_approved: [],
+        ready_to_publish: [],
+        awaiting_live_link: [],
         published: [],
       }
     );
@@ -825,7 +832,7 @@ function SocialPostsPageContent() {
         product: newProduct,
         type: newType,
         scheduled_date: newScheduledDate || null,
-        status: "idea",
+        status: "draft",
         platforms: [],
         created_by: user.id,
       })

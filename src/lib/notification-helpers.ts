@@ -8,7 +8,12 @@
  */
 
 import type { NotificationInput } from "@/providers/notifications-provider";
-import type { PublisherStageStatus, WriterStageStatus } from "@/lib/types";
+import type {
+  PublisherStageStatus,
+  SocialPostStatus,
+  WriterStageStatus,
+} from "@/lib/types";
+import { SOCIAL_POST_STATUS_LABELS, getNextActor } from "@/lib/status";
 
 /**
  * Generates a notification when a blog writer status changes
@@ -194,4 +199,47 @@ function getPublisherStatusLabel(status: PublisherStageStatus): string {
     completed: "Published",
   };
   return labels[status] || status;
+}
+
+/**
+ * Generates a notification when a social post status changes
+ */
+export function socialPostStatusChangedNotification(
+  postTitle: string,
+  previousStatus: SocialPostStatus | null,
+  newStatus: SocialPostStatus,
+  actorName: string | null,
+  postId: string
+): NotificationInput {
+  const nextActor = getNextActor(newStatus);
+  const nextActorLabel =
+    nextActor === "none"
+      ? "No next actor"
+      : nextActor === "admin"
+        ? "Admin"
+        : "Social Editor";
+
+  return {
+    type: "stage_changed",
+    title: `Social Post Update: ${postTitle}`,
+    message: `${SOCIAL_POST_STATUS_LABELS[newStatus]}${actorName ? ` by ${actorName}` : ""} • Next: ${nextActorLabel}`,
+    href: `/social-posts/${postId}`,
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Generates a reminder notification for awaiting live link social posts
+ */
+export function socialPostAwaitingLiveLinkReminderNotification(
+  postTitle: string,
+  postId: string
+): NotificationInput {
+  return {
+    type: "awaiting_action",
+    title: "Live Link Needed",
+    message: `${postTitle} is awaiting at least one live social link.`,
+    href: `/social-posts/${postId}`,
+    timestamp: Date.now(),
+  };
 }

@@ -212,13 +212,14 @@ Key behavior:
   1. Setup (title, platforms, publish date, Canva link/page, product, type)
   2. Link Context (optional associated blog lookup + linked blog actions)
   3. Write Caption (UTF-8 editor focus, formatting tools, grouped copy actions, character guidance)
-  4. Review & Publish (checklist validation, role-aware status transition controls, stage-based final action)
+  4. Review & Publish (checklist validation, role-aware status transition controls, live-link URL management, stage-based final action)
 - autosave plus explicit stage action in Step 4:
   - draft incomplete → `Save Draft`
   - draft complete → `Submit for Review`
   - creative approved + required fields complete → `Move to Ready to Publish`
   - ready to publish → `Mark Awaiting Live Link`
-  - awaiting live link → `Await Live Link` (live links are added in links management surfaces)
+  - awaiting live link without links → `Await Live Link`
+  - awaiting live link with at least one saved link → `Submit Link` (transitions to `published`)
 - execution-stage brief lock:
   - `ready_to_publish` and `awaiting_live_link` are read-only for brief fields
   - admin-only `Edit Brief` action calls `POST /api/social-posts/[postId]/reopen-brief`

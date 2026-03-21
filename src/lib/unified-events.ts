@@ -21,7 +21,8 @@ export type UnifiedEventType =
   | "blog_awaiting_publisher_action"
   | "social_post_status_changed"
   | "social_post_assigned"
-  | "social_post_awaiting_action";
+  | "social_post_awaiting_action"
+  | "social_post_editor_assigned";
 
 /**
  * Maps unified event types to notification types.
@@ -40,6 +41,7 @@ export const UNIFIED_EVENT_TO_NOTIFICATION_TYPE: Record<
   social_post_status_changed: "stage_changed",
   social_post_assigned: "task_assigned",
   social_post_awaiting_action: "awaiting_action",
+  social_post_editor_assigned: "task_assigned",
 };
 
 /**

@@ -18,15 +18,17 @@ const SERVICES = [
     key: "google" as const,
     name: "Google",
     icon: "google" as const,
-    description: "Sign in and receive notifications via Google Workspace",
+    description: "Sign in with your Google Workspace account (@sighthound.com)",
     connectedAtKey: "google_connected_at" as const,
+    purpose: "Sign-in",
   },
   {
     key: "slack" as const,
     name: "Slack",
     icon: "slack" as const,
-    description: "Sign in and receive notifications via Slack",
+    description: "Receive workflow notifications and reminders in Slack",
     connectedAtKey: "slack_connected_at" as const,
+    purpose: "Notifications",
   },
 ];
 
@@ -181,6 +183,9 @@ export function ConnectedServicesForm() {
                     <h4 className="text-sm font-medium text-slate-900">
                       {service.name}
                     </h4>
+                    <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                      {service.purpose}
+                    </span>
                     {isConnected ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
                         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />

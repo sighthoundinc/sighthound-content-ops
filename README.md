@@ -125,7 +125,9 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - Draft complete → `Submit for Review`
   - Creative Approved + complete draft → `Move to Ready to Publish`
   - Ready to Publish → `Mark Awaiting Live Link`
-  - Awaiting Live Link → `Await Live Link`
+  - Awaiting Live Link without links → `Await Live Link`
+  - Awaiting Live Link with at least one saved link → `Submit Link` (marks `Published`)
+- Step 4 includes a `Live Links` section for per-platform URL entry and save
 - Execution-stage authority:
   - `ready_to_publish` and `awaiting_live_link` brief fields are read-only
   - admin-only `Edit Brief` reopens status to `creative_approved`

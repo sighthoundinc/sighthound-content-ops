@@ -384,7 +384,7 @@ The dedicated editor at `/social-posts/[id]` follows a guided 4-step flow:
 1. **Setup** — Post Title, Platform(s), Publish Date, Canva Link/Page, Product, Type.
 2. **Link Context (optional)** — Associated Blog search + linked blog actions.
 3. **Write Caption** — UTF-8 editor focus with formatting tools and grouped copy actions.
-4. **Review & Publish** — Checklist validation, role-aware transition controls, and stage-based final CTA labels.
+4. **Review & Publish** — Checklist validation, role-aware transition controls, live-link URL entry, and stage-based final CTA labels.
 
 Workflow authority invariants:
 - Status transitions are API-authoritative and must use `POST /api/social-posts/[postId]/transition`.

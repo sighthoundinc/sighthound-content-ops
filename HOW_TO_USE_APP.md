@@ -246,6 +246,8 @@ Important:
 - execution stages (`Ready to Publish`, `Awaiting Live Link`) lock brief fields as read-only
 - admins can use `Edit Brief` to reopen an execution-stage post back to `Creative Approved`
 - sending an execution-stage post back to `Changes Requested` requires a reason
+- use the `Live Links` section in Step 4 to add/save LinkedIn, Facebook, or Instagram URLs
+- once at least one live link is saved in `Awaiting Live Link`, the final action changes to `Submit Link`
 - at least one public live link (LinkedIn, Facebook, or Instagram) is required before final completion
 - if live link is missing, keep the post in `Awaiting Live Link`
 

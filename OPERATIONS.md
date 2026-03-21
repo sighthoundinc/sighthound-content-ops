@@ -17,6 +17,7 @@ For end-user manual instructions, see `HOW_TO_USE_APP.md`.
   - clicking the top-left Sighthound brand in the app shell routes to `/`
 
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
+For social execution-stage completion, live links are entered from `/social-posts/[id]` Step 4 (`Review & Publish` → `Live Links`) and persisted in `social_post_links`.
 
 ### UI Architecture (Phase 4A-4C)
 **Phase 4A**: Core UI components (AppShell, DataPageHeader, FilterBar, StatusBadgeSystem)

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserRoles } from "@/lib/roles";
 import { SOCIAL_POST_ALLOWED_TRANSITIONS, getNextActor } from "@/lib/status";
 import { authenticateRequest } from "@/lib/server-permissions";
+import { emitEvent } from "@/lib/emit-event";
 import type { SocialPostStatus } from "@/lib/types";
 
 const SOCIAL_STATUS_VALUES = new Set<SocialPostStatus>([
@@ -122,16 +123,47 @@ export async function POST(
   if (transitionError) {
     return NextResponse.json({ error: transitionError.message }, { status: 400 });
   }
+
+  // Emit unified event for activity history + notification preference enforcement
+  const transitionedPostRecord = transitionedPost as {
+    id: string;
+    title: string;
+    created_by: string | null;
+    editor_user_id: string | null;
+    admin_owner_id: string | null;
+  };
+  
+  // Get actor name for event metadata
+  let actorName: string | undefined;
+  if (auth.context.userId) {
+    const { data: actorProfile } = await auth.context.adminClient
+      .from("profiles")
+      .select("full_name")
+      .eq("id", auth.context.userId)
+      .maybeSingle();
+    actorName = actorProfile?.full_name ?? undefined;
+  }
+  
+  await emitEvent({
+    type: "social_post_status_changed",
+    contentType: "social_post",
+    contentId: postId,
+    oldValue: currentStatus,
+    newValue: toStatus,
+    fieldName: "status",
+    actor: auth.context.userId,
+    actorName,
+    contentTitle: transitionedPostRecord.title,
+    metadata: {
+      reason: normalizedReason,
+      nextActor: getNextActor(toStatus),
+    },
+    timestamp: Date.now(),
+  });
+
   const nextActor = getNextActor(toStatus);
   const slackEventType = SOCIAL_STATUS_TO_SLACK_EVENT[toStatus];
   if (slackEventType && transitionedPost) {
-    const transitionedPostRecord = transitionedPost as {
-      id: string;
-      title: string;
-      created_by: string | null;
-      editor_user_id: string | null;
-      admin_owner_id: string | null;
-    };
     const targetUserId =
       nextActor === "editor"
         ? transitionedPostRecord.editor_user_id ?? transitionedPostRecord.created_by

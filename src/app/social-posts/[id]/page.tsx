@@ -27,6 +27,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
   BlogSite,
   SocialPlatform,
+  SocialPostLinkRecord,
   SocialPostProduct,
   SocialPostStatus,
   SocialPostType,
@@ -90,6 +91,36 @@ function isExecutionStage(status: SocialPostStatus) {
   return status === "ready_to_publish" || status === "awaiting_live_link";
 }
 
+function normalizePostLinkRows(rows: Array<Record<string, unknown>>) {
+  return rows.map((row) => {
+    return {
+      id: String(row.id ?? ""),
+      social_post_id: String(row.social_post_id ?? ""),
+      platform: (row.platform as SocialPlatform) ?? "linkedin",
+      url: String(row.url ?? ""),
+      created_by: String(row.created_by ?? ""),
+      created_at: String(row.created_at ?? ""),
+      updated_at: String(row.updated_at ?? ""),
+    } satisfies SocialPostLinkRecord;
+  });
+}
+
+function createEmptyLiveLinkDrafts(): Record<SocialPlatform, string> {
+  return {
+    linkedin: "",
+    facebook: "",
+    instagram: "",
+  };
+}
+
+function toLiveLinkDrafts(links: SocialPostLinkRecord[]): Record<SocialPlatform, string> {
+  const drafts = createEmptyLiveLinkDrafts();
+  for (const link of links) {
+    drafts[link.platform] = link.url;
+  }
+  return drafts;
+}
+
 function toBoldFormat(input: string) {
   let output = "";
   for (const character of input) {
@@ -151,7 +182,7 @@ function normalizePostRow(row: Record<string, unknown>): SocialPostEditorRecord 
 export default function SocialPostEditorPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { profile, session } = useAuth();
+  const { profile, session, user } = useAuth();
   const { pushNotification } = useNotifications();
   const { showSaving, showSuccess, showError, updateStatus } = useSystemFeedback();
   const postId = params?.id ?? "";
@@ -168,6 +199,11 @@ export default function SocialPostEditorPage() {
   const [blogSearchResults, setBlogSearchResults] = useState<BlogLookupResult[]>([]);
   const [isBlogSearchOpen, setIsBlogSearchOpen] = useState(false);
   const [isBlogSearchLoading, setIsBlogSearchLoading] = useState(false);
+  const [liveLinks, setLiveLinks] = useState<SocialPostLinkRecord[]>([]);
+  const [liveLinkDrafts, setLiveLinkDrafts] = useState<Record<SocialPlatform, string>>(
+    createEmptyLiveLinkDrafts()
+  );
+  const [isLiveLinksSaving, setIsLiveLinksSaving] = useState(false);
   const isExecutionLocked = post ? isExecutionStage(post.status) : false;
 
   const loadPost = useCallback(async () => {
@@ -177,13 +213,21 @@ export default function SocialPostEditorPage() {
     setIsLoading(true);
     setError(null);
     const supabase = getSupabaseBrowserClient();
-    const { data, error: loadError } = await supabase
-      .from("social_posts")
-      .select(
-        "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,associated_blog_id,updated_at,associated_blog:associated_blog_id(id,title,slug,site,live_url)"
-      )
-      .eq("id", postId)
-      .single();
+    const [{ data, error: loadError }, { data: linksData, error: linksError }] =
+      await Promise.all([
+        supabase
+          .from("social_posts")
+          .select(
+            "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,associated_blog_id,updated_at,associated_blog:associated_blog_id(id,title,slug,site,live_url)"
+          )
+          .eq("id", postId)
+          .single(),
+        supabase
+          .from("social_post_links")
+          .select("id,social_post_id,platform,url,created_by,created_at,updated_at")
+          .eq("social_post_id", postId)
+          .order("created_at", { ascending: true }),
+      ]);
     if (loadError) {
       setError(`Couldn't load post. ${loadError.message}`);
       setIsLoading(false);
@@ -204,8 +248,19 @@ export default function SocialPostEditorPage() {
       associated_blog_id: normalized.associated_blog_id,
     });
     setBlogSearchQuery(normalized.associated_blog?.title ?? "");
+    if (linksError) {
+      showError(`Couldn't load live links. ${linksError.message}`);
+      setLiveLinks([]);
+      setLiveLinkDrafts(createEmptyLiveLinkDrafts());
+    } else {
+      const normalizedLinks = normalizePostLinkRows(
+        (linksData ?? []) as Array<Record<string, unknown>>
+      );
+      setLiveLinks(normalizedLinks);
+      setLiveLinkDrafts(toLiveLinkDrafts(normalizedLinks));
+    }
     setIsLoading(false);
-  }, [postId]);
+  }, [postId, showError]);
 
   useEffect(() => {
     void loadPost();
@@ -436,6 +491,7 @@ export default function SocialPostEditorPage() {
   const hasPublishDate = Boolean(form?.scheduled_date);
   const hasCanvaLink = Boolean(form?.canva_url.trim());
   const hasLinkedBlog = Boolean(form?.associated_blog_id);
+  const hasLiveLink = liveLinks.some((link) => link.url.trim().length > 0);
   const isDraftComplete =
     hasTitle && hasCaption && hasPlatform && hasPublishDate && hasCanvaLink;
   const canCurrentUserTransition = useCallback(
@@ -519,6 +575,13 @@ export default function SocialPostEditorPage() {
       };
     }
     if (form?.status === "awaiting_live_link") {
+      if (hasLiveLink) {
+        return {
+          label: "Submit Link",
+          nextStatus: "published" as SocialPostStatus,
+          helper: "At least one live link exists. Submit link to mark this post published.",
+        };
+      }
       return {
         label: "Await Live Link",
         nextStatus: "awaiting_live_link" as SocialPostStatus,
@@ -559,7 +622,7 @@ export default function SocialPostEditorPage() {
       nextStatus: "published" as SocialPostStatus,
       helper: "Update details for this published post.",
     };
-  }, [form?.status, isAdmin, isDraftComplete]);
+  }, [form?.status, hasLiveLink, isAdmin, isDraftComplete]);
 
   const applyCaptionEdit = (nextCaption: string, selectionStart: number, selectionEnd: number) => {
     setForm((previous) => (previous ? { ...previous, caption: nextCaption } : previous));
@@ -641,6 +704,78 @@ export default function SocialPostEditorPage() {
       showSuccess("Copied to clipboard");
     } catch {
       showError("Copy failed. Try again");
+    }
+  };
+
+  const handleSaveLiveLinks = async () => {
+    if (!post || !user?.id) {
+      showError("Session unavailable. Refresh and try again.");
+      return;
+    }
+    setIsLiveLinksSaving(true);
+    const supabase = getSupabaseBrowserClient();
+    const existingByPlatform = new Map<SocialPlatform, SocialPostLinkRecord>(
+      liveLinks.map((link) => [link.platform, link])
+    );
+
+    try {
+      for (const platform of SOCIAL_PLATFORMS) {
+        const nextUrl = (liveLinkDrafts[platform] ?? "").trim();
+        const existingLink = existingByPlatform.get(platform) ?? null;
+
+        if (!nextUrl && existingLink) {
+          const { error: deleteError } = await supabase
+            .from("social_post_links")
+            .delete()
+            .eq("id", existingLink.id);
+          if (deleteError) {
+            throw new Error(deleteError.message);
+          }
+          continue;
+        }
+
+        if (!nextUrl) {
+          continue;
+        }
+
+        const { error: upsertError } = await supabase
+          .from("social_post_links")
+          .upsert(
+            {
+              social_post_id: post.id,
+              platform,
+              url: nextUrl,
+              created_by: user.id,
+            },
+            { onConflict: "social_post_id,platform" }
+          );
+        if (upsertError) {
+          throw new Error(upsertError.message);
+        }
+      }
+
+      const { data: linksData, error: linksError } = await supabase
+        .from("social_post_links")
+        .select("id,social_post_id,platform,url,created_by,created_at,updated_at")
+        .eq("social_post_id", post.id)
+        .order("created_at", { ascending: true });
+      if (linksError) {
+        throw new Error(linksError.message);
+      }
+      const normalizedLinks = normalizePostLinkRows(
+        (linksData ?? []) as Array<Record<string, unknown>>
+      );
+      setLiveLinks(normalizedLinks);
+      setLiveLinkDrafts(toLiveLinkDrafts(normalizedLinks));
+      showSuccess("Live links saved");
+    } catch (saveError) {
+      showError(
+        saveError instanceof Error
+          ? `Couldn't save live links. ${saveError.message}`
+          : "Couldn't save live links."
+      );
+    } finally {
+      setIsLiveLinksSaving(false);
     }
   };
   const handleReopenBrief = async () => {
@@ -1236,6 +1371,64 @@ export default function SocialPostEditorPage() {
                       ))}
                     </select>
                     <SocialPostStatusBadge status={form.status} />
+                  </div>
+                </div>
+                <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Live Links
+                  </p>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    {SOCIAL_PLATFORMS.map((platform) => (
+                      <label key={platform} className="space-y-1 text-xs text-slate-600">
+                        <span className="font-medium text-slate-700">
+                          {SOCIAL_PLATFORM_LABELS[platform]}
+                        </span>
+                        <input
+                          type="url"
+                          value={liveLinkDrafts[platform] ?? ""}
+                          onChange={(event) => {
+                            setLiveLinkDrafts((previous) => ({
+                              ...previous,
+                              [platform]: event.target.value,
+                            }));
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                          placeholder={`https://${platform}.com/...`}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  {liveLinks.length === 0 ? (
+                    <p className="text-xs text-slate-500">
+                      No live links saved yet.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {liveLinks.map((link) => (
+                        <li key={link.id} className="truncate text-xs text-slate-600">
+                          {SOCIAL_PLATFORM_LABELS[link.platform]}:{" "}
+                          <ExternalLink
+                            href={link.url}
+                            className="text-blue-600 underline"
+                          >
+                            {link.url}
+                          </ExternalLink>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      disabled={isLiveLinksSaving}
+                      onClick={() => {
+                        void handleSaveLiveLinks();
+                      }}
+                    >
+                      {isLiveLinksSaving ? "Saving Links…" : "Save Links"}
+                    </Button>
                   </div>
                 </div>
                 <div className="rounded-md border border-slate-200 bg-white p-3">

@@ -14,6 +14,24 @@ const SOCIAL_STATUS_VALUES = new Set<SocialPostStatus>([
   "awaiting_live_link",
   "published",
 ]);
+const SOCIAL_STATUS_TO_SLACK_EVENT: Partial<
+  Record<
+    SocialPostStatus,
+    | "social_submitted_for_review"
+    | "social_changes_requested"
+    | "social_creative_approved"
+    | "social_ready_to_publish"
+    | "social_awaiting_live_link"
+    | "social_published"
+  >
+> = {
+  in_review: "social_submitted_for_review",
+  changes_requested: "social_changes_requested",
+  creative_approved: "social_creative_approved",
+  ready_to_publish: "social_ready_to_publish",
+  awaiting_live_link: "social_awaiting_live_link",
+  published: "social_published",
+};
 
 function parseToStatus(value: unknown): SocialPostStatus | null {
   return typeof value === "string" && SOCIAL_STATUS_VALUES.has(value as SocialPostStatus)
@@ -48,7 +66,7 @@ export async function POST(
 
   const { data: existingPost, error: existingPostError } = await auth.context.adminClient
     .from("social_posts")
-    .select("id,status,title")
+    .select("id,status,title,created_by,editor_user_id,admin_owner_id")
     .eq("id", postId)
     .maybeSingle();
 
@@ -104,9 +122,49 @@ export async function POST(
   if (transitionError) {
     return NextResponse.json({ error: transitionError.message }, { status: 400 });
   }
+  const nextActor = getNextActor(toStatus);
+  const slackEventType = SOCIAL_STATUS_TO_SLACK_EVENT[toStatus];
+  if (slackEventType && transitionedPost) {
+    const transitionedPostRecord = transitionedPost as {
+      id: string;
+      title: string;
+      created_by: string | null;
+      editor_user_id: string | null;
+      admin_owner_id: string | null;
+    };
+    const targetUserId =
+      nextActor === "editor"
+        ? transitionedPostRecord.editor_user_id ?? transitionedPostRecord.created_by
+        : nextActor === "admin"
+          ? transitionedPostRecord.admin_owner_id
+          : null;
+    let targetEmail: string | null = null;
+    if (targetUserId) {
+      const { data: targetProfile } = await auth.context.adminClient
+        .from("profiles")
+        .select("email")
+        .eq("id", targetUserId)
+        .maybeSingle();
+      targetEmail = targetProfile?.email ?? null;
+    }
+
+    await auth.context.adminClient.functions
+      .invoke("slack-notify", {
+        body: {
+          eventType: slackEventType,
+          socialPostId: transitionedPostRecord.id,
+          title: transitionedPostRecord.title,
+          site: "social",
+          actorName: isAdmin ? "Admin" : "Social Editor",
+          targetEmail,
+          appUrl: process.env.NEXT_PUBLIC_APP_URL,
+        },
+      })
+      .catch(() => null);
+  }
 
   return NextResponse.json({
     post: transitionedPost,
-    nextActor: getNextActor(toStatus),
+    nextActor,
   });
 }

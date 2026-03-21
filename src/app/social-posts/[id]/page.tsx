@@ -12,13 +12,17 @@ import { SocialPostStatusBadge } from "@/components/status-badge";
 import { AppIcon } from "@/lib/icons";
 import {
   SOCIAL_PLATFORMS,
+  SOCIAL_POST_ALLOWED_TRANSITIONS,
   SOCIAL_PLATFORM_LABELS,
   SOCIAL_POST_PRODUCTS,
   SOCIAL_POST_PRODUCT_LABELS,
   SOCIAL_POST_TYPES,
+  getNextActor,
   SOCIAL_POST_STATUS_LABELS,
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
+import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
+import { getUserRoles } from "@/lib/roles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
   BlogSite,
@@ -28,6 +32,8 @@ import type {
   SocialPostType,
 } from "@/lib/types";
 import { formatDateInput } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
+import { useNotifications } from "@/providers/notifications-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type BlogLookupResult = {
@@ -79,6 +85,10 @@ const PLATFORM_CAPTION_GUIDANCE: Record<SocialPlatform, string> = {
 const BOLD_SANS_UPPER = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭";
 const BOLD_SANS_LOWER = "𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇";
 const BOLD_SANS_DIGITS = "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵";
+
+function isExecutionStage(status: SocialPostStatus) {
+  return status === "ready_to_publish" || status === "awaiting_live_link";
+}
 
 function toBoldFormat(input: string) {
   let output = "";
@@ -141,9 +151,13 @@ function normalizePostRow(row: Record<string, unknown>): SocialPostEditorRecord 
 export default function SocialPostEditorPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { profile, session } = useAuth();
+  const { pushNotification } = useNotifications();
   const { showSaving, showSuccess, showError, updateStatus } = useSystemFeedback();
   const postId = params?.id ?? "";
   const captionRef = useRef<HTMLTextAreaElement | null>(null);
+  const userRoles = useMemo(() => getUserRoles(profile), [profile]);
+  const isAdmin = userRoles.includes("admin");
 
   const [post, setPost] = useState<SocialPostEditorRecord | null>(null);
   const [form, setForm] = useState<EditorFormState | null>(null);
@@ -154,6 +168,7 @@ export default function SocialPostEditorPage() {
   const [blogSearchResults, setBlogSearchResults] = useState<BlogLookupResult[]>([]);
   const [isBlogSearchOpen, setIsBlogSearchOpen] = useState(false);
   const [isBlogSearchLoading, setIsBlogSearchLoading] = useState(false);
+  const isExecutionLocked = post ? isExecutionStage(post.status) : false;
 
   const loadPost = useCallback(async () => {
     if (!postId) {
@@ -198,7 +213,7 @@ export default function SocialPostEditorPage() {
 
   useEffect(() => {
     const query = blogSearchQuery.trim();
-    if (!isBlogSearchOpen || query.length === 0) {
+    if (isExecutionLocked || !isBlogSearchOpen || query.length === 0) {
       setBlogSearchResults([]);
       return;
     }
@@ -223,32 +238,68 @@ export default function SocialPostEditorPage() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [blogSearchQuery, isBlogSearchOpen, showError]);
+  }, [blogSearchQuery, isBlogSearchOpen, isExecutionLocked, showError]);
 
-  const persistPost = useCallback(
-    async (nextForm: EditorFormState, reason: "autosave" | "manual" = "autosave") => {
+  const persistBrief = useCallback(
+    async (
+      nextForm: EditorFormState,
+      reason: "autosave" | "manual" = "autosave"
+    ) => {
       if (!post) {
-        return;
+        return false;
       }
-      const statusId = showSaving(reason === "autosave" ? "Saving…" : "Updating post…");
-      setIsSaving(true);
-      const supabase = getSupabaseBrowserClient();
+      if (isExecutionStage(post.status)) {
+        if (reason === "manual") {
+          showError(
+            "Execution-stage brief fields are read-only. Use Edit Brief to reopen."
+          );
+        }
+        return false;
+      }
+
       const canvaPage =
-        nextForm.canva_page.trim().length > 0 && !Number.isNaN(Number(nextForm.canva_page))
+        nextForm.canva_page.trim().length > 0 &&
+        !Number.isNaN(Number(nextForm.canva_page))
           ? Math.max(1, Number(nextForm.canva_page))
           : null;
+      const normalizedTitle = nextForm.title.trim();
+      const normalizedCanvaUrl = nextForm.canva_url.trim() || null;
+      const normalizedCaption =
+        nextForm.caption.trim().length > 0 ? nextForm.caption : null;
+      const normalizedPlatforms = Array.from(new Set(nextForm.platforms));
+      const normalizedScheduledDate = nextForm.scheduled_date || null;
+
+      const hasChanges =
+        normalizedTitle !== post.title ||
+        nextForm.product !== post.product ||
+        nextForm.type !== post.type ||
+        normalizedCanvaUrl !== post.canva_url ||
+        canvaPage !== post.canva_page ||
+        normalizedCaption !== post.caption ||
+        normalizedPlatforms.join(",") !== post.platforms.join(",") ||
+        normalizedScheduledDate !== post.scheduled_date ||
+        nextForm.associated_blog_id !== post.associated_blog_id;
+
+      if (!hasChanges) {
+        return true;
+      }
+
+      const statusId = showSaving(
+        reason === "autosave" ? "Saving…" : "Updating post…"
+      );
+      setIsSaving(true);
+      const supabase = getSupabaseBrowserClient();
       const { data, error: saveError } = await supabase
         .from("social_posts")
         .update({
-          title: nextForm.title.trim(),
+          title: normalizedTitle,
           product: nextForm.product,
           type: nextForm.type,
-          canva_url: nextForm.canva_url.trim() || null,
+          canva_url: normalizedCanvaUrl,
           canva_page: canvaPage,
-          caption: nextForm.caption,
-          platforms: Array.from(new Set(nextForm.platforms)),
-          scheduled_date: nextForm.scheduled_date || null,
-          status: nextForm.status,
+          caption: normalizedCaption,
+          platforms: normalizedPlatforms,
+          scheduled_date: normalizedScheduledDate,
           associated_blog_id: nextForm.associated_blog_id,
         })
         .eq("id", post.id)
@@ -257,29 +308,120 @@ export default function SocialPostEditorPage() {
         )
         .single();
       if (saveError) {
-        updateStatus(statusId, { type: "error", message: `Couldn't save. ${saveError.message}` });
+        updateStatus(statusId, {
+          type: "error",
+          message: `Couldn't save. ${saveError.message}`,
+        });
         setIsSaving(false);
-        return;
+        return false;
       }
       const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
       setPost(normalized);
       updateStatus(statusId, { type: "success", message: "Post saved" });
       setIsSaving(false);
+      return true;
     },
-    [post, showSaving, updateStatus]
+    [post, showError, showSaving, updateStatus]
+  );
+
+  const transitionPostStatus = useCallback(
+    async (toStatus: SocialPostStatus) => {
+      if (!post) {
+        return false;
+      }
+      const currentStatus = post.status;
+      if (currentStatus === toStatus) {
+        return true;
+      }
+      const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[currentStatus] ?? [];
+      if (!allowedTransitions.includes(toStatus)) {
+        showError(
+          `Invalid status transition from ${SOCIAL_POST_STATUS_LABELS[currentStatus]} to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`
+        );
+        return false;
+      }
+      if (!session?.access_token) {
+        showError("Session expired. Refresh and try again.");
+        return false;
+      }
+      const requiresRollbackReason =
+        toStatus === "changes_requested" &&
+        (currentStatus === "ready_to_publish" ||
+          currentStatus === "awaiting_live_link");
+      let reason: string | null = null;
+      if (requiresRollbackReason) {
+        const rawReason = window.prompt(
+          "Provide a reason for sending this post back to Changes Requested:"
+        );
+        if (!rawReason || rawReason.trim().length === 0) {
+          showError("Rollback reason is required.");
+          return false;
+        }
+        reason = rawReason.trim();
+      }
+
+      setIsSaving(true);
+      const response = await fetch(`/api/social-posts/${post.id}/transition`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ toStatus, reason }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        showError(payload.error ?? "Couldn't change post status.");
+        setIsSaving(false);
+        return false;
+      }
+
+      setPost((previous) =>
+        previous
+          ? {
+              ...previous,
+              status: toStatus,
+              updated_at: new Date().toISOString(),
+            }
+          : previous
+      );
+      setForm((previous) =>
+        previous
+          ? {
+              ...previous,
+              status: toStatus,
+            }
+          : previous
+      );
+      pushNotification(
+        socialPostStatusChangedNotification(
+          post.title.trim() || "Social Post",
+          currentStatus,
+          toStatus,
+          profile?.full_name ?? null,
+          post.id
+        )
+      );
+      showSuccess(`Moved to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`);
+      setIsSaving(false);
+      return true;
+    },
+    [post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess]
   );
 
   useEffect(() => {
-    if (!form || !post) {
+    if (!form || !post || isExecutionStage(post.status)) {
       return;
     }
     const timeout = window.setTimeout(() => {
-      void persistPost(form, "autosave");
+      void persistBrief(form, "autosave");
     }, AUTOSAVE_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [form, post, persistPost]);
+  }, [form, post, persistBrief]);
 
   const captionLength = form?.caption.length ?? 0;
   const isOverLimit = captionLength > LINKEDIN_CAPTION_LIMIT;
@@ -291,8 +433,31 @@ export default function SocialPostEditorPage() {
   const hasLinkedBlog = Boolean(form?.associated_blog_id);
   const isDraftComplete =
     hasTitle && hasCaption && hasPlatform && hasPublishDate && hasCanvaLink;
-  const canTransitionToReview =
-    isDraftComplete || form?.status === "in_review" || form?.status === "published";
+  const canCurrentUserTransition = useCallback(
+    (fromStatus: SocialPostStatus, toStatus: SocialPostStatus) => {
+      if (fromStatus === toStatus) {
+        return true;
+      }
+      const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[fromStatus] ?? [];
+      if (!allowedTransitions.includes(toStatus)) {
+        return false;
+      }
+      const isExecutionRollback =
+        toStatus === "changes_requested" &&
+        (fromStatus === "ready_to_publish" || fromStatus === "awaiting_live_link");
+      if (isExecutionRollback && !isAdmin) {
+        return false;
+      }
+      if (
+        !isAdmin &&
+        (fromStatus === "in_review" || toStatus === "creative_approved")
+      ) {
+        return false;
+      }
+      return true;
+    },
+    [isAdmin]
+  );
 
   const checklistItems = useMemo(
     () => [
@@ -350,12 +515,20 @@ export default function SocialPostEditorPage() {
     }
     if (form?.status === "awaiting_live_link") {
       return {
-        label: "Save Changes",
+        label: "Await Live Link",
         nextStatus: "awaiting_live_link" as SocialPostStatus,
         helper: "Add at least one live link before marking published.",
       };
     }
     if (form?.status === "in_review") {
+      if (isAdmin) {
+        return {
+          label: "Approve Creative",
+          nextStatus: "creative_approved" as SocialPostStatus,
+          helper:
+            "Approve this creative handoff or use the status control to request changes.",
+        };
+      }
       return {
         label: "Await Admin Review",
         nextStatus: "in_review" as SocialPostStatus,
@@ -381,7 +554,7 @@ export default function SocialPostEditorPage() {
       nextStatus: "published" as SocialPostStatus,
       helper: "Update details for this published post.",
     };
-  }, [form?.status, isDraftComplete]);
+  }, [form?.status, isAdmin, isDraftComplete]);
 
   const applyCaptionEdit = (nextCaption: string, selectionStart: number, selectionEnd: number) => {
     setForm((previous) => (previous ? { ...previous, caption: nextCaption } : previous));
@@ -465,16 +638,82 @@ export default function SocialPostEditorPage() {
       showError("Copy failed. Try again");
     }
   };
-  const handleFinalAction = () => {
-    if (!form) {
+  const handleReopenBrief = async () => {
+    if (!post) {
       return;
     }
-    const nextForm: EditorFormState = {
-      ...form,
-      status: finalAction.nextStatus,
-    };
-    setForm(nextForm);
-    void persistPost(nextForm, "manual");
+    if (!session?.access_token) {
+      showError("Session expired. Refresh and try again.");
+      return;
+    }
+    const reasonInput = window.prompt(
+      "Optional reason for reopening this post to Creative Approved:"
+    );
+    setIsSaving(true);
+    const response = await fetch(`/api/social-posts/${post.id}/reopen-brief`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        reason:
+          typeof reasonInput === "string" && reasonInput.trim().length > 0
+            ? reasonInput.trim()
+            : null,
+      }),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      showError(payload.error ?? "Couldn't reopen brief.");
+      setIsSaving(false);
+      return;
+    }
+    const previousStatus = post.status;
+    setPost((previous) =>
+      previous
+        ? {
+            ...previous,
+            status: "creative_approved",
+            updated_at: new Date().toISOString(),
+          }
+        : previous
+    );
+    setForm((previous) =>
+      previous
+        ? {
+            ...previous,
+            status: "creative_approved",
+          }
+        : previous
+    );
+    pushNotification(
+      socialPostStatusChangedNotification(
+        form?.title.trim() || "Social Post",
+        previousStatus,
+        "creative_approved",
+        profile?.full_name ?? null,
+        post.id
+      )
+    );
+    showSuccess("Post reopened to Creative Approved for brief edits.");
+    setIsSaving(false);
+  };
+
+  const handleFinalAction = async () => {
+    if (!form || !post) {
+      return;
+    }
+    if (finalAction.nextStatus === form.status) {
+      if (isExecutionStage(form.status)) {
+        return;
+      }
+      await persistBrief(form, "manual");
+      return;
+    }
+    await transitionPostStatus(finalAction.nextStatus);
   };
 
   if (isLoading) {
@@ -523,6 +762,27 @@ export default function SocialPostEditorPage() {
               </div>
             }
           />
+          {isExecutionLocked ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <span>
+                Execution stage is read-only. Reopen to Creative Approved before
+                editing brief fields.
+              </span>
+              {isAdmin ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  disabled={isSaving}
+                  onClick={() => {
+                    void handleReopenBrief();
+                  }}
+                >
+                  Edit Brief
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -537,7 +797,10 @@ export default function SocialPostEditorPage() {
                     </p>
                   </div>
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
+                <fieldset
+                  disabled={isExecutionLocked}
+                  className="grid gap-3 md:grid-cols-2 disabled:opacity-70"
+                >
                   <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
                     <span className="font-medium">Post Title</span>
                     <input
@@ -656,7 +919,7 @@ export default function SocialPostEditorPage() {
                       ))}
                     </select>
                   </label>
-                </div>
+                </fieldset>
               </section>
 
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -673,6 +936,7 @@ export default function SocialPostEditorPage() {
                     </p>
                   </div>
                 </div>
+                <fieldset disabled={isExecutionLocked} className="space-y-4 disabled:opacity-70">
                 <label className="space-y-1 text-sm text-slate-700">
                   <span className="font-medium">Associated Blog Search</span>
                   <input
@@ -769,6 +1033,7 @@ export default function SocialPostEditorPage() {
                 ) : (
                   <p className="text-sm text-slate-500">No linked blog yet.</p>
                 )}
+                </fieldset>
               </section>
 
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -783,6 +1048,7 @@ export default function SocialPostEditorPage() {
                     </p>
                   </div>
                 </div>
+                <fieldset disabled={isExecutionLocked} className="space-y-2 disabled:opacity-70">
                 <div className="space-y-2 rounded-lg border border-slate-200 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium text-slate-700">Caption Editor (UTF-8)</p>
@@ -883,6 +1149,7 @@ export default function SocialPostEditorPage() {
                     </details>
                   </div>
                 </div>
+                </fieldset>
               </section>
 
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -932,12 +1199,13 @@ export default function SocialPostEditorPage() {
                       value={form.status}
                       onChange={(event) => {
                         const nextStatus = event.target.value as SocialPostStatus;
-                        if (nextStatus === "in_review" && !canTransitionToReview) {
+                        if (!canCurrentUserTransition(form.status, nextStatus)) {
+                          showError(
+                            "You do not have permission for that transition from the current stage."
+                          );
                           return;
                         }
-                        setForm((previous) =>
-                          previous ? { ...previous, status: nextStatus } : previous
-                        );
+                        void transitionPostStatus(nextStatus);
                       }}
                       className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs"
                     >
@@ -945,7 +1213,12 @@ export default function SocialPostEditorPage() {
                         <option
                           key={value}
                           value={value}
-                          disabled={value === "in_review" && !canTransitionToReview}
+                          disabled={
+                            !canCurrentUserTransition(
+                              form.status,
+                              value as SocialPostStatus
+                            )
+                          }
                         >
                           {label}
                         </option>
@@ -968,8 +1241,16 @@ export default function SocialPostEditorPage() {
                     <Button
                       variant="primary"
                       size="sm"
-                      disabled={isSaving || isOverLimit}
-                      onClick={handleFinalAction}
+                      disabled={
+                        isSaving ||
+                        isOverLimit ||
+                        !canCurrentUserTransition(form.status, finalAction.nextStatus) ||
+                        (finalAction.nextStatus === form.status &&
+                          isExecutionStage(form.status))
+                      }
+                      onClick={() => {
+                        void handleFinalAction();
+                      }}
                     >
                       {isSaving ? "Saving…" : finalAction.label}
                     </Button>
@@ -1034,6 +1315,14 @@ export default function SocialPostEditorPage() {
                   <span className="text-xs text-slate-500">Status</span>
                   <SocialPostStatusBadge status={form.status} />
                 </div>
+                <p className="text-xs text-slate-600">
+                  Next actor:{" "}
+                  {getNextActor(form.status) === "admin"
+                    ? "Admin"
+                    : getNextActor(form.status) === "editor"
+                      ? "Social Editor"
+                      : "Done"}
+                </p>
                 <p className="text-xs text-slate-600">
                   Product: {SOCIAL_POST_PRODUCT_LABELS[form.product]}
                 </p>

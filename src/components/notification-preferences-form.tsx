@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { UserNotificationPreferences } from "@/lib/notification-helpers";
+
+const API_BASE = "/api/users/notification-preferences";
 
 interface NotificationPreferencesFormProps {
   onSaveSuccess?: () => void;
@@ -50,7 +53,7 @@ const NOTIFICATION_TYPES = [
 export function NotificationPreferencesForm({
   onSaveSuccess,
 }: NotificationPreferencesFormProps) {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const { showSuccess, showError } = useAlerts();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -61,14 +64,22 @@ export function NotificationPreferencesForm({
   // Fetch preferences on mount
   useEffect(() => {
     const fetchPreferences = async () => {
-      if (!session?.user?.id) return;
+      if (!user?.id) return;
 
       try {
         setIsLoading(true);
-        const response = await fetch("/api/users/notification-preferences", {
+        const supabase = getSupabaseBrowserClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+
+        if (!accessToken) {
+          throw new Error("No access token available");
+        }
+
+        const response = await fetch(API_BASE, {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
         });
@@ -102,7 +113,7 @@ export function NotificationPreferencesForm({
     };
 
     fetchPreferences();
-  }, [session?.user?.id, session?.access_token, showError]);
+  }, [user?.id, showError]);
 
   const handleToggleAll = (enabled: boolean) => {
     if (!preferences) return;
@@ -132,14 +143,22 @@ export function NotificationPreferencesForm({
   };
 
   const handleSave = async () => {
-    if (!session?.user?.id || !preferences || !hasChanges) return;
+    if (!user?.id || !preferences || !hasChanges) return;
 
     try {
       setIsSaving(true);
-      const response = await fetch("/api/users/notification-preferences", {
+      const supabase = getSupabaseBrowserClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error("No access token available");
+      }
+
+      const response = await fetch(API_BASE, {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(preferences),

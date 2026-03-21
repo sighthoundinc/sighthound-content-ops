@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon } from "@/lib/icons";
@@ -13,8 +13,9 @@ const LOGIN_HIGHLIGHTS = [
   "Coordinate social post creation, captioning, scheduling, and live links",
 ] as const;
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { session } = useAuth();
   const { showError } = useSystemFeedback();
 
@@ -22,12 +23,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reconnectService = searchParams.get("reconnect");
 
   useEffect(() => {
     if (session) {
-      router.replace("/");
+      // If user came from reconnect flow, redirect to settings instead of home
+      const redirectTo = reconnectService ? "/settings" : "/";
+      router.replace(redirectTo);
     }
-  }, [router, session]);
+  }, [router, session, reconnectService]);
 
   useEffect(() => {
     if (!error) {
@@ -63,10 +67,12 @@ export default function LoginPage() {
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
       window.location.origin;
+    // If reconnecting, redirect to settings after OAuth
+    const redirectPath = reconnectService ? "/settings" : "/";
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${appUrl}/`,
+        redirectTo: `${appUrl}${redirectPath}`,
       },
     });
     if (oauthError) {
@@ -80,10 +86,12 @@ export default function LoginPage() {
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
       window.location.origin;
+    // If reconnecting, redirect to settings after OAuth
+    const redirectPath = reconnectService ? "/settings" : "/";
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "slack_oidc",
       options: {
-        redirectTo: `${appUrl}/`,
+        redirectTo: `${appUrl}${redirectPath}`,
       },
     });
     if (oauthError) {
@@ -198,5 +206,13 @@ export default function LoginPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white" />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

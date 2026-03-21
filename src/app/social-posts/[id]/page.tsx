@@ -368,7 +368,12 @@ export default function SocialPostEditorPage() {
           "content-type": "application/json",
         },
         body: JSON.stringify({ toStatus, reason }),
-      });
+      }).catch(() => null);
+      if (!response) {
+        showError("Couldn't change post status. Try again.");
+        setIsSaving(false);
+        return false;
+      }
       if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as {
           error?: string;
@@ -662,7 +667,12 @@ export default function SocialPostEditorPage() {
             ? reasonInput.trim()
             : null,
       }),
-    });
+    }).catch(() => null);
+    if (!response) {
+      showError("Couldn't reopen brief. Try again.");
+      setIsSaving(false);
+      return;
+    }
     if (!response.ok) {
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
@@ -691,7 +701,7 @@ export default function SocialPostEditorPage() {
     );
     pushNotification(
       socialPostStatusChangedNotification(
-        form?.title.trim() || "Social Post",
+        post.title.trim() || "Social Post",
         previousStatus,
         "creative_approved",
         profile?.full_name ?? null,
@@ -1197,6 +1207,7 @@ export default function SocialPostEditorPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <select
                       value={form.status}
+                      disabled={isSaving}
                       onChange={(event) => {
                         const nextStatus = event.target.value as SocialPostStatus;
                         if (!canCurrentUserTransition(form.status, nextStatus)) {

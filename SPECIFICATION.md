@@ -200,6 +200,11 @@ Key behavior:
   - `awaiting_live_link`
   - `published`
 - board drag/drop and side-panel status edits are restricted to valid stage transitions
+- status transitions are API-authoritative (`POST /api/social-posts/[postId]/transition`)
+- allowed backward transitions are locked to:
+  - `ready_to_publish` → `changes_requested`
+  - `awaiting_live_link` → `changes_requested`
+- execution-stage rollback to `changes_requested` requires a reason
 - moving a social post to `published` requires at least one saved live link (`social_post_links`)
 
 ### Social Post Editor (`/social-posts/[id]`)
@@ -207,13 +212,18 @@ Key behavior:
   1. Setup (title, platforms, publish date, Canva link/page, product, type)
   2. Link Context (optional associated blog lookup + linked blog actions)
   3. Write Caption (UTF-8 editor focus, formatting tools, grouped copy actions, character guidance)
-  4. Review & Publish (checklist validation, status transition controls, stage-based final action)
+  4. Review & Publish (checklist validation, role-aware status transition controls, stage-based final action)
 - autosave plus explicit stage action in Step 4:
   - draft incomplete → `Save Draft`
   - draft complete → `Submit for Review`
-  - creative approved + required fields complete → `Mark Ready to Publish`
-  - ready to publish → `Publish Post` (routes to `awaiting_live_link` when no link exists)
-  - awaiting live link + link present → `Submit Link` (moves to `published`)
+  - creative approved + required fields complete → `Move to Ready to Publish`
+  - ready to publish → `Mark Awaiting Live Link`
+  - awaiting live link → `Await Live Link` (live links are added in links management surfaces)
+- execution-stage brief lock:
+  - `ready_to_publish` and `awaiting_live_link` are read-only for brief fields
+  - admin-only `Edit Brief` action calls `POST /api/social-posts/[postId]/reopen-brief`
+  - reopen always returns status to `creative_approved`
+- `published` transition is DB-enforced and requires at least one valid live link
 
 ### Settings (`/settings`)
 - `My Profile` section for all personal preferences:
@@ -424,6 +434,9 @@ Event examples:
 - writer assigned/completed
 - ready to publish
 - published
+- social submitted for review / changes requested / creative approved
+- social ready to publish / awaiting live link / published
+- social live-link reminder
 
 Delivery:
 - configured channel
@@ -448,7 +461,7 @@ Slack:
 The project is migration-driven (`supabase/migrations`) with compatibility layers for:
 - legacy/expanded role model transitions
 - status trigger and enum transition safety
-- social post canonical workflow enforcement (`20260321123000_social_post_workflow_enforcement.sql`)
+- social workflow authority + event normalization (`20260321133000_social_workflow_authority_and_event_normalization.sql`)
 - comments actor compatibility (`user_id` / `created_by`)
 - import collision prevention via deterministic hash
 - permission matrix introduction + expansion migrations

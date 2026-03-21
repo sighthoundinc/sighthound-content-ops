@@ -346,13 +346,23 @@ Endpoint returns:
 **Scope**: Per-user, not global
 
 ## Social Post Dedicated Editor Workflow (MUST)
-
 The dedicated editor at `/social-posts/[id]` follows a guided 4-step flow:
-
 1. **Setup** — Post Title, Platform(s), Publish Date, Canva Link/Page, Product, Type.
 2. **Link Context (optional)** — Associated Blog search + linked blog actions.
 3. **Write Caption** — UTF-8 editor focus with formatting tools and grouped copy actions.
-4. **Review & Publish** — Checklist validation, status transitions, and stage-based final CTA labels:
-   - Draft incomplete → `Save Draft`
-   - Draft complete → `Move to Review`
-   - In Review complete → `Mark Published`
+4. **Review & Publish** — Checklist validation, role-aware transition controls, and stage-based final CTA labels.
+
+Workflow authority invariants:
+- Status transitions are API-authoritative and must use `POST /api/social-posts/[postId]/transition`.
+- Allowed backward transitions are locked to:
+  - `ready_to_publish` → `changes_requested`
+  - `awaiting_live_link` → `changes_requested`
+- Execution-stage rollback requires a non-empty reason.
+- `published` requires at least one valid link in `social_post_links`.
+- Execution stages (`ready_to_publish`, `awaiting_live_link`) are brief-locked (no in-place brief editing).
+- Admin-only brief editing path uses `POST /api/social-posts/[postId]/reopen-brief`, which reopens to `creative_approved` and logs activity.
+
+Reminder + notification invariants:
+- Awaiting-live-link reminder sweeps use `POST /api/social-posts/reminders`.
+- Reminder dedupe is enforced with `social_posts.last_live_link_reminder_at` using a 24-hour cooldown.
+- Social transition and reminder Slack events are emitted by API routes, not direct ad-hoc client writes.

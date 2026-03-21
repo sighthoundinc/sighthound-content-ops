@@ -49,6 +49,9 @@ Content mutations (blogs, stages, comments, derived status) are DB-authoritative
 - `src/app/api/admin/activity-history/` — admin audit/history cleanup API
 - `src/app/api/admin/quick-view/` — admin quick-view user session switch API
 - `src/app/api/admin/users/[userId]/password/` — admin password reset API
+- `src/app/api/social-posts/[postId]/transition/` — canonical social status transition API
+- `src/app/api/social-posts/[postId]/reopen-brief/` — admin execution-stage brief reopen API
+- `src/app/api/social-posts/reminders/` — awaiting-live-link reminder sweep API
 - `src/lib/quick-view.ts` — quick-view snapshot storage helpers
 - `supabase/migrations/` — schema/history migrations
 - `supabase/functions/` — edge functions
@@ -138,6 +141,7 @@ npm run check
 |- `20260320195100_fix_activity_history_rls.sql`
 |- `20260320220000_create_access_logs.sql` (access_logs table with RLS)
 |- `20260320223000_update_access_logs_rls.sql` (RLS policy updates for user self-access)
+|- `20260321133000_social_workflow_authority_and_event_normalization.sql` (canonical social transition authority, event normalization, reminder tracking)
 
 ## 5.5) User preferences
 Per-user preferences are stored in `profiles`:
@@ -504,6 +508,17 @@ Settings UI grouping (for operator orientation):
   - `writer_completed`
   - `ready_to_publish`
   - `published`
+  - `social_submitted_for_review`
+  - `social_changes_requested`
+  - `social_creative_approved`
+  - `social_ready_to_publish`
+  - `social_awaiting_live_link`
+  - `social_published`
+  - `social_live_link_reminder`
+- Reminder sweep behavior:
+  - Triggered via `POST /api/social-posts/reminders`
+  - Admin-only route
+  - 24-hour dedupe per post via `social_posts.last_live_link_reminder_at`
 - Delivery order:
   1. if `SLACK_BOT_TOKEN` exists → post to channel (`SLACK_MARKETING_CHANNEL` or `#marketing`) and optionally DM `targetEmail`
   2. else if `SLACK_WEBHOOK_URL` exists → webhook post

@@ -42,6 +42,7 @@ import {
   PUBLISHER_STATUSES,
   PUBLISHER_STATUS_LABELS,
   SOCIAL_POST_NEXT_ACTION_LABELS,
+  SOCIAL_POST_STATUSES,
   SOCIAL_POST_STATUS_LABELS,
   WRITER_STATUSES,
   WRITER_STATUS_LABELS,
@@ -55,6 +56,7 @@ import {
 } from "@/lib/segmented-control";
 import { getSiteBadgeClasses, getSiteShortLabel } from "@/lib/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getDashboardFilterIntent } from "@/lib/dashboard-filter-state";
 import { getTablePageCount, getTablePageRows } from "@/lib/table";
 import type {
   BlogRecord,
@@ -259,6 +261,9 @@ export default function MyTasksPage() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | WriterStageStatus | PublisherStageStatus
   >("all");
+  const [socialStatusFilter, setSocialStatusFilter] = useState<
+    "all" | SocialPostStatus
+  >("all");
   const [siteFilter, setSiteFilter] = useState<"all" | "sighthound.com" | "redactor.com">("all");
   const [taskSortField, setTaskSortField] = useState<string>("publish_date");
   const [taskSortDirection, setTaskSortDirection] = useState<"asc" | "desc">("asc");
@@ -446,6 +451,36 @@ export default function MyTasksPage() {
 
     void loadTasks();
   }, [loadTasks]);
+
+  useEffect(() => {
+    const intent = getDashboardFilterIntent();
+    if (!intent) {
+      return;
+    }
+    if (
+      intent.type === "writer_status" &&
+      WRITER_STATUSES.includes(intent.value as WriterStageStatus)
+    ) {
+      setStatusFilter(intent.value as WriterStageStatus);
+      setCurrentPage(1);
+      return;
+    }
+    if (
+      intent.type === "publisher_status" &&
+      PUBLISHER_STATUSES.includes(intent.value as PublisherStageStatus)
+    ) {
+      setStatusFilter(intent.value as PublisherStageStatus);
+      setCurrentPage(1);
+      return;
+    }
+    if (
+      intent.type === "social_status" &&
+      SOCIAL_POST_STATUSES.includes(intent.value as SocialPostStatus)
+    ) {
+      setSocialStatusFilter(intent.value as SocialPostStatus);
+      setCurrentPage(1);
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -737,9 +772,25 @@ export default function MyTasksPage() {
     });
     return sorted;
   }, [filteredTaskItems, taskSortField, taskSortDirection]);
+  const filteredSocialTasks = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    return socialTasks.filter((task) => {
+      if (socialStatusFilter !== "all" && task.status !== socialStatusFilter) {
+        return false;
+      }
+      if (!normalizedSearch) {
+        return true;
+      }
+      const haystack = `${task.title} ${task.nextAction}`.toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
+  }, [searchQuery, socialStatusFilter, socialTasks]);
 
   const nextTasks = useMemo(() => sortedTaskItems.slice(0, 3), [sortedTaskItems]);
-  const nextSocialTasks = useMemo(() => socialTasks.slice(0, 5), [socialTasks]);
+  const nextSocialTasks = useMemo(
+    () => filteredSocialTasks.slice(0, 5),
+    [filteredSocialTasks]
+  );
 
   const pageCount = useMemo(
     () => getTablePageCount(sortedTaskItems.length, FULL_LIST_PAGE_SIZE),
@@ -803,6 +854,7 @@ export default function MyTasksPage() {
     setSearchQuery("");
     setKindFilter("all");
     setStatusFilter("all");
+    setSocialStatusFilter("all");
     setSiteFilter("all");
     setAssignmentFilter("all");
     setCurrentPage(1);
@@ -1026,6 +1078,15 @@ export default function MyTasksPage() {
               },
             }
           : null,
+        socialStatusFilter !== "all"
+          ? {
+              id: "social-status",
+              label: `Social Status: ${SOCIAL_POST_STATUS_LABELS[socialStatusFilter]}`,
+              onRemove: () => {
+                setSocialStatusFilter("all");
+              },
+            }
+          : null,
         siteFilter !== "all"
           ? {
               id: "site",
@@ -1036,7 +1097,7 @@ export default function MyTasksPage() {
             }
           : null,
       ].filter((pill) => pill !== null),
-    [assignmentFilter, kindFilter, searchQuery, siteFilter, statusFilter]
+    [assignmentFilter, kindFilter, searchQuery, siteFilter, socialStatusFilter, statusFilter]
   );
 
 
@@ -1261,6 +1322,22 @@ export default function MyTasksPage() {
                   <option value="in_progress">In Progress</option>
                   <option value="not_started">Not Started</option>
                   <option value="needs_revision">Needs Revision</option>
+                </select>
+                <select
+                  aria-label="Social Task Status"
+                  value={socialStatusFilter}
+                  onChange={(event) => {
+                    setSocialStatusFilter(event.target.value as "all" | SocialPostStatus);
+                    setCurrentPage(1);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Social Statuses</option>
+                  {SOCIAL_POST_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {SOCIAL_POST_STATUS_LABELS[status]}
+                    </option>
+                  ))}
                 </select>
                 <select
                   aria-label="Task Type"

@@ -222,6 +222,15 @@ export default function HomePage() {
       if (value) {
         setDashboardFilterIntent({ type: "publisher_status", value });
       }
+    } else if (bucket.id.startsWith("social-")) {
+      const statusMap: Record<string, string> = {
+        "social-awaiting-link": "awaiting_live_link",
+        "social-in-review": "in_review",
+      };
+      const value = statusMap[bucket.id];
+      if (value) {
+        setDashboardFilterIntent({ type: "social_status", value });
+      }
     }
   };
 

@@ -243,8 +243,15 @@ Next-action cues:
 Important:
 - social editors can collaborate concurrently on the same post
 - status controls only allow valid next-stage transitions (invalid jumps are blocked)
+- execution stages (`Ready to Publish`, `Awaiting Live Link`) lock brief fields as read-only
+- admins can use `Edit Brief` to reopen an execution-stage post back to `Creative Approved`
+- sending an execution-stage post back to `Changes Requested` requires a reason
 - at least one public live link (LinkedIn, Facebook, or Instagram) is required before final completion
 - if live link is missing, keep the post in `Awaiting Live Link`
+
+My Tasks integration:
+- social status filter is available directly in `My Tasks`
+- clicking social work buckets from workspace home pre-applies matching social task filters in `My Tasks`
 
 ## 10. Keyboard shortcuts and quick create
 Shortcuts are shown as clickable `Shortcuts` text in the UI.

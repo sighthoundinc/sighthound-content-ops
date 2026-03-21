@@ -86,6 +86,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Top-3 priority summary + expandable full list
 - `Overdue` / `Due Soon` / `Upcoming` indicators
 - Priority sorting by schedule urgency and status state
+- Social task queue with next-action labels and social status filtering
 
 ## Icon system standard
 - Emoji-based icons are banned from UI iconography.
@@ -122,9 +123,14 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Stage-based final CTA behavior:
   - Draft incomplete → `Save Draft`
   - Draft complete → `Submit for Review`
-  - Creative Approved + complete draft → `Mark Ready to Publish`
-  - Ready to Publish → `Publish Post` (moves to `Awaiting Live Link` when link is missing)
-  - Awaiting Live Link + link present → `Submit Link` (moves to `Published`)
+  - Creative Approved + complete draft → `Move to Ready to Publish`
+  - Ready to Publish → `Mark Awaiting Live Link`
+  - Awaiting Live Link → `Await Live Link`
+- Execution-stage authority:
+  - `ready_to_publish` and `awaiting_live_link` brief fields are read-only
+  - admin-only `Edit Brief` reopens status to `creative_approved`
+  - rollback from execution stages to `changes_requested` requires a reason
+  - `published` requires at least one valid live link
 
 ## Tech stack
 - Next.js (App Router) + TypeScript + Tailwind
@@ -167,6 +173,9 @@ npm run dev
 - `/api/admin/quick-view` — admin quick-view session switch
 - `/api/admin/users` — admin user operations
 - `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion
+- `/api/social-posts/[postId]/transition` — canonical social status transitions
+- `/api/social-posts/[postId]/reopen-brief` — admin execution-stage brief reopen
+- `/api/social-posts/reminders` — awaiting-live-link reminder sweep
 - `/api/users/profile` — current user profile operations
 
 ## Supabase migrations
@@ -192,7 +201,7 @@ Current set:
 - `20260313213000_expand_permission_matrix.sql`
 - `20260320195000_add_activity_history_delete_policies.sql`
 - `20260320195100_fix_activity_history_rls.sql`
-- `20260321123000_social_post_workflow_enforcement.sql`
+- `20260321133000_social_workflow_authority_and_event_normalization.sql`
 
 ## Slack edge function
 Path:
@@ -202,6 +211,8 @@ Secrets:
 - `SLACK_BOT_TOKEN` (preferred)
 - `SLACK_MARKETING_CHANNEL` (optional)
 - `SLACK_WEBHOOK_URL` (fallback)
+
+Event coverage includes blog workflow events and social workflow events (`social_submitted_for_review`, `social_changes_requested`, `social_creative_approved`, `social_ready_to_publish`, `social_awaiting_live_link`, `social_published`, `social_live_link_reminder`).
 
 ## Quality checks
 ```bash

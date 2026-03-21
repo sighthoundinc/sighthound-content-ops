@@ -55,6 +55,7 @@ import {
   SOCIAL_POST_TYPES,
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
+import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
 import { getUserRoles } from "@/lib/roles";
 import {
   SEGMENTED_CONTROL_CLASS,
@@ -82,6 +83,7 @@ import type {
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
+import { useNotifications } from "@/providers/notifications-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type SocialPostsView = "board" | "list" | "calendar";
@@ -355,6 +357,7 @@ function SocialPostsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { profile, session, user } = useAuth();
+  const { pushNotification } = useNotifications();
   const userRoles = useMemo(() => getUserRoles(profile), [profile]);
   const isAdmin = userRoles.includes("admin");
   const { showError, showSuccess } = useSystemFeedback();
@@ -874,10 +877,12 @@ function SocialPostsPageContent() {
 
   const transitionPostStatus = async ({
     postId,
+    title,
     currentStatus,
     toStatus,
   }: {
     postId: string;
+    title: string;
     currentStatus: SocialPostStatus;
     toStatus: SocialPostStatus;
   }) => {
@@ -927,6 +932,15 @@ function SocialPostsPageContent() {
       setError(payload.error ?? "Couldn't change post status.");
       return false;
     }
+    pushNotification(
+      socialPostStatusChangedNotification(
+        title,
+        currentStatus,
+        toStatus,
+        profile?.full_name ?? null,
+        postId
+      )
+    );
     return true;
   };
 
@@ -947,6 +961,7 @@ function SocialPostsPageContent() {
 
     const transitioned = await transitionPostStatus({
       postId: post.id,
+      title: post.title,
       currentStatus: post.status,
       toStatus: nextStatus,
     });
@@ -1048,6 +1063,7 @@ function SocialPostsPageContent() {
     if (statusChanged) {
       const transitioned = await transitionPostStatus({
         postId: activePost.id,
+        title: activePost.title,
         currentStatus: activePost.status,
         toStatus: panelForm.status,
       });
@@ -1102,6 +1118,15 @@ function SocialPostsPageContent() {
         entry.id === activePost.id
           ? { ...entry, status: "creative_approved" as SocialPostStatus }
           : entry
+      )
+    );
+    pushNotification(
+      socialPostStatusChangedNotification(
+        activePost.title,
+        activePost.status,
+        "creative_approved",
+        profile?.full_name ?? null,
+        activePost.id
       )
     );
     setPanelForm((previous) =>

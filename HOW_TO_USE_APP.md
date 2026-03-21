@@ -16,8 +16,8 @@ It does NOT:
 ## 1.5 Access and entry flow
 - Signed-out users are routed to `Login` (`/login`)
 - `Login` requires a `@sighthound.com` account and supports:
-  - `Continue with Google` (Google Workspace SSO with @sighthound.com email)
   - `Continue with Slack` (Sighthound Slack workspace)
+  - `Continue with Google` (Google Workspace SSO with @sighthound.com email)
   - email/password credentials (admin-managed accounts)
 - `Login` uses a decluttered premium layout:
   - Sighthound logo and brand context on the left
@@ -25,8 +25,28 @@ It does NOT:
 - After signing in, users are routed to the workspace home page (`/`)
 - First-time OAuth users (Slack or Google) are automatically provisioned with the `writer` role
 
+## 1.55 Connected Services
+Your OAuth sign-in methods are tracked globally. When you sign in via Slack or Google, the system remembers which providers you have connected.
+
+**Where to view**: Settings page shows Google and Slack connector status
+- Green = connected
+- Grey = not connected
+
+**Benefit**: If you signed in via Slack yesterday and sign in via Google today, both will show as "Connected" in your settings. This helps you understand which authentication methods are available to you.
+
 ## 1.6 Daily Standup Home Page
-The home page is your daily standup—a quick view of what needs your attention:
+The home page is your daily standup—a quick view of what needs your attention.
+
+**Warm welcome on login**:
+When you sign in (via email/password or OAuth), you'll see a friendly loading message while your dashboard prepares:
+- "Preparing your standup..."
+- "Gathering your work queue..."
+- "Loading your dashboard..."
+- "Setting up your workspace..."
+- "Syncing your tasks..."
+- "Getting you ready to go..."
+
+A random message is shown each session with "Welcome back." underneath. Your tasks and statuses appear immediately without delay.
 
 **Layout:**
 - Top-left: greeting with your name
@@ -56,6 +76,28 @@ In **Settings** → **My Profile**, update your personal settings in one place:
 - timezone (default: US Eastern)
 - week start day
 - how many days before drafts are flagged for attention
+
+## 1.8 Notification Preferences
+Control which notifications you receive:
+
+**Location**: Settings → Notification Preferences
+
+**Global toggle**:
+- Enable/Disable all notifications with one switch
+
+**Individual notification types** (can be toggled separately):
+- Task Assigned — when you're assigned a blog or social post
+- Stage Changed — when content moves through workflow stages
+- Submitted for Review — when someone submits content for your review
+- Published — when content is published
+- Awaiting Action — when content needs your attention
+- Mention — when someone mentions you in a comment
+
+**Slack delivery** (optional):
+- Enable Slack notifications to receive messages in your Slack workspace
+- Notifications are also sent as direct messages when relevant
+
+**Important**: Disabling a notification type affects both in-app and Slack notifications.
 
 ## 2. Navigation and layout standards
 The sidebar order is fixed and consistent:
@@ -251,6 +293,14 @@ Important:
 - at least one public live link (LinkedIn, Facebook, or Instagram) is required before final completion
 - if live link is missing, keep the post in `Awaiting Live Link`
 
+### Notifications for social posts
+When social post status changes, notifications are sent automatically:
+- **Status transitions** — notifications to relevant team members
+- **Assignment changes** — if editor or admin is reassigned (backend ready, UI pending)
+- **Slack integration** — posts to configured Slack channel and DMs relevant users
+
+You can control which social post notifications you receive in Settings → Notification Preferences.
+
 My Tasks integration:
 - social status filter is available directly in `My Tasks`
 - clicking social work buckets from workspace home pre-applies matching social task filters in `My Tasks`
@@ -293,15 +343,18 @@ Error types you may see:
 
 **How to filter**:
 1. **Activity Type**: Use checkboxes to select/unselect activity types
-   - Login
-   - Dashboard Visit
-   - Blog Writer Status Changed
-   - Blog Publisher Status Changed
-   - Blog Assignment Changed
-   - Social Post Status Changed
-   - Social Post Assignment Changed
-2. **User**: Use checkboxes to select/unselect specific users (all selected by default)
-3. **Apply**: Filters update the table immediately
+   - All Activity — everything combined
+   - Login Only — just sign-in events
+   - Dashboard Only — just dashboard visits
+   - Blog Activity — blog workflow events
+   - Social Post Activity — social post events
+2. **User**: Use checkboxes to select/unselect specific users (multi-select available)
+3. **Apply Filters**: Click Save to apply your filter selections
+
+**Filter behavior**:
+- Multiple activity types are combined with OR (shows any selected type)
+- Multiple users are combined with OR (shows any selected user)
+- Activity types AND users are combined with AND (must match both)
 
 **Table columns**:
 - Category (Login/Dashboard/Blog Activity/Social Post Activity)
@@ -311,16 +364,67 @@ Error types you may see:
 - Email (user's email)
 - Timestamp (when it happened, in your timezone)
 
-## 13. Permissions and sensitive actions
-Permissions are role-based and strictly enforced.
+**Content links**:
+- Blog activities link to the blog detail page
+- Social post activities link to the social post editor
+- Click any content title to view the full record
 
-Settings page organization:
-- `My Profile` — update first name, last name, and display name
-- `Workspace Defaults` — timezone, week start, and stale draft threshold
-- `Access & Oversight` — open the Permissions panel and run Quick View as a non-admin user
-- `Create User Account` + `Reassign User Work` — team admin actions
-- `User Directory` — role/status filters and per-user edit/delete controls
-- `Activity History Cleanup` + `Danger Zone: Wipe App Clean` — destructive admin maintenance tools
+## 12.5 Notification Bell (all users)
+The bell icon in the top-right corner shows your notifications and recent activity.
+
+**What you'll see**:
+- **Real-time notifications**: Task assignments, status changes, mentions
+- **Recent activity**: Latest workflow events across blogs and social posts
+- **Unread count**: Badge shows how many new notifications you have
+
+**Click behavior**:
+- Click the bell to open the notification drawer
+- Click any notification to navigate to the relevant content
+- Click "View History" to see full Activity History (admins only)
+- Click "Clear All" to dismiss visible notifications
+
+**Notification types**:
+- Task Assigned — you're now responsible for a blog or social post
+- Stage Changed — content moved to a new workflow stage
+- Submitted for Review — someone needs your review
+- Published — content went live
+- Awaiting Action — something needs your attention
+- Mention — someone mentioned you in a comment
+
+## 13. Settings page organization
+Settings is organized into clear sections:
+
+### My Profile
+- Update first name, last name, and display name
+- Set your personal timezone
+- Configure week start day (Monday or Sunday)
+- Set stale draft threshold (days before drafts are flagged)
+
+### Connected Services
+- View Google and Slack connection status
+- Shows which OAuth providers you've used to sign in
+- Helps you track available authentication methods
+
+### Notification Preferences
+- Enable/disable all notifications
+- Toggle individual notification types
+- Configure Slack delivery preferences
+
+### Workspace Defaults
+- System-wide defaults (admin-configurable)
+
+### Access & Oversight (admin-only)
+- Permissions panel entry
+- Quick View — switch into non-admin user context for troubleshooting
+
+### Team Administration (admin-only)
+- Create User Account
+- Reassign User Work
+- User Directory with role/status filters
+
+### System Maintenance (admin-only)
+- Activity History Cleanup — remove test data or old records
+- Danger Zone: Wipe App Clean — factory reset (destructive)
 
 Critical rule:
 - only an admin can run `Wipe App Clean`
@@ -348,3 +452,35 @@ Admins can manually reset passwords for any user (admin or non-admin) via the Us
 6. Confirm the change in the modal
 
 The user can then log in with their new password. This is intended for testing and administrative purposes only.
+
+## 16. Keyboard shortcuts
+Shortcuts are shown as clickable `Shortcut` text in the UI.
+
+When clicked, `Shortcut` opens a modal with available key combinations.
+
+**Navigation shortcuts**:
+- `⌘K` (Mac) or `Ctrl+K` (Windows) — Open command palette
+- `Esc` — Close modals and dropdowns
+
+**Quick Create shortcuts** (when Quick Create is open):
+- `↑` / `↓` — Move through options
+- `Enter` — Select current option
+- `Esc` — Close without selecting
+
+**Table shortcuts**:
+- Click column headers to sort (click again to reverse)
+- `↕` shows unsorted, `↑` shows ascending, `↓` shows descending
+
+## 17. Feedback and copy actions
+**Visual feedback**:
+- Success actions show confirmation in bottom-left corner
+- Loading states show progress indicators
+- Errors show actionable messages (what went wrong + how to fix)
+
+**Copy to clipboard**:
+- Copy actions in Quick Actions show visual confirmation
+- Look for the "Copied" indicator near the sidebar
+
+**Table updates**:
+- "Updating results..." appears below pagination during sorts/filters
+- This prevents table jumping and keeps layout stable

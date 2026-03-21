@@ -260,19 +260,151 @@ Return flow:
 - quick-view snapshot is stored in browser local storage
 - “Return to Admin” restores original admin session
 - sign-out clears quick-view snapshot state
-## 11) Slack operations
-Function:
-- `supabase/functions/slack-notify/index.ts`
+## 11) Slack operations and notification system
 
-Secrets:
-- `SLACK_BOT_TOKEN` (preferred)
-- `SLACK_MARKETING_CHANNEL` (optional)
-- `SLACK_WEBHOOK_URL` (fallback)
+### Slack integration configuration
 
-Deploy/update:
+**Environment variables**:
+- `SLACK_BOT_TOKEN` (preferred method) — Bot user OAuth token
+- `SLACK_MARKETING_CHANNEL` (optional) — Default channel for notifications (default: `#marketing`)
+- `SLACK_WEBHOOK_URL` (fallback method) — Incoming Webhook URL
+
+**How it works**:
+1. If `SLACK_BOT_TOKEN` is configured:
+   - Posts to configured channel (`SLACK_MARKETING_CHANNEL` or `#marketing`)
+   - Sends DMs to users if `targetEmail` matches Slack user email
+   - Uses `chat.postMessage` API
+2. If only `SLACK_WEBHOOK_URL` is configured:
+   - Posts only to webhook's designated channel
+   - No DM capability
+
+**Deploy/update**:
 ```bash
 supabase functions deploy slack-notify --project-ref <PROJECT_REF>
 ```
+
+**Debugging**:
+Check Supabase Edge Function logs for:
+- `Invalid payload` — malformed request
+- `No Slack credentials configured` — missing env vars
+- Slack API errors (channel not found, invalid_auth, users.lookupByEmail failure)
+
+### Unified events system
+
+**Architecture**:
+Single `emitEvent()` call handles both notifications and activity history recording.
+
+**Components**:
+- `src/lib/unified-events.ts` — Event type definitions and mappings
+- `src/lib/emit-event.ts` — Emission implementation
+- `src/lib/notifications.ts` — Notification delivery (in-app + Slack)
+- `src/app/api/events/record-activity` — Activity history persistence
+
+**Event flow**:
+```
+emitEvent() call
+├─ Validates event structure
+├─ Records to activity history table
+├─ Maps to notification type
+├─ Checks user preferences
+└─ Emits notification (in-app + Slack)
+```
+
+**Supported event types**:
+- `blog_writer_status_changed` — Writer stage transitions
+- `blog_publisher_status_changed` — Publisher stage transitions
+- `blog_assignment_changed` — Writer/publisher reassignments
+- `social_post_status_changed` — Social post status transitions
+- `social_post_assignment_changed` — Editor/admin reassignments
+
+**Slack event types**:
+- `writer_assigned`, `writer_completed`, `ready_to_publish`, `published`
+- `social_submitted_for_review`, `social_changes_requested`
+- `social_creative_approved`, `social_ready_to_publish`
+- `social_awaiting_live_link`, `social_published`, `social_live_link_reminder`
+
+### Notification preferences enforcement
+
+**System design**:
+- **Single source of truth**: `shouldSendNotification()` in `src/lib/notification-helpers.ts`
+- **Enforcement point**: `pushNotification()` checks preferences before emitting
+- **Automatic coverage**: All existing and future notifications are filtered
+- **Session caching**: Preferences cached per request to avoid N+1 queries
+
+**User preferences** (Settings → Notification Preferences):
+- `notifications_enabled` — Master switch
+- `task_assigned` — Assignment notifications
+- `stage_changed` — Status transition notifications
+- `submitted_for_review` — Review request notifications
+- `published` — Publication notifications
+- `awaiting_action` — Action needed notifications
+- `mention` — Comment mention notifications
+
+**API endpoints**:
+- `GET /api/users/notification-preferences` — Fetch current preferences
+- `PATCH /api/users/notification-preferences` — Update preferences
+
+**Database**:
+- Table: `notification_preferences`
+- Columns: user_id, notifications_enabled, 7 type toggles, timestamps
+- RLS: Users see/edit only own preferences
+- Auto-provisioning: Trigger creates defaults for new users
+
+### Social post event emission
+
+**Status transition events**:
+```typescript
+// When social post status changes:
+await emitEvent({
+  type: 'social_post_status_changed',
+  contentType: 'social_post',
+  contentId: postId,
+  oldValue: previousStatus,
+  newValue: newStatus,
+  fieldName: 'status',
+  actor: userId,
+  actorName: userDisplayName,
+  contentTitle: postTitle,
+  metadata: { reason: rollbackReason },
+  timestamp: new Date(),
+});
+```
+
+**Assignment events** (when UI is built):
+```typescript
+// When editor/admin is reassigned:
+await emitEvent({
+  type: 'social_post_assignment_changed',
+  contentType: 'social_post',
+  contentId: postId,
+  oldValue: { editor_user_id: oldEditor, admin_owner_id: oldAdmin },
+  newValue: { editor_user_id: newEditor, admin_owner_id: newAdmin },
+  fieldName: 'assignment',
+  actor: userId,
+  actorName: userDisplayName,
+  contentTitle: postTitle,
+  timestamp: new Date(),
+});
+```
+
+**Backend infrastructure** (already implemented):
+- Database fields: `editor_user_id`, `admin_owner_id`
+- Audit trigger: `audit_social_post_changes()` logs assignment changes
+- History table: `social_post_activity_history`
+- RLS policies: Admin-only access for assignment changes
+
+**Current state**: 70% complete
+- ✅ Database schema
+- ✅ Event types and mappings
+- ✅ Activity history logging
+- ✅ Notification system integration
+- ❌ UI for reassigning editor/admin (pending product decision)
+- ❌ API endpoint for assignment updates
+
+**Documentation**:
+- `docs/UNIFIED_EVENTS_MIGRATION.md` — Migration guide
+- `docs/SOCIAL_POST_TESTING_GUIDE.md` — Testing procedures
+- `docs/SOCIAL_POST_ASSIGNMENT_VISUAL_GUIDE.md` — UI implementation guide
 
 ## 12) Blog import name resolution (Step 1.75)
 ### Overview
@@ -501,39 +633,77 @@ Settings UI grouping (for operator orientation):
   2. if restore fails, sign out/in as admin
   3. clear stale local snapshot key `sighthound.quick_view_admin_session_v1` if needed
 
-## 19) Slack integration behavior and debugging
+## 19) Slack integration behavior and debugging (detailed)
+
 ### Current behavior
-- Caller: `src/lib/notifications.ts` invokes Supabase function `slack-notify`.
-- Events currently sent:
-  - `writer_assigned`
-  - `writer_completed`
-  - `ready_to_publish`
-  - `published`
-  - `social_submitted_for_review`
-  - `social_changes_requested`
-  - `social_creative_approved`
-  - `social_ready_to_publish`
-  - `social_awaiting_live_link`
-  - `social_published`
-  - `social_live_link_reminder`
-- Reminder sweep behavior:
-  - Triggered via `POST /api/social-posts/reminders`
-  - Admin-only route
-  - 24-hour dedupe per post via `social_posts.last_live_link_reminder_at`
-- Delivery order:
-  1. if `SLACK_BOT_TOKEN` exists → post to channel (`SLACK_MARKETING_CHANNEL` or `#marketing`) and optionally DM `targetEmail`
-  2. else if `SLACK_WEBHOOK_URL` exists → webhook post
-  3. else function returns configuration error
-- Notification send is best-effort; app flow continues even if Slack send fails.
+- Caller: `src/lib/notifications.ts` invokes Supabase function `slack-notify`
+- Events currently sent (with Slack event type mapping):
+  | Event | Slack Event Type | Description |
+  |-------|-----------------|-------------|
+  | `writer_assigned` | `writer_assigned` | Writer assigned to blog |
+  | `writer_completed` | `writer_completed` | Writer finished draft |
+  | `ready_to_publish` | `ready_to_publish` | Blog ready for publishing |
+  | `published` | `published` | Blog went live |
+  | `social_submitted_for_review` | `social_submitted_for_review` | Social post submitted |
+  | `social_changes_requested` | `social_changes_requested` | Changes requested on social post |
+  | `social_creative_approved` | `social_creative_approved` | Social creative approved |
+  | `social_ready_to_publish` | `social_ready_to_publish` | Social post ready to publish |
+  | `social_awaiting_live_link` | `social_awaiting_live_link` | Waiting for live link |
+  | `social_published` | `social_published` | Social post published |
+  | `social_live_link_reminder` | `social_live_link_reminder` | Reminder to submit live link |
+
+### Channel and DM configuration
+
+**Channel notifications**:
+- Default channel: `#marketing`
+- Configurable via `SLACK_MARKETING_CHANNEL` env var
+- Message format: `*Event Label* • Post Title (site)`
+- Includes: Actor name, deep link to app, timestamp
+
+**Direct message notifications**:
+- Sent to `targetEmail` if provided in notification payload
+- Requires matching email in Slack workspace
+- Uses `users.lookupByEmail` to find Slack user ID
+- If lookup fails, silently skips DM (logs warning)
+
+### Reminder sweep behavior
+- **Trigger**: `POST /api/social-posts/reminders` (admin-only)
+- **Criteria**: Posts in `awaiting_live_link` status
+- **Dedupe**: 24-hour cooldown per post via `last_live_link_reminder_at`
+- **Notifications**: Sends `social_live_link_reminder` event
+
+### Delivery order and fallbacks
+1. **Bot Token method** (preferred):
+   - Posts to channel (`SLACK_MARKETING_CHANNEL` or `#marketing`)
+   - Attempts DM to `targetEmail` if configured
+   - Uses `chat.postMessage` API
+2. **Webhook method** (fallback):
+   - Posts only to webhook URL's configured channel
+   - No DM capability
+3. **No credentials**:
+   - Returns configuration error
+   - Does NOT break in-app notifications
+
+### Failure handling
+- Slack failures are **non-blocking**
+- In-app notifications succeed even if Slack fails
+- Errors logged to Supabase Edge Function logs
+- App flow continues normally
+
+### Notification preference enforcement
+All Slack notifications respect user preferences:
+- Global `notifications_enabled` toggle
+- Individual event type toggles
+- If disabled, Slack notification is skipped silently
 
 ### Deployment and debug checklist
-1. confirm function deployment:
+1. Confirm function deployment:
    - `supabase functions deploy slack-notify --project-ref <PROJECT_REF>`
-2. verify secrets exist and are valid:
+2. Verify secrets exist and are valid:
    - `SLACK_BOT_TOKEN` and optional `SLACK_MARKETING_CHANNEL`
-   - or fallback `SLACK_WEBHOOK_URL`
-3. inspect Supabase Edge Function logs for:
+   - Or fallback `SLACK_WEBHOOK_URL`
+3. Inspect Supabase Edge Function logs for:
    - `Invalid payload`
    - `No Slack credentials configured`
-   - Slack API errors (for example channel not found / invalid_auth / users.lookupByEmail failure)
-4. if channel posts succeed but DMs fail, verify `targetEmail` matches an actual Slack user email.
+   - Slack API errors (channel not found, invalid_auth, users.lookupByEmail failure)
+4. If channel posts succeed but DMs fail, verify `targetEmail` matches an actual Slack user email.

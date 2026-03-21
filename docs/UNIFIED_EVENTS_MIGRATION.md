@@ -193,7 +193,131 @@ const handleWriterSave = async (newStatus: string) => {
 };
 ```
 
-#### Example 2: Blog Assignment Change
+#### Example 2: Social Post Status Change
+
+**Before:**
+
+```typescript
+const handleSocialPostTransition = async (newStatus: SocialPostStatus) => {
+  const { data } = await supabase
+    .from('social_posts')
+    .update({ status: newStatus })
+    .eq('id', postId)
+    .select()
+    .single();
+
+  const { pushNotification } = useNotifications();
+  pushNotification({
+    type: 'stage_changed',
+    title: 'Social Post Updated',
+    message: `"${data.title}" status changed to ${newStatus}`,
+    contentType: 'social_post',
+    contentId: postId,
+    contextLink: `/social-posts/${postId}`,
+  });
+};
+```
+
+**After:**
+
+```typescript
+import { emitEvent } from '@/lib/emit-event';
+
+const handleSocialPostTransition = async (newStatus: SocialPostStatus) => {
+  const { data } = await supabase
+    .from('social_posts')
+    .update({ status: newStatus })
+    .eq('id', postId)
+    .select()
+    .single();
+
+  // Unified event emission (notifications + activity history)
+  await emitEvent({
+    type: 'social_post_status_changed',
+    contentType: 'social_post',
+    contentId: postId,
+    oldValue: previousStatus,
+    newValue: newStatus,
+    fieldName: 'status',
+    actor: userId,
+    actorName: userDisplayName,
+    contentTitle: data.title,
+    metadata: {
+      reason: rollbackReason || undefined, // If transitioning to changes_requested
+    },
+    timestamp: new Date(),
+  });
+
+  const { pushAlert } = useAlerts();
+  pushAlert({ type: 'success', message: 'Post status updated' });
+};
+```
+
+#### Example 3: Social Post Assignment Change
+
+**Note:** Assignment changes for social posts work similarly to blogs. When `editor_user_id` or `admin_owner_id` fields change, emit `social_post_assignment_changed` event.
+
+**Before:**
+
+```typescript
+const handleAssignmentChange = async (newEditorId: string) => {
+  const { data } = await supabase
+    .from('social_posts')
+    .update({ editor_user_id: newEditorId })
+    .eq('id', postId)
+    .select()
+    .single();
+
+  const { pushNotification } = useNotifications();
+  pushNotification({
+    type: 'task_assigned',
+    title: 'New Assignment',
+    message: `"${data.title}" assigned to you`,
+    contentType: 'social_post',
+    contentId: postId,
+    contextLink: `/social-posts/${postId}`,
+  });
+};
+```
+
+**After:**
+
+```typescript
+import { emitEvent } from '@/lib/emit-event';
+
+const handleAssignmentChange = async (newEditorId: string) => {
+  const { data } = await supabase
+    .from('social_posts')
+    .update({ editor_user_id: newEditorId })
+    .eq('id', postId)
+    .select()
+    .single();
+
+  // Unified event emission
+  await emitEvent({
+    type: 'social_post_assignment_changed',
+    contentType: 'social_post',
+    contentId: postId,
+    oldValue: previousEditorId,
+    newValue: newEditorId,
+    fieldName: 'assignment',
+    actor: currentUserId,
+    actorName: currentUserName,
+    contentTitle: data.title,
+    metadata: {
+      role: 'editor',
+      oldAssignee: previousEditorName,
+      newAssignee: newEditorName,
+    },
+    timestamp: new Date(),
+  });
+
+  const { pushAlert } = useAlerts();
+  pushAlert({ type: 'success', message: 'Assignment updated' });
+};
+```
+
+#### Example 4: Blog Assignment Change
 
 **Before:**
 
@@ -253,6 +377,15 @@ const handleDetailsSave = async (newWriterId: string) => {
   pushAlert({ type: 'success', message: 'Assignment updated' });
 };
 ```
+
+---
+
+### Summary of Examples
+
+- **Example 1**: Blog writer status changes (core blog workflow)
+- **Example 2**: Social post status transitions (similar to blogs)
+- **Example 3**: Social post assignment changes (editor/admin reassignment)
+- **Example 4**: Blog assignment changes (writer/publisher reassignment)
 
 ### Phase 5: React Component Context
 

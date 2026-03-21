@@ -29,6 +29,7 @@ import {
   Search,
   Settings,
   Share2,
+  Slack,
   Upload,
   X,
 } from "lucide-react";
@@ -41,6 +42,7 @@ const APP_ICON_MAP = {
   blog: BookOpen,
   social: Share2,
   google: Chrome,
+  slack: Slack,
   task: CheckSquare,
   idea: Lightbulb,
   settings: Settings,

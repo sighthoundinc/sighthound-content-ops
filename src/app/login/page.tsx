@@ -74,19 +74,28 @@ export default function LoginPage() {
     }
   };
 
+  const handleSlackSignIn = async () => {
+    const supabase = getSupabaseBrowserClient();
+    setError(null);
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+      window.location.origin;
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "slack_oidc",
+      options: {
+        redirectTo: `${appUrl}/`,
+      },
+    });
+    if (oauthError) {
+      setError(oauthError.message);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white px-4 py-10 sm:px-6 lg:py-16">
       <div className="mx-auto grid w-full max-w-6xl items-stretch gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-sm backdrop-blur-sm sm:p-10">
-          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
-            <AppIcon
-              name="success"
-              boxClassName="h-4 w-4"
-              size={13}
-              className="text-emerald-600"
-            />
-            Secure Workspace Access
-          </span>
+          <img src="/sighthound-badge-mark.svg" alt="Sighthound" className="mb-6 h-10 w-10" />
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
             Sighthound Content Ops
           </h1>
@@ -112,7 +121,7 @@ export default function LoginPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <h2 className="text-xl font-semibold tracking-tight text-slate-900">Sign in</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Google Workspace (`@sighthound.com`) or admin-managed credentials.
+            Use your @sighthound.com account to get started.
           </p>
 
           <button
@@ -124,6 +133,17 @@ export default function LoginPage() {
           >
             <AppIcon name="google" boxClassName="h-4 w-4" size={14} className="text-slate-700" />
             Continue with Google
+          </button>
+
+          <button
+            type="button"
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+            onClick={() => {
+              void handleSlackSignIn();
+            }}
+          >
+            <AppIcon name="slack" boxClassName="h-4 w-4" size={14} className="text-slate-700" />
+            Continue with Slack
           </button>
 
           <div className="my-5 flex items-center gap-3">

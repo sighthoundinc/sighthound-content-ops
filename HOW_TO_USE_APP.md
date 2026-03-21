@@ -15,13 +15,15 @@ It does NOT:
 
 ## 1.5 Access and entry flow
 - Signed-out users are routed to `Login` (`/login`)
-- `Login` supports:
-  - `Continue with Google` (Google Workspace SSO)
+- `Login` requires a `@sighthound.com` account and supports:
+  - `Continue with Google` (Google Workspace SSO with @sighthound.com email)
+  - `Continue with Slack` (Sighthound Slack workspace)
   - email/password credentials (admin-managed accounts)
 - `Login` uses a decluttered premium layout:
-  - brand context on the left
+  - Sighthound logo and brand context on the left
   - focused sign-in card on the right
 - After signing in, users are routed to the workspace home page (`/`)
+- First-time OAuth users (Slack or Google) are automatically provisioned with the `writer` role
 
 ## 1.6 Daily Standup Home Page
 The home page is your daily standup—a quick view of what needs your attention:
@@ -240,6 +242,7 @@ Next-action cues:
 
 Important:
 - social editors can collaborate concurrently on the same post
+- status controls only allow valid next-stage transitions (invalid jumps are blocked)
 - at least one public live link (LinkedIn, Facebook, or Instagram) is required before final completion
 - if live link is missing, keep the post in `Awaiting Live Link`
 

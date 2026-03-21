@@ -8,7 +8,10 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Tasks and Calendar execution/scheduling workflows
 - Ideas + Social Posts modules
 - Workspace home (`/`) with premium quick-action navigation
-- Dedicated premium login (`/login`) with Google sign-in option that routes into workspace home (`/`)
+- Dedicated premium login (`/login`) with OAuth support (Google + Slack OIDC) and email/password fallback
+  - Google login requires @sighthound.com email
+  - Slack login requires Sighthound Slack workspace
+  - First-time OAuth users auto-provisioned with `writer` role
 - Settings + Permissions admin control plane
 - Slack workflow notifications via Supabase Edge Function
 
@@ -118,8 +121,10 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   4. Review & Publish (checklist validation, status transitions, stage-based final CTA)
 - Stage-based final CTA behavior:
   - Draft incomplete → `Save Draft`
-  - Draft complete → `Move to Review`
-  - In Review complete → `Mark Published`
+  - Draft complete → `Submit for Review`
+  - Creative Approved + complete draft → `Mark Ready to Publish`
+  - Ready to Publish → `Publish Post` (moves to `Awaiting Live Link` when link is missing)
+  - Awaiting Live Link + link present → `Submit Link` (moves to `Published`)
 
 ## Tech stack
 - Next.js (App Router) + TypeScript + Tailwind
@@ -187,6 +192,7 @@ Current set:
 - `20260313213000_expand_permission_matrix.sql`
 - `20260320195000_add_activity_history_delete_policies.sql`
 - `20260320195100_fix_activity_history_rls.sql`
+- `20260321123000_social_post_workflow_enforcement.sql`
 
 ## Slack edge function
 Path:

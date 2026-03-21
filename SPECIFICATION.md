@@ -107,11 +107,17 @@ Key behavior:
 Primary authentication entry for signed-out users.
 
 Key behavior:
-- supports Google OAuth (`Continue with Google`) and email/password sign-in
-- uses a premium split layout (brand context + focused authentication card)
-- unauthenticated requests to protected routes are redirected here by middleware
-- successful sign-in routes users to workspace home (`/`)
-- app header brand click returns users to workspace home (`/`)
+- **OAuth providers** (OIDC):
+  - `Continue with Google` (Google Workspace with @sighthound.com email required)
+  - `Continue with Slack` (Sighthound Slack workspace required)
+- **Fallback**: email/password sign-in (admin-managed accounts)
+- **Access restriction**: Login copy clearly states "Use your @sighthound.com account to get started"
+- **User provisioning**: First-time OAuth users are auto-created in profiles table with default role `writer`
+- **Layout**: Premium split layout with Sighthound logo on left, focused authentication card on right
+- **Redirect behavior**:
+  - unauthenticated requests to protected routes → /login (via middleware)
+  - successful sign-in → workspace home (`/`)
+  - app header brand click → workspace home (`/`)
 ### Dashboard (`/dashboard`)
 Primary operations page.
 
@@ -185,6 +191,16 @@ Key behavior:
 
 ### Social Posts (`/social-posts`)
 - social workflow operations connected to content planning
+- canonical social status model:
+  - `draft`
+  - `in_review`
+  - `changes_requested`
+  - `creative_approved`
+  - `ready_to_publish`
+  - `awaiting_live_link`
+  - `published`
+- board drag/drop and side-panel status edits are restricted to valid stage transitions
+- moving a social post to `published` requires at least one saved live link (`social_post_links`)
 
 ### Social Post Editor (`/social-posts/[id]`)
 - guided dedicated editor with 4-step workflow:
@@ -194,8 +210,10 @@ Key behavior:
   4. Review & Publish (checklist validation, status transition controls, stage-based final action)
 - autosave plus explicit stage action in Step 4:
   - draft incomplete → `Save Draft`
-  - draft complete → `Move to Review`
-  - in review complete → `Mark Published`
+  - draft complete → `Submit for Review`
+  - creative approved + required fields complete → `Mark Ready to Publish`
+  - ready to publish → `Publish Post` (routes to `awaiting_live_link` when no link exists)
+  - awaiting live link + link present → `Submit Link` (moves to `published`)
 
 ### Settings (`/settings`)
 - `My Profile` section for all personal preferences:
@@ -430,6 +448,7 @@ Slack:
 The project is migration-driven (`supabase/migrations`) with compatibility layers for:
 - legacy/expanded role model transitions
 - status trigger and enum transition safety
+- social post canonical workflow enforcement (`20260321123000_social_post_workflow_enforcement.sql`)
 - comments actor compatibility (`user_id` / `created_by`)
 - import collision prevention via deterministic hash
 - permission matrix introduction + expansion migrations

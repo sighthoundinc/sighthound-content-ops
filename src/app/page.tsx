@@ -23,7 +23,7 @@ interface WorkBucket {
 }
 
 export default function HomePage() {
-  const { session, profile } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,13 +40,17 @@ export default function HomePage() {
   const shouldShowMultiRoleNote = summary && summary.userRoles.length > 1;
 
   useEffect(() => {
-    if (!session?.access_token) {
-      setIsLoading(false);
+    // Wait for auth to fully load before fetching summary
+    // This ensures we have a valid session and avoid race conditions on OAuth redirect
+    if (authLoading || !session?.access_token) {
+      if (!authLoading && !session) {
+        setIsLoading(false);
+      }
       return;
     }
+
     const fetchSummary = async () => {
       try {
-
         const response = await fetch("/api/dashboard/summary", {
           headers: {
             authorization: `Bearer ${session.access_token}`,
@@ -67,7 +71,7 @@ export default function HomePage() {
     };
 
     void fetchSummary();
-  }, [session?.access_token]);
+  }, [session?.access_token, authLoading]);
 
   const buildWorkBuckets = (data: DashboardSummary): WorkBucket[] => {
     const buckets: WorkBucket[] = [];

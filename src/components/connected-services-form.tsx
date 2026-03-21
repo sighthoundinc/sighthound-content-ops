@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon } from "@/lib/icons";
 
 interface ConnectedServicesState {
@@ -40,52 +39,45 @@ export function ConnectedServicesForm() {
   const [services, setServices] = useState<ConnectedServicesState | null>(null);
   const [disconnectingService, setDisconnectingService] = useState<string | null>(null);
 
-  // Fetch integration status on mount
-  useEffect(() => {
-    const fetchServices = async () => {
-      if (!user?.id) return;
+  // Helper function to fetch services
+  const fetchServices = useCallback(async (token: string | undefined) => {
+    if (!user?.id || !token) return;
 
-      try {
-        setIsLoading(true);
-        const supabase = getSupabaseBrowserClient();
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData?.session?.access_token;
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/users/integrations", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-        if (!accessToken) {
-          throw new Error("No access token available");
-        }
-
-        const response = await fetch("/api/users/integrations", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch integrations: ${response.statusText}`);
-        }
-
-        const data = (await response.json()) as ConnectedServicesState;
-        setServices(data);
-      } catch (error) {
-        console.error("Error fetching connected services:", error);
-        showError("Failed to load connected services. Please refresh.");
-        // Set defaults on error
-        setServices({
-          google_connected: false,
-          google_connected_at: null,
-          slack_connected: false,
-          slack_connected_at: null,
-        });
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch integrations: ${response.statusText}`);
       }
-    };
 
-    fetchServices();
+      const data = (await response.json()) as ConnectedServicesState;
+      setServices(data);
+    } catch (error) {
+      console.error("Error fetching connected services:", error);
+      showError("Failed to load connected services. Please refresh.");
+      // Set defaults on error
+      setServices({
+        google_connected: false,
+        google_connected_at: null,
+        slack_connected: false,
+        slack_connected_at: null,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [user?.id, showError]);
+
+  // Fetch integration status on mount and when session changes
+  useEffect(() => {
+    void fetchServices(session?.access_token);
+  }, [user?.id, session?.access_token, fetchServices]);
 
   const handleDisconnect = async (serviceKey: string) => {
     if (!user?.id || !services || !session?.access_token) return;

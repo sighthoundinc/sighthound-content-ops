@@ -40,7 +40,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user's integration status
+    // Derive provider links from Supabase auth identities (authoritative for OAuth links)
+    const identities = user.identities ?? [];
+    const hasGoogleIdentity = identities.some((identity) => identity.provider === "google");
+    const hasSlackIdentity = identities.some((identity) => identity.provider === "slack_oidc");
+
+    // Get user's persisted integration status
     const { data: integrations, error } = await supabase
       .from("user_integrations")
       .select("google_connected, google_connected_at, slack_connected, slack_connected_at")
@@ -51,17 +56,57 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    // If no integrations row exists, return defaults (all disconnected)
+    // If no integrations row exists, initialize from identities
     if (!integrations) {
-      return NextResponse.json({
-        google_connected: false,
-        google_connected_at: null,
-        slack_connected: false,
-        slack_connected_at: null,
-      });
+      const initialized = {
+        google_connected: hasGoogleIdentity,
+        google_connected_at: hasGoogleIdentity ? new Date().toISOString() : null,
+        slack_connected: hasSlackIdentity,
+        slack_connected_at: hasSlackIdentity ? new Date().toISOString() : null,
+      };
+
+      // Silently attempt to initialize; if it fails, we return the inferred state anyway
+      void supabase
+        .from("user_integrations")
+        .insert({
+          user_id: user.id,
+          ...initialized,
+        })
+
+      return NextResponse.json(initialized);
     }
 
-    return NextResponse.json(integrations);
+    // Merge persisted flags with identities so OAuth-linked providers always appear connected
+    const merged: UserIntegrations = {
+      google_connected: Boolean(integrations.google_connected || hasGoogleIdentity),
+      google_connected_at:
+        integrations.google_connected_at ??
+        (hasGoogleIdentity ? new Date().toISOString() : null),
+      slack_connected: Boolean(integrations.slack_connected || hasSlackIdentity),
+      slack_connected_at:
+        integrations.slack_connected_at ??
+        (hasSlackIdentity ? new Date().toISOString() : null),
+    };
+
+    // Self-heal stored flags if identities indicate connected providers
+    if (
+      merged.google_connected !== integrations.google_connected ||
+      merged.slack_connected !== integrations.slack_connected
+    ) {
+      // Silently attempt self-heal; if it fails, we still return the merged state
+      void supabase
+        .from("user_integrations")
+        .update({
+          google_connected: merged.google_connected,
+          google_connected_at: merged.google_connected_at,
+          slack_connected: merged.slack_connected,
+          slack_connected_at: merged.slack_connected_at,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id)
+    }
+
+    return NextResponse.json(merged);
   } catch (error) {
     console.error("Error fetching integrations:", error);
     return NextResponse.json(

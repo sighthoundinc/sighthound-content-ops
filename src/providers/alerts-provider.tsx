@@ -59,12 +59,15 @@ interface AlertsContextValue {
 const AlertsContext = createContext<AlertsContextValue | null>(null);
 
 const ALERT_DEFAULT_DURATIONS: Record<AlertType, number | null> = {
-  saving: null,
+  saving: 5000, // Max 5 seconds to prevent indefinite display
   success: 3600,
   warning: 4200,
   error: 5000,
   info: 3600,
 };
+
+// Global maximum duration cap: no toast can stay longer than 5 seconds
+const ALERT_MAX_DURATION_MS = 5000;
 
 const ALERT_EXIT_MS = 250;
 const ALERT_LIMIT = 3;
@@ -295,6 +298,14 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
       const isPersistent =
         options?.persistent ?? (type === "error" && isKeywordError(message));
 
+      // Enforce global max duration: no toast stays longer than 5 seconds
+      const finalDuration =
+        options?.durationMs ?? ALERT_DEFAULT_DURATIONS[type];
+      const cappedDuration =
+        finalDuration === null
+          ? ALERT_MAX_DURATION_MS
+          : Math.min(finalDuration, ALERT_MAX_DURATION_MS);
+
       let returnId = "";
 
       setAlerts((previous) => {
@@ -313,8 +324,7 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
                   ...alert,
                   dedupCount: alert.dedupCount + 1,
                   lastFiredAt: now,
-                  durationMs:
-                    options?.durationMs ?? ALERT_DEFAULT_DURATIONS[type],
+                  durationMs: cappedDuration,
                 }
               : alert
           );
@@ -326,7 +336,7 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
           id,
           type,
           message,
-          durationMs: options?.durationMs ?? ALERT_DEFAULT_DURATIONS[type],
+          durationMs: cappedDuration,
           actionLabel: options?.actionLabel ?? null,
           onAction: options?.onAction ?? null,
           closing: false,
@@ -415,14 +425,20 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
             `updateAlert called with non-existent ID: ${id}. Check progress → result chaining pattern.`
           );
         }
+        // Enforce global max duration cap
+        const finalDuration =
+          payload.durationMs ?? ALERT_DEFAULT_DURATIONS[payload.type];
+        const cappedDuration =
+          finalDuration === null
+            ? ALERT_MAX_DURATION_MS
+            : Math.min(finalDuration, ALERT_MAX_DURATION_MS);
         return previous.map((alert) =>
           alert.id === id
             ? {
                 ...alert,
                 type: payload.type,
                 message: payload.message,
-                durationMs:
-                  payload.durationMs ?? ALERT_DEFAULT_DURATIONS[payload.type],
+                durationMs: cappedDuration,
                 actionLabel: payload.actionLabel ?? null,
                 onAction: payload.onAction ?? null,
                 closing: false,

@@ -59,6 +59,8 @@ export interface UserNotificationPreferences {
   notify_on_submitted_for_review: boolean;
   notify_on_published: boolean;
   notify_on_assignment_changed: boolean;
+  slack_delivery_dm?: boolean;
+  slack_delivery_channel?: boolean;
 }
 
 /**

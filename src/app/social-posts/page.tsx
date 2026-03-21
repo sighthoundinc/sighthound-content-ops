@@ -369,7 +369,7 @@ function SocialPostsPageContent() {
   const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<SocialPostsView>("board");
+  const [view, setView] = useState<SocialPostsView>("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<SocialPostStatus | "all">("all");
   const [activePostId, setActivePostId] = useState<string | null>(null);
@@ -378,6 +378,10 @@ function SocialPostsPageContent() {
   const [listCurrentPage, setListCurrentPage] = useState(1);
   const [listSortField, setListSortField] = useState<string>("updated");
   const [listSortDirection, setListSortDirection] = useState<"asc" | "desc">("desc");
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
+    new Set(["product", "type", "status", "created", "scheduled", "published", "updated"])
+  );
+  const [isEditColumnsOpen, setIsEditColumnsOpen] = useState(false);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [hasAppliedCreateQuery, setHasAppliedCreateQuery] = useState(false);
@@ -997,6 +1001,14 @@ function SocialPostsPageContent() {
     setPanelError(null);
     setError(null);
 
+    const canvaUrlTrimmed = panelForm.canva_url.trim();
+    const canvaUrl = canvaUrlTrimmed.length > 0 ? canvaUrlTrimmed : null;
+    if (canvaUrl && !/^https?:\/\//i.test(canvaUrl)) {
+      setPanelError("Canva URL must start with http:// or https://");
+      setIsPanelSaving(false);
+      return;
+    }
+
     const canvaPageRaw = panelForm.canva_page.trim();
     const canvaPage =
       canvaPageRaw.length > 0 && !Number.isNaN(Number(canvaPageRaw))
@@ -1009,7 +1021,7 @@ function SocialPostsPageContent() {
       trimmedTitle !== activePost.title ||
       panelForm.product !== activePost.product ||
       panelForm.type !== activePost.type ||
-      (panelForm.canva_url.trim() || null) !== activePost.canva_url ||
+      canvaUrl !== activePost.canva_url ||
       canvaPage !== activePost.canva_page ||
       (panelForm.caption.trim() || null) !== activePost.caption ||
       panelForm.scheduled_date !== formatDateInput(activePost.scheduled_date) ||
@@ -1031,7 +1043,7 @@ function SocialPostsPageContent() {
           title: trimmedTitle,
           product: panelForm.product,
           type: panelForm.type,
-          canva_url: panelForm.canva_url.trim() || null,
+          canva_url: canvaUrl,
           canva_page: canvaPage,
           caption: panelForm.caption.trim() || null,
           platforms: normalizedPlatforms,
@@ -1292,66 +1304,81 @@ function SocialPostsPageContent() {
     );
   };
 
-  const listTableColumns: DataTableColumn<SocialPostWithRelations>[] = [
-    {
-      id: "title",
-      label: "Title",
-      sortable: true,
-      className: "max-w-[22rem]",
-      render: (post) => post.title,
-    },
-    {
-      id: "status",
-      label: "Status",
-      align: "center",
-      sortable: true,
-      render: (post) => <SocialPostStatusBadge status={post.status} />,
-    },
-    {
-      id: "product",
-      label: "Product",
-      sortable: true,
-      className: "max-w-[10rem]",
-      render: (post) => SOCIAL_POST_PRODUCT_LABELS[post.product],
-    },
-    {
-      id: "type",
-      label: "Type",
-      sortable: true,
-      className: "max-w-[10rem]",
-      render: (post) => SOCIAL_POST_TYPE_LABELS[post.type],
-    },
-    {
-      id: "scheduled",
-      label: "Scheduled",
-      sortable: true,
-      render: (post) => formatDisplayDate(post.scheduled_date) || "—",
-    },
-    {
-      id: "platforms",
-      label: "Platforms",
-      sortable: false,
-      className: "max-w-[16rem]",
-      render: (post) =>
-        post.platforms.length > 0
-          ? post.platforms.map((p) => SOCIAL_PLATFORM_LABELS[p]).join(", ")
-          : "—",
-    },
-    {
-      id: "blog",
-      label: "Associated Blog",
-      sortable: false,
-      className: "max-w-[18rem]",
-      render: (post) => post.associated_blog?.title ?? "—",
-    },
-    {
-      id: "updated",
-      label: "Updated",
-      sortable: true,
-      render: (post) =>
-        formatDistanceToNow(new Date(post.updated_at), { addSuffix: true }),
-    },
-  ];
+  const allTableColumns = useMemo(
+    (): DataTableColumn<SocialPostWithRelations>[] => [
+      // Mandatory columns in specified order
+      {
+        id: "product",
+        label: "Product",
+        sortable: true,
+        className: "max-w-[10rem]",
+        render: (post) => SOCIAL_POST_PRODUCT_LABELS[post.product],
+      },
+      {
+        id: "type",
+        label: "Type",
+        sortable: true,
+        className: "max-w-[10rem]",
+        render: (post) => SOCIAL_POST_TYPE_LABELS[post.type],
+      },
+      {
+        id: "status",
+        label: "Status",
+        align: "center",
+        sortable: true,
+        render: (post) => <SocialPostStatusBadge status={post.status} />,
+      },
+      {
+        id: "created",
+        label: "Created",
+        sortable: true,
+        render: (post) => formatDisplayDate(post.created_at),
+      },
+      {
+        id: "scheduled",
+        label: "Scheduled Publish",
+        sortable: true,
+        render: (post) => formatDisplayDate(post.scheduled_date) || "—",
+      },
+      {
+        id: "published",
+        label: "Published Date",
+        sortable: true,
+        render: (post) => post.status === "published" ? formatDisplayDate(post.updated_at) : "—",
+      },
+      {
+        id: "updated",
+        label: "Updated",
+        sortable: true,
+        render: (post) =>
+          formatDistanceToNow(new Date(post.updated_at), { addSuffix: true }),
+      },
+      // Optional columns
+      {
+        id: "platforms",
+        label: "Platforms",
+        sortable: false,
+        className: "max-w-[16rem]",
+        render: (post) =>
+          post.platforms.length > 0
+            ? post.platforms.map((p) => SOCIAL_PLATFORM_LABELS[p]).join(", ")
+            : "—",
+      },
+      {
+        id: "blog",
+        label: "Associated Blog",
+        sortable: false,
+        className: "max-w-[18rem]",
+        render: (post) => post.associated_blog?.title ?? "—",
+      },
+    ],
+    []
+  );
+
+  const listTableColumns = useMemo(
+    () => allTableColumns.filter((col) => visibleColumns.has(col.id)),
+    [allTableColumns, visibleColumns]
+  );
 
   return (
     <ProtectedPage>
@@ -1453,13 +1480,71 @@ function SocialPostsPageContent() {
                   rowLimit={listRowLimit}
                   noun="social posts"
                 />
-                <TableRowLimitSelect
-                  value={listRowLimit}
-                  onChange={(value) => {
-                    setListRowLimit(value);
-                  }}
-                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setIsEditColumnsOpen(!isEditColumnsOpen);
+                    }}
+                  >
+                    Edit Columns
+                  </Button>
+                  <TableRowLimitSelect
+                    value={listRowLimit}
+                    onChange={(value) => {
+                      setListRowLimit(value);
+                    }}
+                  />
+                </div>
               </div>
+              {isEditColumnsOpen ? (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Mandatory Columns</p>
+                      <div className="space-y-2">
+                        {allTableColumns.slice(0, 7).map((col) => (
+                          <div key={col.id} className="flex items-center gap-2 text-sm text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={true}
+                              disabled
+                              className="cursor-not-allowed"
+                            />
+                            <span>{col.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Optional Columns</p>
+                      <div className="space-y-2">
+                        {allTableColumns.slice(7).map((col) => (
+                          <label key={col.id} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={visibleColumns.has(col.id)}
+                              onChange={(event) => {
+                                const newVisible = new Set(visibleColumns);
+                                if (event.target.checked) {
+                                  newVisible.add(col.id);
+                                } else {
+                                  newVisible.delete(col.id);
+                                }
+                                setVisibleColumns(newVisible);
+                              }}
+                              className="cursor-pointer"
+                            />
+                            <span className="cursor-pointer">{col.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <DataTable
                 data={pagedListPosts}
                 columns={listTableColumns}
@@ -1627,13 +1712,13 @@ function SocialPostsPageContent() {
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="primary"
                     size="sm"
                     onClick={() => {
                       router.push(`/social-posts/${activePost.id}`);
                     }}
                   >
-                    Open dedicated page
+                    Work in Full View
                   </Button>
                   <Button
                     type="button"
@@ -1652,16 +1737,13 @@ function SocialPostsPageContent() {
               <section className="mt-4 space-y-3 rounded-lg border border-slate-200 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    Social Post Details
+                    Basic Information
                   </h4>
                   <SocialPostStatusBadge status={panelForm.status} />
                 </div>
                 {panelExecutionLocked ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                    <span>
-                      Execution stage is read-only. Reopen to Creative Approved before editing brief
-                      fields.
-                    </span>
+                    <span>Read-only. Work in Full View to edit.</span>
                     {isAdmin ? (
                       <Button
                         type="button"
@@ -1677,127 +1759,74 @@ function SocialPostsPageContent() {
                   </div>
                 ) : null}
 
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
-                  <input
-                    value={panelForm.title}
-                    onChange={(event) => {
-                      setPanelForm((previous) =>
-                        previous ? { ...previous, title: event.target.value } : previous
-                      );
-                    }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  />
-                </label>
+                {/* STAGE 1: EDITOR CREATES */}
+                {!panelExecutionLocked && (
+                  <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Required</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">Product</span>
+                        <select
+                          value={panelForm.product}
+                          onChange={(event) => {
+                            setPanelForm((previous) =>
+                              previous
+                                ? { ...previous, product: event.target.value as SocialPostProduct }
+                                : previous
+                            );
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          {SOCIAL_POST_PRODUCTS.map((product) => (
+                            <option key={product} value={product}>
+                              {SOCIAL_POST_PRODUCT_LABELS[product]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">Type</span>
+                        <select
+                          value={panelForm.type}
+                          onChange={(event) => {
+                            setPanelForm((previous) =>
+                              previous
+                                ? { ...previous, type: event.target.value as SocialPostType }
+                                : previous
+                            );
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          {SOCIAL_POST_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {SOCIAL_POST_TYPE_LABELS[type]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">Canva URL</span>
+                      <input
+                        type="url"
+                        value={panelForm.canva_url}
+                        onChange={(event) => {
+                          setPanelForm((previous) =>
+                            previous ? { ...previous, canva_url: event.target.value } : previous
+                          );
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        placeholder="https://www.canva.com/..."
+                      />
+                    </label>
+                  </div>
+                )}
 
-                <div className="grid gap-3 md:grid-cols-3">
+                {/* OPTIONAL FIELDS (ALWAYS EDITABLE) */}
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Optional</p>
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Status</span>
-                    <select
-                      value={panelForm.status}
-                      onChange={(event) => {
-                        setPanelForm((previous) =>
-                          previous
-                            ? {
-                                ...previous,
-                                status: event.target.value as SocialPostStatus,
-                              }
-                            : previous
-                        );
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      {SOCIAL_POST_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {SOCIAL_POST_STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Product
-                    </span>
-                    <select
-                      value={panelForm.product}
-                      onChange={(event) => {
-                        setPanelForm((previous) =>
-                          previous
-                            ? {
-                                ...previous,
-                                product: event.target.value as SocialPostProduct,
-                              }
-                            : previous
-                        );
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      {SOCIAL_POST_PRODUCTS.map((product) => (
-                        <option key={product} value={product}>
-                          {SOCIAL_POST_PRODUCT_LABELS[product]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Type</span>
-                    <select
-                      value={panelForm.type}
-                      onChange={(event) => {
-                        setPanelForm((previous) =>
-                          previous
-                            ? {
-                                ...previous,
-                                type: event.target.value as SocialPostType,
-                              }
-                            : previous
-                        );
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      {SOCIAL_POST_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                          {SOCIAL_POST_TYPE_LABELS[type]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Scheduled Date
-                    </span>
-                    <input
-                      type="date"
-                      value={newScheduledDate}
-                      onChange={(event) => {
-                        setNewScheduledDate(event.target.value);
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
-                  </label>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Canva URL
-                    </span>
-                    <input
-                      type="url"
-                      value={panelForm.canva_url}
-                      onChange={(event) => {
-                        setPanelForm((previous) =>
-                          previous ? { ...previous, canva_url: event.target.value } : previous
-                        );
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      placeholder="https://www.canva.com/..."
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      Canva Page Number
-                    </span>
+                    <span className="mb-1 block text-sm font-medium text-slate-700">Canva Page</span>
                     <input
                       type="number"
                       min={1}
@@ -1808,12 +1837,146 @@ function SocialPostsPageContent() {
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      disabled={panelExecutionLocked}
                     />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
+                    <input
+                      value={panelForm.title}
+                      onChange={(event) => {
+                        setPanelForm((previous) =>
+                          previous ? { ...previous, title: event.target.value } : previous
+                        );
+                      }}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      disabled={panelExecutionLocked}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-slate-700">Caption / Write-up</span>
+                    <textarea
+                      value={panelForm.caption}
+                      onChange={(event) => {
+                        setPanelForm((previous) =>
+                          previous ? { ...previous, caption: event.target.value } : previous
+                        );
+                      }}
+                      className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="Main social caption..."
+                      disabled={panelExecutionLocked}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-slate-700">Associated Blog</span>
+                    <input
+                      value={blogSearchQuery}
+                      onFocus={() => {
+                        setIsBlogSearchOpen(true);
+                      }}
+                      onChange={(event) => {
+                        setBlogSearchQuery(event.target.value);
+                        setIsBlogSearchOpen(true);
+                      }}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="Search blog title or slug..."
+                      disabled={panelExecutionLocked}
+                    />
+                    {panelForm.associated_blog_id ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                        <span>Linked blog ID: {panelForm.associated_blog_id}</span>
+                        <button
+                          type="button"
+                          className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                          onClick={() => {
+                            setPanelForm((previous) =>
+                              previous ? { ...previous, associated_blog_id: null } : previous
+                            );
+                            setBlogSearchQuery("");
+                            setBlogSearchResults([]);
+                            setIsBlogSearchOpen(false);
+                          }}
+                          disabled={panelExecutionLocked}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    ) : null}
+                    {isBlogSearchOpen && !panelExecutionLocked ? (
+                      <div className="mt-2 max-h-52 overflow-y-auto rounded-md border border-slate-200 bg-white">
+                        {isBlogSearchLoading ? (
+                          <p className="px-3 py-2 text-sm text-slate-500">Searching blogs…</p>
+                        ) : blogSearchResults.length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-slate-500">No matching blogs.</p>
+                        ) : (
+                          blogSearchResults.map((blog) => (
+                            <button
+                              key={blog.id}
+                              type="button"
+                              className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                              onClick={() => {
+                                setPanelForm((previous) =>
+                                  previous
+                                    ? { ...previous, associated_blog_id: blog.id }
+                                    : previous
+                                );
+                                setBlogSearchQuery(blog.title);
+                                setBlogSearchResults([]);
+                                setIsBlogSearchOpen(false);
+                              }}
+                            >
+                              <p className="text-sm font-medium text-slate-900">{blog.title}</p>
+                              <p className="text-xs text-slate-500">
+                                {blog.slug || "no-slug"} • {blog.site}
+                              </p>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
                   </label>
                 </div>
 
+                {/* SCHEDULING */}
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Schedule</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">Scheduled Publish Date</span>
+                      <input
+                        type="date"
+                        value={panelForm.scheduled_date}
+                        onChange={(event) => {
+                          setPanelForm((previous) =>
+                            previous
+                              ? { ...previous, scheduled_date: event.target.value }
+                              : previous
+                          );
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">Published Date</span>
+                      <input
+                        type="date"
+                        value={panelForm.scheduled_date}
+                        onChange={(event) => {
+                          setPanelForm((previous) =>
+                            previous
+                              ? { ...previous, scheduled_date: event.target.value }
+                              : previous
+                          );
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* PLATFORMS SELECTION */}
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">Platforms</span>
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Platforms</span>
                   <div className="flex flex-wrap gap-2">
                     {SOCIAL_PLATFORMS.map((platform) => {
                       const isSelected = panelForm.platforms.includes(platform);
@@ -1821,131 +1984,29 @@ function SocialPostsPageContent() {
                         <button
                           key={platform}
                           type="button"
-                          className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                             isSelected
                               ? "border-slate-900 bg-slate-900 text-white"
                               : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                          }`}
+                          } ${panelExecutionLocked ? "cursor-not-allowed opacity-60" : ""}`}
                           onClick={() => {
-                            setPanelForm((previous) => {
-                              if (!previous) {
-                                return previous;
-                              }
-                              const nextPlatforms = previous.platforms.includes(platform)
-                                ? previous.platforms.filter((entry) => entry !== platform)
-                                : [...previous.platforms, platform];
-                              return { ...previous, platforms: nextPlatforms };
-                            });
+                            if (!panelExecutionLocked) {
+                              setPanelForm((previous) => {
+                                if (!previous) return previous;
+                                const nextPlatforms = previous.platforms.includes(platform)
+                                  ? previous.platforms.filter((entry) => entry !== platform)
+                                  : [...previous.platforms, platform];
+                                return { ...previous, platforms: nextPlatforms };
+                              });
+                            }
                           }}
+                          disabled={panelExecutionLocked}
                         >
                           {SOCIAL_PLATFORM_LABELS[platform]}
                         </button>
                       );
                     })}
                   </div>
-                </label>
-
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Scheduled Date
-                  </span>
-                  <input
-                    type="date"
-                    value={panelForm.scheduled_date}
-                    onChange={(event) => {
-                      setPanelForm((previous) =>
-                        previous
-                          ? { ...previous, scheduled_date: event.target.value }
-                          : previous
-                      );
-                    }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Caption / Write-up
-                  </span>
-                  <textarea
-                    value={panelForm.caption}
-                    onChange={(event) => {
-                      setPanelForm((previous) =>
-                        previous ? { ...previous, caption: event.target.value } : previous
-                      );
-                    }}
-                    className="min-h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    placeholder="Main social caption..."
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Associated Blog
-                  </span>
-                  <input
-                    value={blogSearchQuery}
-                    onFocus={() => {
-                      setIsBlogSearchOpen(true);
-                    }}
-                    onChange={(event) => {
-                      setBlogSearchQuery(event.target.value);
-                      setIsBlogSearchOpen(true);
-                    }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    placeholder="Search blog title or slug..."
-                  />
-                  {panelForm.associated_blog_id ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                      <span>Linked blog ID: {panelForm.associated_blog_id}</span>
-                      <button
-                        type="button"
-                        className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100"
-                        onClick={() => {
-                          setPanelForm((previous) =>
-                            previous ? { ...previous, associated_blog_id: null } : previous
-                          );
-                          setBlogSearchQuery("");
-                          setBlogSearchResults([]);
-                          setIsBlogSearchOpen(false);
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  ) : null}
-                  {isBlogSearchOpen ? (
-                    <div className="mt-2 max-h-52 overflow-y-auto rounded-md border border-slate-200 bg-white">
-                      {isBlogSearchLoading ? (
-                        <p className="px-3 py-2 text-sm text-slate-500">Searching blogs…</p>
-                      ) : blogSearchResults.length === 0 ? (
-                        <p className="px-3 py-2 text-sm text-slate-500">No matching blogs.</p>
-                      ) : (
-                        blogSearchResults.map((blog) => (
-                          <button
-                            key={blog.id}
-                            type="button"
-                            className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
-                            onClick={() => {
-                              setPanelForm((previous) =>
-                                previous
-                                  ? { ...previous, associated_blog_id: blog.id }
-                                  : previous
-                              );
-                              setBlogSearchQuery(blog.title);
-                              setBlogSearchResults([]);
-                              setIsBlogSearchOpen(false);
-                            }}
-                          >
-                            <p className="text-sm font-medium text-slate-900">{blog.title}</p>
-                            <p className="text-xs text-slate-500">
-                              {blog.slug || "no-slug"} • {blog.site}
-                            </p>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  ) : null}
                 </label>
 
                 <div className="flex justify-end">
@@ -1962,60 +2023,55 @@ function SocialPostsPageContent() {
                 </div>
               </section>
 
-              <section className="mt-4 space-y-3 rounded-lg border border-slate-200 p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Published Links
-                </h4>
-                {SOCIAL_PLATFORMS.map((platform) => (
-                  <label key={platform} className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
-                      {SOCIAL_PLATFORM_LABELS[platform]}
-                    </span>
-                    <input
-                      type="url"
-                      value={panelLinksDraft[platform] ?? ""}
-                      onChange={(event) => {
-                        setPanelLinksDraft((previous) => ({
-                          ...previous,
-                          [platform]: event.target.value,
-                        }));
-                      }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      placeholder={`https://${platform}.com/...`}
-                    />
-                  </label>
-                ))}
-                {activePostLinks.length > 0 ? (
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                    <p className="font-medium text-slate-700">Current links</p>
-                    <ul className="mt-1 space-y-1">
-                      {activePostLinks.map((link) => (
-                        <li key={link.id} className="truncate">
-                          {SOCIAL_PLATFORM_LABELS[link.platform]}:{" "}
-                          <ExternalLink
-                            href={link.url}
-                            className="text-blue-600 underline"
-                          >
-                            {link.url}
-                          </ExternalLink>
-                        </li>
-                      ))}
-                    </ul>
+              {/* EXECUTION STAGE: LIVE LINKS */}
+              {(panelForm.status === "ready_to_publish" || panelForm.status === "awaiting_live_link" || panelForm.status === "published") && (
+                <section className="mt-4 space-y-3 rounded-lg border border-slate-200 p-4">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Live Links</h4>
+                  <div className="space-y-2">
+                    {SOCIAL_PLATFORMS.map((platform) => (
+                      <label key={platform} className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">{SOCIAL_PLATFORM_LABELS[platform]}</span>
+                        <input
+                          type="url"
+                          value={panelLinksDraft[platform] ?? ""}
+                          onChange={(event) => {
+                            setPanelLinksDraft((previous) => ({
+                              ...previous,
+                              [platform]: event.target.value,
+                            }));
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          placeholder={`https://${platform}.com/...`}
+                        />
+                      </label>
+                    ))}
                   </div>
-                ) : null}
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    disabled={isLinksSaving}
-                    className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => {
-                      void handleSaveLinks();
-                    }}
-                  >
-                    {isLinksSaving ? "Saving..." : "Save Links"}
-                  </button>
-                </div>
-              </section>
+                  {activePostLinks.length > 0 ? (
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      <p className="font-medium text-slate-700">Saved Links</p>
+                      <ul className="mt-1 space-y-1">
+                        {activePostLinks.map((link) => (
+                          <li key={link.id} className="truncate">
+                            {SOCIAL_PLATFORM_LABELS[link.platform]}: <ExternalLink href={link.url} className="text-blue-600 underline">{link.url}</ExternalLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      disabled={isLinksSaving}
+                      className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        void handleSaveLinks();
+                      }}
+                    >
+                      {isLinksSaving ? "Saving..." : "Save Links"}
+                    </button>
+                  </div>
+                </section>
+              )}
 
               <section className="mt-4 rounded-lg border border-slate-200 p-4">
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">

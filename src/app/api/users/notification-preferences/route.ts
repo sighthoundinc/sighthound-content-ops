@@ -11,6 +11,8 @@ interface NotificationPreferencesUpdate {
   notify_on_submitted_for_review?: boolean;
   notify_on_published?: boolean;
   notify_on_assignment_changed?: boolean;
+  slack_delivery_dm?: boolean;
+  slack_delivery_channel?: boolean;
 }
 
 /**
@@ -67,6 +69,8 @@ export async function GET(request: NextRequest) {
         notify_on_submitted_for_review: true,
         notify_on_published: true,
         notify_on_assignment_changed: true,
+        slack_delivery_dm: true,
+        slack_delivery_channel: true,
       });
     }
 
@@ -142,6 +146,12 @@ export async function PATCH(request: NextRequest) {
     }
     if (body.notify_on_assignment_changed !== undefined) {
       updates.notify_on_assignment_changed = body.notify_on_assignment_changed;
+    }
+    if (body.slack_delivery_dm !== undefined) {
+      updates.slack_delivery_dm = body.slack_delivery_dm;
+    }
+    if (body.slack_delivery_channel !== undefined) {
+      updates.slack_delivery_channel = body.slack_delivery_channel;
     }
 
     // Try to update existing preferences

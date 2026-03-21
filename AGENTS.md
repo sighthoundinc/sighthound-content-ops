@@ -229,6 +229,7 @@ To keep idea intake predictable and avoid split editing patterns:
 - **Icons**: lucide-react via `AppIcon` (no emoji)
 - **Trigger**: Direct API calls (save, delete, import, copy)
 - **Provider**: `AlertsProvider` in root layout
+- **Global Duration Cap (MUST)**: No toast, regardless of type, can display longer than 5 seconds. All alerts auto-dismiss within 5000ms max, even if status updates are forgotten or network latency delays completion. This prevents orphaned "Updating.." toasts from cluttering the sidebar indefinitely.
 
 ### Notifications (`useNotifications`)
 - **Purpose**: Persistent workflow state changes (assignments, submissions, publications, status transitions)
@@ -400,3 +401,21 @@ Reminder + notification invariants:
 - Awaiting-live-link reminder sweeps use `POST /api/social-posts/reminders`.
 - Reminder dedupe is enforced with `social_posts.last_live_link_reminder_at` using a 24-hour cooldown.
 - Social transition and reminder Slack events are emitted by API routes, not direct ad-hoc client writes.
+
+## UI Label Standards (MUST)
+
+**Avoid labeling user roles in section headers** unless explicitly necessary for admin-only features:
+
+1. **Do NOT use**: "Required (Editor)", "Optional / Editor & Admin", "Schedule (Admin)"
+2. **Use instead**: "Required", "Optional", "Schedule"
+3. **Exception**: Only explicitly mention user roles when it clarifies permission boundaries for admin-only sections (e.g., "Admin Only" for sensitive operations)
+4. **Rationale**: User roles are implicit from context and capability; explicit role labels clutter the UI and reduce clarity
+5. **Apply globally** across all form sections, drawer panels, and preview panes (Social Posts, Blogs, Tasks, etc.)
+
+**Section label examples:**
+- "Basic Information" → Primary content fields
+- "Required" → Must-fill fields
+- "Optional" → Nice-to-have fields
+- "Schedule" → Publishing/workflow dates
+- "Advanced Settings" → Power-user options
+- "Admin Only" → Restricted to admins (exception case)

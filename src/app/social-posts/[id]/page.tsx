@@ -17,7 +17,6 @@ import {
   SOCIAL_POST_PRODUCTS,
   SOCIAL_POST_PRODUCT_LABELS,
   SOCIAL_POST_TYPES,
-  getNextActor,
   SOCIAL_POST_STATUS_LABELS,
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
@@ -81,6 +80,27 @@ const PLATFORM_CAPTION_GUIDANCE: Record<SocialPlatform, string> = {
   facebook: "Facebook: keep it short, clear, and conversational with one CTA.",
   instagram: "Instagram: front-load impact and keep hashtag use intentional.",
 };
+const VALIDATION_MESSAGES = {
+  captionExceeds: "Caption exceeds LinkedIn limit.",
+  sessionExpired: "Session expired. Refresh and try again.",
+  couldNotSave: "Couldn't save.",
+  couldNotLoad: "Couldn't load post.",
+  couldNotLoadLinks: "Couldn't load live links.",
+  couldNotSearchBlogs: "Couldn't search blogs.",
+  briefReadOnly: "Execution-stage brief fields are read-only. Use Edit Brief to reopen.",
+  invalidTransition: "Invalid status transition",
+  noPermissionTransition: "You do not have permission for that transition from the current stage.",
+  rollbackReasonRequired: "Rollback reason is required.",
+  couldNotChangeStatus: "Couldn't change post status.",
+  couldNotSaveLinks: "Couldn't save live links.",
+  couldNotReopenBrief: "Couldn't reopen brief.",
+  nothingToCopy: "Nothing to copy",
+  copiedToClipboard: "Copied to clipboard",
+  copyFailed: "Copy failed. Try again",
+  postReopened: "Post reopened to Creative Approved for brief edits.",
+  linksSaved: "Live links saved",
+  postSaved: "Post saved",
+} as const;
 
 // Unicode bold sans-serif characters for LinkedIn-compatible bold text
 const BOLD_SANS_UPPER = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭";
@@ -179,6 +199,21 @@ function normalizePostRow(row: Record<string, unknown>): SocialPostEditorRecord 
   };
 }
 
+function createFormFromPost(post: SocialPostEditorRecord): EditorFormState {
+  return {
+    title: post.title,
+    product: post.product,
+    type: post.type,
+    canva_url: post.canva_url ?? "",
+    canva_page: post.canva_page ? String(post.canva_page) : "",
+    caption: post.caption ?? "",
+    platforms: post.platforms,
+    scheduled_date: formatDateInput(post.scheduled_date),
+    status: post.status,
+    associated_blog_id: post.associated_blog_id,
+  };
+}
+
 export default function SocialPostEditorPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -229,27 +264,16 @@ export default function SocialPostEditorPage() {
           .order("created_at", { ascending: true }),
       ]);
     if (loadError) {
-      setError(`Couldn't load post. ${loadError.message}`);
+      setError(`${VALIDATION_MESSAGES.couldNotLoad} ${loadError.message}`);
       setIsLoading(false);
       return;
     }
     const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
     setPost(normalized);
-    setForm({
-      title: normalized.title,
-      product: normalized.product,
-      type: normalized.type,
-      canva_url: normalized.canva_url ?? "",
-      canva_page: normalized.canva_page ? String(normalized.canva_page) : "",
-      caption: normalized.caption ?? "",
-      platforms: normalized.platforms,
-      scheduled_date: formatDateInput(normalized.scheduled_date),
-      status: normalized.status,
-      associated_blog_id: normalized.associated_blog_id,
-    });
+    setForm(createFormFromPost(normalized));
     setBlogSearchQuery(normalized.associated_blog?.title ?? "");
     if (linksError) {
-      showError(`Couldn't load live links. ${linksError.message}`);
+      showError(`${VALIDATION_MESSAGES.couldNotLoadLinks} ${linksError.message}`);
       setLiveLinks([]);
       setLiveLinkDrafts(createEmptyLiveLinkDrafts());
     } else {
@@ -281,7 +305,7 @@ export default function SocialPostEditorPage() {
           p_limit: 8,
         });
         if (searchError) {
-          showError(`Couldn't search blogs. ${searchError.message}`);
+          showError(`${VALIDATION_MESSAGES.couldNotSearchBlogs} ${searchError.message}`);
           setBlogSearchResults([]);
           setIsBlogSearchLoading(false);
           return;
@@ -305,9 +329,7 @@ export default function SocialPostEditorPage() {
       }
       if (isExecutionStage(post.status)) {
         if (reason === "manual") {
-          showError(
-            "Execution-stage brief fields are read-only. Use Edit Brief to reopen."
-          );
+          showError(VALIDATION_MESSAGES.briefReadOnly);
         }
         return false;
       }
@@ -365,18 +387,44 @@ export default function SocialPostEditorPage() {
       if (saveError) {
         updateStatus(statusId, {
           type: "error",
-          message: `Couldn't save. ${saveError.message}`,
+          message: `${VALIDATION_MESSAGES.couldNotSave} ${saveError.message}`,
         });
         setIsSaving(false);
         return false;
       }
       const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
       setPost(normalized);
-      updateStatus(statusId, { type: "success", message: "Post saved" });
+      updateStatus(statusId, { type: "success", message: VALIDATION_MESSAGES.postSaved });
       setIsSaving(false);
       return true;
     },
     [post, showError, showSaving, updateStatus]
+  );
+
+  const canCurrentUserTransition = useCallback(
+    (fromStatus: SocialPostStatus, toStatus: SocialPostStatus) => {
+      if (fromStatus === toStatus) {
+        return true;
+      }
+      const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[fromStatus] ?? [];
+      if (!allowedTransitions.includes(toStatus)) {
+        return false;
+      }
+      const isExecutionRollback =
+        toStatus === "changes_requested" &&
+        (fromStatus === "ready_to_publish" || fromStatus === "awaiting_live_link");
+      if (isExecutionRollback && !isAdmin) {
+        return false;
+      }
+      if (
+        !isAdmin &&
+        (fromStatus === "in_review" || toStatus === "creative_approved")
+      ) {
+        return false;
+      }
+      return true;
+    },
+    [isAdmin]
   );
 
   const transitionPostStatus = useCallback(
@@ -385,18 +433,14 @@ export default function SocialPostEditorPage() {
         return false;
       }
       const currentStatus = post.status;
-      if (currentStatus === toStatus) {
-        return true;
-      }
-      const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[currentStatus] ?? [];
-      if (!allowedTransitions.includes(toStatus)) {
+      if (!canCurrentUserTransition(currentStatus, toStatus)) {
         showError(
-          `Invalid status transition from ${SOCIAL_POST_STATUS_LABELS[currentStatus]} to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`
+          `${VALIDATION_MESSAGES.invalidTransition} from ${SOCIAL_POST_STATUS_LABELS[currentStatus]} to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`
         );
         return false;
       }
       if (!session?.access_token) {
-        showError("Session expired. Refresh and try again.");
+        showError(VALIDATION_MESSAGES.sessionExpired);
         return false;
       }
       const requiresRollbackReason =
@@ -409,7 +453,7 @@ export default function SocialPostEditorPage() {
           "Provide a reason for sending this post back to Changes Requested:"
         );
         if (!rawReason || rawReason.trim().length === 0) {
-          showError("Rollback reason is required.");
+          showError(VALIDATION_MESSAGES.rollbackReasonRequired);
           return false;
         }
         reason = rawReason.trim();
@@ -425,7 +469,7 @@ export default function SocialPostEditorPage() {
         body: JSON.stringify({ toStatus, reason }),
       }).catch(() => null);
       if (!response) {
-        showError("Couldn't change post status. Try again.");
+        showError(VALIDATION_MESSAGES.couldNotChangeStatus);
         setIsSaving(false);
         return false;
       }
@@ -433,7 +477,7 @@ export default function SocialPostEditorPage() {
         const payload = (await response.json().catch(() => ({}))) as {
           error?: string;
         };
-        showError(payload.error ?? "Couldn't change post status.");
+        showError(payload.error ?? VALIDATION_MESSAGES.couldNotChangeStatus);
         setIsSaving(false);
         return false;
       }
@@ -468,7 +512,7 @@ export default function SocialPostEditorPage() {
       setIsSaving(false);
       return true;
     },
-    [post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess]
+    [post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess, canCurrentUserTransition]
   );
 
   useEffect(() => {
@@ -494,40 +538,15 @@ export default function SocialPostEditorPage() {
   const hasLiveLink = liveLinks.some((link) => link.url.trim().length > 0);
   const isDraftComplete =
     hasTitle && hasCaption && hasPlatform && hasPublishDate && hasCanvaLink;
-  const canCurrentUserTransition = useCallback(
-    (fromStatus: SocialPostStatus, toStatus: SocialPostStatus) => {
-      if (fromStatus === toStatus) {
-        return true;
-      }
-      const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[fromStatus] ?? [];
-      if (!allowedTransitions.includes(toStatus)) {
-        return false;
-      }
-      const isExecutionRollback =
-        toStatus === "changes_requested" &&
-        (fromStatus === "ready_to_publish" || fromStatus === "awaiting_live_link");
-      if (isExecutionRollback && !isAdmin) {
-        return false;
-      }
-      if (
-        !isAdmin &&
-        (fromStatus === "in_review" || toStatus === "creative_approved")
-      ) {
-        return false;
-      }
-      return true;
-    },
-    [isAdmin]
-  );
 
   const checklistItems = useMemo(
     () => [
-      { label: "Title exists", done: hasTitle, required: true },
-      { label: "Platform selected", done: hasPlatform, required: true },
-      { label: "Publish date set", done: hasPublishDate, required: true },
-      { label: "Canva link added", done: hasCanvaLink, required: true },
-      { label: "Caption written", done: hasCaption, required: true },
-      { label: "Blog linked", done: hasLinkedBlog, required: false },
+      { label: "Add post title", done: hasTitle, required: true },
+      { label: "Select platform(s)", done: hasPlatform, required: true },
+      { label: "Set publish date", done: hasPublishDate, required: true },
+      { label: "Add Canva link", done: hasCanvaLink, required: true },
+      { label: "Write caption", done: hasCaption, required: true },
+      { label: "Link blog (optional)", done: hasLinkedBlog, required: false },
     ],
     [hasCanvaLink, hasCaption, hasLinkedBlog, hasPlatform, hasPublishDate, hasTitle]
   );
@@ -696,20 +715,20 @@ export default function SocialPostEditorPage() {
 
   const copyText = async (text: string) => {
     if (!text.trim()) {
-      showError("Nothing to copy");
+      showError(VALIDATION_MESSAGES.nothingToCopy);
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      showSuccess("Copied to clipboard");
+      showSuccess(VALIDATION_MESSAGES.copiedToClipboard);
     } catch {
-      showError("Copy failed. Try again");
+      showError(VALIDATION_MESSAGES.copyFailed);
     }
   };
 
   const handleSaveLiveLinks = async () => {
     if (!post || !user?.id) {
-      showError("Session unavailable. Refresh and try again.");
+      showError(VALIDATION_MESSAGES.sessionExpired);
       return;
     }
     setIsLiveLinksSaving(true);
@@ -767,12 +786,12 @@ export default function SocialPostEditorPage() {
       );
       setLiveLinks(normalizedLinks);
       setLiveLinkDrafts(toLiveLinkDrafts(normalizedLinks));
-      showSuccess("Live links saved");
+      showSuccess(VALIDATION_MESSAGES.linksSaved);
     } catch (saveError) {
       showError(
         saveError instanceof Error
-          ? `Couldn't save live links. ${saveError.message}`
-          : "Couldn't save live links."
+          ? `${VALIDATION_MESSAGES.couldNotSaveLinks} ${saveError.message}`
+          : VALIDATION_MESSAGES.couldNotSaveLinks
       );
     } finally {
       setIsLiveLinksSaving(false);
@@ -783,7 +802,7 @@ export default function SocialPostEditorPage() {
       return;
     }
     if (!session?.access_token) {
-      showError("Session expired. Refresh and try again.");
+      showError(VALIDATION_MESSAGES.sessionExpired);
       return;
     }
     const reasonInput = window.prompt(
@@ -804,7 +823,7 @@ export default function SocialPostEditorPage() {
       }),
     }).catch(() => null);
     if (!response) {
-      showError("Couldn't reopen brief. Try again.");
+      showError(VALIDATION_MESSAGES.couldNotReopenBrief);
       setIsSaving(false);
       return;
     }
@@ -812,7 +831,7 @@ export default function SocialPostEditorPage() {
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
       };
-      showError(payload.error ?? "Couldn't reopen brief.");
+      showError(payload.error ?? VALIDATION_MESSAGES.couldNotReopenBrief);
       setIsSaving(false);
       return;
     }
@@ -843,7 +862,7 @@ export default function SocialPostEditorPage() {
         post.id
       )
     );
-    showSuccess("Post reopened to Creative Approved for brief edits.");
+    showSuccess(VALIDATION_MESSAGES.postReopened);
     setIsSaving(false);
   };
 
@@ -892,7 +911,7 @@ export default function SocialPostEditorPage() {
         <div className="space-y-5">
           <DataPageHeader
             title={form.title || "Social Post"}
-            description="Follow the natural flow: Setup → Link Context → Write Caption → Review & Publish."
+            description="Build and refine your social post from concept to publication."
             primaryAction={
               <div className="flex items-center gap-2">
                 <Button
@@ -931,155 +950,155 @@ export default function SocialPostEditorPage() {
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                    1
-                  </span>
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">Setup</h3>
-                    <p className="text-sm text-slate-600">
-                      Define the post essentials before writing or review.
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Setup</h3>
+                  <p className="text-sm text-slate-600">
+                    Define the post essentials before writing or review.
+                  </p>
                 </div>
                 <fieldset
                   disabled={isExecutionLocked}
-                  className="grid gap-3 md:grid-cols-2 disabled:opacity-70"
+                  className="disabled:opacity-70"
                 >
-                  <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
-                    <span className="font-medium">Post Title</span>
-                    <input
-                      value={form.title}
-                      onChange={(event) => {
-                        setForm((previous) =>
-                          previous ? { ...previous, title: event.target.value } : previous
-                        );
-                      }}
-                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
-                    <span className="font-medium">Platform(s)</span>
-                    <div className="flex flex-wrap gap-2">
-                      {SOCIAL_PLATFORMS.map((platform) => {
-                        const isSelected = form.platforms.includes(platform);
-                        return (
-                          <Button
-                            key={platform}
-                            size="xs"
-                            variant={isSelected ? "primary" : "secondary"}
-                            onClick={() => {
-                              setForm((previous) => {
-                                if (!previous) {
-                                  return previous;
-                                }
-                                const nextPlatforms = previous.platforms.includes(platform)
-                                  ? previous.platforms.filter((entry) => entry !== platform)
-                                  : [...previous.platforms, platform];
-                                return { ...previous, platforms: nextPlatforms };
-                              });
-                            }}
-                          >
-                            {SOCIAL_PLATFORM_LABELS[platform]}
-                          </Button>
-                        );
-                      })}
+                  <div className="space-y-3 border-b border-slate-200 pb-3">
+                    <h4 className="text-sm font-semibold text-slate-900">Basic Information</h4>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-1 text-sm text-slate-700">
+                        <span className="font-medium">Product</span>
+                        <select
+                          value={form.product}
+                          onChange={(event) => {
+                            setForm((previous) =>
+                              previous
+                                ? { ...previous, product: event.target.value as SocialPostProduct }
+                                : previous
+                            );
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          {SOCIAL_POST_PRODUCTS.map((product) => (
+                            <option key={product} value={product}>
+                              {SOCIAL_POST_PRODUCT_LABELS[product]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm text-slate-700">
+                        <span className="font-medium">Type</span>
+                        <select
+                          value={form.type}
+                          onChange={(event) => {
+                            setForm((previous) =>
+                              previous ? { ...previous, type: event.target.value as SocialPostType } : previous
+                            );
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          {SOCIAL_POST_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {SOCIAL_POST_TYPE_LABELS[type]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+                        <span className="font-medium">Canva Link</span>
+                        <input
+                          type="url"
+                          value={form.canva_url}
+                          onChange={(event) => {
+                            setForm((previous) =>
+                              previous ? { ...previous, canva_url: event.target.value } : previous
+                            );
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="https://www.canva.com/..."
+                        />
+                      </label>
                     </div>
-                  </label>
-                  <label className="space-y-1 text-sm text-slate-700">
-                    <span className="font-medium">Publish Date</span>
-                    <input
-                      type="date"
-                      value={form.scheduled_date}
-                      onChange={(event) => {
-                        setForm((previous) =>
-                          previous ? { ...previous, scheduled_date: event.target.value } : previous
-                        );
-                      }}
-                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm text-slate-700">
-                    <span className="font-medium">Canva Link</span>
-                    <input
-                      type="url"
-                      value={form.canva_url}
-                      onChange={(event) => {
-                        setForm((previous) =>
-                          previous ? { ...previous, canva_url: event.target.value } : previous
-                        );
-                      }}
-                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      placeholder="https://www.canva.com/..."
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm text-slate-700">
-                    <span className="font-medium">Canva Page</span>
-                    <input
-                      value={form.canva_page}
-                      onChange={(event) => {
-                        setForm((previous) =>
-                          previous ? { ...previous, canva_page: event.target.value } : previous
-                        );
-                      }}
-                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      placeholder="e.g. 23"
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm text-slate-700">
-                    <span className="font-medium">Product</span>
-                    <select
-                      value={form.product}
-                      onChange={(event) => {
-                        setForm((previous) =>
-                          previous
-                            ? { ...previous, product: event.target.value as SocialPostProduct }
-                            : previous
-                        );
-                      }}
-                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      {SOCIAL_POST_PRODUCTS.map((product) => (
-                        <option key={product} value={product}>
-                          {SOCIAL_POST_PRODUCT_LABELS[product]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-1 text-sm text-slate-700">
-                    <span className="font-medium">Type</span>
-                    <select
-                      value={form.type}
-                      onChange={(event) => {
-                        setForm((previous) =>
-                          previous ? { ...previous, type: event.target.value as SocialPostType } : previous
-                        );
-                      }}
-                      className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      {SOCIAL_POST_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                          {SOCIAL_POST_TYPE_LABELS[type]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  </div>
+                  <div className="space-y-3 pt-3">
+                    <h4 className="text-sm font-semibold text-slate-900">Optional</h4>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-1 text-sm text-slate-700">
+                        <span className="font-medium">Canva Page</span>
+                        <input
+                          value={form.canva_page}
+                          onChange={(event) => {
+                            setForm((previous) =>
+                              previous ? { ...previous, canva_page: event.target.value } : previous
+                            );
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="e.g. 23"
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm text-slate-700">
+                        <span className="font-medium">Post Title</span>
+                        <input
+                          value={form.title}
+                          onChange={(event) => {
+                            setForm((previous) =>
+                              previous ? { ...previous, title: event.target.value } : previous
+                            );
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm text-slate-700">
+                        <span className="font-medium">Scheduled Publish Date</span>
+                        <input
+                          type="date"
+                          value={form.scheduled_date}
+                          onChange={(event) => {
+                            setForm((previous) =>
+                              previous ? { ...previous, scheduled_date: event.target.value } : previous
+                            );
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+                        <span className="font-medium">Platform(s)</span>
+                        <div className="flex flex-wrap gap-2">
+                          {SOCIAL_PLATFORMS.map((platform) => {
+                            const isSelected = form.platforms.includes(platform);
+                            return (
+                              <Button
+                                key={platform}
+                                size="xs"
+                                variant={isSelected ? "primary" : "secondary"}
+                                onClick={() => {
+                                  setForm((previous) => {
+                                    if (!previous) {
+                                      return previous;
+                                    }
+                                    const nextPlatforms = previous.platforms.includes(platform)
+                                      ? previous.platforms.filter((entry) => entry !== platform)
+                                      : [...previous.platforms, platform];
+                                    return { ...previous, platforms: nextPlatforms };
+                                  });
+                                }}
+                              >
+                                {SOCIAL_PLATFORM_LABELS[platform]}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </label>
+                    </div>
+                  </div>
                 </fieldset>
               </section>
 
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                    2
-                  </span>
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">
-                      Link Context <span className="text-slate-500">(optional)</span>
-                    </h3>
-                    <p className="text-sm text-slate-600">
-                      Link a related blog so caption and publishing context stay connected.
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    Link Context <span className="text-slate-500">(optional)</span>
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    Link a related blog so caption and publishing context stay connected.
+                  </p>
                 </div>
                 <fieldset disabled={isExecutionLocked} className="space-y-4 disabled:opacity-70">
                 <label className="space-y-1 text-sm text-slate-700">
@@ -1182,16 +1201,11 @@ export default function SocialPostEditorPage() {
               </section>
 
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                    3
-                  </span>
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">Write Caption</h3>
-                    <p className="text-sm text-slate-600">
-                      Use the editor like a focused notepad, then copy from one menu.
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Write Caption</h3>
+                  <p className="text-sm text-slate-600">
+                    Use the editor like a focused notepad, then copy from one menu.
+                  </p>
                 </div>
                 <fieldset disabled={isExecutionLocked} className="space-y-2 disabled:opacity-70">
                 <div className="space-y-2 rounded-lg border border-slate-200 p-3">
@@ -1298,42 +1312,11 @@ export default function SocialPostEditorPage() {
               </section>
 
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                    4
-                  </span>
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">Review & Publish</h3>
-                    <p className="text-sm text-slate-600">
-                      Validate checklist items, manage transitions, and run the final stage action.
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Checklist + Validation
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Review & Publish</h3>
+                  <p className="text-sm text-slate-600">
+                    Manage transitions and handle publishing actions.
                   </p>
-                  <ul className="space-y-1">
-                    {checklistItems.map((item) => (
-                      <li key={item.label} className="flex items-center gap-2 text-sm text-slate-700">
-                        <span
-                          className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                            item.done ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
-                          }`}
-                        >
-                          {item.done ? (
-                            <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                          ) : (
-                            <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
-                          )}
-                        </span>
-                        <span>{item.label}</span>
-                        <span className="text-xs text-slate-500">
-                          {item.required ? "(required)" : "(optional)"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
                 <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -1346,9 +1329,7 @@ export default function SocialPostEditorPage() {
                       onChange={(event) => {
                         const nextStatus = event.target.value as SocialPostStatus;
                         if (!canCurrentUserTransition(form.status, nextStatus)) {
-                          showError(
-                            "You do not have permission for that transition from the current stage."
-                          );
+                          showError(VALIDATION_MESSAGES.noPermissionTransition);
                           return;
                         }
                         void transitionPostStatus(nextStatus);
@@ -1431,109 +1412,84 @@ export default function SocialPostEditorPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="rounded-md border border-slate-200 bg-white p-3">
-                  <p className="text-sm text-slate-600">{finalAction.helper}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Next stage: {SOCIAL_POST_STATUS_LABELS[finalAction.nextStatus]}
-                  </p>
-                  {isOverLimit ? (
-                    <p className="mt-1 text-xs text-rose-700">
-                      Caption exceeds the LinkedIn character limit.
-                    </p>
-                  ) : null}
-                  <div className="mt-3">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      disabled={
-                        isSaving ||
-                        isOverLimit ||
-                        !canCurrentUserTransition(form.status, finalAction.nextStatus) ||
-                        (finalAction.nextStatus === form.status &&
-                          isExecutionStage(form.status))
-                      }
-                      onClick={() => {
-                        void handleFinalAction();
-                      }}
-                    >
-                      {isSaving ? "Saving…" : finalAction.label}
-                    </Button>
-                  </div>
-                </div>
               </section>
             </div>
 
-            <aside className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <section className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Workflow Progress
-                </p>
-                <ul className="space-y-1">
-                  <li className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {hasTitle && hasPlatform && hasPublishDate && hasCanvaLink ? (
-                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                      ) : (
-                        "1"
-                      )}
-                    </span>
-                    Setup
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {hasLinkedBlog ? (
-                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                      ) : (
-                        "2"
-                      )}
-                    </span>
-                    Link Context (optional)
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {hasCaption ? (
-                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                      ) : (
-                        "3"
-                      )}
-                    </span>
-                    Write Caption
-                  </li>
-                  <li className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                      {form.status === "published" ? (
-                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                      ) : (
-                        "4"
-                      )}
-                    </span>
-                    Review & Publish
-                  </li>
-                </ul>
-              </section>
-              <section className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+            <aside className="space-y-3">
+              <section className="sticky top-20 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Current Snapshot
                 </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Status</span>
-                  <SocialPostStatusBadge status={form.status} />
+                <div className="space-y-2 border-b border-slate-200 pb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Status</span>
+                    <SocialPostStatusBadge status={form.status} />
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    Product: {SOCIAL_POST_PRODUCT_LABELS[form.product]}
+                  </p>
+                  <p className="text-xs text-slate-600">Type: {SOCIAL_POST_TYPE_LABELS[form.type]}</p>
+                  <p className="text-xs text-slate-600">
+                    Last saved: {formatSavedTimestamp(post.updated_at)}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-600">
-                  Next actor:{" "}
-                  {getNextActor(form.status) === "admin"
-                    ? "Admin"
-                    : getNextActor(form.status) === "editor"
-                      ? "Social Editor"
-                      : "Done"}
-                </p>
-                <p className="text-xs text-slate-600">
-                  Product: {SOCIAL_POST_PRODUCT_LABELS[form.product]}
-                </p>
-                <p className="text-xs text-slate-600">Type: {SOCIAL_POST_TYPE_LABELS[form.type]}</p>
-                <p className="text-xs text-slate-600">
-                  Last saved: {formatSavedTimestamp(post.updated_at)}
-                </p>
+              </section>
+              <section className="sticky top-56 space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Checklist + Validation
+                  </p>
+                </div>
+                <ul className="space-y-1">
+                  {checklistItems.map((item) => (
+                    <li key={item.label} className="flex items-start gap-2 text-sm text-slate-700">
+                      <span
+                        className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs ${
+                          item.done ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+                        }`}
+                      >
+                        {item.done ? (
+                          <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                        ) : (
+                          <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+                        )}
+                      </span>
+                      <div>
+                        <p>{item.label}</p>
+                        <p className="text-xs text-slate-500">
+                          {item.required ? "(required)" : "(optional)"}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="space-y-2 border-t border-slate-200 pt-3">
+                  <p className="text-xs text-slate-600">{finalAction.helper}</p>
+                  <p className="text-xs font-medium text-slate-700">
+                    Next stage: {SOCIAL_POST_STATUS_LABELS[finalAction.nextStatus]}
+                  </p>
+                  {isOverLimit ? (
+                    <p className="text-xs text-rose-700">
+                      {VALIDATION_MESSAGES.captionExceeds}
+                    </p>
+                  ) : null}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={
+                      isSaving ||
+                      isOverLimit ||
+                      !canCurrentUserTransition(form.status, finalAction.nextStatus) ||
+                      (finalAction.nextStatus === form.status &&
+                        isExecutionStage(form.status))
+                    }
+                    onClick={() => {
+                      void handleFinalAction();
+                    }}
+                  >
+                    {isSaving ? "Saving…" : finalAction.label}
+                  </Button>
+                </div>
               </section>
             </aside>
           </div>

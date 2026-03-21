@@ -8,7 +8,7 @@ import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { DataTable } from "@/components/data-table";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
@@ -52,11 +52,6 @@ import type {
 import { formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
-import { useNotifications } from "@/providers/notifications-provider";
-import {
-  blogWriterStatusChangedNotification,
-  blogPublisherStatusChangedNotification,
-} from "@/lib/notification-helpers";
 
 type TaskKind = "writer" | "publisher";
 

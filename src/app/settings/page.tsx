@@ -1207,10 +1207,10 @@ export default function SettingsPage() {
               {isAdminUser ? (
                 <section className="rounded-lg border border-rose-200 bg-rose-50/40 p-4">
                   <h3 className="text-base font-semibold text-rose-900">
-                    Activity History Cleanup
+                    Manage Activity Records
                   </h3>
                   <p className="mt-1 text-sm text-rose-800/90">
-                    Clean up activity history and records. Useful for removing test data or reducing noise.
+                    Clean up activity records. Useful for removing test data or reducing noise.
                   </p>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -1287,7 +1287,7 @@ export default function SettingsPage() {
                           setIsDeleteHistoryModalOpen(true);
                         }}
                       >
-                        Delete Activity History
+                        Delete Records
                       </button>
                   </div>
                 </section>
@@ -1321,10 +1321,10 @@ export default function SettingsPage() {
               {isAdminUser || isQuickViewActive ? (
                 <section className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-4">
                   <h3 className="text-base font-semibold text-indigo-900">
-                    Access & Oversight
+                    Administration
                   </h3>
                   <p className="mt-1 text-sm text-indigo-900/80">
-                    Manage role permissions or temporarily view the app as another user.
+                    Manage permissions and temporarily view the app as another user.
                   </p>
                   {canManagePermissions ? (
                     <div className="mt-3">

@@ -1337,7 +1337,7 @@ export default function BlogDetailPage() {
 
           <section className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Assignment & Activity History
+              Assignment & Changes
             </h3>
             {history.length === 0 ? (
               <p className="mt-3 text-sm text-slate-500">No history yet.</p>

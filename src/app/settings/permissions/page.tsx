@@ -349,10 +349,10 @@ export default function PermissionsSettingsPage() {
 
           <section className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Permission Audit Log
+              Permission Changes
             </h3>
             {auditRows.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">No permission changes logged yet.</p>
+              <p className="mt-3 text-sm text-slate-500">No permission changes recorded yet.</p>
             ) : (
               <ul className="mt-3 space-y-2">
                 {auditRows.map((audit) => (

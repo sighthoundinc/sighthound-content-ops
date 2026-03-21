@@ -244,7 +244,7 @@ export default function AccessLogsPage() {
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
-            title="Activity History"
+            title="Recent Activity"
             description="View your dashboard activity"
           />
 
@@ -368,7 +368,7 @@ export default function AccessLogsPage() {
           )}
 
           {!isLoading && totalCount === 0 && !error && (
-            <DataPageEmptyState title="No access logs yet" description="Login and dashboard activity will appear here" />
+            <DataPageEmptyState title="No activity yet" description="Login and dashboard activity will appear here" />
           )}
 
           {!isLoading && totalCount > 0 && !error && (
@@ -378,7 +378,7 @@ export default function AccessLogsPage() {
                   totalRows={totalCount}
                   currentPage={currentPage}
                   rowLimit={rowLimit}
-                  noun="logs"
+                  noun="entries"
                 />
                 <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
                   <TableRowLimitSelect
@@ -434,7 +434,7 @@ export default function AccessLogsPage() {
 
           {isLoading && (
             <div className="flex items-center justify-center py-12">
-              <div className="text-gray-500">Loading access history...</div>
+              <div className="text-gray-500">Loading activity...</div>
             </div>
           )}
         </div>

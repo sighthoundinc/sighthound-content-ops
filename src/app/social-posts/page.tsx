@@ -2067,7 +2067,7 @@ function SocialPostsPageContent() {
 
               <section className="mt-4 rounded-lg border border-slate-200 p-4">
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Activity History
+                  Recent Changes
                 </h4>
                 {isPanelLoading ? (
                   <p className="mt-3 text-sm text-slate-500">Loading activity…</p>

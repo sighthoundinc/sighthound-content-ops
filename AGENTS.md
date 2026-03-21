@@ -231,13 +231,13 @@ To keep idea intake predictable and avoid split editing patterns:
 - **Provider**: `AlertsProvider` in root layout
 
 ### Notifications (`useNotifications`)
-- **Purpose**: Persistent workflow state changes (task assigned, stage changed, awaiting action)
+- **Purpose**: Persistent workflow state changes (assignments, submissions, publications, status transitions)
 - **Placement**: Bell icon (top-right) with unread count badge
 - **Lifecycle**: Persistent until explicitly marked as read or cleared
 - **Visible in bell drawer** with titles, messages, timestamps, and links to context
-- **Types**: `task_assigned`, `stage_changed`, `awaiting_action`, `mention`
+- **Types**: `task_assigned`, `stage_changed`, `awaiting_action`, `mention`, `submitted_for_review`, `published`, `assignment_changed`
 - **Icons**: lucide-react via `AppIcon` (no emoji)
-- **Trigger**: Workflow mutations (blog status changes, task assignments)
+- **Trigger**: Workflow mutations (blog status changes, task assignments, submissions, publications)
 - **Provider**: `NotificationsProvider` in root layout
 
 ### Implementation
@@ -250,6 +250,88 @@ To keep idea intake predictable and avoid split editing patterns:
 1. Define helper in `src/lib/notification-helpers.ts` returning `NotificationInput`
 2. Call `pushNotification(helper(...))` in mutation handler
 3. Update SPECIFICATION.md and this guide with trigger point documentation
+
+### Notification Types & Trigger Points
+
+**Existing Types**:
+- `task_assigned` — User is assigned a new blog (writer or publisher role)
+- `stage_changed` — Blog writer/publisher status transitions (e.g., In Progress → Pending Review)
+- `awaiting_action` — Blog needs revision or is awaiting review
+- `mention` — User is mentioned in a comment
+
+**New Activity Types** (user-centric actions):
+- `submitted_for_review` — Writer/Publisher submits a blog for review (transitions to `pending_review`)
+  - **Example**: "Blog A submitted by Writer B" (triggered on writer status → pending_review)
+  - **Example**: "Blog C submitted by Publisher D" (triggered on publisher status → pending_review)
+- `published` — Blog is published live (publisher status transitions to `completed`)
+  - **Example**: "Blog E published by Publisher F"
+- `assignment_changed` — Blog writer/publisher assignment changes (via details form)
+  - **Example**: "Blog G reassigned to Writer H as Writer by Admin I"
+  - **Example**: "Blog J reassigned to Publisher K as Publisher by Admin L"
+
+**Trigger Sources**:
+- **Blog Detail Page** (`/blogs/[id]/page.tsx`):
+  - `handleDetailsSave()`: Emits `assignment_changed` for writer/publisher assignment changes
+  - `handleWriterSave()`: Emits `stage_changed` + `submitted_for_review` on writer status changes (especially pending_review)
+  - `handlePublisherSave()`: Emits `stage_changed` + `submitted_for_review` on publisher pending_review, + `published` on completion
+
+### Activity History Feed
+
+In addition to real-time notifications, the bell drawer displays a unified activity feed from multiple content types. This provides users with a complete audit trail across all major content:
+
+- **Source**: `/api/activity-feed` endpoint fetches the 50 most recent activities from:
+  - `blog_assignment_history` table (blog activities)
+  - `social_post_activity_history` table (social post activities)
+- **Displayed in**: Bell drawer under "Recent Activity" section, separate from real-time notifications
+- **Content types**: Blogs and Social Posts (with icons to distinguish them)
+- **Data includes**: Status transitions, assignment changes, field updates with old/new values
+- **Format**: Event type (e.g., "writer_status_changed"), content title, actor name, and relative timestamp
+- **Click behavior**: Clicking a blog activity navigates to `/blogs/[id]`; clicking a social post activity navigates to `/social-posts/[id]`
+- **Load trigger**: Activity feed is fetched when the notification panel opens
+- **Display limit**: Shows up to 10 most recent activities merged from all sources; full history available via "View History" link
+- **Sorting**: Activities are merged and sorted by timestamp (most recent first) across all content types
+
+## Activity History Filtering (Multi-Select) (MUST)
+
+**Admin-only feature** for reviewing unified activity records across the application.
+
+### Location
+- UI: `/settings/access-logs` (page title: "Activity History")
+- API: `GET /api/admin/activity-history`
+
+### Activity Types Supported
+- `login` — User sign-in events
+- `dashboard_visit` — Dashboard page visits
+- `blog_writer_status_changed` — Blog writer workflow transitions
+- `blog_publisher_status_changed` — Blog publisher workflow transitions
+- `blog_assignment_changed` — Blog writer/publisher assignment changes
+- `social_post_status_changed` — Social post workflow transitions
+- `social_post_assignment_changed` — Social post assignment changes
+
+### Multi-Select Filtering
+- **Activity Type Filter**: Checkboxes for selecting multiple activity types (independent toggle per type)
+- **User Filter**: Checkboxes for selecting multiple users (independent toggle per user)
+- **Default Selection**: All activity types selected on page load (users: none selected)
+- **Behavior**: Filters apply as union (OR) within each category and intersection (AND) across categories
+
+### Table Display
+- **Columns**: Category (login/dashboard/blog/social), Action (event description), Content (title or "—" for access logs), User, Email, Timestamp
+- **Content links**: Blog activities link to blog detail page; social post activities link to social post page
+- **Access log content**: Shows "—" (em-dash) instead of content title
+- **Timestamps**: Formatted per user's timezone setting (admins default to UTC for consistency)
+
+### API Response Structure
+Endpoint returns:
+- `activities`: Array of unified activity records
+- `total`: Total count for pagination
+- `activityTypeLabels`: Map of activity type → human-readable label
+- `activityTypeCategories`: Map of activity type → category (Login/Dashboard/Blog Activity/Social Post Activity)
+
+### Implementation Details
+- **Query params**: `?activity_types=type1,type2&user_ids=user1,user2&limit=100&offset=0`
+- **Data sources**: Merges `access_logs`, `blog_assignment_history`, `social_post_activity_history` tables
+- **Sort order**: Most recent activities first (timestamp descending)
+- **RLS enforcement**: Admin role required; non-admins cannot access this endpoint
 
 ## User Preferences (MUST)
 

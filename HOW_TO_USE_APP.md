@@ -1,4 +1,4 @@
-# Sighthound Content Ops — User Guide
+# Sighthound Content Ops — User Manual
 
 ## 1. What this app is
 This is your content operations system for blogs and social posts.
@@ -68,13 +68,9 @@ The sidebar order is fixed and consistent:
 9. Settings
 10. Permissions
 
-Filter groups in the left sidebar:
-- `Writer Filters`
-- `Publisher Filters`
-
-Behavior:
-- both filter groups are collapsed by default
-- each group toggles independently (opening one does not open/close the other)
+Dashboard sidebar behavior:
+- no quick-filter groups are shown in the left sidebar
+- no `Recently Published` section is shown in the left sidebar
 - clicking the top-left Sighthound brand in the header always returns to workspace home (`/`)
 
 ## 3. Quick role-based start
@@ -145,6 +141,9 @@ Filters:
 - are designed to behave consistently across pages
 
 If no results are found, you should see a clear empty state.
+On Dashboard:
+- filtered no-results includes actions to clear filters or open import
+- no-data state includes actions to add a new blog or open import
 
 ## 6. Import workflow (columns + rows)
 Imports support both column-level and row-level control before final submit.
@@ -245,9 +244,9 @@ Important:
 - if live link is missing, keep the post in `Awaiting Live Link`
 
 ## 10. Keyboard shortcuts and quick create
-Shortcuts are shown as clickable `Shortcut` text in the UI.
+Shortcuts are shown as clickable `Shortcuts` text in the UI.
 
-When clicked, `Shortcut` opens a modal with key combinations.
+When clicked, `Shortcuts` opens a modal with key combinations.
 
 Shortcut visibility:
 - shown alongside core actions in dropdowns (for example Dashboard, Add New Idea, New Blog, New Social Post)
@@ -270,7 +269,37 @@ Error types you may see:
 - permission errors (check role/access)
 - system errors (retry, then report if persistent)
 
-## 12. Permissions and sensitive actions
+## 12. Activity History (admin only)
+**Admin-only feature** for reviewing unified activity records across the application.
+
+**Access**: Settings → Activity History
+
+**What it shows**:
+- All login/dashboard activity
+- Blog workflow changes (writer/publisher status transitions, assignment changes)
+- Social post workflow changes (status transitions, assignment changes)
+
+**How to filter**:
+1. **Activity Type**: Use checkboxes to select/unselect activity types
+   - Login
+   - Dashboard Visit
+   - Blog Writer Status Changed
+   - Blog Publisher Status Changed
+   - Blog Assignment Changed
+   - Social Post Status Changed
+   - Social Post Assignment Changed
+2. **User**: Use checkboxes to select/unselect specific users (all selected by default)
+3. **Apply**: Filters update the table immediately
+
+**Table columns**:
+- Category (Login/Dashboard/Blog Activity/Social Post Activity)
+- Action (what happened)
+- Content (blog/post title, or "—" for access logs)
+- User (who performed the action)
+- Email (user's email)
+- Timestamp (when it happened, in your timezone)
+
+## 13. Permissions and sensitive actions
 Permissions are role-based and strictly enforced.
 
 Settings page organization:
@@ -287,7 +316,7 @@ Critical rule:
 - the initiating admin's own content/activity records are also wiped as part of the reset behavior
 - optional: enable `Also remove all other admin profiles and auth accounts` in the wipe confirmation modal to delete other admin accounts; leave it unchecked to preserve them
 
-## 13. Interaction consistency expectations
+## 14. Interaction consistency expectations
 For consistent UX:
 - dropdowns and modals close when focus is lost (click outside)
 - copy actions in Quick Actions show a global visual confirmation
@@ -295,7 +324,7 @@ For consistent UX:
 
 If these behaviors are missing, report it as a bug.
 
-## 14. Password reset (test-only)
+## 15. Password reset (test-only)
 **Note:** This feature is temporary and for testing purposes only. It will be removed before production deployment.
 
 Admins can manually reset passwords for any user (admin or non-admin) via the User Directory:

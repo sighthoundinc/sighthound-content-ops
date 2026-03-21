@@ -109,6 +109,66 @@ export function blogAwaitingActionNotification(
 }
 
 /**
+ * Generates a notification when a blog is submitted for review
+ */
+export function blogSubmittedForReviewNotification(
+  blogTitle: string,
+  submitterName: string | null,
+  reviewType: "writer" | "publisher",
+  blogId: string
+): NotificationInput {
+  const reviewTypeLabel = reviewType === "writer" ? "Writer" : "Publisher";
+  return {
+    type: "submitted_for_review",
+    title: `Submitted for ${reviewTypeLabel} Review`,
+    message: `${blogTitle} submitted by ${submitterName || "user"}`,
+    href: `/blogs/${blogId}`,
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Generates a notification when a blog is published
+ */
+export function blogPublishedNotification(
+  blogTitle: string,
+  publisherName: string | null,
+  blogId: string
+): NotificationInput {
+  return {
+    type: "published",
+    title: "Blog Published",
+    message: `${blogTitle} published by ${publisherName || "user"}`,
+    href: `/blogs/${blogId}`,
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Generates a notification when a blog's writer or publisher assignment changes
+ */
+export function blogAssignmentChangedNotification(
+  blogTitle: string,
+  assignmentType: "writer" | "publisher",
+  assignedToName: string | null,
+  assignedByName: string | null,
+  blogId: string
+): NotificationInput {
+  const roleLabel = assignmentType === "writer" ? "Writer" : "Publisher";
+  const message = assignedToName
+    ? `${blogTitle} reassigned to ${assignedToName} as ${roleLabel} by ${assignedByName || "user"}`
+    : `${blogTitle} ${roleLabel} assignment removed`;
+
+  return {
+    type: "assignment_changed",
+    title: `Assignment Changed`,
+    message,
+    href: `/blogs/${blogId}`,
+    timestamp: Date.now(),
+  };
+}
+
+/**
  * Get human-readable label for writer status
  */
 function getWriterStatusLabel(status: WriterStageStatus): string {

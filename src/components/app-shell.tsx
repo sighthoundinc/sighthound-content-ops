@@ -97,6 +97,17 @@ export function AppShell({
     null
   );
   const [quickViewError, setQuickViewError] = useState<string | null>(null);
+  const [activityFeed, setActivityFeed] = useState<
+    Array<{
+      id: string;
+      content_type: "blog" | "social_post";
+      content_id: string;
+      content_title: string;
+      event_type: string;
+      changed_by_name: string | null;
+      changed_at: string;
+    }>
+  >([]);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
   const quickCreateItemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const permissionContract = useMemo(
@@ -164,7 +175,7 @@ export function AppShell({
       return "Ideas";
     }
     if (pathname.startsWith("/resources")) {
-      return "User Guide";
+      return "User Manual";
     }
     if (pathname.startsWith("/settings")) {
       return "Settings";
@@ -387,6 +398,25 @@ export function AppShell({
     setQuickViewError(null);
   }, [user?.id]);
 
+  // Load activity feed when notification panel opens
+  useEffect(() => {
+    if (!isNotificationPanelOpen) {
+      return;
+    }
+    const loadActivityFeed = async () => {
+      try {
+        const response = await fetch("/api/activity-feed");
+        if (response.ok) {
+          const data = await response.json();
+          setActivityFeed(data.data?.activities || []);
+        }
+      } catch (error) {
+        console.error("Failed to load activity feed:", error);
+      }
+    };
+    void loadActivityFeed();
+  }, [isNotificationPanelOpen]);
+
   const returnToAdminFromQuickView = async () => {
     const snapshot = readQuickViewSnapshot();
     if (!snapshot) {
@@ -480,51 +510,111 @@ export function AppShell({
                       </Button>
                     </div>
                   </div>
-                  {notifications.length === 0 ? (
+                  {notifications.length === 0 && activityFeed.length === 0 ? (
                     <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
-                      No notifications.
+                      No updates or activity.
                     </p>
                   ) : (
-                    <ul className="mt-2 space-y-1">
-                      {notifications.slice(0, 5).map((notification) => (
-                        <li key={notification.id}>
-                          <button
-                            type="button"
-                            className={cn(
-                              "w-full rounded-md border px-2 py-2 text-left transition hover:bg-slate-50",
-                              notification.read
-                                ? "border-slate-200 bg-white"
-                                : "border-indigo-200 bg-indigo-50"
-                            )}
-                            onClick={() => {
-                              markAsRead(notification.id);
-                              setIsNotificationPanelOpen(false);
-                              if (notification.href) {
-                                router.push(notification.href);
-                              }
-                            }}
-                          >
-                            <div className="flex items-start gap-2">
-                              <span className="mt-0.5 inline-flex shrink-0">
-                                <AppIcon
-                                  name="bell"
-                                  boxClassName="h-4 w-4"
-                                  size={14}
-                                  className="text-blue-600"
-                                />
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-slate-900 text-sm">{notification.title}</p>
-                                <p className="mt-0.5 text-sm text-slate-700">{notification.message}</p>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  {formatNotificationAge(notification.createdAt)}
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-2 space-y-3 max-h-[400px] overflow-y-auto">
+                      {/* Real-time notifications */}
+                      {notifications.length > 0 && (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Updates</p>
+                          <ul className="space-y-1">
+                            {notifications.slice(0, 5).map((notification) => (
+                              <li key={notification.id}>
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    "w-full rounded-md border px-2 py-2 text-left transition hover:bg-slate-50",
+                                    notification.read
+                                      ? "border-slate-200 bg-white"
+                                      : "border-indigo-200 bg-indigo-50"
+                                  )}
+                                  onClick={() => {
+                                    markAsRead(notification.id);
+                                    setIsNotificationPanelOpen(false);
+                                    if (notification.href) {
+                                      router.push(notification.href);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <span className="mt-0.5 inline-flex shrink-0">
+                                      <AppIcon
+                                        name="bell"
+                                        boxClassName="h-4 w-4"
+                                        size={14}
+                                        className="text-blue-600"
+                                      />
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-medium text-slate-900 text-sm">{notification.title}</p>
+                                      <p className="mt-0.5 text-sm text-slate-700">{notification.message}</p>
+                                      <p className="mt-1 text-xs text-slate-500">
+                                        {formatNotificationAge(notification.createdAt)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Activity history */}
+                      {activityFeed.length > 0 && (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Recent Activity</p>
+                          <ul className="space-y-1">
+                            {activityFeed.slice(0, 10).map((activity) => {
+                              const href =
+                                activity.content_type === "blog"
+                                  ? `/blogs/${activity.content_id}`
+                                  : `/social-posts/${activity.content_id}`;
+                              const icon =
+                                activity.content_type === "blog" ? "blog" : "social";
+                              return (
+                                <li key={activity.id}>
+                                  <button
+                                    type="button"
+                                    className="w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-left text-xs transition hover:bg-slate-50"
+                                    onClick={() => {
+                                      setIsNotificationPanelOpen(false);
+                                      router.push(href);
+                                    }}
+                                  >
+                                    <div className="flex items-start gap-2">
+                                      <span className="mt-0.5 inline-flex shrink-0">
+                                        <AppIcon
+                                          name={icon}
+                                          boxClassName="h-4 w-4"
+                                          size={12}
+                                          className="text-slate-400"
+                                        />
+                                      </span>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-slate-900">
+                                          {activity.event_type.replace(/_/g, " ")}
+                                        </p>
+                                        <p className="mt-0.5 truncate text-slate-700">
+                                          {activity.content_title}
+                                          {activity.changed_by_name && ` by ${activity.changed_by_name}`}
+                                        </p>
+                                        <p className="mt-1 text-slate-500">
+                                          {formatNotificationAge(new Date(activity.changed_at).getTime())}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ) : null}
@@ -542,13 +632,13 @@ export function AppShell({
               Shortcuts
             </button>
 
-            {/* User Guide - Plain text link */}
+            {/* User Manual - Plain text link */}
             <Link
               href="/resources"
               className="text-sm text-slate-700 transition hover:text-slate-900"
-              title="Go to User Guide"
+              title="Go to User Manual"
             >
-              User Guide
+              User Manual
             </Link>
 
             {/* User name - Clickable link to settings */}
@@ -814,7 +904,7 @@ export function AppShell({
                   setIsShortcutModalOpen(true);
                 }}
               >
-                Shortcut
+                Shortcuts
               </button>{" "}
               details
             </p>

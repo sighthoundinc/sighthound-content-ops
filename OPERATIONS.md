@@ -3,7 +3,7 @@ This runbook is for maintainers and operators.
 It describes how the system runs in practice today (deployment, monitoring, incident response, and admin maintenance).  
 For product behavior, see `SPECIFICATION.md`.  
 For implementation/build rules, see `AGENTS.md`.  
-For end-user instructions, see `HOW_TO_USE_APP.md`.
+For end-user manual instructions, see `HOW_TO_USE_APP.md`.
 
 ## 1) System overview
 - Frontend: Next.js + TypeScript + Tailwind (Phase 4A-4C UI complete)
@@ -25,6 +25,7 @@ Content mutations (blogs, stages, comments, derived status) are DB-authoritative
 - All pages use consistent DataTable component for sorting, filtering, pagination
 - Column definitions defined at page level with type safety
 - StatusBadgeSystem used throughout for status rendering
+- Dashboard left sidebar is intentionally minimal (quick filters and recently published panel removed)
 - Zero dead code, production-ready quality (TypeScript 0 errors, ESLint 0 errors)
 
 ### Icon system operations standard
@@ -174,17 +175,20 @@ API:
 
 Use this to move writer/publisher assignments safely between users, instead of manual SQL updates.
 
-## 8) Access history operations
+## 8) Access history and unified activity operations
 Access logging API:
 - `POST /api/actions/log-login` (client action) — logs successful login events
 - `POST /api/actions/log-dashboard-visit` (client action) — logs dashboard page visits
-- `GET /api/admin/access-logs` — retrieves activity history with filters
+- `GET /api/admin/access-logs` — retrieves access logs with filters (legacy endpoint, deprecated in favor of unified activity API)
+
+Unified activity history API:
+- `GET /api/admin/activity-history` — retrieves unified activity records with multi-select filtering
 
 Behavior:
-- **Non-admin users**: can only see their own dashboard visits (read-only)
-- **Admin users**: can filter by event type (All/Login/Dashboard) and user (All Users or specific)
-- **RLS policies**: allow users to see their own logs; admins see all logs
-- **Immutable**: access logs cannot be edited, only created or deleted by admins
+- **Non-admin users**: cannot access activity history (admin-only feature)
+- **Admin users**: can filter by activity type (multi-select) and user (multi-select)
+- **RLS policies**: admin role required; endpoint is hard-gated in application layer
+- **Immutable**: activity records cannot be edited, only created or deleted by admins
 - **Cleanup**: included in `/api/admin/activity-history` deletion scope
 
 Access logs table (`access_logs`):
@@ -192,6 +196,17 @@ Access logs table (`access_logs`):
 - `user_id` (FK to profiles)
 - `event_type` ('login' | 'dashboard_visit')
 - `timestamp` (UTC)
+
+Unified activity sources:
+- `access_logs` — login and dashboard visit events
+- `blog_assignment_history` — blog writer/publisher status transitions and assignment changes
+- `social_post_activity_history` — social post status transitions and assignment changes
+
+Multi-select filtering:
+- **Activity types**: login, dashboard_visit, blog_writer_status_changed, blog_publisher_status_changed, blog_assignment_changed, social_post_status_changed, social_post_assignment_changed
+- **Users**: any user in the system (all selected by default on page load)
+- **Filter logic**: OR within activity types, AND across activity types and users
+- **Query params**: `activity_types=type1,type2&user_ids=user1,user2&limit=100&offset=0`
 
 Notification bell integration:
 - Top 5 recent activity notifications displayed in bell dropdown

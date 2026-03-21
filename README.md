@@ -14,7 +14,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 
 ## Documentation map
 - Product behavior: `SPECIFICATION.md`
-- End-user guide: `HOW_TO_USE_APP.md`
+- End-user manual: `HOW_TO_USE_APP.md`
 - Operations runbook: `OPERATIONS.md`
 
 ## UX implementation status
@@ -44,9 +44,8 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - divider
   - configuration pages (`Settings`, `Permissions` for admins only)
 - Active nav page has stronger visual state (left border + highlighted row)
-- Clickable queue/pipeline filters and clickable Today metrics
-- Writing queue shortcuts: `Drafting`, `Needs Revision`, `Ready for Publishing`, `Backlog`
-- Publishing queue shortcuts: `Not Started`, `In Progress`, `Final Review`, `Published`
+- Left sidebar is intentionally clean (no quick-filter groups and no recently-published card)
+- Clickable Today metrics
 - Delayed metric: scheduled publish date is in the past and overall status is not `Published`
 - Active filter chips + clear-all behavior
 - Scan-friendly table:

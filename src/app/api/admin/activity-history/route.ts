@@ -2,7 +2,271 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getUserRoles } from "@/lib/roles";
-import { authenticateRequest } from "@/lib/server-permissions";
+import { authenticateRequest, requirePermission } from "@/lib/server-permissions";
+
+type ActivityType =
+  | "login"
+  | "dashboard_visit"
+  | "blog_writer_status_changed"
+  | "blog_publisher_status_changed"
+  | "blog_assignment_changed"
+  | "social_post_status_changed"
+  | "social_post_assignment_changed";
+
+interface UnifiedActivity {
+  id: string;
+  activity_type: ActivityType;
+  content_type: "access_log" | "blog" | "social_post";
+  user_id: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  content_id: string | null;
+  content_title: string | null;
+  event_description: string;
+  created_at: string;
+}
+
+const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
+  login: "Login",
+  dashboard_visit: "Dashboard Visit",
+  blog_writer_status_changed: "Blog Writer Status Changed",
+  blog_publisher_status_changed: "Blog Publisher Status Changed",
+  blog_assignment_changed: "Blog Assignment Changed",
+  social_post_status_changed: "Social Post Status Changed",
+  social_post_assignment_changed: "Social Post Assignment Changed",
+};
+
+const ACTIVITY_TYPE_CATEGORIES: Record<ActivityType, string> = {
+  login: "Access",
+  dashboard_visit: "Access",
+  blog_writer_status_changed: "Blog",
+  blog_publisher_status_changed: "Blog",
+  blog_assignment_changed: "Blog",
+  social_post_status_changed: "Social Post",
+  social_post_assignment_changed: "Social Post",
+};
+
+/**
+ * GET /api/admin/activity-history
+ * Unified activity history with multi-select filtering
+ * Query params:
+ *   - activity_types: comma-separated list of activity types
+ *   - user_ids: comma-separated list of user IDs
+ *   - limit: page size (default 100, max 1000)
+ *   - offset: pagination offset
+ */
+export async function GET(request: NextRequest) {
+  const auth = await requirePermission(request, "manage_users");
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const adminClient = auth.context.adminClient;
+
+  const url = new URL(request.url);
+  const activityTypesParam = url.searchParams.get("activity_types");
+  const userIdsParam = url.searchParams.get("user_ids");
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "100"), 1000);
+  const offset = parseInt(url.searchParams.get("offset") || "0");
+
+  // Parse activity types
+  const selectedActivityTypes: ActivityType[] = activityTypesParam
+    ? (activityTypesParam.split(",") as ActivityType[]).filter((type) =>
+        Object.keys(ACTIVITY_TYPE_LABELS).includes(type)
+      )
+    : (Object.keys(ACTIVITY_TYPE_LABELS) as ActivityType[]);
+
+  // Parse user IDs
+  const selectedUserIds: string[] = userIdsParam
+    ? userIdsParam.split(",").filter((id) => id.trim())
+    : [];
+
+  try {
+    const activities: UnifiedActivity[] = [];
+
+    // Fetch access logs
+    if (
+      selectedActivityTypes.some((t) =>
+        ["login", "dashboard_visit"].includes(t)
+      )
+    ) {
+      const accessLogTypes = selectedActivityTypes.filter((t) =>
+        ["login", "dashboard_visit"].includes(t)
+      ) as ("login" | "dashboard_visit")[];
+
+      let accessLogsQuery = adminClient
+        .from("access_logs")
+        .select("id, user_id, event_type, created_at");
+
+      if (selectedUserIds.length > 0) {
+        accessLogsQuery = accessLogsQuery.in("user_id", selectedUserIds);
+      }
+
+      if (accessLogTypes.length > 0) {
+        accessLogsQuery = accessLogsQuery.in("event_type", accessLogTypes);
+      }
+
+      const { data: accessLogs } = await accessLogsQuery
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (accessLogs) {
+        for (const log of accessLogs) {
+          const { data: profile } = await adminClient
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", log.user_id)
+            .maybeSingle();
+
+          activities.push({
+            id: `access_log_${log.id}`,
+            activity_type: log.event_type as ActivityType,
+            content_type: "access_log",
+            user_id: log.user_id,
+            user_name: profile?.full_name || null,
+            user_email: profile?.email || null,
+            content_id: null,
+            content_title: null,
+            event_description: ACTIVITY_TYPE_LABELS[log.event_type as ActivityType],
+            created_at: log.created_at,
+          });
+        }
+      }
+    }
+
+    // Fetch blog activities
+    if (
+      selectedActivityTypes.some((t) =>
+        [
+          "blog_writer_status_changed",
+          "blog_publisher_status_changed",
+          "blog_assignment_changed",
+        ].includes(t)
+      )
+    ) {
+      let blogActivityQuery = adminClient
+        .from("blog_assignment_history")
+        .select(
+          "id, blog_id, changed_by, event_type, created_at, blogs(title)"
+        );
+
+      if (selectedUserIds.length > 0) {
+        blogActivityQuery = blogActivityQuery.in("changed_by", selectedUserIds);
+      }
+
+      const { data: blogActivities } = await blogActivityQuery
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (blogActivities) {
+        for (const activity of blogActivities) {
+          const eventType = activity.event_type as ActivityType;
+
+          if (selectedActivityTypes.includes(eventType)) {
+            const { data: profile } = await adminClient
+              .from("profiles")
+              .select("full_name, email")
+              .eq("id", activity.changed_by)
+              .maybeSingle();
+
+            activities.push({
+              id: `blog_${activity.id}`,
+              activity_type: eventType,
+              content_type: "blog",
+              user_id: activity.changed_by,
+              user_name: profile?.full_name || null,
+              user_email: profile?.email || null,
+              content_id: activity.blog_id,
+              content_title: (activity.blogs as { title?: string } | null)
+                ?.title || null,
+              event_description: ACTIVITY_TYPE_LABELS[eventType],
+              created_at: activity.created_at,
+            });
+          }
+        }
+      }
+    }
+
+    // Fetch social post activities
+    if (
+      selectedActivityTypes.some((t) =>
+        [
+          "social_post_status_changed",
+          "social_post_assignment_changed",
+        ].includes(t)
+      )
+    ) {
+      let socialActivityQuery = adminClient
+        .from("social_post_activity_history")
+        .select(
+          "id, social_post_id, changed_by, event_type, created_at, social_posts(title)"
+        );
+
+      if (selectedUserIds.length > 0) {
+        socialActivityQuery = socialActivityQuery.in(
+          "changed_by",
+          selectedUserIds
+        );
+      }
+
+      const { data: socialActivities } = await socialActivityQuery
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (socialActivities) {
+        for (const activity of socialActivities) {
+          const eventType = activity.event_type as ActivityType;
+
+          if (selectedActivityTypes.includes(eventType)) {
+            const { data: profile } = await adminClient
+              .from("profiles")
+              .select("full_name, email")
+              .eq("id", activity.changed_by)
+              .maybeSingle();
+
+            activities.push({
+              id: `social_post_${activity.id}`,
+              activity_type: eventType,
+              content_type: "social_post",
+              user_id: activity.changed_by,
+              user_name: profile?.full_name || null,
+              user_email: profile?.email || null,
+              content_id: activity.social_post_id,
+              content_title: (activity.social_posts as {
+                title?: string;
+              } | null)?.title || null,
+              event_description: ACTIVITY_TYPE_LABELS[eventType],
+              created_at: activity.created_at,
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by created_at descending and apply pagination
+    const sortedActivities = activities.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    const paginatedActivities = sortedActivities.slice(offset, offset + limit);
+
+    return NextResponse.json({
+      activities: paginatedActivities,
+      total: sortedActivities.length,
+      limit,
+      offset,
+      activityTypeLabels: ACTIVITY_TYPE_LABELS,
+      activityTypeCategories: ACTIVITY_TYPE_CATEGORIES,
+    });
+  } catch (error) {
+    console.error("Error in activity history GET endpoint:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
 
 const deleteActivityHistorySchema = z.object({
   scope: z.enum(["all", "users"]).default("all"),

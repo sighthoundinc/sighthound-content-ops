@@ -221,7 +221,7 @@ export function GlobalQuickCreate() {
                 window.dispatchEvent(new CustomEvent("open-shortcuts-modal"));
               }}
             >
-              Shortcut
+              Shortcuts
             </button>
           </div>
         </div>

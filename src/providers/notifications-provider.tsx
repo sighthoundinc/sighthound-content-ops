@@ -12,7 +12,10 @@ type NotificationType =
   | "task_assigned"
   | "stage_changed"
   | "awaiting_action"
-  | "mention";
+  | "mention"
+  | "submitted_for_review"
+  | "published"
+  | "assignment_changed";
 
 export type NotificationInput = {
   type: NotificationType;

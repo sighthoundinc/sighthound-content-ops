@@ -9,7 +9,6 @@ import { AppShell } from "@/components/app-shell";
 import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
 import { BlogImportModal } from "@/components/blog-import-modal";
 import { Button } from "@/components/button";
-import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ColumnEditor } from "@/components/column-editor";
 import { DashboardTable } from "@/components/dashboard-table";
@@ -315,16 +314,6 @@ type SavedDashboardView = {
   createdAt: string;
   updatedAt: string;
 };
-export type QuickQueueKey =
-  | "writer_not_started"
-  | "writer_in_progress"
-  | "writer_needs_revision"
-  | "writer_completed_waiting_publish"
-  | "backlog_unscheduled"
-  | "publisher_not_started"
-  | "publisher_in_progress"
-  | "publisher_final_review"
-  | "publisher_published";
 
 const DASHBOARD_FILTER_STATE_STORAGE_KEY = "dashboard-filter-state:v1";
 const DASHBOARD_SAVED_VIEWS_STORAGE_KEY = "dashboard-saved-views:v1";
@@ -554,12 +543,9 @@ export default function DashboardPage() {
   const [isPanelLoading, setIsPanelLoading] = useState(false);
   const [isPanelCommentSaving, setIsPanelCommentSaving] = useState(false);
   const [isPanelEditMode, setIsPanelEditMode] = useState(false);
-  const [activeQuickQueue, setActiveQuickQueue] = useState<QuickQueueKey | null>(null);
   const [activeMetricFilter, setActiveMetricFilter] = useState<MetricFilterKey | null>(null);
   const [isApplyingFilterFeedback, setIsApplyingFilterFeedback] = useState(false);
   const [isEditColumnsOpen, setIsEditColumnsOpen] = useState(false);
-  const [isWriterFilterSidebarOpen, setIsWriterFilterSidebarOpen] = useState(false);
-  const [isPublisherFilterSidebarOpen, setIsPublisherFilterSidebarOpen] = useState(false);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const [, setCompletionTimingsByBlog] = useState<
     Record<string, BlogCompletionTiming>
@@ -665,8 +651,7 @@ export default function DashboardPage() {
     publisherFilters.length > 0 ||
     writerStatusFilters.length > 0 ||
     publisherStatusFilters.length > 0 ||
-    activeMetricFilter !== null ||
-    activeQuickQueue !== null;
+    activeMetricFilter !== null;
 
   const loadData = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -909,33 +894,6 @@ export default function DashboardPage() {
     setSelectedBlogIds((previous) => previous.filter((id) => existingIds.has(id)));
   }, [blogs]);
 
-  const quickQueueCounts = useMemo(() => {
-    const countBy = (predicate: (blog: BlogRecord) => boolean) =>
-      blogs.filter(predicate).length;
-
-    return {
-      writerNotStarted: countBy((blog) => blog.writer_status === "not_started"),
-      writerInProgress: countBy((blog) => blog.writer_status === "in_progress"),
-      writerNeedsRevision: countBy((blog) => blog.writer_status === "needs_revision"),
-      writerCompletedWaitingPublishing: countBy(
-        (blog) =>
-          blog.writer_status === "completed" && blog.publisher_status === "not_started"
-      ),
-      backlogUnscheduledIdeas: countBy(
-        (blog) =>
-          blog.writer_status === "not_started" &&
-          getBlogScheduledDate(blog) === null
-      ),
-      publisherNotStarted: countBy((blog) => blog.publisher_status === "not_started"),
-      publisherInProgress: countBy((blog) => blog.publisher_status === "in_progress"),
-      publisherFinalReview: countBy(
-        (blog) =>
-          blog.writer_status === "completed" && blog.publisher_status === "in_progress"
-      ),
-      publisherPublished: countBy((blog) => blog.publisher_status === "completed"),
-    };
-  }, [blogs]);
-
 
   useEffect(() => {
     if (!activeBlogId) {
@@ -1089,45 +1047,6 @@ export default function DashboardPage() {
       return scheduledTime >= weekStart.getTime() && scheduledTime <= weekEnd.getTime();
     };
 
-    const matchesQuickQueue = (blog: BlogRecord) => {
-      if (!activeQuickQueue) {
-        return true;
-      }
-      if (activeQuickQueue === "writer_not_started") {
-        return blog.writer_status === "not_started";
-      }
-      if (activeQuickQueue === "writer_in_progress") {
-        return blog.writer_status === "in_progress";
-      }
-      if (activeQuickQueue === "writer_needs_revision") {
-        return blog.writer_status === "needs_revision";
-      }
-      if (activeQuickQueue === "writer_completed_waiting_publish") {
-        return (
-          blog.writer_status === "completed" &&
-          blog.publisher_status === "not_started"
-        );
-      }
-      if (activeQuickQueue === "backlog_unscheduled") {
-        return (
-          blog.writer_status === "not_started" &&
-          getBlogScheduledDate(blog) === null
-        );
-      }
-      if (activeQuickQueue === "publisher_not_started") {
-        return blog.publisher_status === "not_started";
-      }
-      if (activeQuickQueue === "publisher_in_progress") {
-        return blog.publisher_status === "in_progress";
-      }
-      if (activeQuickQueue === "publisher_final_review") {
-        return (
-          blog.writer_status === "completed" &&
-          blog.publisher_status === "in_progress"
-        );
-      }
-      return blog.publisher_status === "completed";
-    };
     const matchesMetricFilter = (blog: BlogRecord) => {
       if (!activeMetricFilter) {
         return true;
@@ -1186,7 +1105,6 @@ export default function DashboardPage() {
         publisherStatusFilters.length === 0 ||
         publisherStatusFilters.includes(blog.publisher_status);
       return (
-        matchesQuickQueue(blog) &&
         matchesMetricFilter(blog) &&
         matchesSearch &&
         matchesSite &&
@@ -1204,7 +1122,6 @@ export default function DashboardPage() {
     search,
     siteFilters,
     statusFilters,
-    activeQuickQueue,
     activeMetricFilter,
     writerFilters,
     writerStatusFilters,
@@ -1288,7 +1205,6 @@ export default function DashboardPage() {
     setCurrentPage(1);
   }, [
     activeMetricFilter,
-    activeQuickQueue,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
@@ -1307,7 +1223,6 @@ export default function DashboardPage() {
     tableContainerRef.current.scrollTop = 0;
   }, [
     activeMetricFilter,
-    activeQuickQueue,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
@@ -1332,7 +1247,6 @@ export default function DashboardPage() {
     };
   }, [
     activeMetricFilter,
-    activeQuickQueue,
     currentPage,
     isLoading,
     publisherFilters,
@@ -1425,21 +1339,6 @@ export default function DashboardPage() {
       publishingInProgress,
     };
   }, [blogs]);
-
-  const recentPublishedBlogs = useMemo(
-    () =>
-      [...blogs]
-        .filter((blog) => blog.overall_status === "published")
-        .sort((left, right) => {
-          const leftDate = left.actual_published_at ?? left.published_at ?? "";
-          const rightDate = right.actual_published_at ?? right.published_at ?? "";
-          return rightDate.localeCompare(leftDate);
-        })
-        .slice(0, 3),
-    [blogs]
-  );
-
-  const mostRecentPublishedBlog = recentPublishedBlogs[0] ?? null;
 
   const visibleBlogIds = useMemo(() => pagedBlogs.map((blog) => blog.id), [pagedBlogs]);
   const activeBlogIndex = useMemo(
@@ -1553,28 +1452,11 @@ export default function DashboardPage() {
 
   const resetDashboardFilters = useCallback(() => {
     applyFilterState(DEFAULT_DASHBOARD_FILTER_STATE);
-    setActiveQuickQueue(null);
     setActiveMetricFilter(null);
     setActiveSavedViewId(null);
     setError(null);
     setSuccessMessage("Dashboard filters reset.");
   }, [applyFilterState]);
-
-  const applyQuickQueuePreset = useCallback((queue: QuickQueueKey) => {
-    setActiveQuickQueue(queue);
-    setActiveMetricFilter(null);
-    setActiveSavedViewId(null);
-    setSearch("");
-    setSiteFilters([]);
-    setStatusFilters([]);
-    setWriterFilters([]);
-    setPublisherFilters([]);
-    setWriterStatusFilters([]);
-    setPublisherStatusFilters([]);
-    setSortField("publish_date");
-    setSortDirection(queue === "publisher_published" ? "desc" : "asc");
-    setCurrentPage(1);
-  }, []);
   const clearAllFilters = useCallback(() => {
     resetDashboardFilters();
     setSuccessMessage("All filters cleared.");
@@ -1648,19 +1530,9 @@ export default function DashboardPage() {
               },
             }
           : null,
-        activeQuickQueue
-          ? {
-              id: "queue",
-              label: "Pipeline filter active",
-              onRemove: () => {
-                setActiveQuickQueue(null);
-              },
-            }
-          : null,
       ].filter((pill) => pill !== null),
     [
       activeMetricFilter,
-      activeQuickQueue,
       publisherFilters,
       publisherOptions,
       publisherStatusFilters,
@@ -2506,22 +2378,7 @@ export default function DashboardPage() {
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
-      <AppShell
-        sidebarContent={
-          <DashboardSidebar
-            quickQueueCounts={quickQueueCounts}
-            activeQuickQueue={activeQuickQueue}
-            recentlyPublished={mostRecentPublishedBlog}
-            onApplyQuickQueueFilter={applyQuickQueuePreset}
-            onOpenBlog={openPanel}
-            isWriterFilterOpen={isWriterFilterSidebarOpen}
-            onWriterFilterToggle={setIsWriterFilterSidebarOpen}
-            isPublisherFilterOpen={isPublisherFilterSidebarOpen}
-            onPublisherFilterToggle={setIsPublisherFilterSidebarOpen}
-            userTimezone={profile?.timezone}
-          />
-        }
-      >
+      <AppShell>
         <div className={`${DATA_PAGE_STACK_CLASS} transition-opacity duration-200`}>
           <DataPageHeader
             title="Dashboard"
@@ -2605,7 +2462,6 @@ export default function DashboardPage() {
                   setActiveMetricFilter((previous) =>
                     previous === "scheduled_this_week" ? null : "scheduled_this_week"
                   );
-                  setActiveQuickQueue(null);
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
@@ -2626,7 +2482,6 @@ export default function DashboardPage() {
                   setActiveMetricFilter((previous) =>
                     previous === "currently_writing" ? null : "currently_writing"
                   );
-                  setActiveQuickQueue(null);
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
@@ -2647,7 +2502,6 @@ export default function DashboardPage() {
                   setActiveMetricFilter((previous) =>
                     previous === "under_review" ? null : "under_review"
                   );
-                  setActiveQuickQueue(null);
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
@@ -2668,7 +2522,6 @@ export default function DashboardPage() {
                   setActiveMetricFilter((previous) =>
                     previous === "needs_revision" ? null : "needs_revision"
                   );
-                  setActiveQuickQueue(null);
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
@@ -2689,7 +2542,6 @@ export default function DashboardPage() {
                   setActiveMetricFilter((previous) =>
                     previous === "ready_to_publish" ? null : "ready_to_publish"
                   );
-                  setActiveQuickQueue(null);
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
@@ -2710,7 +2562,6 @@ export default function DashboardPage() {
                   setActiveMetricFilter((previous) =>
                     previous === "publishing_in_progress" ? null : "publishing_in_progress"
                   );
-                  setActiveQuickQueue(null);
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
@@ -3195,7 +3046,7 @@ export default function DashboardPage() {
               {sortedBlogs.length === 0 && hasActiveDashboardFilters ? (
                 <DataPageEmptyState
                   title="No blogs match your filters."
-                  description="Try clearing filters or importing blogs."
+                  description="Clear filters to return to the full view, or import new records."
                   action={
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
@@ -3206,6 +3057,40 @@ export default function DashboardPage() {
                       >
                         Clear all filters
                       </Button>
+                      {canRunDataImport ? (
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            router.push("/blogs?import=1");
+                          }}
+                        >
+                          Open import
+                        </Button>
+                      ) : null}
+                    </div>
+                  }
+                />
+              ) : null}
+              {sortedBlogs.length === 0 && !hasActiveDashboardFilters ? (
+                <DataPageEmptyState
+                  title="No blogs yet."
+                  description="Create your first blog or import existing content to get started."
+                  action={
+                    <div className="flex flex-wrap items-center gap-2">
+                      {canCreateBlog ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            router.push("/blogs/new");
+                          }}
+                        >
+                          Add new blog
+                        </Button>
+                      ) : null}
                       {canRunDataImport ? (
                         <Button
                           type="button"

@@ -119,12 +119,13 @@ Key behavior:
 - navigation separates workflow vs configuration pages
 - permissions navigation visible only for admin users
 - active nav link uses stronger visual state (highlight + indicator)
-- clickable queue filters and pipeline chips (filter-only behavior)
-- writing queue labels: `Drafting`, `Needs Revision`, `Ready for Publishing`, `Backlog`
-- publishing queue labels: `Not Started`, `In Progress`, `Final Review`, `Published`
+- left sidebar stays intentionally clean (no quick filter groups and no recently published block)
 - today strip (scheduled this week / ready / delayed) with clickable metric filtering
 - delayed definition: scheduled publish date passed while `overall_status != published`
 - active filter chips and clear-all control
+- action-led empty states:
+  - filtered no-results: clear filters / open import
+  - no data yet: add new blog / open import
 - **Phase 4C**: Unified DataTable with:
   - two-line clamped titles
   - site badges (`SH`, `RED`)
@@ -219,18 +220,22 @@ Key behavior:
   - when unchecked, other admin profiles are preserved
 
 ### Activity History (`/settings/access-logs`)
-Admin-accessible page for tracking user access events.
+Admin-accessible unified activity history page for tracking all operational events across the system.
 
 Key behavior:
-- **For non-admins**: restricted to viewing own dashboard visits only (view only, no filtering)
-- **For admins**:
-  - event type filter: All, Login, Dashboard
-  - user filter: All Users or select specific users
-  - all combinations are allowed (e.g., filter by "Dashboard" and "All Users")
-  - timestamps in UTC for consistency
-  - sortable by date, user, or event type
-- **Notification bell integration**: top 5 activity notifications with "View History" link and "Clear All" button
-- **Data source**: `access_logs` table (immutable; only creation/cleanup via admin actions)
+- **Admin-only access**: non-admins cannot view this page
+- **Multi-select filtering**:
+  - Activity Type Filter: Checkboxes for selecting multiple activity types (`login`, `dashboard_visit`, `blog_writer_status_changed`, `blog_publisher_status_changed`, `blog_assignment_changed`, `social_post_status_changed`, `social_post_assignment_changed`)
+  - User Filter: Checkboxes for selecting multiple users (all selected by default on page load)
+  - Filter logic: OR within activity types, AND across activity types and users
+- **Timestamps**: displayed in user's configured timezone (admins default to UTC for consistency)
+- **Table columns**: Category (login/dashboard/blog activity/social post activity), Action (event description), Content (blog/post title, or "—" for access logs), User, Email, Timestamp
+- **Content links**: Blog activities link to blog detail page; social post activities link to social post page
+- **Notification bell integration**: top 5 recent activity notifications with "View History" link and "Clear All" button
+- **Data sources**:
+  - `access_logs` table (login and dashboard visit events)
+  - `blog_assignment_history` table (blog writer/publisher status transitions and assignment changes)
+  - `social_post_activity_history` table (social post status transitions and assignment changes)
 
 ### Password Reset (Test-Only)
 Admin-only feature at Settings → User Directory → Edit User → Reset Password section.

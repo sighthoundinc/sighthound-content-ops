@@ -37,8 +37,8 @@ export default function ResourcesPage() {
       <AppShell>
         <div className="space-y-5">
           <DataPageHeader
-            title="User Guide"
-            description="Practical guide for workflow rules, statuses, filters, imports, shortcuts, and troubleshooting."
+            title="User Manual"
+            description="Practical manual for workflow rules, statuses, filters, imports, shortcuts, and troubleshooting."
           />
 
           <Section id="what-this-app-is" title="1. What this app is">
@@ -70,12 +70,12 @@ export default function ResourcesPage() {
               <li>Settings</li>
               <li>Permissions</li>
             </ol>
-            <p className="font-semibold text-slate-900">Filter groups:</p>
+            <p className="font-semibold text-slate-900">Dashboard sidebar:</p>
             <BulletList
               items={[
-                "Writer Filters and Publisher Filters are separate groups.",
-                "Both are collapsed by default.",
-                "Each group toggles independently.",
+                "The dashboard left sidebar is intentionally clean.",
+                "Quick filter groups are not shown in the dashboard sidebar.",
+                "The Recently Published section is not shown in the dashboard sidebar.",
               ]}
             />
           </Section>
@@ -210,7 +210,7 @@ export default function ResourcesPage() {
           <Section id="shortcuts-quick-create" title="10. Keyboard shortcuts and quick create">
             <BulletList
               items={[
-                "Shortcuts are exposed as clickable Shortcut text that opens a key-combination modal.",
+                "Shortcuts are exposed as a clickable Shortcuts label that opens a key-combination modal.",
                 "Shortcut hints are shown in major action dropdowns (Dashboard, Add New Idea, New Blog, New Social Post).",
                 "Avoid using system-sensitive shortcuts for app-defined actions.",
                 "Quick Create supports ↑ or ↓ to move, Enter to select, and Esc to close.",

@@ -40,6 +40,9 @@ import { useNotifications } from "@/providers/notifications-provider";
 import {
   blogWriterStatusChangedNotification,
   blogPublisherStatusChangedNotification,
+  blogSubmittedForReviewNotification,
+  blogPublishedNotification,
+  blogAssignmentChangedNotification,
 } from "@/lib/notification-helpers";
 
 type BlogFormState = {
@@ -408,8 +411,11 @@ export default function BlogDetailPage() {
       return;
     }
     const previousWriterId = blog.writer_id ?? "";
+    const previousPublisherId = blog.publisher_id ?? "";
     const writerChanged =
       canChangeWriterAssignment && previousWriterId !== form.writer_id;
+    const publisherChanged =
+      canChangePublisherAssignment && previousPublisherId !== form.publisher_id;
     const updates: Record<string, unknown> = {};
     if (canMetadataEdit) {
       updates.title = form.title.trim();
@@ -439,19 +445,57 @@ export default function BlogDetailPage() {
       return;
     }
 
+    const notifyCallbacks: Array<() => Promise<void>> = [];
+
+    // Slack notification for writer assignment
+    if (writerChanged && form.writer_id && selectedWriter) {
+      notifyCallbacks.push(async () => {
+        await notifySlack({
+          eventType: "writer_assigned",
+          blogId: blog.id,
+          title: form.title,
+          site: form.site,
+          actorName: profile?.full_name ?? "Admin",
+          targetEmail: selectedWriter.email,
+        });
+      });
+    }
+
+    // Push in-app notifications for assignments
+    if (writerChanged) {
+      notifyCallbacks.push(async () => {
+        pushNotification(
+          blogAssignmentChangedNotification(
+            form.title,
+            "writer",
+            selectedWriter?.full_name ?? null,
+            profile?.full_name ?? null,
+            blog.id
+          )
+        );
+      });
+    }
+
+    if (publisherChanged) {
+      notifyCallbacks.push(async () => {
+        pushNotification(
+          blogAssignmentChangedNotification(
+            form.title,
+            "publisher",
+            selectedPublisher?.full_name ?? null,
+            profile?.full_name ?? null,
+            blog.id
+          )
+        );
+      });
+    }
+
     await updateBlog(
       updates,
       "Blog details updated.",
-      writerChanged && form.writer_id && selectedWriter
+      notifyCallbacks.length > 0
         ? async () => {
-            await notifySlack({
-              eventType: "writer_assigned",
-              blogId: blog.id,
-              title: form.title,
-              site: form.site,
-              actorName: profile?.full_name ?? "Admin",
-              targetEmail: selectedWriter.email,
-            });
+            await Promise.all(notifyCallbacks.map((cb) => cb()));
           }
         : undefined
     );
@@ -573,23 +617,46 @@ export default function BlogDetailPage() {
     }
 
     const previousStatus = blog.writer_status;
+    const notifyCallbacks: Array<() => Promise<void>> = [];
+
+    if (previousStatus !== form.writer_status) {
+      // Always emit status change notification
+      notifyCallbacks.push(async () => {
+        pushNotification(
+          blogWriterStatusChangedNotification(
+            blog.title,
+            previousStatus,
+            form.writer_status,
+            profile?.full_name ?? null,
+            blog.id
+          )
+        );
+      });
+
+      // Also emit specific "submitted for review" when transitioning to pending_review
+      if (form.writer_status === "pending_review") {
+        notifyCallbacks.push(async () => {
+          pushNotification(
+            blogSubmittedForReviewNotification(
+              blog.title,
+              profile?.full_name ?? null,
+              "writer",
+              blog.id
+            )
+          );
+        });
+      }
+    }
+
     await updateBlog(
       {
         writer_status: form.writer_status,
         google_doc_url: form.google_doc_url.trim() || null,
       },
       "Writer updates saved.",
-      previousStatus !== form.writer_status
+      notifyCallbacks.length > 0
         ? async () => {
-            pushNotification(
-              blogWriterStatusChangedNotification(
-                blog.title,
-                previousStatus,
-                form.writer_status,
-                profile?.full_name ?? null,
-                blog.id
-              )
-            );
+            await Promise.all(notifyCallbacks.map((cb) => cb()));
           }
         : undefined
     );
@@ -618,23 +685,59 @@ export default function BlogDetailPage() {
     }
 
     const previousStatus = blog.publisher_status;
+    const notifyCallbacks: Array<() => Promise<void>> = [];
+
+    if (previousStatus !== form.publisher_status) {
+      // Always emit status change notification
+      notifyCallbacks.push(async () => {
+        pushNotification(
+          blogPublisherStatusChangedNotification(
+            blog.title,
+            previousStatus,
+            form.publisher_status,
+            profile?.full_name ?? null,
+            blog.id
+          )
+        );
+      });
+
+      // Emit specific "submitted for review" when transitioning to pending_review
+      if (form.publisher_status === "pending_review") {
+        notifyCallbacks.push(async () => {
+          pushNotification(
+            blogSubmittedForReviewNotification(
+              blog.title,
+              profile?.full_name ?? null,
+              "publisher",
+              blog.id
+            )
+          );
+        });
+      }
+
+      // Emit "published" when transitioning to completed
+      if (form.publisher_status === "completed") {
+        notifyCallbacks.push(async () => {
+          pushNotification(
+            blogPublishedNotification(
+              blog.title,
+              profile?.full_name ?? null,
+              blog.id
+            )
+          );
+        });
+      }
+    }
+
     await updateBlog(
       {
         publisher_status: form.publisher_status,
         live_url: form.live_url.trim() || null,
       },
       "Publisher updates saved.",
-      previousStatus !== form.publisher_status
+      notifyCallbacks.length > 0
         ? async () => {
-            pushNotification(
-              blogPublisherStatusChangedNotification(
-                blog.title,
-                previousStatus,
-                form.publisher_status,
-                profile?.full_name ?? null,
-                blog.id
-              )
-            );
+            await Promise.all(notifyCallbacks.map((cb) => cb()));
           }
         : undefined
     );

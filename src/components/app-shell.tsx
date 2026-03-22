@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { getUserRoles } from "@/lib/roles";
 
 import { Button } from "@/components/button";
@@ -44,6 +43,20 @@ const SECONDARY_NAV_ITEMS: NavItem[] = [
   { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/blogs/cardboard", label: "CardBoard", icon: "blog" },
 ];
+const BADGE_GIF_SRC_CANDIDATES = [
+  "/sighthound-badge-animated.GIF",
+  "/sighthound-badge-animated.gif",
+  "/sighthound-badge-animated.GIF?v=1",
+  "/sighthound-badge-animated.gif?v=1",
+  "/sighthound-badge-animated.gif?cache=1",
+  "/./sighthound-badge-animated.gif",
+  "sighthound-badge-animated.gif",
+  "./sighthound-badge-animated.gif",
+  "../sighthound-badge-animated.gif",
+  "/public/sighthound-badge-animated.gif",
+  "/sighthound-badge-animated%2Egif",
+  "/sighthound-badge-animated.gif#animated",
+] as const;
 type ShortcutDefinition = {
   id: string;
   label: string;
@@ -99,6 +112,8 @@ export function AppShell({
     null
   );
   const [quickViewError, setQuickViewError] = useState<string | null>(null);
+  const [badgeGifSourceIndex, setBadgeGifSourceIndex] = useState(0);
+  const [badgeGifFailedAll, setBadgeGifFailedAll] = useState(false);
   const [activityFeed, setActivityFeed] = useState<
     Array<{
       id: string;
@@ -112,6 +127,12 @@ export function AppShell({
   >([]);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
   const quickCreateItemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  const badgeGifSrc =
+    BADGE_GIF_SRC_CANDIDATES[
+      Math.min(badgeGifSourceIndex, BADGE_GIF_SRC_CANDIDATES.length - 1)
+    ];
+  const hasMoreBadgeGifCandidates =
+    badgeGifSourceIndex < BADGE_GIF_SRC_CANDIDATES.length - 1;
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -474,15 +495,31 @@ export function AppShell({
             className="flex items-center gap-3 rounded-md px-1 py-1 hover:bg-slate-50"
             aria-label="Sighthound Content Ops"
           >
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white p-1">
-              <Image
+            {badgeGifFailedAll ? (
+              <img
                 src="/sighthound-badge-mark.svg"
-                alt="Sighthound badge mark"
-                width={28}
-                height={28}
-                className="h-7 w-7 object-contain"
+                alt="Sighthound badge"
+                width={9}
+                height={9}
+                className="h-[9px] w-[9px] object-contain"
               />
-            </span>
+            ) : (
+              <img
+                key={badgeGifSrc}
+                src={badgeGifSrc}
+                alt="Sighthound badge"
+                width={9}
+                height={9}
+                className="h-[9px] w-[9px] object-contain"
+                onError={() => {
+                  if (hasMoreBadgeGifCandidates) {
+                    setBadgeGifSourceIndex((previous) => previous + 1);
+                    return;
+                  }
+                  setBadgeGifFailedAll(true);
+                }}
+              />
+            )}
             <span className="leading-tight">
               <span className="block text-sm font-semibold text-slate-900">Sighthound</span>
               <span className="block text-xs text-slate-600">Content Ops</span>

@@ -325,8 +325,9 @@ function SocialPostCard({
           >
             <button
               type="button"
-              disabled={isDeleting}
+              disabled={isDeleting || post.status === "published"}
               onClick={handleDelete}
+              title={post.status === "published" ? "Published posts cannot be deleted" : ""}
               className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
             >
               {isDeleting ? "Deleting…" : "Delete"}
@@ -1326,9 +1327,17 @@ function SocialPostsPageContent() {
     }
 
     const postsToDelete = Array.from(selectedRowIndices).map((idx) => pagedListPosts[idx]);
-    const postCount = postsToDelete.length;
+    const deletablePosts = postsToDelete.filter((p) => p.status !== "published");
+    const publishedCount = postsToDelete.length - deletablePosts.length;
+
+    if (deletablePosts.length === 0) {
+      showError("Cannot delete published posts");
+      return;
+    }
+
+    const postCount = deletablePosts.length;
     const confirmed = window.confirm(
-      `Are you sure you want to delete ${postCount} post${postCount === 1 ? "" : "s"}? This action cannot be undone.`
+      `Are you sure you want to delete ${postCount} post${postCount === 1 ? "" : "s"}? This action cannot be undone.${publishedCount > 0 ? `\n\n${publishedCount} published post${publishedCount === 1 ? " will" : "s will"} be skipped.` : ""}`
     );
     if (!confirmed) {
       return;
@@ -1340,7 +1349,7 @@ function SocialPostsPageContent() {
     let failureCount = 0;
     const failedPostIds: string[] = [];
 
-    for (const post of postsToDelete) {
+    for (const post of deletablePosts) {
       const response = await fetch(`/api/social-posts/${post.id}`, {
         method: "DELETE",
         headers: {
@@ -1358,28 +1367,31 @@ function SocialPostsPageContent() {
     }
 
     setPosts((previous) =>
-      previous.filter((p) => !postsToDelete.some((d) => d.id === p.id))
+      previous.filter((p) => !deletablePosts.some((d) => d.id === p.id))
     );
     setPostLinks((previous) =>
       previous.filter(
-        (link) => !postsToDelete.some((d) => d.id === link.social_post_id)
+        (link) => !deletablePosts.some((d) => d.id === link.social_post_id)
       )
     );
     setSelectedRowIndices(new Set());
     setIsDeletingPost(false);
 
-    if (failureCount === 0) {
-      showSuccess(
-        `Deleted ${successCount} post${successCount === 1 ? "" : "s"}`
-      );
-    } else if (successCount === 0) {
-      showError(
-        `Failed to delete ${failureCount} post${failureCount === 1 ? "" : "s"}`
-      );
+    let message = "";
+    if (successCount > 0) {
+      message = `Deleted ${successCount} post${successCount === 1 ? "" : "s"}`;
+    }
+    if (failureCount > 0) {
+      message += (message ? ", " : "") + `failed to delete ${failureCount} post${failureCount === 1 ? "" : "s"}`;
+    }
+    if (publishedCount > 0) {
+      message += (message ? ", " : "") + `skipped ${publishedCount} published post${publishedCount === 1 ? "" : "s"}`;
+    }
+
+    if (failureCount === 0 && publishedCount === 0) {
+      showSuccess(message);
     } else {
-      showError(
-        `Deleted ${successCount} post${successCount === 1 ? "" : "s"}, failed to delete ${failureCount}`
-      );
+      showError(message);
     }
   };
 
@@ -1545,7 +1557,11 @@ function SocialPostsPageContent() {
         className: "w-12",
         render: (post) => {
           const isOpen = openRowMenuId === post.id;
-          const canDelete = !isDeletingPost && (post.created_by === user?.id || isAdmin);
+          const canDelete =
+            !isDeletingPost &&
+            (post.created_by === user?.id || isAdmin) &&
+            post.status !== "published";
+          const isPublished = post.status === "published";
           return (
             <div className="relative">
               <button
@@ -1572,6 +1588,7 @@ function SocialPostsPageContent() {
                     onClick={() => {
                       void handleDeletePost(post.id);
                     }}
+                    title={isPublished ? "Published posts cannot be deleted" : ""}
                     className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
                   >
                     {isDeletingPost ? "Deleting…" : "Delete"}

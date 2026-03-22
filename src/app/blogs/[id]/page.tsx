@@ -9,6 +9,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
+import { validateAuthor } from "@/lib/shape-validation";
 import {
   BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
@@ -70,10 +71,7 @@ type BlogCommentRecord = {
 
 function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
   return rows.map((row) => {
-    const authorValue = row.author;
-    const author = Array.isArray(authorValue)
-      ? ((authorValue[0] ?? null) as BlogCommentRecord["author"])
-      : ((authorValue ?? null) as BlogCommentRecord["author"]);
+    const author = validateAuthor(row.author);
 
     return {
       id: String(row.id ?? ""),

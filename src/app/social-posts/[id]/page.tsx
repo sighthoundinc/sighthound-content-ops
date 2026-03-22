@@ -10,6 +10,7 @@ import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { AppIcon } from "@/lib/icons";
+import { validateBlogRelation } from "@/lib/shape-validation";
 import {
   SOCIAL_PLATFORMS,
   SOCIAL_POST_ALLOWED_TRANSITIONS,
@@ -171,10 +172,7 @@ function formatSavedTimestamp(value: string) {
 }
 
 function normalizePostRow(row: Record<string, unknown>): SocialPostEditorRecord {
-  const associatedBlogRaw = row.associated_blog;
-  const associatedBlog = Array.isArray(associatedBlogRaw)
-    ? ((associatedBlogRaw[0] ?? null) as BlogLookupResult | null)
-    : ((associatedBlogRaw ?? null) as BlogLookupResult | null);
+  const associatedBlog = validateBlogRelation(row.associated_blog);
   return {
     id: String(row.id ?? ""),
     title: String(row.title ?? ""),

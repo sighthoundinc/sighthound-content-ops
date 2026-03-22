@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getUserRoles } from "@/lib/roles";
 import { authenticateRequest, requirePermission } from "@/lib/server-permissions";
+import { createAdminClient } from "@/lib/supabase/server";
 
 type ActivityType =
   | "login"
@@ -55,6 +56,23 @@ const ACTIVITY_TYPE_CATEGORIES: Record<ActivityType, string> = {
  *   - limit: page size (default 100, max 1000)
  *   - offset: pagination offset
  */
+async function batchLoadProfiles(
+  adminClient: ReturnType<typeof createAdminClient>,
+  userIds: string[]
+) {
+  if (userIds.length === 0) return new Map();
+  const { data: profiles } = await adminClient
+    .from("profiles")
+    .select("id, full_name, email");
+  const profileMap = new Map(
+    (profiles ?? []).map((p) => [
+      p.id,
+      { full_name: p.full_name, email: p.email },
+    ])
+  );
+  return profileMap;
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "manage_users");
   if ("error" in auth) {
@@ -83,8 +101,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const activities: UnifiedActivity[] = [];
+    const userIdsToLoad = new Set<string>();
 
-    // Fetch access logs
+    // Fetch access logs (no pagination at query level)
     if (
       selectedActivityTypes.some((t) =>
         ["login", "dashboard_visit"].includes(t)
@@ -106,25 +125,20 @@ export async function GET(request: NextRequest) {
         accessLogsQuery = accessLogsQuery.in("event_type", accessLogTypes);
       }
 
-      const { data: accessLogs } = await accessLogsQuery
-        .order("created_at", { ascending: false })
-        .limit(limit);
+      const { data: accessLogs } = await accessLogsQuery.order("created_at", {
+        ascending: false,
+      });
 
       if (accessLogs) {
         for (const log of accessLogs) {
-          const { data: profile } = await adminClient
-            .from("profiles")
-            .select("full_name, email")
-            .eq("id", log.user_id)
-            .maybeSingle();
-
+          userIdsToLoad.add(log.user_id);
           activities.push({
             id: `access_log_${log.id}`,
             activity_type: log.event_type as ActivityType,
             content_type: "access_log",
             user_id: log.user_id,
-            user_name: profile?.full_name || null,
-            user_email: profile?.email || null,
+            user_name: null,
+            user_email: null,
             content_id: null,
             content_title: null,
             event_description: ACTIVITY_TYPE_LABELS[log.event_type as ActivityType],
@@ -134,7 +148,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch blog activities
+    // Fetch blog activities (no pagination at query level)
     if (
       selectedActivityTypes.some((t) =>
         [
@@ -146,36 +160,30 @@ export async function GET(request: NextRequest) {
     ) {
       let blogActivityQuery = adminClient
         .from("blog_assignment_history")
-        .select(
-          "id, blog_id, changed_by, event_type, created_at, blogs(title)"
-        );
+        .select("id, blog_id, changed_by, event_type, created_at, blogs(title)");
 
       if (selectedUserIds.length > 0) {
         blogActivityQuery = blogActivityQuery.in("changed_by", selectedUserIds);
       }
 
-      const { data: blogActivities } = await blogActivityQuery
-        .order("created_at", { ascending: false })
-        .limit(limit);
+      const { data: blogActivities } = await blogActivityQuery.order(
+        "created_at",
+        { ascending: false }
+      );
 
       if (blogActivities) {
         for (const activity of blogActivities) {
           const eventType = activity.event_type as ActivityType;
 
           if (selectedActivityTypes.includes(eventType)) {
-            const { data: profile } = await adminClient
-              .from("profiles")
-              .select("full_name, email")
-              .eq("id", activity.changed_by)
-              .maybeSingle();
-
+            userIdsToLoad.add(activity.changed_by);
             activities.push({
               id: `blog_${activity.id}`,
               activity_type: eventType,
               content_type: "blog",
               user_id: activity.changed_by,
-              user_name: profile?.full_name || null,
-              user_email: profile?.email || null,
+              user_name: null,
+              user_email: null,
               content_id: activity.blog_id,
               content_title: (activity.blogs as { title?: string } | null)
                 ?.title || null,
@@ -187,7 +195,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch social post activities
+    // Fetch social post activities (no pagination at query level)
     if (
       selectedActivityTypes.some((t) =>
         [
@@ -209,28 +217,24 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const { data: socialActivities } = await socialActivityQuery
-        .order("created_at", { ascending: false })
-        .limit(limit);
+      const { data: socialActivities } = await socialActivityQuery.order(
+        "created_at",
+        { ascending: false }
+      );
 
       if (socialActivities) {
         for (const activity of socialActivities) {
           const eventType = activity.event_type as ActivityType;
 
           if (selectedActivityTypes.includes(eventType)) {
-            const { data: profile } = await adminClient
-              .from("profiles")
-              .select("full_name, email")
-              .eq("id", activity.changed_by)
-              .maybeSingle();
-
+            userIdsToLoad.add(activity.changed_by);
             activities.push({
               id: `social_post_${activity.id}`,
               activity_type: eventType,
               content_type: "social_post",
               user_id: activity.changed_by,
-              user_name: profile?.full_name || null,
-              user_email: profile?.email || null,
+              user_name: null,
+              user_email: null,
               content_id: activity.social_post_id,
               content_title: (activity.social_posts as {
                 title?: string;
@@ -243,8 +247,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Batch-load all profiles
+    const profileMap = await batchLoadProfiles(
+      adminClient,
+      Array.from(userIdsToLoad)
+    );
+
+    // Enrich activities with profile data
+    const enrichedActivities = activities.map((activity) => {
+      const profile = profileMap.get(activity.user_id ?? "");
+      return {
+        ...activity,
+        user_name: profile?.full_name || null,
+        user_email: profile?.email || null,
+      };
+    });
+
     // Sort by created_at descending and apply pagination
-    const sortedActivities = activities.sort(
+    const sortedActivities = enrichedActivities.sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
@@ -356,20 +376,35 @@ export async function DELETE(request: NextRequest) {
         targetUserIds,
       });
 
-      let deleteQuery = adminClient.from(table).delete().gt("id", "00000000-0000-0000-0000-000000000000");
-      if (targetUserIds && targetUserIds.length > 0) {
-        const filterStr = `user_id.in.(${targetUserIds.join(",")}),created_by.in.(${targetUserIds.join(",")})`;
-        console.log(`[Comments] Applying delete filter: ${filterStr}`);
-        deleteQuery = deleteQuery.or(filterStr);
+      if (!targetUserIds || targetUserIds.length === 0) {
+        console.log(`[Comments] No target user IDs, skipping delete for ${table}`);
+        return 0;
       }
-      const { count, error: deleteError } = await deleteQuery;
-      if (deleteError) {
-        console.error(`[Comments] Error deleting from ${table}:`, deleteError);
-        throw new Error(`${table}: ${deleteError.message}`);
-      }
-      console.log(`[Comments] Successfully deleted ${count} rows from ${table}`);
 
-      return count ?? 0;
+      const [{ count: userIdCount, error: userIdError }, { count: createdByCount, error: createdByError }] = await Promise.all([
+        adminClient
+          .from(table)
+          .delete()
+          .in("user_id", targetUserIds),
+        adminClient
+          .from(table)
+          .delete()
+          .in("created_by", targetUserIds),
+      ]);
+
+      if (userIdError) {
+        console.error(`[Comments] Error deleting from ${table} by user_id:`, userIdError);
+        throw new Error(`${table}: ${userIdError.message}`);
+      }
+      if (createdByError) {
+        console.error(`[Comments] Error deleting from ${table} by created_by:`, createdByError);
+        throw new Error(`${table}: ${createdByError.message}`);
+      }
+
+      const totalDeleted = (userIdCount ?? 0) + (createdByCount ?? 0);
+      console.log(`[Comments] Successfully deleted ${totalDeleted} rows from ${table}`);
+
+      return totalDeleted;
     };
 
     const blogAssignmentHistoryDeleted = await deleteForTable(

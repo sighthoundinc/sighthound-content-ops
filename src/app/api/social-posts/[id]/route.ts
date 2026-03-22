@@ -14,18 +14,23 @@ export async function DELETE(
 
   const { id } = await params;
 
-  // Get the post to verify ownership or admin status
+  // Get the post to verify ownership, admin status, and deletion eligibility
   const { data: post, error: postError } = await auth.context.adminClient
     .from("social_posts")
-    .select("id, title, created_by")
+    .select("id, title, created_by, status")
     .eq("id", id)
     .maybeSingle();
 
   if (postError) {
     return NextResponse.json({ error: postError.message }, { status: 500 });
   }
+
+  // Idempotent: Already deleted
   if (!post) {
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    return NextResponse.json(
+      { success: true, message: "Post already deleted" },
+      { status: 204 }
+    );
   }
 
   // Check if user is owner or admin
@@ -37,6 +42,14 @@ export async function DELETE(
     return NextResponse.json(
       { error: "You do not have permission to delete this post" },
       { status: 403 }
+    );
+  }
+
+  // Prevent deletion of published posts
+  if (post.status === "published") {
+    return NextResponse.json(
+      { error: "Published posts cannot be deleted" },
+      { status: 400 }
     );
   }
 
@@ -53,9 +66,13 @@ export async function DELETE(
     );
   }
 
-  return NextResponse.json({
-    success: true,
-    message: "Post deleted successfully",
-    deletedPostId: id,
-  });
+  return NextResponse.json(
+    {
+      success: true,
+      message: "Post deleted successfully",
+      deletedPostId: id,
+      deletedPostTitle: post.title,
+    },
+    { status: 204 }
+  );
 }

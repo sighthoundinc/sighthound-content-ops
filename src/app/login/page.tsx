@@ -105,7 +105,7 @@ function LoginPageContent() {
       <div className="mx-auto grid w-full max-w-6xl items-stretch gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-sm backdrop-blur-sm sm:p-10">
           <Image
-            src="/sighthound-logo-with-text.svg"
+            src="/sighthound-logo-with-text.png"
             alt="Sighthound"
             width={212}
             height={48}

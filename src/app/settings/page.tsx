@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -89,6 +89,24 @@ function splitName(fullName: string) {
 }
 
 export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <ProtectedPage>
+          <AppShell>
+            <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+              Loading settings…
+            </p>
+          </AppShell>
+        </ProtectedPage>
+      }
+    >
+      <SettingsPageContent />
+    </Suspense>
+  );
+}
+
+function SettingsPageContent() {
   const searchParams = useSearchParams();
   const { hasPermission, session, profile, refreshProfile, user } = useAuth();
   const { showError, showSuccess } = useSystemFeedback();

@@ -1578,7 +1578,7 @@ export default function DashboardPage() {
     setActiveSavedViewId(nextId);
     setError(null);
     setSuccessMessage(`Saved new view "${trimmedName}".`);
-  }, [buildCurrentFilterState, columnOrder, savedViews]);
+  }, [buildCurrentFilterState, columnOrder, profile?.timezone, savedViews]);
 
 
   const getExportCellValue = useCallback(
@@ -1809,6 +1809,7 @@ export default function DashboardPage() {
       canExportCsv,
       canExportSelectedCsv,
       getExportCellValue,
+      profile?.timezone,
       selectedBlogs,
       sortedBlogs,
       visibleColumnOrder,

@@ -923,6 +923,7 @@ export default function MyTasksPage() {
     canExportCsv,
     filteredTaskItems,
     getTaskExportCellValue,
+    profile?.timezone,
     showError,
     showSuccess,
     visibleColumnOrder,

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   DndContext,
@@ -1383,49 +1383,52 @@ function SocialPostsPageContent() {
     }
   };
 
-  const handleDeletePost = async (postIdParam?: string) => {
-    const postId = postIdParam ?? activePost?.id;
-    const post = postIdParam ? posts.find((p) => p.id === postIdParam) : activePost;
-    if (!post || !session?.access_token) {
-      return;
-    }
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${post.title}"? This action cannot be undone.`
-    );
-    if (!confirmed) {
-      return;
-    }
-    setIsDeletingPost(true);
-    setPanelError(null);
-    setOpenRowMenuId(null);
-
-    const response = await fetch(`/api/social-posts/${postId}`, {
-      method: "DELETE",
-      headers: {
-        authorization: `Bearer ${session.access_token}`,
-        "content-type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      if (postIdParam) {
-        showError(payload.error ?? "Failed to delete post.");
-      } else {
-        setPanelError(payload.error ?? "Failed to delete post.");
+  const handleDeletePost = useCallback(
+    async (postIdParam?: string) => {
+      const postId = postIdParam ?? activePost?.id;
+      const post = postIdParam ? posts.find((p) => p.id === postIdParam) : activePost;
+      if (!post || !session?.access_token) {
+        return;
       }
-      setIsDeletingPost(false);
-      return;
-    }
-    setPosts((previous) => previous.filter((p) => p.id !== postId));
-    setPostLinks((previous) => previous.filter((link) => link.social_post_id !== postId));
-    if (activePost?.id === postId) {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete "${post.title}"? This action cannot be undone.`
+      );
+      if (!confirmed) {
+        return;
+      }
+      setIsDeletingPost(true);
+      setPanelError(null);
+      setOpenRowMenuId(null);
+
+      const response = await fetch(`/api/social-posts/${postId}`, {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        if (postIdParam) {
+          showError(payload.error ?? "Failed to delete post.");
+        } else {
+          setPanelError(payload.error ?? "Failed to delete post.");
+        }
+        setIsDeletingPost(false);
+        return;
+      }
+      setPosts((previous) => previous.filter((p) => p.id !== postId));
+      setPostLinks((previous) => previous.filter((link) => link.social_post_id !== postId));
+      if (activePost?.id === postId) {
+        setActivePostId(null);
+      }
       setActivePostId(null);
-    }
-    setActivePostId(null);
-    showSuccess("Post deleted successfully");
-    setIsDeletingPost(false);
-  };
+      showSuccess("Post deleted successfully");
+      setIsDeletingPost(false);
+    },
+    [activePost, posts, session?.access_token, showError, showSuccess]
+  );
 
 
   const renderCommentTree = (parentId: string | null, depth: number) => {
@@ -1580,7 +1583,7 @@ function SocialPostsPageContent() {
         },
       },
     ],
-    []
+    [handleDeletePost, isAdmin, isDeletingPost, openRowMenuId, user?.id]
   );
 
   const listTableColumns = useMemo(

@@ -83,7 +83,7 @@ export default function HomePage() {
     };
 
     void fetchSummary();
-  }, [session?.access_token, authLoading]);
+  }, [session, session?.access_token, authLoading]);
 
   const buildWorkBuckets = (data: DashboardSummary): WorkBucket[] => {
     const buckets: WorkBucket[] = [];

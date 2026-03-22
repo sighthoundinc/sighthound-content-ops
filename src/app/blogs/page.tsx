@@ -1057,6 +1057,7 @@ function BlogLibraryPageContent() {
     buildCsv,
     canExportCsv,
     canExportSelectedCsv,
+    profile?.timezone,
     selectedBlogs,
     showSaving,
     sortedBlogs,

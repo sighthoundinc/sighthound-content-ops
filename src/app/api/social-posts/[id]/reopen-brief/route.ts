@@ -6,7 +6,7 @@ import { authenticateRequest } from "@/lib/server-permissions";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ postId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await authenticateRequest(request);
   if ("error" in auth) {
@@ -21,7 +21,7 @@ export async function POST(
     );
   }
 
-  const { postId } = await params;
+  const { id } = await params;
   const payload = (await request.json().catch(() => ({}))) as { reason?: unknown };
   const reason =
     typeof payload.reason === "string" && payload.reason.trim().length > 0
@@ -31,7 +31,7 @@ export async function POST(
   const { data: reopenedPost, error: reopenError } = await auth.context.adminClient.rpc(
     "reopen_social_post_for_brief_edit",
     {
-      p_social_post_id: postId,
+      p_social_post_id: id,
       p_actor_id: auth.context.userId,
       p_reason: reason,
     }

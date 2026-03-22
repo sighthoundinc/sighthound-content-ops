@@ -42,14 +42,14 @@ function parseToStatus(value: unknown): SocialPostStatus | null {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ postId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await authenticateRequest(request);
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const { postId } = await params;
+  const { id } = await params;
   const payload = (await request.json().catch(() => ({}))) as {
     toStatus?: unknown;
     reason?: unknown;
@@ -68,7 +68,7 @@ export async function POST(
   const { data: existingPost, error: existingPostError } = await auth.context.adminClient
     .from("social_posts")
     .select("id,status,title,created_by,editor_user_id,admin_owner_id")
-    .eq("id", postId)
+    .eq("id", id)
     .maybeSingle();
 
   if (existingPostError) {
@@ -113,7 +113,7 @@ export async function POST(
   const { data: transitionedPost, error: transitionError } = await auth.context.adminClient.rpc(
     "transition_social_post_status",
     {
-      p_social_post_id: postId,
+      p_social_post_id: id,
       p_to_status: toStatus,
       p_actor_id: auth.context.userId,
       p_reason: normalizedReason,
@@ -147,7 +147,7 @@ export async function POST(
   await emitEvent({
     type: "social_post_status_changed",
     contentType: "social_post",
-    contentId: postId,
+    contentId: id,
     oldValue: currentStatus,
     newValue: toStatus,
     fieldName: "status",

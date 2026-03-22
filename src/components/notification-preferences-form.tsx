@@ -64,6 +64,8 @@ export function NotificationPreferencesForm({
   const [preferences, setPreferences] = useState<UserNotificationPreferences | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [integrations, setIntegrations] = useState<IntegrationStatus>({ slack_connected: false });
+  const [allInAppChecked, setAllInAppChecked] = useState(true);
+  const [allSlackChecked, setAllSlackChecked] = useState(true);
 
   // Fetch preferences and integration status on mount
   useEffect(() => {
@@ -143,6 +145,7 @@ export function NotificationPreferencesForm({
   const handleToggleAll = (enabled: boolean) => {
     if (!preferences) return;
     setPreferences({
+      ...preferences,
       notifications_enabled: enabled,
       notify_on_task_assigned: enabled,
       notify_on_stage_changed: enabled,
@@ -151,7 +154,48 @@ export function NotificationPreferencesForm({
       notify_on_submitted_for_review: enabled,
       notify_on_published: enabled,
       notify_on_assignment_changed: enabled,
+      slack_notify_on_task_assigned: enabled,
+      slack_notify_on_stage_changed: enabled,
+      slack_notify_on_awaiting_action: enabled,
+      slack_notify_on_mention: enabled,
+      slack_notify_on_submitted_for_review: enabled,
+      slack_notify_on_published: enabled,
+      slack_notify_on_assignment_changed: enabled,
     });
+    setAllInAppChecked(enabled);
+    setAllSlackChecked(enabled);
+    setHasChanges(true);
+  };
+
+  const handleToggleAllInApp = (enabled: boolean) => {
+    if (!preferences) return;
+    setPreferences({
+      ...preferences,
+      notify_on_task_assigned: enabled,
+      notify_on_stage_changed: enabled,
+      notify_on_awaiting_action: enabled,
+      notify_on_mention: enabled,
+      notify_on_submitted_for_review: enabled,
+      notify_on_published: enabled,
+      notify_on_assignment_changed: enabled,
+    });
+    setAllInAppChecked(enabled);
+    setHasChanges(true);
+  };
+
+  const handleToggleAllSlack = (enabled: boolean) => {
+    if (!preferences) return;
+    setPreferences({
+      ...preferences,
+      slack_notify_on_task_assigned: enabled,
+      slack_notify_on_stage_changed: enabled,
+      slack_notify_on_awaiting_action: enabled,
+      slack_notify_on_mention: enabled,
+      slack_notify_on_submitted_for_review: enabled,
+      slack_notify_on_published: enabled,
+      slack_notify_on_assignment_changed: enabled,
+    });
+    setAllSlackChecked(enabled);
     setHasChanges(true);
   };
 
@@ -262,44 +306,76 @@ export function NotificationPreferencesForm({
                       Notification Type
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">
-                      {CHANNEL_NAMES.in_app}
+                      <div className="flex flex-col items-center gap-1">
+                        <span>{CHANNEL_NAMES.in_app}</span>
+                        <input
+                          type="checkbox"
+                          checked={allInAppChecked}
+                          onChange={(e) => handleToggleAllInApp(e.target.checked)}
+                          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-slate-600 focus:ring-2 focus:ring-slate-500"
+                          title="Toggle all in-app notifications"
+                          aria-label="Toggle all in-app notifications"
+                        />
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">
-                      {CHANNEL_NAMES.slack}
-                      {!integrations.slack_connected && (
-                        <span className="ml-1 text-xs font-normal text-slate-500">(not connected)</span>
-                      )}
+                      <div className="flex flex-col items-center gap-1">
+                        <div>
+                          {CHANNEL_NAMES.slack}
+                          {!integrations.slack_connected && (
+                            <span className="ml-1 text-xs font-normal text-slate-500">(not connected)</span>
+                          )}
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allSlackChecked}
+                          onChange={(e) => handleToggleAllSlack(e.target.checked)}
+                          disabled={!integrations.slack_connected}
+                          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-slate-500"
+                          title={!integrations.slack_connected ? "Connect Slack to enable notifications" : "Toggle all Slack notifications"}
+                          aria-label="Toggle all Slack notifications"
+                        />
+                      </div>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {NOTIFICATION_TYPES.map(({ key, label }) => (
-                    <tr key={key} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                        {label}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={preferences[key]}
-                          onChange={(e) => handleTogglePreference(key, e.target.checked)}
-                          className="h-5 w-5 cursor-pointer rounded border-slate-300 text-slate-600 focus:ring-2 focus:ring-slate-500"
-                          aria-label={`${label} - In-App`}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={preferences[key]}
-                          onChange={(e) => handleTogglePreference(key, e.target.checked)}
-                          disabled={!integrations.slack_connected}
-                          className="h-5 w-5 cursor-pointer rounded border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-slate-500"
-                          aria-label={`${label} - Slack`}
-                          title={!integrations.slack_connected ? "Connect Slack to enable notifications" : undefined}
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                  {NOTIFICATION_TYPES.map(({ key, label }) => {
+                    const slackKey = `slack_${key}` as keyof UserNotificationPreferences;
+                    return (
+                      <tr key={key} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                          {label}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={preferences[key]}
+                            onChange={(e) => handleTogglePreference(key, e.target.checked)}
+                            className="h-5 w-5 cursor-pointer rounded border-slate-300 text-slate-600 focus:ring-2 focus:ring-slate-500"
+                            aria-label={`${label} - In-App`}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={(preferences[slackKey] as boolean) ?? preferences[key]}
+                            onChange={(e) => {
+                              setPreferences({
+                                ...preferences,
+                                [slackKey]: e.target.checked,
+                              });
+                              setHasChanges(true);
+                            }}
+                            disabled={!integrations.slack_connected}
+                            className="h-5 w-5 cursor-pointer rounded border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-slate-500"
+                            aria-label={`${label} - Slack`}
+                            title={!integrations.slack_connected ? "Connect Slack to enable notifications" : undefined}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

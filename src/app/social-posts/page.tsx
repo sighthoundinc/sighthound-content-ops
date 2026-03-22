@@ -242,54 +242,99 @@ function SocialPostCard({
   post,
   linkCount,
   onOpen,
+  onDelete,
+  isDeleting,
 }: {
   post: SocialPostWithRelations;
   linkCount: number;
   onOpen: () => void;
+  onDelete: (postId: string) => void;
+  isDeleting: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: post.id,
   });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const dragStyle = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
 
+  const handleDelete = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIsMenuOpen(false);
+    onDelete(post.id);
+  };
+
   return (
-    <button
+    <div
       ref={setNodeRef}
       style={dragStyle}
-      type="button"
-      className={`w-full rounded-md border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50 ${
+      className={`relative rounded-md border border-slate-200 bg-white shadow-sm transition ${
         isDragging ? "opacity-60" : ""
       }`}
-      onClick={onOpen}
-      {...attributes}
-      {...listeners}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="line-clamp-2 text-sm font-semibold text-slate-900">{post.title}</p>
-        <SocialPostStatusBadge status={post.status} />
-      </div>
-      <p className="mt-1 text-xs text-slate-600">
-        {SOCIAL_POST_PRODUCT_LABELS[post.product]} • {SOCIAL_POST_TYPE_LABELS[post.type]}
-      </p>
-      <p className="mt-1 text-xs text-slate-500">
-        Scheduled: {formatDisplayDate(post.scheduled_date) || "Unscheduled"}
-      </p>
-      <p className="mt-1 text-xs text-slate-500">
-        Platforms:{" "}
-        {post.platforms.length > 0
-          ? post.platforms.map((platform) => SOCIAL_PLATFORM_LABELS[platform]).join(", ")
-          : "—"}
-      </p>
-      {post.associated_blog ? (
-        <p className="mt-1 truncate text-xs text-slate-500">
-          Blog: {post.associated_blog.title}
+      <button
+        type="button"
+        className="block w-full rounded-md p-3 text-left hover:border-slate-300 hover:bg-slate-50"
+        onClick={onOpen}
+        {...attributes}
+        {...listeners}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <p className="line-clamp-2 text-sm font-semibold text-slate-900">{post.title}</p>
+          <SocialPostStatusBadge status={post.status} />
+        </div>
+        <p className="mt-1 text-xs text-slate-600">
+          {SOCIAL_POST_PRODUCT_LABELS[post.product]} • {SOCIAL_POST_TYPE_LABELS[post.type]}
         </p>
-      ) : null}
-      <p className="mt-2 text-[11px] text-slate-400">{linkCount} published links</p>
-    </button>
+        <p className="mt-1 text-xs text-slate-500">
+          Scheduled: {formatDisplayDate(post.scheduled_date) || "Unscheduled"}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Platforms:{" "}
+          {post.platforms.length > 0
+            ? post.platforms.map((platform) => SOCIAL_PLATFORM_LABELS[platform]).join(", ")
+            : "—"}
+        </p>
+        {post.associated_blog ? (
+          <p className="mt-1 truncate text-xs text-slate-500">
+            Blog: {post.associated_blog.title}
+          </p>
+        ) : null}
+        <p className="mt-2 text-[11px] text-slate-400">{linkCount} published links</p>
+      </button>
+      <div className="absolute right-2 top-2">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setIsMenuOpen(!isMenuOpen);
+          }}
+          className="rounded px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          aria-label="Open row actions"
+        >
+          <span className="text-lg leading-none">⋯</span>
+        </button>
+        {isMenuOpen ? (
+          <div
+            className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleDelete}
+              className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -306,11 +351,15 @@ function SocialStatusColumn({
   posts,
   linksByPost,
   onOpenPost,
+  onDeletePost,
+  isDeletingPost,
 }: {
   status: SocialPostStatus;
   posts: SocialPostWithRelations[];
   linksByPost: Record<string, SocialPostLinkRecord[]>;
   onOpenPost: (postId: string) => void;
+  onDeletePost: (postId: string) => void;
+  isDeletingPost: boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `${STATUS_DROP_ZONE_PREFIX}${status}`,
@@ -345,6 +394,8 @@ function SocialStatusColumn({
               onOpen={() => {
                 onOpenPost(post.id);
               }}
+              onDelete={onDeletePost}
+              isDeleting={isDeletingPost}
             />
           ))
         )}
@@ -1266,21 +1317,89 @@ function SocialPostsPageContent() {
   };
 
   const [isDeletingPost, setIsDeletingPost] = useState(false);
+  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
+  const [selectedRowIndices, setSelectedRowIndices] = useState<Set<number>>(new Set());
 
-  const handleDeletePost = async () => {
-    if (!activePost || !session?.access_token) {
+  const handleBulkDelete = async () => {
+    if (selectedRowIndices.size === 0 || !session?.access_token) {
+      return;
+    }
+
+    const postsToDelete = Array.from(selectedRowIndices).map((idx) => pagedListPosts[idx]);
+    const postCount = postsToDelete.length;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${postCount} post${postCount === 1 ? "" : "s"}? This action cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeletingPost(true);
+
+    let successCount = 0;
+    let failureCount = 0;
+    const failedPostIds: string[] = [];
+
+    for (const post of postsToDelete) {
+      const response = await fetch(`/api/social-posts/${post.id}`, {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        successCount++;
+      } else {
+        failureCount++;
+        failedPostIds.push(post.title);
+      }
+    }
+
+    setPosts((previous) =>
+      previous.filter((p) => !postsToDelete.some((d) => d.id === p.id))
+    );
+    setPostLinks((previous) =>
+      previous.filter(
+        (link) => !postsToDelete.some((d) => d.id === link.social_post_id)
+      )
+    );
+    setSelectedRowIndices(new Set());
+    setIsDeletingPost(false);
+
+    if (failureCount === 0) {
+      showSuccess(
+        `Deleted ${successCount} post${successCount === 1 ? "" : "s"}`
+      );
+    } else if (successCount === 0) {
+      showError(
+        `Failed to delete ${failureCount} post${failureCount === 1 ? "" : "s"}`
+      );
+    } else {
+      showError(
+        `Deleted ${successCount} post${successCount === 1 ? "" : "s"}, failed to delete ${failureCount}`
+      );
+    }
+  };
+
+  const handleDeletePost = async (postIdParam?: string) => {
+    const postId = postIdParam ?? activePost?.id;
+    const post = postIdParam ? posts.find((p) => p.id === postIdParam) : activePost;
+    if (!post || !session?.access_token) {
       return;
     }
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${activePost.title}"? This action cannot be undone.`
+      `Are you sure you want to delete "${post.title}"? This action cannot be undone.`
     );
     if (!confirmed) {
       return;
     }
     setIsDeletingPost(true);
     setPanelError(null);
+    setOpenRowMenuId(null);
 
-    const response = await fetch(`/api/social-posts/${activePost.id}`, {
+    const response = await fetch(`/api/social-posts/${postId}`, {
       method: "DELETE",
       headers: {
         authorization: `Bearer ${session.access_token}`,
@@ -1290,17 +1409,24 @@ function SocialPostsPageContent() {
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      setPanelError(payload.error ?? "Failed to delete post.");
+      if (postIdParam) {
+        showError(payload.error ?? "Failed to delete post.");
+      } else {
+        setPanelError(payload.error ?? "Failed to delete post.");
+      }
       setIsDeletingPost(false);
       return;
     }
-
-    setPosts((previous) => previous.filter((post) => post.id !== activePost.id));
-    setPostLinks((previous) => previous.filter((link) => link.social_post_id !== activePost.id));
+    setPosts((previous) => previous.filter((p) => p.id !== postId));
+    setPostLinks((previous) => previous.filter((link) => link.social_post_id !== postId));
+    if (activePost?.id === postId) {
+      setActivePostId(null);
+    }
     setActivePostId(null);
     showSuccess("Post deleted successfully");
     setIsDeletingPost(false);
   };
+
 
   const renderCommentTree = (parentId: string | null, depth: number) => {
     const comments = commentChildren[parentId ?? "root"] ?? [];
@@ -1408,6 +1534,51 @@ function SocialPostsPageContent() {
         className: "max-w-[18rem]",
         render: (post) => post.associated_blog?.title ?? "—",
       },
+      {
+        id: "actions",
+        label: "",
+        sortable: false,
+        align: "center",
+        className: "w-12",
+        render: (post) => {
+          const isOpen = openRowMenuId === post.id;
+          const canDelete = !isDeletingPost && (post.created_by === user?.id || isAdmin);
+          return (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpenRowMenuId(isOpen ? null : post.id);
+                }}
+                className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Open row actions"
+              >
+                <span className="text-lg leading-none">⋯</span>
+              </button>
+              {isOpen ? (
+                <div
+                  className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled={!canDelete}
+                    onClick={() => {
+                      void handleDeletePost(post.id);
+                    }}
+                    className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  >
+                    {isDeletingPost ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          );
+        },
+      },
     ],
     []
   );
@@ -1504,6 +1675,8 @@ function SocialPostsPageContent() {
                     posts={postsByStatus[status]}
                     linksByPost={linksByPost}
                     onOpenPost={openPostPanel}
+                    onDeletePost={(postId) => void handleDeletePost(postId)}
+                    isDeletingPost={isDeletingPost}
                   />
                 ))}
               </section>
@@ -1582,6 +1755,31 @@ function SocialPostsPageContent() {
                   </div>
                 </div>
               ) : null}
+              {selectedRowIndices.size > 0 ? (
+                <div className="mb-3 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedRowIndices.size} selected
+                  </span>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => void handleBulkDelete()}
+                    disabled={isDeletingPost}
+                  >
+                    {isDeletingPost ? "Deleting..." : "Delete Selected"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setSelectedRowIndices(new Set())}
+                    disabled={isDeletingPost}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : null}
               <DataTable
                 data={pagedListPosts}
                 columns={listTableColumns}
@@ -1595,6 +1793,9 @@ function SocialPostsPageContent() {
                 activeIndex={pagedListPosts.findIndex((p) => p.id === activePostId)}
                 density="comfortable"
                 emptyMessage="No social posts found"
+                showSelection={true}
+                selectedIndices={selectedRowIndices}
+                onSelectionChange={setSelectedRowIndices}
               />
               <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} justify-end`}>
                 <TablePaginationControls
@@ -1680,6 +1881,10 @@ function SocialPostsPageContent() {
                               className="block w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
                               onClick={() => {
                                 openPostPanel(post.id);
+                              }}
+                              onContextMenu={(event) => {
+                                event.preventDefault();
+                                void handleDeletePost(post.id);
                               }}
                             >
                               <p className="truncate font-medium">{post.title}</p>

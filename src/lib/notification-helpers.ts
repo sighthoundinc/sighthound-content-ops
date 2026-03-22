@@ -49,6 +49,7 @@ export const NOTIFICATION_TYPE_TO_PREFERENCE_KEY: Record<
 /**
  * User notification preferences structure
  * Enforced before any notification is emitted (in-app or Slack).
+ * Each notification type can be toggled independently for in-app and Slack channels.
  */
 export interface UserNotificationPreferences {
   notifications_enabled: boolean;
@@ -59,6 +60,13 @@ export interface UserNotificationPreferences {
   notify_on_submitted_for_review: boolean;
   notify_on_published: boolean;
   notify_on_assignment_changed: boolean;
+  slack_notify_on_task_assigned?: boolean;
+  slack_notify_on_stage_changed?: boolean;
+  slack_notify_on_awaiting_action?: boolean;
+  slack_notify_on_mention?: boolean;
+  slack_notify_on_submitted_for_review?: boolean;
+  slack_notify_on_published?: boolean;
+  slack_notify_on_assignment_changed?: boolean;
   slack_delivery_dm?: boolean;
   slack_delivery_channel?: boolean;
 }

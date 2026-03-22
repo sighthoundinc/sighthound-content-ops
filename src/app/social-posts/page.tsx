@@ -1265,6 +1265,43 @@ function SocialPostsPageContent() {
     setPanelError(null);
   };
 
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
+
+  const handleDeletePost = async () => {
+    if (!activePost || !session?.access_token) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${activePost.title}"? This action cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+    setIsDeletingPost(true);
+    setPanelError(null);
+
+    const response = await fetch(`/api/social-posts/${activePost.id}`, {
+      method: "DELETE",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      setPanelError(payload.error ?? "Failed to delete post.");
+      setIsDeletingPost(false);
+      return;
+    }
+
+    setPosts((previous) => previous.filter((post) => post.id !== activePost.id));
+    setPostLinks((previous) => previous.filter((link) => link.social_post_id !== activePost.id));
+    setActivePostId(null);
+    showSuccess("Post deleted successfully");
+    setIsDeletingPost(false);
+  };
+
   const renderCommentTree = (parentId: string | null, depth: number) => {
     const comments = commentChildren[parentId ?? "root"] ?? [];
     if (comments.length === 0) {
@@ -1719,6 +1756,17 @@ function SocialPostsPageContent() {
                     }}
                   >
                     Work in Full View
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={isDeletingPost}
+                    onClick={() => {
+                      void handleDeletePost();
+                    }}
+                  >
+                    {isDeletingPost ? "Deleting…" : "Delete"}
                   </Button>
                   <Button
                     type="button"

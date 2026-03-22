@@ -97,29 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Log login event when session is first established
       // Use fire-and-forget to avoid blocking auth flow
       void logLoginEvent(nextSession.user.id);
-      
-      // Auto-mark OAuth providers as connected
-      // Check which identity provider was used for this session
-      const identities = nextSession.user.identities ?? [];
-      const hasSlackIdentity = identities.some(id => id.provider === 'slack_oidc');
-      const hasGoogleIdentity = identities.some(id => id.provider === 'google');
-      
-      if (hasSlackIdentity || hasGoogleIdentity) {
-        // Fire-and-forget: mark providers as connected without blocking auth
-        void fetch('/api/users/integrations', {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${nextSession.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            slack_connected: hasSlackIdentity,
-            google_connected: hasGoogleIdentity,
-          }),
-        }).catch((error) => {
-          console.error('Failed to update integration status:', error);
-        });
-      }
+      // Note: We do NOT auto-update OAuth connection status here.
+      // Users control which providers are "connected" via Settings → Connected Services.
+      // This respects manual disconnects — logging in with Google doesn't force
+      // Google to show as "connected" if the user previously disconnected it.
     } catch (error) {
       console.error(error);
       setProfile(null);

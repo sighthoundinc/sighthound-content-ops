@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
@@ -88,6 +89,7 @@ function splitName(fullName: string) {
 }
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const { hasPermission, session, profile, refreshProfile, user } = useAuth();
   const { showError, showSuccess } = useSystemFeedback();
   const permissionContract = useMemo(
@@ -198,6 +200,41 @@ export default function SettingsPage() {
     }
     showSuccess(success);
   }, [showSuccess, success]);
+
+  // Handle OAuth reconnect flow: when user completes OAuth from Connected Services,
+  // mark the provider as connected in user_integrations
+  useEffect(() => {
+    const reconnectService = searchParams.get("reconnect");
+    if (!reconnectService || !session?.access_token) return;
+
+    // Only mark as connected if we actually have that OAuth identity
+    const identities = (session.user?.identities ?? []) as Array<{ provider: string }>;
+    const hasGoogle = identities.some(id => id.provider === "google");
+    const hasSlack = identities.some(id => id.provider === "slack_oidc");
+
+    const updates: Record<string, boolean> = {};
+    if (reconnectService === "google" && hasGoogle) {
+      updates.google_connected = true;
+    } else if (reconnectService === "slack" && hasSlack) {
+      updates.slack_connected = true;
+    }
+
+    if (Object.keys(updates).length === 0) return;
+
+    // Mark as connected via API
+    void fetch("/api/users/integrations", {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updates),
+    }).then(() => {
+      showSuccess(`${reconnectService === "google" ? "Google" : "Slack"} connected successfully.`);
+    }).catch((error) => {
+      console.error("Failed to mark service as connected:", error);
+    });
+  }, [searchParams, session, showSuccess]);
 
   const loadUsers = async () => {
     const supabase = getSupabaseBrowserClient();

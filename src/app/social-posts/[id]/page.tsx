@@ -880,6 +880,39 @@ export default function SocialPostEditorPage() {
     await transitionPostStatus(finalAction.nextStatus);
   };
 
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
+
+  const handleDeletePost = async () => {
+    if (!post || !session?.access_token) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${post.title}"? This action cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+    setIsDeletingPost(true);
+
+    const response = await fetch(`/api/social-posts/${post.id}`, {
+      method: "DELETE",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      showError(payload.error ?? "Failed to delete post.");
+      setIsDeletingPost(false);
+      return;
+    }
+
+    showSuccess("Post deleted successfully");
+    router.push("/social-posts");
+  };
+
   if (isLoading) {
     return (
       <ProtectedPage>
@@ -914,6 +947,16 @@ export default function SocialPostEditorPage() {
             description="Build and refine your social post from concept to publication."
             primaryAction={
               <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={isDeletingPost}
+                  onClick={() => {
+                    void handleDeletePost();
+                  }}
+                >
+                  {isDeletingPost ? "Deleting…" : "Delete"}
+                </Button>
                 <Button
                   variant="secondary"
                   size="sm"

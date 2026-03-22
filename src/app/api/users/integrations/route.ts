@@ -40,12 +40,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Derive provider links from Supabase auth identities (authoritative for OAuth links)
-    const identities = user.identities ?? [];
-    const hasGoogleIdentity = identities.some((identity) => identity.provider === "google");
-    const hasSlackIdentity = identities.some((identity) => identity.provider === "slack_oidc");
-
-    // Get user's persisted integration status
+    // Get user's persisted integration status (source of truth)
+    // This respects manual disconnects from Settings → Connected Services
     const { data: integrations, error } = await supabase
       .from("user_integrations")
       .select("google_connected, google_connected_at, slack_connected, slack_connected_at")
@@ -56,57 +52,20 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    // If no integrations row exists, initialize from identities
+    // If no integrations row exists, return disconnected state
+    // User must explicitly connect via Settings (proper UX)
     if (!integrations) {
-      const initialized = {
-        google_connected: hasGoogleIdentity,
-        google_connected_at: hasGoogleIdentity ? new Date().toISOString() : null,
-        slack_connected: hasSlackIdentity,
-        slack_connected_at: hasSlackIdentity ? new Date().toISOString() : null,
-      };
-
-      // Silently attempt to initialize; if it fails, we return the inferred state anyway
-      void supabase
-        .from("user_integrations")
-        .insert({
-          user_id: user.id,
-          ...initialized,
-        })
-
-      return NextResponse.json(initialized);
+      return NextResponse.json({
+        google_connected: false,
+        google_connected_at: null,
+        slack_connected: false,
+        slack_connected_at: null,
+      });
     }
 
-    // Merge persisted flags with identities so OAuth-linked providers always appear connected
-    const merged: UserIntegrations = {
-      google_connected: Boolean(integrations.google_connected || hasGoogleIdentity),
-      google_connected_at:
-        integrations.google_connected_at ??
-        (hasGoogleIdentity ? new Date().toISOString() : null),
-      slack_connected: Boolean(integrations.slack_connected || hasSlackIdentity),
-      slack_connected_at:
-        integrations.slack_connected_at ??
-        (hasSlackIdentity ? new Date().toISOString() : null),
-    };
-
-    // Self-heal stored flags if identities indicate connected providers
-    if (
-      merged.google_connected !== integrations.google_connected ||
-      merged.slack_connected !== integrations.slack_connected
-    ) {
-      // Silently attempt self-heal; if it fails, we still return the merged state
-      void supabase
-        .from("user_integrations")
-        .update({
-          google_connected: merged.google_connected,
-          google_connected_at: merged.google_connected_at,
-          slack_connected: merged.slack_connected,
-          slack_connected_at: merged.slack_connected_at,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id)
-    }
-
-    return NextResponse.json(merged);
+    // Return persisted state only — user's explicit choice is respected
+    // If they disconnected Google in Settings, it stays disconnected even if they have Google OAuth
+    return NextResponse.json(integrations);
   } catch (error) {
     console.error("Error fetching integrations:", error);
     return NextResponse.json(
@@ -118,7 +77,11 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/users/integrations
- * Update integration connection status (typically called after OAuth completion)
+ * Update integration connection status (called from Settings → Connected Services)
+ * 
+ * This is the ONLY place where connection status should be modified.
+ * Users explicitly control which providers appear "connected" via the UI.
+ * OAuth login does NOT auto-update these flags — that would override manual disconnects.
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -157,15 +120,11 @@ export async function PATCH(request: NextRequest) {
 
     if (body.google_connected !== undefined) {
       updates.google_connected = body.google_connected;
-      if (body.google_connected) {
-        updates.google_connected_at = new Date().toISOString();
-      }
+      updates.google_connected_at = body.google_connected ? new Date().toISOString() : null;
     }
     if (body.slack_connected !== undefined) {
       updates.slack_connected = body.slack_connected;
-      if (body.slack_connected) {
-        updates.slack_connected_at = new Date().toISOString();
-      }
+      updates.slack_connected_at = body.slack_connected ? new Date().toISOString() : null;
     }
 
     // Try to update existing integrations row

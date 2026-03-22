@@ -17,7 +17,8 @@ const SERVICES = [
     key: "google" as const,
     name: "Google",
     icon: "google" as const,
-    description: "Sign in with your Google Workspace account (@sighthound.com)",
+    descriptionDisconnected: "Sign in with your Google Workspace account (@sighthound.com)",
+    descriptionConnected: "Your Google account is linked for sign-in.",
     connectedAtKey: "google_connected_at" as const,
     purpose: "Sign-in",
   },
@@ -25,7 +26,8 @@ const SERVICES = [
     key: "slack" as const,
     name: "Slack",
     icon: "slack" as const,
-    description: "Receive workflow notifications and reminders in Slack",
+    descriptionDisconnected: "Connect Slack to receive workflow notifications and reminders.",
+    descriptionConnected: "You will receive workflow notifications and reminders in Slack.",
     connectedAtKey: "slack_connected_at" as const,
     purpose: "Notifications",
   },
@@ -191,7 +193,7 @@ export function ConnectedServicesForm() {
                     )}
                   </div>
                   <p className="mt-0.5 text-xs text-slate-600">
-                    {service.description}
+                    {isConnected ? service.descriptionConnected : service.descriptionDisconnected}
                   </p>
                   {isConnected && connectedDate && (
                     <p className="mt-1 text-xs text-slate-500">

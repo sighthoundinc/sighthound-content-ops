@@ -51,7 +51,7 @@ def render_spec(spec_path: str, out_path: str) -> tuple[bool, str]:
 
     lines: list[str] = []
 
-    title = spec.get("plan") or spec.get("title") or "Specification"
+    title = spec.get("title") or spec.get("plan") or "Specification"
     lines.append(f"# {title}\n")
 
     if overview := spec.get("overview") or spec.get("description"):
@@ -62,9 +62,6 @@ def render_spec(spec_path: str, out_path: str) -> tuple[bool, str]:
         do = task.get("do") or task.get("title") or ""
         task_status = task.get("status", "")
         lines.append(f"## {task_id}: {do}  `[{task_status}]`\n")
-        if deps := task.get("dependencies"):
-            dep_list = ", ".join(deps)
-            lines.append(f"**Depends on**: {dep_list}\n")
         for key in ("narrative", "acceptance", "why"):
             if val := task.get(key):
                 if isinstance(val, list):

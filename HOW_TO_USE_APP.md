@@ -113,6 +113,30 @@ The sidebar order is fixed and consistent:
 10. Permissions
 
 Dashboard sidebar behavior:
+- sidebar supports two persistent states:
+  - expanded (`240px`): icon + label
+  - collapsed (`72px`): icon-only
+- collapsed state shows labels through hover/focus tooltips only (no browser `title` fallback)
+- collapse preference is global and remembered across sessions
+- sidebar and page content are rendered in separate columns, so content shifts instead of being overlaid
+- sidebar column is viewport-anchored (`sticky top-0 h-screen`) so navigation stays visible while page content scrolls
+- only the middle navigation region scrolls (`flex-1 overflow-y-auto`); sidebar header/toggle stays pinned and always visible
+- optional sidebar footer content remains fixed (non-scrolling) below the nav region
+- when you navigate between pages, sidebar nav scroll resets intentionally to top for consistent behavior
+- if your OS enables “Reduce Motion”, sidebar toggle/nav transitions are disabled while layout updates still apply immediately
+- tooltip labels are rendered above drawers/modals and are not clipped by table scroll containers
+- keyboard navigation in collapsed mode:
+  - use `Tab` to move through sidebar items
+  - focused items show a visible inset focus ring
+  - tooltip labels open on focus (not only on hover)
+  - if sidebar is toggled while focus is inside the sidebar, focus remains predictable (kept on toggle if needed) and does not jump to page body
+- active item visibility in collapsed mode:
+  - active item uses a strong dark background plus white icon color
+  - active state remains obvious even without tooltip or label text
+- click target behavior in collapsed mode:
+  - each nav item keeps a minimum ~44px height for reliable click/tap targeting
+  - icons remain centered in the full clickable row
+  - clicking anywhere in the row activates the item (no icon-only dead zone)
 - no quick-filter groups are shown in the left sidebar
 - no `Recently Published` section is shown in the left sidebar
 - clicking the top-left Sighthound brand in the header always returns to workspace home (`/`)

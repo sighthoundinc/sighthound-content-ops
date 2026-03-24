@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getUserRoles } from "@/lib/roles";
 
 import { Button } from "@/components/button";
@@ -23,8 +23,11 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon, type AppIconName } from "@/lib/icons";
 import { socialPostAwaitingLiveLinkReminderNotification } from "@/lib/notification-helpers";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "@/components/tooltip";
 import { useAuth } from "@/providers/auth-provider";
 import { useNotifications } from "@/providers/notifications-provider";
+import { useSidebarState } from "@/hooks/useSidebarState";
+import { SidebarToggle } from "@/components/sidebar-toggle";
 
 type NavItem = { href: string; label: string; icon: AppIconName };
 
@@ -41,7 +44,7 @@ const CONTENT_WORKFLOW_NAV_ITEMS: NavItem[] = [
 
 const SECONDARY_NAV_ITEMS: NavItem[] = [
   { href: "/calendar", label: "Calendar", icon: "calendar" },
-  { href: "/blogs/cardboard", label: "CardBoard", icon: "blog" },
+  { href: "/blogs/cardboard", label: "CardBoard", icon: "kanban" },
 ];
 const BADGE_GIF_SRC_CANDIDATES = [
   "/sighthound-badge-animated.GIF",
@@ -104,6 +107,7 @@ export function AppShell({
     markAsRead,
     clearAll,
   } = useNotifications();
+  const { collapsed, setCollapsed } = useSidebarState();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [activeQuickCreateIndex, setActiveQuickCreateIndex] = useState(0);
@@ -126,6 +130,9 @@ export function AppShell({
     }>
   >([]);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
+  const sidebarNavScrollRef = useRef<HTMLDivElement | null>(null);
   const quickCreateItemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const badgeGifSrc =
     BADGE_GIF_SRC_CANDIDATES[
@@ -416,6 +423,13 @@ export function AppShell({
     };
   }, [isNotificationPanelOpen]);
 
+  useLayoutEffect(() => {
+    if (!sidebarNavScrollRef.current) {
+      return;
+    }
+    sidebarNavScrollRef.current.scrollTop = 0;
+  }, [pathname]);
+
   useEffect(() => {
     setQuickViewSnapshot(readQuickViewSnapshot());
     setQuickViewError(null);
@@ -485,6 +499,37 @@ export function AppShell({
     setQuickViewSnapshot(null);
     router.push("/settings");
   };
+
+  const handleSidebarToggle = useCallback(() => {
+    const activeElement =
+      typeof document !== "undefined"
+        ? (document.activeElement as HTMLElement | null)
+        : null;
+    const wasFocusInsideSidebar = Boolean(
+      activeElement && sidebarRef.current?.contains(activeElement)
+    );
+
+    setCollapsed((previous) => !previous);
+
+    if (!wasFocusInsideSidebar) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const currentActiveElement =
+        typeof document !== "undefined"
+          ? (document.activeElement as HTMLElement | null)
+          : null;
+      const focusIsLost = !currentActiveElement || currentActiveElement === document.body;
+      const focusMovedOutsideSidebar = Boolean(
+        currentActiveElement && !sidebarRef.current?.contains(currentActiveElement)
+      );
+
+      if (focusIsLost || focusMovedOutsideSidebar) {
+        sidebarToggleRef.current?.focus();
+      }
+    });
+  }, [setCollapsed]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -756,134 +801,128 @@ export function AppShell({
         </div>
       ) : null}
 
-      <div className="mx-auto flex w-full max-w-7xl gap-6 px-6 py-6">
-        <aside className="w-full max-w-56 shrink-0 rounded-lg border border-slate-200 bg-white p-3">
-          <nav className="space-y-1">
-            <div className="space-y-1">
-              {ENTRY_POINT_NAV_ITEMS.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={`${item.href}-${item.label}`}
-                    href={item.href}
-                    className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
-                      isActive
-                        ? "bg-slate-900 text-white font-semibold"
-                        : "text-slate-700 font-medium hover:bg-slate-50"
-                    )}
-                  >
-                    <AppIcon
-                      name={item.icon}
-                      boxClassName="h-4 w-4"
-                      size={14}
-                      className={isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
-                    />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-            <div className="space-y-1">
-              <div className="my-2 border-t border-slate-200" />
-              {CONTENT_WORKFLOW_NAV_ITEMS.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={`${item.href}-${item.label}`}
-                    href={item.href}
-                    className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
-                      isActive
-                        ? "bg-slate-900 text-white font-semibold"
-                        : "text-slate-700 font-medium hover:bg-slate-50"
-                    )}
-                  >
-                    <AppIcon
-                      name={item.icon}
-                      boxClassName="h-4 w-4"
-                      size={14}
-                      className={isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
-                    />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-            <div className="space-y-1">
-              <div className="my-2 border-t border-slate-200" />
-              {SECONDARY_NAV_ITEMS.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={`${item.href}-${item.label}`}
-                    href={item.href}
-                    className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
-                      isActive
-                        ? "bg-slate-900 text-white font-semibold"
-                        : "text-slate-700 font-medium hover:bg-slate-50"
-                    )}
-                  >
-                    <AppIcon
-                      name={item.icon}
-                      boxClassName="h-4 w-4"
-                      size={14}
-                      className={isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
-                    />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-            <div className="space-y-1">
-              <div className="my-2 border-t border-slate-200" />
-              <Link
-                href="/settings"
-                className={cn(
-                  "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
-                  pathname === "/settings"
-                    ? "bg-slate-900 text-white font-semibold"
-                    : "text-slate-700 font-medium hover:bg-slate-50"
-                )}
-              >
-                <AppIcon
-                  name="settings"
-                  boxClassName="h-4 w-4"
-                  size={14}
-                  className={pathname === "/settings" ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
-                />
-                Settings
-              </Link>
-              {canManagePermissions ? (
-                <Link
-                  href="/settings/permissions"
-                  className={cn(
-                    "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
-                    pathname === "/settings/permissions"
-                      ? "bg-slate-900 text-white font-semibold"
+      <div className="flex min-h-[calc(100vh-8rem)] w-full bg-slate-50">
+        <aside
+          ref={sidebarRef}
+          className={cn(
+            "sticky top-0 h-screen shrink-0 flex flex-col border-r border-slate-200 bg-white transition-[width] duration-200 ease-in-out motion-reduce:transition-none",
+            collapsed ? "w-[72px]" : "w-[240px]"
+          )}
+        >
+          {/* Sidebar header with toggle */}
+          <div className="shrink-0 flex items-center justify-between px-2 py-3">
+            {!collapsed && <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Menu</span>}
+            <SidebarToggle
+              ref={sidebarToggleRef}
+              collapsed={collapsed}
+              onToggle={handleSidebarToggle}
+            />
+          </div>
+          <div ref={sidebarNavScrollRef} className="flex-1 overflow-y-auto">
+            <nav className="space-y-1 px-1 pb-3">
+              {/* Helper to render nav items with consistent styling */}
+              {(() => {
+                const renderNavItem = (item: NavItem, isActive: boolean) => {
+                  const navKey = `${item.href}-${item.label}`;
+                  const navItemClassName = cn(
+                    "group flex w-full min-h-11 items-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset",
+                    collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2",
+                    isActive
+                      ? "bg-slate-900 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)] hover:bg-slate-900 hover:text-white"
                       : "text-slate-700 font-medium hover:bg-slate-50"
-                  )}
-                >
-                  <AppIcon
-                    name="lock"
-                    boxClassName="h-4 w-4"
-                    size={14}
-                    className={pathname === "/settings/permissions" ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
-                  />
-                  Permissions
-                </Link>
-              ) : null}
-            </div>
-          </nav>
-          {sidebarContent ? (
-            <div className="mt-4 border-t border-slate-200 pt-3">{sidebarContent}</div>
+                  );
+
+                  const navContent = (
+                    <Link
+                      href={item.href}
+                      className={navItemClassName}
+                      aria-label={collapsed ? item.label : undefined}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <AppIcon
+                        name={item.icon}
+                        boxClassName="h-4 w-4 shrink-0"
+                        size={14}
+                        className={
+                          isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"
+                        }
+                      />
+                      {!collapsed ? <span className="text-sm">{item.label}</span> : null}
+                    </Link>
+                  );
+
+                  if (collapsed) {
+                    return (
+                      <Tooltip
+                        key={navKey}
+                        content={item.label}
+                        delay={150}
+                        className="block w-full"
+                      >
+                        {navContent}
+                      </Tooltip>
+                    );
+                  }
+
+                  return (
+                    <div key={navKey} className="block w-full">
+                      {navContent}
+                    </div>
+                  );
+                };
+
+                return (
+                  <>
+                    {/* Entry points */}
+                    <div className="space-y-0.5">
+                      {ENTRY_POINT_NAV_ITEMS.map((item) => {
+                        const isActive = pathname === item.href;
+                        return renderNavItem(item, isActive);
+                      })}
+                    </div>
+
+                    {/* Content workflow */}
+                    <div className="mt-2 space-y-0.5 border-t border-slate-200 pt-2">
+                      {CONTENT_WORKFLOW_NAV_ITEMS.map((item) => {
+                        const isActive = pathname === item.href;
+                        return renderNavItem(item, isActive);
+                      })}
+                    </div>
+
+                    {/* Supporting tools */}
+                    <div className="mt-2 space-y-0.5 border-t border-slate-200 pt-2">
+                      {SECONDARY_NAV_ITEMS.map((item) => {
+                        const isActive = pathname === item.href;
+                        return renderNavItem(item, isActive);
+                      })}
+                    </div>
+
+                    {/* System/Admin */}
+                    <div className="mt-2 space-y-0.5 border-t border-slate-200 pt-2">
+                      {renderNavItem({ href: "/settings", label: "Settings", icon: "settings" }, pathname === "/settings")}
+                      {canManagePermissions
+                        ? renderNavItem(
+                            { href: "/settings/permissions", label: "Permissions", icon: "lock" },
+                            pathname === "/settings/permissions"
+                          )
+                        : null}
+                    </div>
+                  </>
+                );
+              })()}
+            </nav>
+          </div>
+          {!collapsed && sidebarContent ? (
+            <div className="shrink-0 border-t border-slate-200 px-1 pt-3 pb-3">{sidebarContent}</div>
           ) : null}
         </aside>
-
-        <main className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white p-5">
-          {children}
-        </main>
+        <div className="min-w-0 flex-1">
+          <div className="mx-auto w-full max-w-7xl px-6 py-6">
+            <main className="min-w-0 rounded-lg border border-slate-200 bg-white p-5">
+              {children}
+            </main>
+          </div>
+        </div>
       </div>
       {isQuickCreateOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

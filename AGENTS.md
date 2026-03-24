@@ -419,3 +419,36 @@ Reminder + notification invariants:
 - "Schedule" → Publishing/workflow dates
 - "Advanced Settings" → Power-user options
 - "Admin Only" → Restricted to admins (exception case)
+
+## Sidebar Pattern (MUST)
+
+**Global collapsible sidebar** with two stable states: expanded (240px, icons + labels) and collapsed (72px, icons only).
+
+See `docs/SIDEBAR_PATTERN.md` for complete specification including:
+- Global state persistence via localStorage (`sidebar:collapsed`)
+- Layout behavior (content margin adjustment, no overlays)
+- Icon consistency and recognition requirements
+- Tooltip requirements for collapsed state (non-negotiable)
+- Active state styling, transition timing (200ms ease-in-out)
+- Grouping behavior and spacing rules
+- Accessibility requirements (aria-label, keyboard nav)
+- Performance considerations and naming conventions
+- Testing & validation checklist
+
+**Key requirements**:
+1. Sidebar state is **global and persistent** across sessions
+2. Collapsed state requires **tooltips on hover** (usability critical)
+3. All icons must be recognizable **without text labels**
+4. Content must **shift, not overlay** when sidebar toggles
+5. Use chevron toggle (ChevronLeft/ChevronRight) in sidebar header
+6. No emoji icons—use lucide-react via `AppIcon`
+7. Fixed icon size (20px), consistent stroke weight, outline style
+8. Test on initial load (no flicker) and across page navigations
+9. Sidebar root stays viewport-anchored (`sticky top-0 h-screen flex flex-col`) for always-visible navigation
+10. Sidebar scrolling is isolated to the middle nav section (`flex-1 overflow-y-auto`); header/toggle remains visible and must never scroll out of view
+11. Sidebar nav scroll position resets intentionally to top on route changes to avoid random/restored scroll jumps across pages
+12. When `prefers-reduced-motion` is enabled, sidebar toggle/nav transitions are disabled (`motion-reduce:transition-none`) while layout updates remain immediate and stable
+
+**Risk**: Medium (UI-only, affects layout and navigation consistency)
+
+**Owner**: Design + Frontend (audit existing sidebar implementation and enforce this spec globally)

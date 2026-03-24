@@ -125,6 +125,32 @@ Key behavior:
 - navigation separates workflow vs configuration pages
 - permissions navigation visible only for admin users
 - active nav link uses stronger visual state (highlight + indicator)
+- app shell sidebar supports two persistent states:
+  - expanded `240px` (icon + label)
+  - collapsed `72px` (icon-only)
+- sidebar and content are rendered in separate columns so toggling sidebar state shifts content instead of overlaying it
+- sidebar root is viewport-anchored (`sticky top-0 h-screen`) to keep navigation visible
+- sidebar uses a fixed header/toggle row and optional fixed footer row
+- only the middle nav region scrolls (`flex-1 overflow-y-auto`); root sidebar must not scroll
+- sidebar nav scroll resets intentionally to top on route pathname changes
+- when `prefers-reduced-motion` is enabled, sidebar toggle/nav transitions are disabled while layout updates remain immediate
+- collapsed nav labels must be shown with application tooltips on hover/focus
+- collapsed sidebar label affordance must not rely on browser `title` attributes
+- tooltip rendering must be portal-based, viewport-aware, and layered above drawer/modal surfaces
+- collapsed sidebar must support keyboard tab navigation with:
+  - visible focus ring on each focused nav item
+  - tooltip label display on focus
+- toggling sidebar while focus is inside sidebar must preserve focus predictably:
+  - no focus jump to `document.body`
+  - fallback target is the sidebar toggle control
+- collapsed active item must remain visually obvious without text:
+  - dark background highlight
+  - high-contrast icon color
+- collapsed nav click target must remain usable:
+  - minimum ~40–44px row height
+  - icon centered inside full-row clickable target
+  - no dead zones around icon (row remains clickable)
+- icon-only recognition must avoid reused ambiguous icons (CardBoard uses dedicated kanban icon)
 - left sidebar stays intentionally clean (no quick filter groups and no recently published block)
 - today strip (scheduled this week / ready / delayed) with clickable metric filtering
 - delayed definition: scheduled publish date passed while `overall_status != published`

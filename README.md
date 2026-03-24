@@ -46,6 +46,22 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - workflow pages first (`Dashboard`, `My Tasks`, `Calendar`, `Blogs`, `Ideas`, `Social Posts`)
   - divider
   - configuration pages (`Settings`, `Permissions` for admins only)
+- Sidebar is collapsible with global persistent state:
+  - expanded: `240px` (icons + labels)
+  - collapsed: `72px` (icons only)
+- Collapsed nav labels are provided through the app tooltip component (hover/focus), not `title` attributes
+- Sidebar is rendered as a dedicated layout column, so content shifts and never overlays
+- Sidebar column is viewport-anchored with `sticky top-0 h-screen` for always-visible navigation
+- Sidebar scroll is isolated to the middle nav section (`flex-1 overflow-y-auto`), keeping header/toggle visible
+- Optional sidebar footer content remains fixed below the nav scroll region
+- Sidebar nav scroll resets to top on route changes for predictable cross-page behavior
+- Sidebar respects reduced-motion preferences by disabling toggle/nav transitions (`motion-reduce:transition-none`)
+- Tooltip rendering uses a portal + high z-index layer to avoid clipping in table scroll containers and to stay above drawers/modals
+- Collapsed sidebar supports keyboard navigation with visible focus ring and focus-triggered tooltips
+- CardBoard navigation uses a dedicated kanban icon (not reused blog icon) for clearer recognition in collapsed mode
+- Toggling sidebar while focused inside nav preserves focus predictably (fallback to toggle button, no jump to body)
+- Active sidebar item remains obvious in collapsed mode via dark background + white icon contrast
+- Collapsed nav rows keep a ~44px minimum hit target with centered icons and full-row click area (no dead zones)
 - Active nav page has stronger visual state (left border + highlighted row)
 - Left sidebar is intentionally clean (no quick-filter groups and no recently-published card)
 - Clickable Today metrics

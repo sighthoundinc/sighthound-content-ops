@@ -27,6 +27,22 @@ For social execution-stage completion, live links are entered from `/social-post
 - Column definitions defined at page level with type safety
 - StatusBadgeSystem used throughout for status rendering
 - Dashboard left sidebar is intentionally minimal (quick filters and recently published panel removed)
+- App shell sidebar is collapsible with persistent local state (`sidebar:collapsed`)
+- Collapsed sidebar labels are rendered via `Tooltip` component (`src/components/tooltip.tsx`) on hover/focus only
+- Sidebar tooltip behavior intentionally avoids browser `title` attributes for consistent UX and accessibility control
+- Sidebar/content are rendered in separate layout columns (no overlay behavior when toggling collapsed state)
+- App shell sidebar root is viewport-anchored (`sticky top-0 h-screen`) with a fixed header/toggle row
+- Sidebar scrolling is intentionally isolated to the nav region (`flex-1 overflow-y-auto`); root sidebar does not scroll
+- Optional sidebar footer content is non-scrolling to keep persistent controls visible
+- Sidebar nav scroll position is reset to top on route changes to ensure deterministic navigation behavior
+- Reduced-motion users get immediate sidebar state changes via `motion-reduce:transition-none` on sidebar width and nav/toggle interactions
+- Tooltip layering uses portal rendering + `fixed` positioning + `z-[220]` to stay above drawers/modals and outside overflow clipping
+- Tooltip position is viewport-clamped to prevent edge clipping
+- Collapsed sidebar links expose keyboard-first UX: visible focus ring (`focus-visible` inset ring) and tooltip opening on focus
+- CardBoard nav item uses a dedicated kanban icon to improve icon-only state recognition
+- Sidebar toggle includes focus-retention handling: if focus was inside sidebar during toggle, focus is preserved predictably (fallback to toggle control) instead of dropping to document body
+- Active nav item in collapsed mode is intentionally high-contrast (dark background + white icon) so state is clear without labels/tooltips
+- Collapsed nav item hit area is constrained to ~44px minimum row height with centered icon and full-row click target
 - Zero dead code, production-ready quality (TypeScript 0 errors, ESLint 0 errors)
 
 ### Icon system operations standard
@@ -42,6 +58,8 @@ For social execution-stage completion, live links are entered from `/social-post
 - `src/lib/server-permissions.ts` — server-side permission resolution
 - `src/lib/access-logging.ts` — server-side utility for logging access events
 - `src/lib/format-date.ts` — timezone-aware date formatting utilities
+- `src/components/tooltip.tsx` — global hover/focus tooltip component used by collapsed sidebar navigation
+- `src/components/app-shell.tsx` — app shell layout with non-overlay collapsible sidebar column, sticky full-height shell, and nav-only scroll partition
 - `src/app/settings/permissions/` — permission management UI
 - `src/app/settings/access-logs/` — activity history page UI
 - `src/app/api/admin/permissions/` — permission CRUD/reset APIs

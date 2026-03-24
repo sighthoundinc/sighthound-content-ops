@@ -1,4 +1,5 @@
 # Sidebar Pattern Specification
+Cross-reference: See `AGENTS.md` → `Layout Invariants (MUST)` for global layout and layering constraints that apply alongside this sidebar spec.
 
 ## Overview
 

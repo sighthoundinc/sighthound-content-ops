@@ -4,6 +4,10 @@ import { z } from "zod";
 import { getUserRoles } from "@/lib/roles";
 import { authenticateRequest, requirePermission } from "@/lib/server-permissions";
 import { createAdminClient } from "@/lib/supabase/server";
+import {
+  getActivityTypeCategory,
+  getActivityTypeLabel,
+} from "@/lib/activity-history-format";
 
 type ActivityType =
   | "login"
@@ -28,23 +32,23 @@ interface UnifiedActivity {
 }
 
 const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
-  login: "Login",
-  dashboard_visit: "Dashboard Visit",
-  blog_writer_status_changed: "Blog Writer Status Changed",
-  blog_publisher_status_changed: "Blog Publisher Status Changed",
-  blog_assignment_changed: "Blog Assignment Changed",
-  social_post_status_changed: "Social Post Status Changed",
-  social_post_assignment_changed: "Social Post Assignment Changed",
+  login: getActivityTypeLabel("login"),
+  dashboard_visit: getActivityTypeLabel("dashboard_visit"),
+  blog_writer_status_changed: getActivityTypeLabel("blog_writer_status_changed"),
+  blog_publisher_status_changed: getActivityTypeLabel("blog_publisher_status_changed"),
+  blog_assignment_changed: getActivityTypeLabel("blog_assignment_changed"),
+  social_post_status_changed: getActivityTypeLabel("social_post_status_changed"),
+  social_post_assignment_changed: getActivityTypeLabel("social_post_assignment_changed"),
 };
 
 const ACTIVITY_TYPE_CATEGORIES: Record<ActivityType, string> = {
-  login: "Access",
-  dashboard_visit: "Access",
-  blog_writer_status_changed: "Blog",
-  blog_publisher_status_changed: "Blog",
-  blog_assignment_changed: "Blog",
-  social_post_status_changed: "Social Post",
-  social_post_assignment_changed: "Social Post",
+  login: getActivityTypeCategory("login"),
+  dashboard_visit: getActivityTypeCategory("dashboard_visit"),
+  blog_writer_status_changed: getActivityTypeCategory("blog_writer_status_changed"),
+  blog_publisher_status_changed: getActivityTypeCategory("blog_publisher_status_changed"),
+  blog_assignment_changed: getActivityTypeCategory("blog_assignment_changed"),
+  social_post_status_changed: getActivityTypeCategory("social_post_status_changed"),
+  social_post_assignment_changed: getActivityTypeCategory("social_post_assignment_changed"),
 };
 
 /**

@@ -475,7 +475,7 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
   return (
     <AlertsContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed bottom-6 left-6 z-[100] flex w-[calc(100%-3rem)] max-w-80 flex-col gap-2">
+      <div className="pointer-events-none fixed bottom-6 left-6 z-[300] flex w-[calc(100%-3rem)] max-w-80 flex-col gap-2">
         {alerts.map((alert) => (
           <AlertCard
             key={alert.id}

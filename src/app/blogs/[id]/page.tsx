@@ -44,6 +44,10 @@ import {
   blogSubmittedForReviewNotification,
   blogPublishedNotification,
 } from "@/lib/notification-helpers";
+import {
+  formatActivityChangeDescription,
+  formatActivityEventTitle,
+} from "@/lib/activity-history-format";
 
 type BlogFormState = {
   title: string;
@@ -319,6 +323,21 @@ export default function BlogDetailPage() {
     () => users.find((nextUser) => nextUser.id === form?.publisher_id) ?? null,
     [form?.publisher_id, users]
   );
+  const activityUserNameById = useMemo(() => {
+    const entries: Array<[string, string]> = [];
+    for (const nextUser of users) {
+      if (nextUser.id && nextUser.full_name) {
+        entries.push([nextUser.id, nextUser.full_name]);
+      }
+    }
+    if (blog?.writer?.id && blog.writer.full_name) {
+      entries.push([blog.writer.id, blog.writer.full_name]);
+    }
+    if (blog?.publisher?.id && blog.publisher.full_name) {
+      entries.push([blog.publisher.id, blog.publisher.full_name]);
+    }
+    return Object.fromEntries(entries);
+  }, [blog?.publisher, blog?.writer, users]);
 
   const updateBlog = async (
     updates: Record<string, unknown>,
@@ -1404,12 +1423,16 @@ export default function BlogDetailPage() {
                     className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
                   >
                     <p className="text-sm font-medium text-slate-800">
-                      {toTitleCase(entry.event_type)}
+                      {formatActivityEventTitle(entry)}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      {entry.field_name ? `${entry.field_name}: ` : ""}
-                      {entry.old_value ?? "—"} → {entry.new_value ?? "—"}
-                    </p>
+                    {(() => {
+                      const detail = formatActivityChangeDescription(entry, {
+                        userNameById: activityUserNameById,
+                      });
+                      return detail ? (
+                        <p className="text-xs text-slate-500">{detail}</p>
+                      ) : null;
+                    })()}
                     <p className="text-xs text-slate-400">
                       {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                     </p>

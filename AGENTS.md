@@ -355,6 +355,12 @@ In addition to real-time notifications, the bell drawer displays a unified activ
 - **Access log content**: Shows "—" (em-dash) instead of content title
 - **Timestamps**: Formatted per user's timezone setting (admins default to UTC for consistency)
 
+### Activity Message Language (MUST)
+- Activity titles and change summaries must be operator-friendly and avoid raw technical keys.
+- Never expose raw field keys or enum values in user-facing history rows (for example, avoid `publisher_status`, `pending_review`, `publisher_approved` in UI copy).
+- Never expose raw UUIDs in user-facing change summaries; resolve to names when available and otherwise use neutral wording (for example, "Team member" or "Reassigned").
+- Keep wording consistent across all activity surfaces: detail timelines, dashboard drawers, notification feed, and Activity History page.
+
 ### API Response Structure
 Endpoint returns:
 - `activities`: Array of unified activity records
@@ -452,3 +458,26 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 **Risk**: Medium (UI-only, affects layout and navigation consistency)
 
 **Owner**: Design + Frontend (audit existing sidebar implementation and enforce this spec globally)
+
+## Layout Invariants (MUST)
+
+1. No horizontal overflow in action/control bars.
+   - Use `flex-wrap`, `min-w-0`, `max-w-full`.
+2. Exactly one scroll container per table region.
+   - Never nest overflow containers around tables.
+3. Layout-critical state must initialize before first paint.
+   - No post-mount corrections for layout state.
+4. Viewport breakpoints must not degrade usable content width.
+   - Sidebar presence must be accounted for.
+   - Prefer later breakpoints over cramped layouts.
+5. Z-index hierarchy must remain consistent.
+   - `Tooltip < Drawer < Modal < Toast`.
+   - Do not override locally without system-level change.
+
+## Calendar Rendering and Scroll Stability (MUST)
+
+1. Month view must avoid nested per-day scroll regions to prevent wheel-capture jitter and flicker.
+2. Month tiles render a compact event list (up to 3 visible cards) with a `+N more` affordance for overflow.
+3. Clicking `+N more` transitions to week view focused on that date so hidden month items remain quickly accessible.
+4. Dense calendar cards must prefer lightweight hover behavior (native `title` metadata) over heavy inline hover popovers.
+5. Calendar visual polish should prioritize subtle depth (borders/shadows/gradients) without introducing motion-heavy effects (for example, backdrop blur in dense grids).

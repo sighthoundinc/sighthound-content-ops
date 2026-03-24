@@ -115,7 +115,10 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 
 ### Calendar
 - Month/week views
-- Week-grouped month layout
+- Week-grouped month layout with compact per-day cards
+- Month day tiles show up to 3 items and expose overflow via `+N more`
+- `+N more` jumps directly to week view on that date
+- Month view avoids nested per-tile scroll regions for smoother page scroll
 - Drag-and-drop scheduling (permission-gated)
 - Published entries are non-draggable
 
@@ -129,6 +132,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Optional comments cleanup during history purge
 - Admin quick-view as non-admin user with return-to-admin workflow
 - Admin-only `Danger Zone: Wipe App Clean` reset with optional checkbox to remove other admin profiles/accounts (signed-in admin is always preserved)
+- Activity and timeline entries are rendered with plain-language labels and UUID-safe wording for operator readability
 
 ### Social Post Editor (`/social-posts/[id]`)
 - Guided 4-step single-post workflow:

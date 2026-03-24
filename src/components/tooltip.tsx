@@ -163,7 +163,7 @@ export function Tooltip({
               ref={tooltipRef}
               id={tooltipId}
               role="tooltip"
-              className="pointer-events-none fixed z-[220] rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg"
+              className="pointer-events-none fixed z-20 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg"
               style={{
                 top: position.top,
                 left: position.left,

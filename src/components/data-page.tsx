@@ -24,8 +24,9 @@ export const DATA_PAGE_TABLE_SECTION_CLASS =
 export const DATA_PAGE_CONTROL_STRIP_CLASS =
   "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2";
 export const DATA_PAGE_CONTROL_ROW_CLASS =
-  "flex w-full flex-wrap items-center justify-between gap-3";
-export const DATA_PAGE_CONTROL_ACTIONS_CLASS = "ml-auto flex items-center gap-2";
+  "flex w-full min-w-0 flex-wrap items-center justify-between gap-3";
+export const DATA_PAGE_CONTROL_ACTIONS_CLASS =
+  "ml-auto flex max-w-full flex-wrap items-center justify-end gap-2";
 export const DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS =
   "inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium";
 export const DATA_PAGE_TABLE_FEEDBACK_CLASS = "min-h-[1rem] px-1";

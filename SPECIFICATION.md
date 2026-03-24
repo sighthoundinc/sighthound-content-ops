@@ -197,7 +197,10 @@ Key behavior:
 
 ### Calendar (`/calendar`)
 - month/week views
-- month layout grouped by week with weekly blog lines
+- month layout grouped by week with compact per-day cards
+- month day tiles show up to 3 visible items and use a `+N more` overflow affordance
+- selecting `+N more` switches to week view focused on that date
+- month rendering avoids nested per-tile scroll regions to reduce wheel jitter/flicker
 - drag-and-drop rescheduling (permission-gated)
 - published blogs non-draggable
 - unscheduled bucket with pagination
@@ -286,6 +289,7 @@ Key behavior:
 - **Timestamps**: displayed in user's configured timezone (admins default to UTC for consistency)
 - **Table columns**: Category (login/dashboard/blog activity/social post activity), Action (event description), Content (blog/post title, or "—" for access logs), User, Email, Timestamp
 - **Content links**: Blog activities link to blog detail page; social post activities link to social post page
+- **Message language**: action titles and change summaries are operator-friendly and avoid raw field keys, enum values, and UUID exposure
 - **Notification bell integration**: top 5 recent activity notifications with "View History" link and "Clear All" button
 - **Data sources**:
   - `access_logs` table (login and dashboard visit events)

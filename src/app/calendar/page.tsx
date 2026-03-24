@@ -21,7 +21,6 @@ import {
   endOfMonth,
   endOfWeek,
   format,
-  isSameDay,
   isWithinInterval,
   startOfMonth,
   startOfWeek,
@@ -201,11 +200,12 @@ function DroppableDayCell({
   dateKey,
   className,
   children,
+  ...containerProps
 }: {
   dateKey: string;
   className: string;
   children: React.ReactNode;
-}) {
+} & React.HTMLAttributes<HTMLDivElement>) {
   const { isOver, setNodeRef } = useDroppable({
     id: `day-${dateKey}`,
   });
@@ -214,6 +214,7 @@ function DroppableDayCell({
     <div
       ref={setNodeRef}
       className={`${className} ${isOver ? "ring-2 ring-indigo-300 ring-offset-1" : ""}`}
+      {...containerProps}
     >
       {children}
     </div>
@@ -256,12 +257,14 @@ function CalendarBlogEventCard({
       style={dragStyle}
       type="button"
       onClick={onOpen}
-      className={`group relative flex w-full items-start gap-2 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-left shadow-sm transition-colors duration-150 ${
-        canDrag ? "cursor-grab hover:bg-slate-50 active:cursor-grabbing" : "cursor-default"
-      } ${isDragging ? "opacity-50 shadow-lg" : ""}`}
+      className={`relative flex w-full items-start gap-2 rounded-lg border border-slate-200/90 bg-white/95 px-2 py-1.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none ${
+        canDrag
+          ? "cursor-grab hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)] active:cursor-grabbing"
+          : "cursor-default"
+      } ${isDragging ? "opacity-55 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.7)]" : ""}`}
       title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nPublisher · ${
         blog.publisher?.full_name ?? "Unassigned"
-      }\nPublish Date · ${scheduledDate ?? "Unscheduled"}\nStatus · ${toTitleCase(stage)}`}
+      }\nSite · ${getSiteLabel(blog.site)}\nPublish Date · ${scheduledDate ?? "Unscheduled"}\nStatus · ${toTitleCase(stage)}`}
       {...(canDrag ? attributes : {})}
       {...(canDrag ? listeners : {})}
     >
@@ -289,13 +292,6 @@ function CalendarBlogEventCard({
           isOverdue,
         })}`}
       />
-      <div className="pointer-events-none absolute left-3 top-full z-20 mt-1 hidden w-72 rounded-md border border-slate-200 bg-white p-2 text-left text-xs text-slate-600 shadow-lg group-hover:block">
-        <p className="font-semibold text-slate-900">{blog.title}</p>
-        <p className="mt-1">Writer: {blog.writer?.full_name ?? "Unassigned"}</p>
-        <p>Site: {getSiteLabel(blog.site)}</p>
-        <p>Status: {toTitleCase(stage)}</p>
-        <p>Publish Date: {scheduledDate ?? "Unscheduled"}</p>
-      </div>
     </button>
   );
 }
@@ -314,7 +310,7 @@ function CalendarSocialEventCard({
     <button
       type="button"
       onClick={onOpen}
-      className="group relative flex w-full items-start gap-2 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-left shadow-sm transition-colors duration-150 hover:bg-slate-50"
+      className="relative flex w-full items-start gap-2 rounded-lg border border-slate-200/90 bg-white/95 px-2 py-1.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)]"
       title={`${post.title}\nType · ${SOCIAL_POST_TYPE_LABELS[post.type]}\nStatus · ${SOCIAL_POST_STATUS_LABELS[post.status]}\nScheduled · ${post.scheduled_date ?? "Unscheduled"}`}
     >
       <span className="self-stretch w-1 rounded-full bg-orange-500" />
@@ -338,13 +334,6 @@ function CalendarSocialEventCard({
       <span
         className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getSocialStatusDotClass(post.status)}`}
       />
-      <div className="pointer-events-none absolute left-3 top-full z-20 mt-1 hidden w-72 rounded-md border border-slate-200 bg-white p-2 text-left text-xs text-slate-600 shadow-lg group-hover:block">
-        <p className="font-semibold text-slate-900">{post.title}</p>
-        <p className="mt-1">Format: {SOCIAL_POST_TYPE_LABELS[post.type]}</p>
-        <p>Status: {SOCIAL_POST_STATUS_LABELS[post.status]}</p>
-        <p>Scheduled: {post.scheduled_date ?? "Unscheduled"}</p>
-        {post.associated_blog ? <p>Linked Blog: {post.associated_blog.title}</p> : null}
-      </div>
     </button>
   );
 }
@@ -1202,7 +1191,7 @@ export default function CalendarPage() {
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
-          <p className="text-sm font-medium text-slate-700">
+          <p className="text-sm font-semibold text-slate-800 tabular-nums">
             {mode === "month"
               ? format(cursorDate, "MMMM yyyy")
               : `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`}
@@ -1226,32 +1215,32 @@ export default function CalendarPage() {
                   </p>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/90 bg-white/90 px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
                     <span className="h-2 w-2 rounded-full bg-blue-500" />
                     SH Blog
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/90 bg-white/90 px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
                     <span className="h-2 w-2 rounded-full bg-purple-500" />
                     RED Blog
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/90 bg-white/90 px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
                     <span className="h-2 w-2 rounded-full bg-orange-500" />
                     Social Post
                   </span>
                 </div>
-                <div className="rounded-md border border-slate-200 bg-white p-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">This Week</h3>
-                  <div className="mt-2 flex items-center gap-6 text-sm text-slate-700">
+                <div className="rounded-xl border border-slate-200/90 bg-gradient-to-r from-white via-white to-indigo-50/35 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">This Week</h3>
+                  <div className="mt-2 flex flex-wrap items-center gap-5 text-sm text-slate-700">
                     <div>
-                      <span className="font-semibold">{weeklySummary.blogCount}</span>{" "}
+                      <span className="font-semibold tabular-nums">{weeklySummary.blogCount}</span>{" "}
                       <span className="text-slate-500">Blog{weeklySummary.blogCount !== 1 ? "s" : ""}</span>
                     </div>
                     <div>
-                      <span className="font-semibold">{weeklySummary.socialCount}</span>{" "}
+                      <span className="font-semibold tabular-nums">{weeklySummary.socialCount}</span>{" "}
                       <span className="text-slate-500">Social{weeklySummary.socialCount !== 1 ? "s" : ""}</span>
                     </div>
                     <div>
-                      <span className="font-semibold">{weeklySummary.busyDays}</span>{" "}
+                      <span className="font-semibold tabular-nums">{weeklySummary.busyDays}</span>{" "}
                       <span className="text-slate-500">Busy Day{weeklySummary.busyDays !== 1 ? "s" : ""}</span>
                     </div>
                   </div>
@@ -1291,115 +1280,137 @@ export default function CalendarPage() {
                       setDragOverDateKey(null);
                     }}
                   >
-                <div className="grid grid-cols-7 gap-2" ref={calendarGridRef} style={{ contain: "layout" }}>
-                    {days.map((day) => {
-                      const key = format(day, "yyyy-MM-dd");
-                      const items = calendarItemsByDate[key] ?? [];
-                      const isToday = isSameDay(day, new Date());
-                      const isCurrentMonth = day.getMonth() === cursorDate.getMonth();
-                      const compact = mode === "month";
+                    <div
+                      className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+                    >
+                      <div
+                        className="grid grid-cols-7 gap-2"
+                        ref={calendarGridRef}
+                        style={{ contain: "layout" }}
+                      >
+                        {days.map((day) => {
+                          const key = format(day, "yyyy-MM-dd");
+                          const items = calendarItemsByDate[key] ?? [];
+                          const compact = mode === "month";
+                          const visibleItems = compact ? items.slice(0, 3) : items;
+                          const hiddenItemCount = compact
+                            ? Math.max(0, items.length - visibleItems.length)
+                            : 0;
+                          const isToday = key === todayDateKey;
+                          const isCurrentMonth = day.getMonth() === cursorDate.getMonth();
 
-                      return (
-                        <DroppableDayCell
-                          key={key}
-                          dateKey={key}
-                          className="relative overflow-visible"
-                          data-is-today={isToday}
-                        >
-                          <CalendarTile
-                            dayLabel={format(day, "d")}
-                            isToday={isToday}
-                            isCurrentMonth={isCurrentMonth}
-                            hasEvents={items.length > 0}
-                            isFocused={focusedDateKey === key}
-                            className={compact ? "" : "min-h-[18rem]"}
-                            headerAction={
-                              <button
-                                type="button"
-                                className="rounded-md border border-white/30 bg-white/50 px-1.5 py-0.5 text-[11px] text-slate-600 backdrop-blur-sm hover:bg-white/70 transition-colors"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setQuickCreateDateKey((previous) =>
-                                    previous === key ? null : key
-                                  );
-                                }}
-                              >
-                                +
-                              </button>
-                            }
-                            bodyClassName="space-y-1"
-                          >
-                          {quickCreateDateKey === key ? (
-                            <div className="absolute right-2 top-8 z-20 w-40 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
-                              <Link
-                                href={`/blogs/new?scheduled_publish_date=${key}`}
-                                className="block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-                                onClick={() => {
-                                  setQuickCreateDateKey(null);
-                                }}
-                              >
-                                <span className="flex items-center justify-between gap-2">
-                                  <span>New Blog</span>
-                                  <KbdShortcut className="text-[10px]">
-                                    {MAIN_CREATE_SHORTCUTS.newBlog}
-                                  </KbdShortcut>
-                                </span>
-                              </Link>
-                              <Link
-                                href={`/social-posts?view=calendar&create=1&scheduled_date=${key}`}
-                                className="mt-1 block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-                                onClick={() => {
-                                  setQuickCreateDateKey(null);
-                                }}
-                              >
-                                <span className="flex items-center justify-between gap-2">
-                                  <span>New Social Post</span>
-                                  <KbdShortcut className="text-[10px]">
-                                    {MAIN_CREATE_SHORTCUTS.newSocialPost}
-                                  </KbdShortcut>
-                                </span>
-                              </Link>
-                            </div>
-                          ) : null}
-                          <div className="space-y-1.5">
-                            {items.length === 0 ? (
-                              // Hide "No items" text for cleaner UI
-                              null
-                            ) : (
-                              items.map((item) =>
-                                item.type === "blog" ? (
-                                  <CalendarBlogEventCard
-                                    key={item.key}
-                                    blog={item.blog}
-                                    canDrag={
-                                      canDragCalendarBlogs && item.blog.overall_status !== "published"
-                                    }
-                                    compact={compact}
-                                    todayDateKey={todayDateKey}
-                                    onOpen={() => {
-                                      setActiveSocialPostId(null);
-                                      setActiveBlogId(item.blog.id);
+                          return (
+                            <DroppableDayCell
+                              key={key}
+                              dateKey={key}
+                              className="relative overflow-visible"
+                              data-is-today={isToday}
+                            >
+                              <CalendarTile
+                                dayLabel={format(day, "d")}
+                                isToday={isToday}
+                                isCurrentMonth={isCurrentMonth}
+                                hasEvents={items.length > 0}
+                                isFocused={focusedDateKey === key}
+                                className={compact ? "" : "min-h-[18rem]"}
+                                bodyScrollable={!compact}
+                                headerAction={
+                                  <button
+                                    type="button"
+                                    className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setQuickCreateDateKey((previous) =>
+                                        previous === key ? null : key
+                                      );
                                     }}
-                                  />
-                                ) : (
-                                  <CalendarSocialEventCard
-                                    key={item.key}
-                                    post={item.social}
-                                    compact={compact}
-                                    onOpen={() => {
-                                      setActiveBlogId(null);
-                                      setActiveSocialPostId(item.social.id);
-                                    }}
-                                  />
-                                )
-                              )
-                            )}
-                          </div>
-                          </CalendarTile>
-                        </DroppableDayCell>
-                      );
-                    })}
-                  </div>
+                                  >
+                                    +
+                                  </button>
+                                }
+                                bodyClassName="space-y-1"
+                              >
+                                {quickCreateDateKey === key ? (
+                                  <div className="absolute right-2 top-8 z-20 w-40 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
+                                    <Link
+                                      href={`/blogs/new?scheduled_publish_date=${key}`}
+                                      className="block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                                      onClick={() => {
+                                        setQuickCreateDateKey(null);
+                                      }}
+                                    >
+                                      <span className="flex items-center justify-between gap-2">
+                                        <span>New Blog</span>
+                                        <KbdShortcut className="text-[10px]">
+                                          {MAIN_CREATE_SHORTCUTS.newBlog}
+                                        </KbdShortcut>
+                                      </span>
+                                    </Link>
+                                    <Link
+                                      href={`/social-posts?view=calendar&create=1&scheduled_date=${key}`}
+                                      className="mt-1 block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                                      onClick={() => {
+                                        setQuickCreateDateKey(null);
+                                      }}
+                                    >
+                                      <span className="flex items-center justify-between gap-2">
+                                        <span>New Social Post</span>
+                                        <KbdShortcut className="text-[10px]">
+                                          {MAIN_CREATE_SHORTCUTS.newSocialPost}
+                                        </KbdShortcut>
+                                      </span>
+                                    </Link>
+                                  </div>
+                                ) : null}
+                                <div className="space-y-1.5">
+                                  {visibleItems.map((item) =>
+                                    item.type === "blog" ? (
+                                      <CalendarBlogEventCard
+                                        key={item.key}
+                                        blog={item.blog}
+                                        canDrag={
+                                          canDragCalendarBlogs && item.blog.overall_status !== "published"
+                                        }
+                                        compact={compact}
+                                        todayDateKey={todayDateKey}
+                                        onOpen={() => {
+                                          setActiveSocialPostId(null);
+                                          setActiveBlogId(item.blog.id);
+                                        }}
+                                      />
+                                    ) : (
+                                      <CalendarSocialEventCard
+                                        key={item.key}
+                                        post={item.social}
+                                        compact={compact}
+                                        onOpen={() => {
+                                          setActiveBlogId(null);
+                                          setActiveSocialPostId(item.social.id);
+                                        }}
+                                      />
+                                    )
+                                  )}
+                                  {hiddenItemCount > 0 ? (
+                                    <button
+                                      type="button"
+                                      className="w-full rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-100"
+                                      onClick={() => {
+                                        setMode("week");
+                                        setCursorDate(day);
+                                        setFocusedDateKey(key);
+                                        setQuickCreateDateKey(null);
+                                      }}
+                                    >
+                                      +{hiddenItemCount} more
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </CalendarTile>
+                            </DroppableDayCell>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </DndContext>
                 )}
               </section>

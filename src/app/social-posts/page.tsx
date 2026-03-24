@@ -82,6 +82,10 @@ import type {
 } from "@/lib/types";
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
+import {
+  formatActivityChangeDescription,
+  formatActivityEventTitle,
+} from "@/lib/activity-history-format";
 import { useAuth } from "@/providers/auth-provider";
 import { useNotifications } from "@/providers/notifications-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
@@ -663,6 +667,20 @@ function SocialPostsPageContent() {
     () => posts.find((post) => post.id === activePostId) ?? null,
     [activePostId, posts]
   );
+  const activityUserNameById = useMemo(() => {
+    const entries: Array<[string, string]> = [];
+    for (const post of posts) {
+      if (post.creator?.id && post.creator.full_name) {
+        entries.push([post.creator.id, post.creator.full_name]);
+      }
+    }
+    for (const entry of panelActivity) {
+      if (entry.actor?.id && entry.actor.full_name) {
+        entries.push([entry.actor.id, entry.actor.full_name]);
+      }
+    }
+    return Object.fromEntries(entries);
+  }, [panelActivity, posts]);
   const panelExecutionLocked = activePost ? isExecutionStage(activePost.status) : false;
 
   const loadPanelDetails = async (postId: string) => {
@@ -2410,12 +2428,16 @@ function SocialPostsPageContent() {
                         className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
                       >
                         <p className="text-sm font-medium text-slate-800">
-                          {toTitleCase(entry.event_type)}
+                          {formatActivityEventTitle(entry)}
                         </p>
-                        <p className="text-xs text-slate-500">
-                          {entry.field_name ? `${entry.field_name}: ` : ""}
-                          {entry.old_value ?? "—"} → {entry.new_value ?? "—"}
-                        </p>
+                        {(() => {
+                          const detail = formatActivityChangeDescription(entry, {
+                            userNameById: activityUserNameById,
+                          });
+                          return detail ? (
+                            <p className="text-xs text-slate-500">{detail}</p>
+                          ) : null;
+                        })()}
                         <p className="text-xs text-slate-400">
                           {entry.actor?.full_name ?? "System"} •{" "}
                           {formatDateInTimezone(entry.changed_at, profile?.timezone)}

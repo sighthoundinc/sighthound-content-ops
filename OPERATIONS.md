@@ -169,6 +169,15 @@ Per-user preferences are stored in `profiles`:
 - `stale_draft_days` (default: 10) for dashboard draft flagging
 All are editable via Settings → My Profile.
 
+## 5.6) Calendar runtime behavior
+- Calendar month view is intentionally compact:
+  - day tiles render up to 3 visible event cards
+  - overflow is represented by `+N more`
+  - selecting `+N more` switches to week view on that date
+- Month tiles do not use nested per-tile scroll regions (reduces wheel-capture jitter/flicker in dense datasets).
+- Calendar event cards rely on native title metadata for hover detail to keep scroll performance stable.
+- Drag-reschedule remains permission-gated by `edit_scheduled_publish_date`; published blogs remain non-draggable.
+
 ## 6) Permission operations
 Primary control plane:
 - UI: `/settings/permissions`
@@ -213,6 +222,7 @@ Behavior:
 - **RLS policies**: admin role required; endpoint is hard-gated in application layer
 - **Immutable**: activity records cannot be edited, only created or deleted by admins
 - **Cleanup**: included in `/api/admin/activity-history` deletion scope
+- **Message formatting**: user-facing activity copy must stay plain-language (no raw field keys, enum values, or UUID output in change summaries)
 
 Access logs table (`access_logs`):
 - `id` (UUID)
@@ -235,6 +245,7 @@ Notification bell integration:
 - Top 5 recent activity notifications displayed in bell dropdown
 - "View History" link navigates to full Activity History page
 - "Clear All" button dismisses only bell dropdown view (does not delete full history)
+- Bell activity entries use the same plain-language formatter as timeline/history views to keep wording consistent across surfaces
 
 ## 8.5) Admin maintenance operations
 Activity history cleanup API:
@@ -536,6 +547,12 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 1. verify assignment (`writer_id` / `publisher_id`)
 2. verify current queue filter and stage state
 3. confirm `view_writing_queue` / `view_publishing_queue` permission
+
+### “Calendar month view feels janky or seems to hide items”
+1. confirm users are on current build with compact month rendering (`+N more` behavior)
+2. use `+N more` to jump to week view for full same-day item list
+3. verify no custom CSS reintroduced per-tile `overflow-y-auto` in month mode
+4. check filter state (`Blogs`, `Social Posts`, writer scope) before triaging data completeness
 
 ### “Actions are being logged under unexpected user”
 1. check whether quick-view mode is active in UI banner

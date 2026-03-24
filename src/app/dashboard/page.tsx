@@ -90,6 +90,10 @@ import type {
 } from "@/lib/types";
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
+import {
+  formatActivityChangeDescription,
+  formatActivityEventTitle,
+} from "@/lib/activity-history-format";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 import { logDashboardVisitEvent } from "@/app/actions/log-dashboard-visit";
@@ -2273,6 +2277,21 @@ export default function DashboardPage() {
     () => blogs.find((blog) => blog.id === activeBlogId) ?? null,
     [activeBlogId, blogs]
   );
+  const panelHistoryUserNameById = useMemo(() => {
+    const entries: Array<[string, string]> = [];
+    for (const nextUser of assignmentOptions) {
+      if (nextUser.id && nextUser.full_name) {
+        entries.push([nextUser.id, nextUser.full_name]);
+      }
+    }
+    if (activeBlog?.writer?.id && activeBlog.writer.full_name) {
+      entries.push([activeBlog.writer.id, activeBlog.writer.full_name]);
+    }
+    if (activeBlog?.publisher?.id && activeBlog.publisher.full_name) {
+      entries.push([activeBlog.publisher.id, activeBlog.publisher.full_name]);
+    }
+    return Object.fromEntries(entries);
+  }, [activeBlog?.publisher, activeBlog?.writer, assignmentOptions]);
   useEffect(() => {
     if (!activeBlogId || sortedBlogs.length === 0 || activeBlogIndex < 0) {
       return;
@@ -3109,43 +3128,41 @@ export default function DashboardPage() {
                 />
               ) : null}
 
-              <div className="overflow-hidden rounded-lg border border-slate-200">
-                <div
-                  ref={tableContainerRef}
-                  className="max-h-[70vh] overflow-y-auto"
-                >
-                  <DashboardTable
-                    blogs={pagedBlogs}
-                    visibleColumns={visibleColumnOrder}
-                    activeBlogId={activeBlogId}
-                    selectedIds={selectedIdSet}
-                    rowDensity={rowDensity}
-                    canSelectRows={canSelectRows}
-                    canEditWritingStage={canEditWritingStage}
-                    canEditPublishingStage={canEditPublishingStage}
-                    sortField={sortField}
-                    sortDirection={sortDirection}
-                    staleDraftDays={staleDraftDays}
-                    onRowClick={openPanel}
-                    onSortChange={handleSortByColumn}
-                    onToggleAll={handleToggleAllVisible}
-                    onToggleSingle={handleToggleSingle}
-                    onWriterStatusChange={(blog, status) => {
-                      void updateBlogInline(
-                        blog,
-                        { writer_status: status },
-                        `Writer stage updated for "${blog.title}".`
-                      );
-                    }}
-                    onPublisherStatusChange={(blog, status) => {
-                      void updateBlogInline(
-                        blog,
-                        { publisher_status: status },
-                        `Publisher stage updated for "${blog.title}".`
-                      );
-                    }}
-                  />
-                </div>
+              <div
+                ref={tableContainerRef}
+                className="overflow-hidden rounded-lg border border-slate-200"
+              >
+                <DashboardTable
+                  blogs={pagedBlogs}
+                  visibleColumns={visibleColumnOrder}
+                  activeBlogId={activeBlogId}
+                  selectedIds={selectedIdSet}
+                  rowDensity={rowDensity}
+                  canSelectRows={canSelectRows}
+                  canEditWritingStage={canEditWritingStage}
+                  canEditPublishingStage={canEditPublishingStage}
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  staleDraftDays={staleDraftDays}
+                  onRowClick={openPanel}
+                  onSortChange={handleSortByColumn}
+                  onToggleAll={handleToggleAllVisible}
+                  onToggleSingle={handleToggleSingle}
+                  onWriterStatusChange={(blog, status) => {
+                    void updateBlogInline(
+                      blog,
+                      { writer_status: status },
+                      `Writer stage updated for \"${blog.title}\".`
+                    );
+                  }}
+                  onPublisherStatusChange={(blog, status) => {
+                    void updateBlogInline(
+                      blog,
+                      { publisher_status: status },
+                      `Publisher stage updated for \"${blog.title}\".`
+                    );
+                  }}
+                />
               </div>
               <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
                 <div className="flex flex-wrap items-center gap-3">
@@ -3552,12 +3569,16 @@ export default function DashboardPage() {
                         className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
                       >
                         <p className="text-sm font-medium text-slate-800">
-                          {toTitleCase(entry.event_type)}
+                          {formatActivityEventTitle(entry)}
                         </p>
-                        <p className="text-xs text-slate-600">
-                          {entry.field_name ? `${entry.field_name}: ` : ""}
-                          {entry.old_value ?? "—"} → {entry.new_value ?? "—"}
-                        </p>
+                        {(() => {
+                          const detail = formatActivityChangeDescription(entry, {
+                            userNameById: panelHistoryUserNameById,
+                          });
+                          return detail ? (
+                            <p className="text-xs text-slate-600">{detail}</p>
+                          ) : null;
+                        })()}
                         <p className="text-xs text-slate-400">
                           {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                         </p>

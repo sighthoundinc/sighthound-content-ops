@@ -988,7 +988,7 @@ export default function SocialPostEditorPage() {
               ) : null}
             </div>
           ) : null}
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
                 <div>

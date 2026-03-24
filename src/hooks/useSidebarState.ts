@@ -18,24 +18,13 @@ const SIDEBAR_STATE_KEY = 'sidebar:collapsed';
  * ```
  */
 export function useSidebarState() {
-  const [collapsed, setCollapsedState] = useState<boolean>(false);
+  const [collapsed, setCollapsedState] = useState<boolean>(() => readSidebarStateSync());
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
   /**
-   * Initialize state from localStorage on mount.
-   * This runs once when the component mounts.
+   * Mark mounted for any consumers that need hydration awareness.
    */
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SIDEBAR_STATE_KEY);
-      if (stored !== null) {
-        const parsedValue = stored === 'true';
-        setCollapsedState(parsedValue);
-      }
-    } catch (error) {
-      console.warn('Failed to read sidebar state from localStorage:', error);
-      // Fail gracefully: default to expanded (false)
-    }
     setIsMounted(true);
   }, []);
 

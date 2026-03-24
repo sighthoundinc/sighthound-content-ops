@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/server-permissions";
+import {
+  formatActivityChangeDescription,
+  formatActivityEventTitle,
+} from "@/lib/activity-history-format";
 
 interface ActivityRecord {
   id: string;
@@ -8,6 +12,8 @@ interface ActivityRecord {
   content_title: string;
   changed_by_name: string | null;
   event_type: string;
+  event_title: string;
+  event_summary: string | null;
   field_name: string | null;
   old_value: string | null;
   new_value: string | null;
@@ -37,6 +43,7 @@ export async function GET(request: NextRequest) {
       .filter((u): u is { id: string; full_name: string } => Boolean(u?.id))
       .map((u) => [u.id, u.full_name])
   );
+  const userNameById = Object.fromEntries(userMap.entries());
 
   // Fetch blog activity history
   const { data: blogActivityData, error: blogActivityError } = await adminClient
@@ -86,34 +93,54 @@ export async function GET(request: NextRequest) {
 
   // Transform blog activity records
   const blogActivities: ActivityRecord[] = (blogActivityData ?? [])
-    .map((record) => ({
-      id: record.id ?? "",
-      content_type: "blog" as const,
-      content_id: record.blog_id ?? "",
-      content_title: (record.blogs as { title?: string } | null)?.title || "Unknown Blog",
-      changed_by_name: record.changed_by ? userMap.get(record.changed_by) ?? null : null,
-      event_type: record.event_type ?? "",
-      field_name: record.field_name ?? null,
-      old_value: record.old_value ?? null,
-      new_value: record.new_value ?? null,
-      changed_at: record.changed_at ?? "",
-    }))
+    .map((record) => {
+      const event = {
+        event_type: record.event_type ?? "",
+        field_name: record.field_name ?? null,
+        old_value: record.old_value ?? null,
+        new_value: record.new_value ?? null,
+      };
+      return {
+        id: record.id ?? "",
+        content_type: "blog" as const,
+        content_id: record.blog_id ?? "",
+        content_title: (record.blogs as { title?: string } | null)?.title || "Unknown Blog",
+        changed_by_name: record.changed_by ? userMap.get(record.changed_by) ?? null : null,
+        event_type: record.event_type ?? "",
+        event_title: formatActivityEventTitle(event),
+        event_summary: formatActivityChangeDescription(event, { userNameById }),
+        field_name: record.field_name ?? null,
+        old_value: record.old_value ?? null,
+        new_value: record.new_value ?? null,
+        changed_at: record.changed_at ?? "",
+      };
+    })
     .filter((activity) => activity.id && activity.content_id);
 
   // Transform social post activity records
   const socialActivities: ActivityRecord[] = (socialActivityData ?? [])
-    .map((record) => ({
-      id: record.id ?? "",
-      content_type: "social_post" as const,
-      content_id: record.social_post_id ?? "",
-      content_title: (record.social_posts as { title?: string } | null)?.title || "Unknown Social Post",
-      changed_by_name: record.changed_by ? userMap.get(record.changed_by) ?? null : null,
-      event_type: record.event_type ?? "",
-      field_name: record.field_name ?? null,
-      old_value: record.old_value ?? null,
-      new_value: record.new_value ?? null,
-      changed_at: record.changed_at ?? "",
-    }))
+    .map((record) => {
+      const event = {
+        event_type: record.event_type ?? "",
+        field_name: record.field_name ?? null,
+        old_value: record.old_value ?? null,
+        new_value: record.new_value ?? null,
+      };
+      return {
+        id: record.id ?? "",
+        content_type: "social_post" as const,
+        content_id: record.social_post_id ?? "",
+        content_title: (record.social_posts as { title?: string } | null)?.title || "Unknown Social Post",
+        changed_by_name: record.changed_by ? userMap.get(record.changed_by) ?? null : null,
+        event_type: record.event_type ?? "",
+        event_title: formatActivityEventTitle(event),
+        event_summary: formatActivityChangeDescription(event, { userNameById }),
+        field_name: record.field_name ?? null,
+        old_value: record.old_value ?? null,
+        new_value: record.new_value ?? null,
+        changed_at: record.changed_at ?? "",
+      };
+    })
     .filter((activity) => activity.id && activity.content_id);
 
   // Merge and sort by timestamp

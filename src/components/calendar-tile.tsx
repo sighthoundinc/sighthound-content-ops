@@ -8,6 +8,7 @@ type CalendarTileProps = {
   isCurrentMonth: boolean;
   headerAction?: ReactNode;
   children?: ReactNode;
+  bodyScrollable?: boolean;
   className?: string;
   headerClassName?: string;
   dayLabelClassName?: string;
@@ -26,6 +27,7 @@ export function CalendarTile({
   isCurrentMonth,
   headerAction,
   children,
+  bodyScrollable = true,
   className,
   headerClassName,
   dayLabelClassName,
@@ -40,22 +42,18 @@ export function CalendarTile({
   return (
     <article
       className={cn(
-        // Base styling with clear borders and backgrounds
-        "relative flex h-40 flex-col rounded-lg border border-slate-200 bg-white transition-all duration-200",
-        // Out of month styling
-        !isCurrentMonth && "bg-slate-50 border-slate-100",
-        // Today styling with highlight
-        isToday && "border-indigo-400 bg-indigo-50 shadow-md",
-        // Focus ring
+        "relative flex h-40 flex-col rounded-xl border border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/55 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
+        !isCurrentMonth && "border-slate-200/70 bg-slate-50/75",
+        isToday &&
+          "border-indigo-300 bg-indigo-50/70 shadow-[0_0_0_1px_rgba(99,102,241,0.18),0_10px_20px_-14px_rgba(79,70,229,0.45)]",
         isFocused && "ring-2 ring-indigo-400 ring-offset-1",
-        // Custom today container class (for backwards compatibility)
         todayContainerClassName && isToday && todayContainerClassName,
         className,
       )}
     >
       <div
         className={cn(
-          "flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2",
+          "flex items-center justify-between gap-2 border-b border-slate-200/80 px-3 py-2",
           headerClassName,
         )}
       >
@@ -87,10 +85,11 @@ export function CalendarTile({
         </div>
         {headerAction}
       </div>
-      {/* Fixed-height scrollable content area */}
+      {/* Content area (optional internal scrolling) */}
       <div
         className={cn(
-          "flex-1 overflow-y-auto px-2 py-1.5",
+          "flex-1 px-2 py-1.5",
+          bodyScrollable ? "overflow-y-auto overscroll-contain" : "overflow-hidden",
           bodyClassName,
         )}
       >

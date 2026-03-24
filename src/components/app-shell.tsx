@@ -125,6 +125,8 @@ export function AppShell({
       content_id: string;
       content_title: string;
       event_type: string;
+      event_title: string;
+      event_summary: string | null;
       changed_by_name: string | null;
       changed_at: string;
     }>
@@ -703,11 +705,18 @@ export function AppShell({
                                       </span>
                                       <div className="min-w-0 flex-1">
                                         <p className="font-medium text-slate-900">
-                                          {activity.event_type.replace(/_/g, " ")}
+                                          {activity.event_title}
                                         </p>
-                                        <p className="mt-0.5 truncate text-slate-700">
+                                        {activity.event_summary ? (
+                                          <p className="mt-0.5 truncate text-slate-700">
+                                            {activity.event_summary}
+                                          </p>
+                                        ) : null}
+                                        <p className="mt-0.5 truncate text-slate-500">
                                           {activity.content_title}
-                                          {activity.changed_by_name && ` by ${activity.changed_by_name}`}
+                                          {activity.changed_by_name
+                                            ? ` • ${activity.changed_by_name}`
+                                            : ""}
                                         </p>
                                         <p className="mt-1 text-slate-500">
                                           {formatNotificationAge(new Date(activity.changed_at).getTime())}

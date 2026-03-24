@@ -78,17 +78,17 @@ export default function AccessLogsPage() {
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [activityTypeLabels, setActivityTypeLabels] = useState<Record<ActivityType, string>>({
-    login: "Login",
-    dashboard_visit: "Dashboard Visit",
-    blog_writer_status_changed: "Writer Status Changed",
-    blog_publisher_status_changed: "Publisher Status Changed",
-    blog_assignment_changed: "Blog Assignment Changed",
-    social_post_status_changed: "Social Post Status Changed",
-    social_post_assignment_changed: "Social Post Assignment Changed",
+    login: "Signed In",
+    dashboard_visit: "Opened Dashboard",
+    blog_writer_status_changed: "Writing Stage Updated",
+    blog_publisher_status_changed: "Publishing Stage Updated",
+    blog_assignment_changed: "Blog Assignment Updated",
+    social_post_status_changed: "Status Updated",
+    social_post_assignment_changed: "Social Post Assignment Updated",
   });
   const [activityTypeCategories, setActivityTypeCategories] = useState<Record<ActivityType, string>>({
-    login: "Login",
-    dashboard_visit: "Dashboard",
+    login: "Access",
+    dashboard_visit: "Access",
     blog_writer_status_changed: "Blog Activity",
     blog_publisher_status_changed: "Blog Activity",
     blog_assignment_changed: "Blog Activity",
@@ -244,8 +244,8 @@ export default function AccessLogsPage() {
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
-            title="Recent Activity"
-            description="View your dashboard activity"
+            title="Activity History"
+            description="View access and workflow activity in plain language"
           />
 
           {error && (
@@ -258,9 +258,9 @@ export default function AccessLogsPage() {
             <div className="rounded-md border border-gray-200 bg-white p-4">
               <div className="flex flex-col gap-4">
                 {/* Filter Dropdowns */}
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                   {/* Activity Type Dropdown */}
-                  <div className="flex-1">
+                  <div className="min-w-[16rem] flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Activity Types</label>
                     <div className="relative">
                       <button
@@ -300,7 +300,7 @@ export default function AccessLogsPage() {
                   </div>
 
                   {/* User Dropdown */}
-                  <div className="flex-1">
+                  <div className="min-w-[16rem] flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Users</label>
                     <div className="relative">
                       <button

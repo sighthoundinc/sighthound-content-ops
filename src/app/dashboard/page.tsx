@@ -1374,6 +1374,38 @@ export default function DashboardPage() {
     Boolean(bulkWriterStatus) ||
     Boolean(bulkPublisherStatus);
 
+  // Validation: Check if required fields are filled based on what's being changed
+  // If changing writer status but no writer assigned/selected, it's invalid
+  const getBulkActionValidationError = (): string | null => {
+    if (!hasPendingBulkChanges) {
+      return null;
+    }
+
+    // If trying to set writer status but no writer is assigned
+    if (bulkWriterStatus && bulkWriterStatus !== "not_started") {
+      const selectedWithoutWriter = selectedBlogs.filter(
+        (blog) => !blog.writer_id && !bulkWriterId
+      );
+      if (selectedWithoutWriter.length > 0) {
+        return "Select a writer to apply writer status changes.";
+      }
+    }
+
+    // If trying to set publisher status but no publisher is assigned
+    if (bulkPublisherStatus && bulkPublisherStatus !== "not_started") {
+      const selectedWithoutPublisher = selectedBlogs.filter(
+        (blog) => !blog.publisher_id && !bulkPublisherId
+      );
+      if (selectedWithoutPublisher.length > 0) {
+        return "Select a publisher to apply publisher status changes.";
+      }
+    }
+
+    return null;
+  };
+
+  const bulkValidationError = getBulkActionValidationError();
+
   const handleToggleAllVisible = (checked: boolean) => {
     if (!canSelectRows) {
       return;
@@ -2827,7 +2859,7 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  disabled={isBulkSaving || !hasPendingBulkChanges}
+                  disabled={isBulkSaving || !hasPendingBulkChanges || Boolean(bulkValidationError)}
                   className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     void handleBulkApplyChanges();
@@ -2835,6 +2867,9 @@ export default function DashboardPage() {
                 >
                   Apply Changes
                 </button>
+                {bulkValidationError && (
+                  <p className="text-xs text-rose-600 font-medium">{bulkValidationError}</p>
+                )}
                 {canDeleteBlog ? (
                   <button
                     type="button"

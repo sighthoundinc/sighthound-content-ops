@@ -17,6 +17,19 @@ interface DashboardSummary {
   socialPostCounts: Record<string, number>;
   userRoles: string[];
 }
+interface SnapshotTask {
+  id: string;
+  title: string;
+  kind: "blog" | "social";
+  href: string;
+  statusLabel: string;
+  scheduledDate: string | null;
+  actionState: "action_required" | "waiting_on_others";
+}
+interface TasksSnapshot {
+  requiredByMe: SnapshotTask[];
+  waitingOnOthers: SnapshotTask[];
+}
 
 interface WorkBucket {
   id: string;
@@ -39,6 +52,10 @@ const LOADING_MESSAGES = [
 export default function HomePage() {
   const { session, profile, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [tasksSnapshot, setTasksSnapshot] = useState<TasksSnapshot>({
+    requiredByMe: [],
+    waitingOnOthers: [],
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage] = useState(
@@ -68,20 +85,40 @@ export default function HomePage() {
 
     const fetchSummary = async () => {
       try {
-        const response = await fetch("/api/dashboard/summary", {
-          headers: {
-            authorization: `Bearer ${session.access_token}`,
-          },
-        });
-        const payload = await parseApiResponseJson<DashboardSummary>(response);
-        if (isApiFailure(response, payload)) {
-          throw new Error(getApiErrorMessage(payload, "Failed to fetch work summary"));
+        const [summaryResponse, snapshotResponse] = await Promise.all([
+          fetch("/api/dashboard/summary", {
+            headers: {
+              authorization: `Bearer ${session.access_token}`,
+            },
+          }),
+          fetch("/api/dashboard/tasks-snapshot", {
+            headers: {
+              authorization: `Bearer ${session.access_token}`,
+            },
+          }),
+        ]);
+        const summaryPayload = await parseApiResponseJson<DashboardSummary>(
+          summaryResponse
+        );
+        if (isApiFailure(summaryResponse, summaryPayload)) {
+          throw new Error(
+            getApiErrorMessage(summaryPayload, "Failed to fetch work summary")
+          );
         }
-        setSummary(payload);
+        setSummary(summaryPayload);
+        const snapshotPayload = await parseApiResponseJson<TasksSnapshot>(
+          snapshotResponse
+        );
+        if (!isApiFailure(snapshotResponse, snapshotPayload)) {
+          setTasksSnapshot(snapshotPayload);
+        } else {
+          setTasksSnapshot({ requiredByMe: [], waitingOnOthers: [] });
+        }
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error loading summary");
         setSummary(null);
+        setTasksSnapshot({ requiredByMe: [], waitingOnOthers: [] });
       } finally {
         setIsLoading(false);
       }
@@ -183,7 +220,11 @@ export default function HomePage() {
       }
     }
 
-    if (data.userRoles.includes("admin") || data.userRoles.includes("publisher")) {
+    if (
+      data.userRoles.includes("admin") ||
+      data.userRoles.includes("publisher") ||
+      data.userRoles.includes("editor")
+    ) {
       const awaitingLink = data.socialPostCounts.awaiting_live_link ?? 0;
       const inReview = data.socialPostCounts.in_review ?? 0;
 
@@ -219,6 +260,9 @@ export default function HomePage() {
 
   const workBuckets = summary ? buildWorkBuckets(summary) : [];
   const hasWork = workBuckets.length > 0;
+  const hasSnapshotItems =
+    tasksSnapshot.requiredByMe.length > 0 || tasksSnapshot.waitingOnOthers.length > 0;
+  const hasAnyWork = hasWork || hasSnapshotItems;
 
   const handleBucketClick = (bucket: WorkBucket) => {
     // Determine filter type and value based on bucket ID
@@ -275,7 +319,7 @@ export default function HomePage() {
           <p className="mt-3 max-w-2xl text-base text-slate-600 sm:text-lg">
             {isLoading
               ? loadingMessage
-              : hasWork
+              : hasAnyWork
               ? "Jump into what needs your attention now."
               : "All caught up—no pending work right now."}
           </p>
@@ -328,7 +372,73 @@ export default function HomePage() {
           </div>
         )}
 
-        {!isLoading && !hasWork && !error && (
+        {!isLoading && hasSnapshotItems && (
+          <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-slate-900">My Tasks Snapshot</h2>
+              <Link
+                href="/tasks"
+                className="text-sm font-medium text-slate-700 underline-offset-2 hover:text-slate-900 hover:underline"
+              >
+                View all
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Required by Me
+                </p>
+                {tasksSnapshot.requiredByMe.length === 0 ? (
+                  <p className="mt-2 text-sm text-slate-500">No items right now.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {tasksSnapshot.requiredByMe.map((task) => (
+                      <li key={task.id}>
+                        <Link
+                          href={task.href}
+                          className="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 transition hover:bg-slate-100"
+                        >
+                          <p className="truncate text-sm font-medium text-slate-900">{task.title}</p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            {task.kind === "blog" ? "Blog" : "Social"} · {task.statusLabel}
+                            {task.scheduledDate ? ` · ${task.scheduledDate}` : ""}
+                          </p>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Waiting on Others
+                </p>
+                {tasksSnapshot.waitingOnOthers.length === 0 ? (
+                  <p className="mt-2 text-sm text-slate-500">No waiting items right now.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {tasksSnapshot.waitingOnOthers.map((task) => (
+                      <li key={task.id}>
+                        <Link
+                          href={task.href}
+                          className="block rounded-lg border border-slate-200 bg-white px-3 py-2 transition hover:bg-slate-50"
+                        >
+                          <p className="truncate text-sm font-medium text-slate-900">{task.title}</p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            {task.kind === "blog" ? "Blog" : "Social"} · {task.statusLabel}
+                            {task.scheduledDate ? ` · ${task.scheduledDate}` : ""}
+                          </p>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {!isLoading && !hasAnyWork && !error && (
           <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center">
             <AppIcon
               name="check"

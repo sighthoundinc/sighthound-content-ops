@@ -8,6 +8,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Tasks and Calendar execution/scheduling workflows
 - Ideas + Social Posts modules
 - Workspace home (`/`) with premium quick-action navigation
+- Workspace home (`/`) My Tasks Snapshot (mixed blog + social, grouped as Required by Me / Waiting on Others)
 - Dedicated premium login (`/login`) with OAuth support (Google + Slack OIDC) and email/password fallback
   - Google login requires @sighthound.com email
   - Slack login requires Sighthound Slack workspace
@@ -67,6 +68,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Clickable Today metrics
 - Delayed metric: scheduled publish date is in the past and overall status is not `Published`
 - Active filter chips + clear-all behavior
+- Home standup social counts are assignment-scoped to current user relevance (not global social totals)
 - Scan-friendly table:
   - clamped title rendering
   - SH/RED site badges
@@ -197,6 +199,8 @@ npm run dev
 - `npm run import:legacy` — legacy XLSX import
 
 ## API highlights
+- `/api/dashboard/summary` — standup summary counts (assignment-scoped social counts)
+- `/api/dashboard/tasks-snapshot` — grouped mixed My Tasks snapshot for `/`
 - `/api/admin/permissions` — role permission read/update/reset
 - `/api/admin/reassign-assignments` — controlled assignment transfer
 - `/api/admin/activity-history` — admin activity/audit cleanup

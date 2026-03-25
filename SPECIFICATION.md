@@ -102,7 +102,13 @@ Key behavior:
 - **Bucket interactions**: clicking a bucket navigates to `My Tasks` with that filter pre-applied (one-time only, clears on refresh)
 - **Empty state**: "All work is on track" with summary when no items pending
 - **Bottom buttons**: persistent quick links to `Dashboard` and `Calendar` for context switching
-- **Data source**: `/api/dashboard/summary` endpoint (see APIs section below)
+- **My Tasks Snapshot**:
+  - shows top mixed assigned items (blogs + social, max 8)
+  - grouped into `Required by Me` and `Waiting on Others`
+  - includes `View all` action to `/tasks`
+- **Data sources**:
+  - `/api/dashboard/summary` for standup counts
+  - `/api/dashboard/tasks-snapshot` for grouped mixed-task snapshot
 
 ### Login (`/login`)
 Primary authentication entry for signed-out users.
@@ -515,6 +521,7 @@ Returns aggregated work counts for the daily standup home page.
 - **Writer counts**: blogs where `writer_id = current_user.id` AND `overall_status != "published"`
 - **Publisher counts**: blogs where `publisher_id = current_user.id` AND `writer_status = "completed"` AND `overall_status != "published"`
 - **Social post counts**: social posts where `status IN ["awaiting_live_link", "in_review"]`
+- **Social post scope**: social counts are assignment-scoped to current user ownership/relevance (not global)
 - Admins and those with appropriate roles see their respective queues
 - Counts reflect actual assignments (not admin overviews)
 

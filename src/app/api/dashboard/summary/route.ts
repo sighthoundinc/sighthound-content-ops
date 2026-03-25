@@ -10,6 +10,16 @@ interface DashboardSummary {
   userRoles: string[];
 }
 
+function isMissingSocialOwnershipColumnError(message: string) {
+  return (
+    message.includes("assigned_to_user_id") ||
+    message.includes("worker_user_id") ||
+    message.includes("reviewer_user_id") ||
+    message.includes("editor_user_id") ||
+    message.includes("admin_owner_id")
+  );
+}
+
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, "view_writing_queue");
@@ -86,17 +96,54 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch social post status counts (specific statuses only)
-    if (userRoles.includes("admin") || userRoles.includes("publisher")) {
-      const { data: socialPostData, error: socialError } = await adminClient
+    // Fetch social post status counts (assignment-scoped + specific statuses only)
+    if (
+      userRoles.includes("admin") ||
+      userRoles.includes("publisher") ||
+      userRoles.includes("editor")
+    ) {
+      let socialRows: Array<Record<string, unknown>> | null = null;
+      let socialError: { message: string } | null = null;
+
+      const scopedSocial = await adminClient
         .from("social_posts")
-        .select("status")
-        .in("status", ["awaiting_live_link", "in_review"]);
+        .select("status,created_by,assigned_to_user_id,worker_user_id,reviewer_user_id,editor_user_id,admin_owner_id")
+        .in("status", ["awaiting_live_link", "in_review"])
+        .or(
+          `assigned_to_user_id.eq.${profile.id},worker_user_id.eq.${profile.id},reviewer_user_id.eq.${profile.id},created_by.eq.${profile.id},editor_user_id.eq.${profile.id},admin_owner_id.eq.${profile.id}`
+        );
+
+      socialRows = scopedSocial.data as Array<Record<string, unknown>> | null;
+      socialError = scopedSocial.error as { message: string } | null;
+
+      if (socialError && isMissingSocialOwnershipColumnError(socialError.message)) {
+        const fallbackWithLegacyOwners = await adminClient
+          .from("social_posts")
+          .select("status,created_by,editor_user_id,admin_owner_id")
+          .in("status", ["awaiting_live_link", "in_review"])
+          .or(`created_by.eq.${profile.id},editor_user_id.eq.${profile.id},admin_owner_id.eq.${profile.id}`);
+        socialRows = fallbackWithLegacyOwners.data as Array<Record<string, unknown>> | null;
+        socialError = fallbackWithLegacyOwners.error as { message: string } | null;
+      }
+
+      if (
+        socialError &&
+        (socialError.message.includes("editor_user_id") ||
+          socialError.message.includes("admin_owner_id"))
+      ) {
+        const fallbackCreatedByOnly = await adminClient
+          .from("social_posts")
+          .select("status,created_by")
+          .in("status", ["awaiting_live_link", "in_review"])
+          .eq("created_by", profile.id);
+        socialRows = fallbackCreatedByOnly.data as Array<Record<string, unknown>> | null;
+        socialError = fallbackCreatedByOnly.error as { message: string } | null;
+      }
 
       if (socialError) {
         console.error("Error fetching social post counts:", socialError);
-      } else if (socialPostData && Array.isArray(socialPostData)) {
-        socialPostData.forEach((row: Record<string, unknown>) => {
+      } else if (socialRows && Array.isArray(socialRows)) {
+        socialRows.forEach((row: Record<string, unknown>) => {
           const status = row.status as string | undefined;
           if (status && status in summary.socialPostCounts) {
             (summary.socialPostCounts[status] as number)++;

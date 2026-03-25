@@ -38,7 +38,6 @@ const PRESERVED_ADMIN_PROFILE_SELECT =
 
 const FULL_WIPE_TABLES: Array<{ table: string; markerColumn: string }> = [
   { table: "social_post_comments", markerColumn: "id" },
-  { table: "social_post_links", markerColumn: "id" },
   { table: "social_post_activity_history", markerColumn: "id" },
   { table: "blog_comments", markerColumn: "id" },
   { table: "blog_idea_comments", markerColumn: "id" },
@@ -47,7 +46,9 @@ const FULL_WIPE_TABLES: Array<{ table: string; markerColumn: string }> = [
   { table: "notification_events", markerColumn: "id" },
   { table: "blog_import_logs", markerColumn: "id" },
   { table: "role_permissions", markerColumn: "role" },
+  // Delete social posts before social_post_links to avoid FK constraint violations
   { table: "social_posts", markerColumn: "id" },
+  { table: "social_post_links", markerColumn: "id" },
   { table: "blog_ideas", markerColumn: "id" },
   { table: "blogs", markerColumn: "id" },
   { table: "profiles", markerColumn: "id" },

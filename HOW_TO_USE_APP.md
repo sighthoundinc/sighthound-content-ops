@@ -12,18 +12,20 @@ Use it to:
 Use `My Tasks` as your first stop each day.
 
 ## 2. Daily workflow (recommended order)
-1. Open `My Tasks` and review assigned and due work.
-2. Open each item and complete required fields/checklist items.
-3. Move status forward only when the current stage is complete.
-4. Use filters to focus on one queue at a time (status/product/type/owner).
-5. For social posts, add at least one public live link before final completion.
-6. Keep `Action State` on `All` when you want full assignment visibility, including items waiting on teammates.
+1. Open `/` and review the `My Tasks Snapshot` groups (`Required by Me` and `Waiting on Others`).
+2. Open `My Tasks` and review assigned and due work.
+3. Open each item and complete required fields/checklist items.
+4. Move status forward only when the current stage is complete.
+5. Use filters to focus on one queue at a time (status/product/type/owner).
+6. For social posts, add at least one public live link before final completion.
+7. Keep `Action State` on `All` when you want full assignment visibility, including items waiting on teammates.
 
 ### My Tasks visibility rule
 - `My Tasks` shows all of your assigned, non-published work (blogs + social), including items where the next step is currently on someone else.
 - Use `Action State` filter to switch between:
   - `Required by Me` (actionable now)
   - `Waiting on Others` (assigned to you but blocked on another actor)
+- The home page uses the same model for `My Tasks Snapshot`, showing top mixed items grouped by those two states.
 
 ## 3. Workflow rules and statuses
 ### Blog status language

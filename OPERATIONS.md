@@ -66,6 +66,10 @@ For social execution-stage completion, live links are entered from `/social-post
   - shows all non-published work assigned to the current user (not only currently actionable rows)
   - includes rows waiting on another actor to preserve end-to-end assignment visibility
   - provides `Action State` filtering (`Required by Me` / `Waiting on Others`) for triage
+- `/` home page includes `My Tasks Snapshot`:
+  - mixed blog + social items (max 8)
+  - grouped as `Required by Me` and `Waiting on Others`
+  - backed by assignment-based task model to match `/tasks`
 
 ### Icon system operations standard
 - Icon provider: `lucide-react` (open-source SVG icon set)
@@ -90,6 +94,8 @@ For social execution-stage completion, live links are entered from `/social-post
 - `src/app/api/admin/activity-history/` — admin audit/history cleanup API
 - `src/app/api/admin/quick-view/` — admin quick-view user session switch API
 - `src/app/api/admin/users/[userId]/password/` — admin password reset API
+- `src/app/api/dashboard/summary/` — home standup counts (social counts are assignment-scoped)
+- `src/app/api/dashboard/tasks-snapshot/` — grouped mixed-task snapshot for home page
 - `src/app/api/social-posts/[postId]/transition/` — canonical social status transition API
 - `src/app/api/social-posts/[postId]/reopen-brief/` — admin execution-stage brief reopen API
 - `src/app/api/social-posts/reminders/` — awaiting-live-link reminder sweep API

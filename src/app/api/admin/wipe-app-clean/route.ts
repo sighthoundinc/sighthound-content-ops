@@ -12,47 +12,33 @@ type WipeAppCleanRpcResult = {
   fallback_used?: boolean;
   fallback_reason?: string;
 };
-type WipeAppCleanRequestBody = {
-  removeOtherAdminProfiles?: boolean;
-};
 type PostgrestLikeError = {
   code?: string | null;
   message?: string | null;
   details?: string | null;
   hint?: string | null;
 };
-type PreservedAdminProfile = {
-  id: string;
-  email: string;
-  full_name: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  display_name?: string | null;
-  timezone?: string | null;
-  role: "admin" | "writer" | "publisher" | "editor";
-  user_roles?: Array<"admin" | "writer" | "publisher" | "editor"> | null;
-  is_active: boolean;
-};
-const PRESERVED_ADMIN_PROFILE_SELECT =
-  "id,email,full_name,first_name,last_name,display_name,timezone,role,user_roles,is_active";
 
 const FULL_WIPE_TABLES: Array<{ table: string; markerColumn: string }> = [
   { table: "social_post_comments", markerColumn: "id" },
   { table: "social_post_activity_history", markerColumn: "id" },
+  { table: "social_post_links", markerColumn: "id" },
+  { table: "social_posts", markerColumn: "id" },
   { table: "blog_comments", markerColumn: "id" },
   { table: "blog_idea_comments", markerColumn: "id" },
   { table: "blog_assignment_history", markerColumn: "id" },
-  { table: "permission_audit_logs", markerColumn: "id" },
   { table: "notification_events", markerColumn: "id" },
+  { table: "task_assignments", markerColumn: "id" },
+  { table: "permission_audit_logs", markerColumn: "id" },
+  { table: "access_logs", markerColumn: "id" },
   { table: "blog_import_logs", markerColumn: "id" },
-  { table: "role_permissions", markerColumn: "role" },
-  // Delete social posts before social_post_links to avoid FK constraint violations
-  { table: "social_posts", markerColumn: "id" },
-  { table: "social_post_links", markerColumn: "id" },
   { table: "blog_ideas", markerColumn: "id" },
   { table: "blogs", markerColumn: "id" },
-  { table: "profiles", markerColumn: "id" },
+  { table: "notification_preferences", markerColumn: "id" },
+  { table: "user_integrations", markerColumn: "id" },
+  { table: "role_permissions", markerColumn: "permission_key" },
   { table: "app_settings", markerColumn: "id" },
+  { table: "profiles", markerColumn: "id" },
 ];
 
 function normalizeErrorText(error: PostgrestLikeError | null | undefined) {
@@ -110,65 +96,6 @@ async function listAllAuthUserIds(adminClient: ReturnType<typeof createAdminClie
   return Array.from(new Set(allUserIds));
 }
 
-async function readPreservedAdminProfile(
-  adminClient: ReturnType<typeof createAdminClient>,
-  userId: string
-) {
-  const { data, error } = await adminClient
-    .from("profiles")
-    .select(PRESERVED_ADMIN_PROFILE_SELECT)
-    .eq("id", userId)
-    .maybeSingle();
-  if (error || !data) {
-    throw new Error("Could not load acting admin profile before wipe.");
-  }
-  return data as PreservedAdminProfile;
-}
-async function readOtherAdminProfiles(
-  adminClient: ReturnType<typeof createAdminClient>,
-  userId: string
-) {
-  const { data, error } = await adminClient
-    .from("profiles")
-    .select(PRESERVED_ADMIN_PROFILE_SELECT)
-    .neq("id", userId);
-  if (error) {
-    throw new Error("Could not load other admin profiles before wipe.");
-  }
-  const profiles = (data ?? []) as PreservedAdminProfile[];
-  return profiles.filter((nextProfile) =>
-    nextProfile.user_roles?.length
-      ? nextProfile.user_roles.includes("admin")
-      : nextProfile.role === "admin"
-  );
-}
-
-async function restorePreservedAdminProfiles(
-  adminClient: ReturnType<typeof createAdminClient>,
-  profiles: PreservedAdminProfile[]
-) {
-  if (profiles.length === 0) {
-    return;
-  }
-  const { error } = await adminClient.from("profiles").upsert(
-    profiles.map((profile) => ({
-      id: profile.id,
-      email: profile.email,
-      full_name: profile.full_name,
-      first_name: profile.first_name ?? null,
-      last_name: profile.last_name ?? null,
-      display_name: profile.display_name ?? profile.full_name,
-      timezone: profile.timezone ?? "America/New_York",
-      role: "admin",
-      user_roles: ["admin"],
-      is_active: true,
-    })),
-    { onConflict: "id" }
-  );
-  if (error) {
-    throw new Error(`Failed to restore preserved admin profile(s): ${error.message}`);
-  }
-}
 
 async function wipePublicDataWithFallback(
   adminClient: ReturnType<typeof createAdminClient>,
@@ -188,15 +115,15 @@ async function wipePublicDataWithFallback(
 
   const wipedTables: string[] = [];
   for (const entry of FULL_WIPE_TABLES) {
-    const { table } = entry;
+    const { table, markerColumn } = entry;
     let deleteQuery = adminClient.from(table).delete();
     if (table === "profiles") {
       // Delete all profiles except the preserved admin
       deleteQuery = deleteQuery.neq("id", preserveUserId);
     } else {
-      // For other tables, delete ALL rows (matching RPC behavior).
-      // Use .neq("id", null) as a universal match since all rows have non-null IDs.
-      deleteQuery = deleteQuery.neq("id", null);
+      // For other tables, delete all rows with an explicit predicate to satisfy
+      // safe-delete guards in hosted environments.
+      deleteQuery = deleteQuery.neq(markerColumn, null);
     }
     const { error: deleteError } = await deleteQuery;
     if (!deleteError) {
@@ -238,13 +165,6 @@ async function wipePublicDataWithFallback(
 
 export const DELETE = withApiContract(async function DELETE(request: NextRequest) {
   try {
-    let removeOtherAdminProfiles = false;
-    try {
-      const requestBody = (await request.json()) as WipeAppCleanRequestBody;
-      removeOtherAdminProfiles = requestBody?.removeOtherAdminProfiles === true;
-    } catch {
-      removeOtherAdminProfiles = false;
-    }
     const auth = await requirePermission(request, "delete_user");
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -259,17 +179,6 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
     }
 
     const adminClient = auth.context.adminClient;
-    const preservedAdminProfile = await readPreservedAdminProfile(
-      adminClient,
-      auth.context.userId
-    );
-    const otherAdminProfiles = removeOtherAdminProfiles
-      ? []
-      : await readOtherAdminProfiles(adminClient, auth.context.userId);
-    const preservedAdminUserIds = new Set<string>([
-      auth.context.userId,
-      ...otherAdminProfiles.map((nextProfile) => nextProfile.id),
-    ]);
     const wipeData = await wipePublicDataWithFallback(adminClient, auth.context.userId);
     const normalizedWipeData = wipeData as WipeAppCleanRpcResult;
     const tablesWiped = normalizedWipeData.truncated_table_count ?? 0;
@@ -278,10 +187,6 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
         "Wipe operation completed but deleted no public data. The cleanup did not run successfully."
       );
     }
-    await restorePreservedAdminProfiles(adminClient, [
-      preservedAdminProfile,
-      ...otherAdminProfiles,
-    ]);
 
     const userIds = await listAllAuthUserIds(adminClient);
     const failedUserDeletes: Array<{ userId: string; error: string }> = [];
@@ -289,7 +194,7 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
     let preservedAuthUsers = 0;
 
     for (const userId of userIds) {
-      if (preservedAdminUserIds.has(userId)) {
+      if (userId === auth.context.userId) {
         preservedAuthUsers += 1;
         continue;
       }
@@ -309,8 +214,6 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
           deletedAuthUsers,
           preservedAuthUsers,
           preservedAdminUserId: auth.context.userId,
-          removedOtherAdminProfiles: removeOtherAdminProfiles,
-          preservedOtherAdminProfiles: otherAdminProfiles.length,
           failedUserDeletes,
           wipeSummary: normalizedWipeData,
         },
@@ -322,8 +225,6 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
       deletedAuthUsers,
       preservedAuthUsers,
       preservedAdminUserId: auth.context.userId,
-      removedOtherAdminProfiles: removeOtherAdminProfiles,
-      preservedOtherAdminProfiles: otherAdminProfiles.length,
       failedUserDeletes,
       wipeSummary: normalizedWipeData,
     });

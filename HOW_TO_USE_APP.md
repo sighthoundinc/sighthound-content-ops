@@ -168,6 +168,7 @@ This format enables quick scanning in busy channels and shows exactly who is res
 - Social post stuck before completion: add at least one valid public live link.
 - Missing results: clear filters/search and reapply one by one.
 - Import errors: unselect invalid rows, verify required columns, then retry.
+- Wipe App Clean behavior: this action deletes all content/history and all other user accounts (including other admins); only your currently signed-in admin account is preserved.
 - Add User or import fails with `Database error creating new user`: ask an admin to run latest Supabase migrations (including `20260326103000_harden_auth_user_integrations_trigger.sql`) and retry.
 - Missing notifications: verify notification toggles and connector status in `Settings`.
 - Provider connect failed: ensure you have an active session, then retry from Settings → Connected Services.

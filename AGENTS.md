@@ -115,6 +115,14 @@ For every non-trivial UI or workflow change:
 3. API routes that depend on maintenance RPCs must handle recoverable SQL safety failures (for example `DELETE requires a WHERE clause`) and provide a safe fallback path with explicit-predicate deletes.
 4. Treat SQLSTATE `21000` + `DELETE requires a WHERE clause` as a regression signal that requires immediate forward-migration correction.
 
+## Wipe App Clean Safety Contract (MUST)
+
+1. `DELETE /api/admin/wipe-app-clean` must preserve only the currently signed-in admin account.
+2. All other auth users (including other admins) must be deleted as part of wipe completion.
+3. Public content and history data must be fully removed (blogs, social posts, ideas, comments, activity, imports, and related operational records).
+4. Wipe SQL must use explicit predicates (`WHERE true` or equivalent explicit conditions) and never rely on broad implicit deletes.
+5. Wipe results must return a clear summary (tables wiped, preserved admin user) so operators can verify completion.
+
 ## Contract-Driven Engineering (MUST)
 
 1. **API Contracts are locked**:

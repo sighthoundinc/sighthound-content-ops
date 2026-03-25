@@ -141,7 +141,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Admin-only activity history cleanup (global or user-scoped)
 - Optional comments cleanup during history purge
 - Admin quick-view as non-admin user with return-to-admin workflow
-- Admin-only `Danger Zone: Wipe App Clean` reset with optional checkbox to remove other admin profiles/accounts (signed-in admin is always preserved)
+- Admin-only `Danger Zone: Wipe App Clean` reset that removes all other users and app data while preserving only the signed-in admin account
 - Activity and timeline entries are rendered with plain-language labels and UUID-safe wording for operator readability
 
 ### Social Post Editor (`/social-posts/[id]`)
@@ -206,7 +206,7 @@ npm run dev
 - `/api/admin/activity-history` — admin activity/audit cleanup
 - `/api/admin/quick-view` — admin quick-view session switch
 - `/api/admin/users` — admin user operations
-- `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion
+- `/api/admin/wipe-app-clean` — full factory reset preserving only signed-in admin account
 - `/api/blogs/import` — blog import endpoint (supports `nameResolutions` with `userId`/`selectedUserId` compatibility)
   - `draftDocLink` and `actualPublishDate` are optional import fields
   - writer/publisher resolution uses exact + loose contains/token-overlap matching across full/display/username/first/last/email signals with confidence scoring
@@ -264,6 +264,8 @@ Current set:
 - `20260325202500_auth_user_creation_diagnostics.sql`
 - `20260326100000_enforce_comprehensive_rls_policies.sql`
 - `20260326103000_harden_auth_user_integrations_trigger.sql`
+- `20260326113000_guard_social_post_link_delete_audit.sql`
+- `20260326123000_fix_wipe_app_clean_preserve_current_admin.sql`
 
 Auth provisioning hardening note:
 - `20260326103000_harden_auth_user_integrations_trigger.sql` fixes auth user creation failures caused by unqualified trigger writes (`INSERT INTO user_integrations`) by enforcing `public.user_integrations`, `SECURITY DEFINER`, and exception-safe trigger behavior.

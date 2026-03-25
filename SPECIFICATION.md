@@ -274,6 +274,7 @@ Key behavior:
   - `awaiting_live_link` → `changes_requested`
 - execution-stage rollback to `changes_requested` requires a reason
 - moving a social post to `published` requires at least one saved live link (`social_post_links`)
+- deleting a social post is idempotent and safe when live links exist; link-removal activity logging is best-effort and skipped if the parent post is already removed by cascade delete
 
 ### Social Post Editor (`/social-posts/[id]`)
 - guided dedicated editor with 4-step workflow:
@@ -312,9 +313,8 @@ Key behavior:
 - admin-only activity history cleanup (global or user-scoped)
 - optional comments cleanup during history purge
 - admin-only wipe app clean (full factory reset)
-  - always preserves currently signed-in admin account
-  - optional checkbox can remove all other admin profiles/accounts
-  - when unchecked, other admin profiles are preserved
+  - preserves only currently signed-in admin account
+  - removes all other auth users, including other admins
 
 ### Activity History (`/settings/access-logs`)
 Admin-accessible unified activity history page for tracking all operational events across the system.
@@ -530,7 +530,7 @@ Returns aggregated work counts for the daily standup home page.
 |- `/api/admin/reassign-assignments` — assignment transfer
 |- `/api/admin/activity-history` — activity cleanup, optional comments cleanup
 |- `/api/admin/quick-view` — admin quick-view token generation/session switch support
-|- `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion flag
+|- `/api/admin/wipe-app-clean` — full factory reset preserving only the signed-in admin account
 ## 11) Integrations
 Slack via Supabase Edge Function:
 - `supabase/functions/slack-notify/index.ts`
@@ -614,6 +614,8 @@ The project is migration-driven (`supabase/migrations`) with compatibility layer
 - auth-user trigger diagnostics RPC (`20260325202500_auth_user_creation_diagnostics.sql`)
 - comprehensive RLS normalization (`20260326100000_enforce_comprehensive_rls_policies.sql`)
 - auth integrations trigger hardening (`20260326103000_harden_auth_user_integrations_trigger.sql`) to prevent `relation "user_integrations" does not exist` failures from aborting auth user creation
+- social-link delete audit guard (`20260326113000_guard_social_post_link_delete_audit.sql`) to prevent FK failures during cascade deletes
+- wipe cleanup hardening (`20260326123000_fix_wipe_app_clean_preserve_current_admin.sql`) to preserve only signed-in admin while deleting all other app data
 ## 14) Non-functional requirements
 - fast workflow execution
 - deterministic DB-level invariants for workflow integrity

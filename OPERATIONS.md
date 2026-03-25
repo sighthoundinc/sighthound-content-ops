@@ -195,6 +195,8 @@ npm run check
 |- `20260325202500_auth_user_creation_diagnostics.sql` (service-role RPC for auth trigger/constraint inspection)
 |- `20260326100000_enforce_comprehensive_rls_policies.sql` (comprehensive CRUD policy normalization)
 |- `20260326103000_harden_auth_user_integrations_trigger.sql` (fixes unqualified `user_integrations` insert in auth trigger)
+|- `20260326113000_guard_social_post_link_delete_audit.sql` (prevents FK violations when social post delete cascades to live-link audit trigger logging)
+|- `20260326123000_fix_wipe_app_clean_preserve_current_admin.sql` (hardens wipe RPC to preserve only signed-in admin profile and wipe all other app data)
 
 ## 5.5) User preferences
 Per-user preferences are stored in `profiles`:
@@ -697,9 +699,8 @@ For legacy XLSX import script (`npm run import:legacy`):
   - optional comments cleanup for `blog_comments` and `social_post_comments`
 |- Factory reset: `/api/admin/wipe-app-clean`
   - admin-only
-  - always preserves currently signed-in admin auth/profile context
-  - optional: delete all other admin profiles and auth accounts (checkbox in confirmation modal)
-  - if unchecked, other admin profiles are preserved alongside signed-in admin
+  - preserves only currently signed-in admin auth/profile context
+  - deletes all other auth users, including other admins
   - clears all non-admin users, content, logs, permissions, and related operational data
 
 ## 18) Admin workflows (current state)

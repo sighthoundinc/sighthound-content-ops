@@ -171,8 +171,6 @@ function SettingsPageContent() {
     useState("");
   const [isWipeAppCleanModalOpen, setIsWipeAppCleanModalOpen] = useState(false);
   const [isWipingAppClean, setIsWipingAppClean] = useState(false);
-  const [wipeAppCleanRemoveOtherAdminProfiles, setWipeAppCleanRemoveOtherAdminProfiles] =
-    useState(false);
   const [editTargetUserId, setEditTargetUserId] = useState<string | null>(null);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [isSavingEditedUser, setIsSavingEditedUser] = useState(false);
@@ -822,17 +820,12 @@ function SettingsPageContent() {
         "content-type": "application/json",
         authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({
-        removeOtherAdminProfiles: wipeAppCleanRemoveOtherAdminProfiles,
-      }),
     });
     const payload = await parseApiResponseJson<{
       error?: string;
       deletedAuthUsers?: number;
       preservedAuthUsers?: number;
       preservedAdminUserId?: string;
-      removedOtherAdminProfiles?: boolean;
-      preservedOtherAdminProfiles?: number;
       failedUserDeletes?: Array<{ userId: string; error: string }>;
       wipeSummary?: {
         truncated_table_count?: number;
@@ -853,7 +846,6 @@ function SettingsPageContent() {
 
     setIsWipeAppCleanModalOpen(false);
     setIsWipingAppClean(false);
-    setWipeAppCleanRemoveOtherAdminProfiles(false);
     clearQuickViewSnapshot();
     setQuickViewSnapshot(null);
     if (typeof window !== "undefined") {
@@ -876,11 +868,7 @@ function SettingsPageContent() {
     setSuccess(
       `WIPE APP CLEAN complete. Cleared ${
         payload.wipeSummary?.truncated_table_count ?? 0
-      } table(s), deleted ${payload.deletedAuthUsers ?? 0} other user account(s), preserved your admin account${
-        payload.removedOtherAdminProfiles
-          ? "."
-          : `, and preserved ${payload.preservedOtherAdminProfiles ?? 0} other admin profile(s).`
-      }`
+      } table(s), deleted ${payload.deletedAuthUsers ?? 0} other user account(s), and preserved only your signed-in admin account.`
     );
   };
   const deleteInactiveUsers = async () => {
@@ -1389,7 +1377,6 @@ function SettingsPageContent() {
                         disabled={isWipingAppClean}
                         className="rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={() => {
-                          setWipeAppCleanRemoveOtherAdminProfiles(false);
                           setIsWipeAppCleanModalOpen(true);
                         }}
                       >
@@ -2185,7 +2172,6 @@ function SettingsPageContent() {
                     onClick={() => {
                       if (!isWipingAppClean) {
                         setIsWipeAppCleanModalOpen(false);
-                        setWipeAppCleanRemoveOtherAdminProfiles(false);
                       }
                     }}
                   />
@@ -2194,25 +2180,10 @@ function SettingsPageContent() {
                       WIPE APP CLEAN?
                     </h3>
                     <p className="mt-1 text-sm text-slate-600">
-                      This permanently deletes all app data and all non-admin user accounts.
-                      Your currently signed-in admin account is always preserved.
+                      This permanently deletes all app data and all other user accounts,
+                      including other admins. Your currently signed-in admin account is
+                      always preserved.
                     </p>
-                    <label className="mt-4 inline-flex items-start gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={wipeAppCleanRemoveOtherAdminProfiles}
-                        onChange={(event) => {
-                          setWipeAppCleanRemoveOtherAdminProfiles(
-                            event.target.checked
-                          );
-                        }}
-                        disabled={isWipingAppClean}
-                      />
-                      <span>
-                        Also remove all other admin profiles and auth accounts (except my
-                        signed-in admin account)
-                      </span>
-                    </label>
                     <p className="mt-3 text-xs font-medium text-rose-900">
                       This action cannot be undone.
                     </p>
@@ -2223,7 +2194,6 @@ function SettingsPageContent() {
                         className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={() => {
                           setIsWipeAppCleanModalOpen(false);
-                          setWipeAppCleanRemoveOtherAdminProfiles(false);
                         }}
                       >
                         Cancel

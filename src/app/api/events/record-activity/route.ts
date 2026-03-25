@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { withApiContract } from "@/lib/api-contract";
 
 interface RecordActivityRequest {
   blog_id?: string;
@@ -18,7 +19,7 @@ interface RecordActivityRequest {
  * Records a unified event to activity history.
  * Called by emitEvent() to ensure events appear in both notifications and audit trail.
  */
-export async function POST(request: NextRequest) {
+export const POST = withApiContract(async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as RecordActivityRequest;
 
@@ -117,4 +118,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

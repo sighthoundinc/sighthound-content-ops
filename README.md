@@ -94,6 +94,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 ### Ideas (`/ideas`)
 - Idea cards keep comments/references visible by default
 - Idea title/site/comments-references are edited through `Edit Idea` (single edit path)
+- Creator/admin users can delete ideas from the card action row after confirmation
 - Conversion actions include:
   - `Convert to Blog`
   - `Convert to Social Post`
@@ -198,7 +199,25 @@ npm run dev
 - `/api/social-posts/[postId]/transition` — canonical social status transitions
 - `/api/social-posts/[postId]/reopen-brief` — admin execution-stage brief reopen
 - `/api/social-posts/reminders` — awaiting-live-link reminder sweep
+- `/api/ideas/[id]/delete` — creator/admin idea deletion
 - `/api/users/profile` — current user profile operations
+
+## Contract-driven engineering baseline
+- API routes are normalized via `src/lib/api-contract.ts` to prevent drift:
+  - success envelope includes `success: true`
+  - error envelope includes `success: false`, `error`, `errorCode`
+  - response header includes `x-api-contract-version`
+- Frontend API consumers must parse envelopes via `src/lib/api-response.ts`:
+  - `parseApiResponseJson()` for safe JSON parsing
+  - `isApiFailure()` to fail on either HTTP error or `success: false`
+  - `getApiErrorMessage()` to surface `error` and optional `errorCode`
+- Edge response handling:
+  - non-JSON responses (downloads/streams), redirects, and no-body statuses (`204/205/304`) are explicit pass-through responses from the wrapper (not JSON-enveloped)
+  - `parseApiResponseJson()` safely returns an empty object for non-JSON/no-body responses to avoid runtime parsing failures
+- Request payloads are schema-validated at route boundaries.
+- Reusable UI components are treated as contracts (not per-page variants).
+- `DataTable` keeps fixed row-height and forced single-line text truncation invariants.
+- Workflow state mutations must follow: client action → API contract → DB mutation (no bypass).
 
 ## Supabase migrations
 Apply in timestamp order from `supabase/migrations/`.

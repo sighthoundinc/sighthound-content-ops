@@ -34,16 +34,23 @@ export const SidebarToggle = forwardRef<HTMLButtonElement, SidebarToggleProps>(
         ref={ref}
         type="button"
         onClick={onToggle}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Open sidebar" : "Close sidebar"}
         className={cn(
-          "inline-flex items-center justify-center rounded-md p-2 transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset",
-          "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+          "group flex items-center justify-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset",
+          collapsed
+            ? "w-full min-h-11 px-2 py-2 hover:bg-slate-50"
+            : "h-9 w-9 p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
         )}
       >
         <AppIcon
           name={collapsed ? "chevronRight" : "chevronLeft"}
-          size={20}
-          boxClassName="h-5 w-5"
+          size={14}
+          boxClassName="h-4 w-4 shrink-0"
+          className={cn(
+            collapsed
+              ? "text-slate-400 group-hover:text-slate-600"
+              : "text-slate-500 group-hover:text-slate-700"
+          )}
         />
       </button>
     );

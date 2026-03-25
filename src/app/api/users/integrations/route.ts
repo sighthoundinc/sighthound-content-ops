@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { withApiContract } from "@/lib/api-contract";
 
 interface UserIntegrations {
   google_connected: boolean;
@@ -12,7 +13,7 @@ interface UserIntegrations {
  * GET /api/users/integrations
  * Get the current user's connected services status
  */
-export async function GET(request: NextRequest) {
+export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/users/integrations
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
  * Users explicitly control which providers appear "connected" via the UI.
  * OAuth login does NOT auto-update these flags — that would override manual disconnects.
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withApiContract(async function PATCH(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
@@ -165,4 +166,4 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

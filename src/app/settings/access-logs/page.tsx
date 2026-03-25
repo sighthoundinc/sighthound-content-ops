@@ -20,6 +20,11 @@ import {
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import type { ProfileRecord } from "@/lib/types";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -126,16 +131,16 @@ export default function AccessLogsPage() {
       }
     );
 
-    const payload = (await response.json()) as {
+    const payload = await parseApiResponseJson<{
       error?: string;
       activities?: UnifiedActivity[];
       total?: number;
       activityTypeLabels?: Record<ActivityType, string>;
       activityTypeCategories?: Record<ActivityType, string>;
-    };
+    }>(response);
 
-    if (!response.ok) {
-      const errorMsg = payload.error ?? "Failed to load activity history.";
+    if (isApiFailure(response, payload)) {
+      const errorMsg = getApiErrorMessage(payload, "Failed to load activity history.");
       setError(errorMsg);
       showError(errorMsg);
       setIsLoading(false);

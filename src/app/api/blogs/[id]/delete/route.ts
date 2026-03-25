@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getUserRoles } from "@/lib/roles";
 import { authenticateRequest } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
-export async function DELETE(
+export const DELETE = withApiContract(async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -29,7 +30,7 @@ export async function DELETE(
   if (!blog) {
     return NextResponse.json(
       { success: true, message: "Blog already deleted" },
-      { status: 204 }
+      { status: 200 }
     );
   }
 
@@ -98,6 +99,6 @@ export async function DELETE(
       deletedBlogId: id,
       deletedBlogTitle: blog.title,
     },
-    { status: 204 }
+    { status: 200 }
   );
-}
+});

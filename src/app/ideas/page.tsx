@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
+import { parseApiResponseJson, isApiFailure, getApiErrorMessage } from "@/lib/api-response";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
+import { getUserRoles } from "@/lib/roles";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogIdeaRecord, BlogSite, IdeaCommentRecord } from "@/lib/types";
@@ -24,7 +26,7 @@ function formatDateTime(value: string) {
 
 export default function IdeasPage() {
   const router = useRouter();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, profile, session, user } = useAuth();
   const { showError, showSuccess } = useSystemFeedback();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
@@ -45,8 +47,10 @@ export default function IdeasPage() {
   const [editDescription, setEditDescription] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [ideaComments, setIdeaComments] = useState<Record<string, IdeaCommentRecord[]>>({});
+  const [deletingIdeaId, setDeletingIdeaId] = useState<string | null>(null);
 
   const canCreateBlog = permissionContract.canCreateBlog;
+  const isAdmin = useMemo(() => getUserRoles(profile).includes("admin"), [profile]);
 
   const loadIdeas = async () => {
     setIsLoading(true);
@@ -282,6 +286,38 @@ export default function IdeasPage() {
     if (!didSave) return;
     closeEditModal();
   };
+  const handleDeleteIdea = async (idea: BlogIdeaRecord) => {
+    if (!session?.access_token) {
+      setError("You must be logged in.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${idea.title}"? This action cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingIdeaId(idea.id);
+    const response = await fetch(`/api/ideas/${idea.id}/delete`, {
+      method: "DELETE",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+    });
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+    if (isApiFailure(response, payload)) {
+      showError(getApiErrorMessage(payload, "Failed to delete idea."));
+      setDeletingIdeaId(null);
+      return;
+    }
+
+    setIdeas((previous) => previous.filter((existingIdea) => existingIdea.id !== idea.id));
+    showSuccess("Idea deleted successfully");
+    setDeletingIdeaId(null);
+  };
 
 
   return (
@@ -380,6 +416,18 @@ export default function IdeasPage() {
 
                     {/* Action Buttons */}
                     <div className="mt-3 flex flex-wrap gap-2">
+                      {idea.created_by === user?.id || isAdmin ? (
+                        <button
+                          type="button"
+                          disabled={deletingIdeaId === idea.id}
+                          className="rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => {
+                            void handleDeleteIdea(idea);
+                          }}
+                        >
+                          {deletingIdeaId === idea.id ? "Deleting…" : "Delete"}
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"

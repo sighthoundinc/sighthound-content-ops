@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserRoles } from "@/lib/roles";
 import { getNextActor } from "@/lib/status";
 import { authenticateRequest } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
-export async function POST(
+export const POST = withApiContract(async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -74,4 +75,4 @@ export async function POST(
     post: reopenedPost,
     nextActor: getNextActor("creative_approved"),
   });
-}
+});

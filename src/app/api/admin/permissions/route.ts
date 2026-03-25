@@ -11,6 +11,7 @@ import {
   isCanonicalPermissionKey,
   isLockedAdminPermission,
 } from "@/lib/permissions";
+import { withApiContract } from "@/lib/api-contract";
 import { requirePermission } from "@/lib/server-permissions";
 import type { AppRole, CanonicalAppPermissionKey } from "@/lib/types";
 
@@ -40,7 +41,7 @@ function getRoleDefaults(role: AppRole) {
   }));
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withApiContract(async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "manage_permissions");
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -103,9 +104,9 @@ export async function GET(request: NextRequest) {
       actor_name: row.changed_by ? actorNameById.get(row.changed_by) ?? null : null,
     })),
   });
-}
+});
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withApiContract(async function PATCH(request: NextRequest) {
   const auth = await requirePermission(request, "manage_permissions");
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -168,9 +169,9 @@ export async function PATCH(request: NextRequest) {
     oldValue,
     newValue: enabled,
   });
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withApiContract(async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "manage_permissions");
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -233,5 +234,5 @@ export async function POST(request: NextRequest) {
     resetCount: defaults.length,
     changedCount: auditRows.length,
   });
-}
+});
 

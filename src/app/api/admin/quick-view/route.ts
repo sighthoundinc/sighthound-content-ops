@@ -3,12 +3,13 @@ import { z } from "zod";
 
 import { getUserRoles } from "@/lib/roles";
 import { authenticateRequest } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
 const quickViewSchema = z.object({
   targetUserId: z.string().uuid(),
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withApiContract(async function POST(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request);
     if ("error" in auth) {
@@ -98,4 +99,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

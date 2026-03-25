@@ -11,6 +11,11 @@ import {
   getRolePermissionState,
   normalizeRolePermissionRows,
 } from "@/lib/permissions";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import type { AppRole, CanonicalAppPermissionKey } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
@@ -108,13 +113,13 @@ export default function PermissionsSettingsPage() {
         authorization: `Bearer ${session.access_token}`,
       },
     });
-    const payload = (await response.json()) as {
+    const payload = await parseApiResponseJson<{
       error?: string;
       rolePermissions?: unknown;
       auditLogs?: PermissionAuditRow[];
-    };
-    if (!response.ok) {
-      setError(payload.error ?? "Failed to load permissions.");
+    }>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Failed to load permissions."));
       setIsLoading(false);
       return;
     }
@@ -179,9 +184,9 @@ export default function PermissionsSettingsPage() {
         enabled,
       }),
     });
-    const payload = (await response.json()) as { error?: string };
-    if (!response.ok) {
-      setError(payload.error ?? "Failed to save permission.");
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Failed to save permission."));
       setSavingPermissionKey(null);
       return;
     }
@@ -215,9 +220,9 @@ export default function PermissionsSettingsPage() {
         role: selectedRole,
       }),
     });
-    const payload = (await response.json()) as { error?: string; changedCount?: number };
-    if (!response.ok) {
-      setError(payload.error ?? "Failed to reset role permissions.");
+    const payload = await parseApiResponseJson<{ changedCount?: number }>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Failed to reset role permissions."));
       setIsResetting(false);
       return;
     }

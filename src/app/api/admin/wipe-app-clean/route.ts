@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserRoles } from "@/lib/roles";
 import { requirePermission } from "@/lib/server-permissions";
 import { createAdminClient } from "@/lib/supabase/server";
+import { withApiContract } from "@/lib/api-contract";
 
 type WipeAppCleanRpcResult = {
   truncated_table_count?: number;
@@ -230,7 +231,7 @@ async function wipePublicDataWithFallback(
   };
 }
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withApiContract(async function DELETE(request: NextRequest) {
   try {
     let removeOtherAdminProfiles = false;
     try {
@@ -320,4 +321,4 @@ export async function DELETE(request: NextRequest) {
     console.error(error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
-}
+});

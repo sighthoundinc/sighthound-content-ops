@@ -22,6 +22,11 @@ import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon, type AppIconName } from "@/lib/icons";
 import { socialPostAwaitingLiveLinkReminderNotification } from "@/lib/notification-helpers";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/tooltip";
 import { useAuth } from "@/providers/auth-provider";
@@ -46,20 +51,6 @@ const SECONDARY_NAV_ITEMS: NavItem[] = [
   { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/blogs/cardboard", label: "CardBoard", icon: "kanban" },
 ];
-const BADGE_GIF_SRC_CANDIDATES = [
-  "/sighthound-badge-animated.GIF",
-  "/sighthound-badge-animated.gif",
-  "/sighthound-badge-animated.GIF?v=1",
-  "/sighthound-badge-animated.gif?v=1",
-  "/sighthound-badge-animated.gif?cache=1",
-  "/./sighthound-badge-animated.gif",
-  "sighthound-badge-animated.gif",
-  "./sighthound-badge-animated.gif",
-  "../sighthound-badge-animated.gif",
-  "/public/sighthound-badge-animated.gif",
-  "/sighthound-badge-animated%2Egif",
-  "/sighthound-badge-animated.gif#animated",
-] as const;
 type ShortcutDefinition = {
   id: string;
   label: string;
@@ -116,8 +107,6 @@ export function AppShell({
     null
   );
   const [quickViewError, setQuickViewError] = useState<string | null>(null);
-  const [badgeGifSourceIndex, setBadgeGifSourceIndex] = useState(0);
-  const [badgeGifFailedAll, setBadgeGifFailedAll] = useState(false);
   const [activityFeed, setActivityFeed] = useState<
     Array<{
       id: string;
@@ -136,12 +125,6 @@ export function AppShell({
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
   const sidebarNavScrollRef = useRef<HTMLDivElement | null>(null);
   const quickCreateItemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
-  const badgeGifSrc =
-    BADGE_GIF_SRC_CANDIDATES[
-      Math.min(badgeGifSourceIndex, BADGE_GIF_SRC_CANDIDATES.length - 1)
-    ];
-  const hasMoreBadgeGifCandidates =
-    badgeGifSourceIndex < BADGE_GIF_SRC_CANDIDATES.length - 1;
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -451,12 +434,10 @@ export function AppShell({
               authorization: `Bearer ${session.access_token}`,
             },
           });
-          if (reminderResponse.ok) {
-            const reminderPayload = (await reminderResponse
-              .json()
-              .catch(() => ({}))) as {
-              posts?: Array<{ id: string; title: string }>;
-            };
+          const reminderPayload = await parseApiResponseJson<{
+            posts?: Array<{ id: string; title: string }>;
+          }>(reminderResponse);
+          if (!isApiFailure(reminderResponse, reminderPayload)) {
             for (const reminderPost of reminderPayload.posts ?? []) {
               pushNotification(
                 socialPostAwaitingLiveLinkReminderNotification(
@@ -465,13 +446,35 @@ export function AppShell({
                 )
               );
             }
+          } else {
+            console.warn(
+              getApiErrorMessage(
+                reminderPayload,
+                "Failed to run social reminder sweep."
+              )
+            );
           }
         }
         const response = await fetch("/api/activity-feed");
-        if (response.ok) {
-          const data = await response.json();
-          setActivityFeed(data.data?.activities || []);
+        const payload = await parseApiResponseJson<{
+          data?: {
+            activities?: Array<{
+              id: string;
+              content_type: "blog" | "social_post";
+              content_id: string;
+              content_title: string;
+              event_type: string;
+              event_title: string;
+              event_summary: string | null;
+              changed_by_name: string | null;
+              changed_at: string;
+            }>;
+          };
+        }>(response);
+        if (isApiFailure(response, payload)) {
+          throw new Error(getApiErrorMessage(payload, "Failed to load activity feed."));
         }
+        setActivityFeed(payload.data?.activities || []);
       } catch (error) {
         console.error("Failed to load activity feed:", error);
       }
@@ -535,38 +538,20 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-slate-200 bg-[#fcfcfe]">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <Link
             href="/"
             className="flex items-center gap-3 rounded-md px-1 py-1 hover:bg-slate-50"
             aria-label="Sighthound Content Ops"
           >
-            {badgeGifFailedAll ? (
-              <img
-                src="/sighthound-badge-mark.svg"
-                alt="Sighthound badge"
-                width={9}
-                height={9}
-                className="h-[9px] w-[9px] object-contain"
-              />
-            ) : (
-              <img
-                key={badgeGifSrc}
-                src={badgeGifSrc}
-                alt="Sighthound badge"
-                width={9}
-                height={9}
-                className="h-[9px] w-[9px] object-contain"
-                onError={() => {
-                  if (hasMoreBadgeGifCandidates) {
-                    setBadgeGifSourceIndex((previous) => previous + 1);
-                    return;
-                  }
-                  setBadgeGifFailedAll(true);
-                }}
-              />
-            )}
+            <img
+              src="/sighthound-badge-animated.gif"
+              alt="Sighthound badge"
+              width={64}
+              height={36}
+              className="h-9 w-auto object-contain"
+            />
             <span className="leading-tight">
               <span className="block text-sm font-semibold text-slate-900">Sighthound</span>
               <span className="block text-xs text-slate-600">Content Ops</span>
@@ -819,13 +804,35 @@ export function AppShell({
           )}
         >
           {/* Sidebar header with toggle */}
-          <div className="shrink-0 flex items-center justify-between px-2 py-3">
-            {!collapsed && <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Menu</span>}
-            <SidebarToggle
-              ref={sidebarToggleRef}
-              collapsed={collapsed}
-              onToggle={handleSidebarToggle}
-            />
+          <div className={cn("shrink-0 py-3", collapsed ? "px-1" : "px-2")}>
+            {collapsed ? (
+              <Tooltip
+                content="Open sidebar"
+                delay={150}
+                className="block w-full"
+              >
+                <SidebarToggle
+                  ref={sidebarToggleRef}
+                  collapsed={collapsed}
+                  onToggle={handleSidebarToggle}
+                />
+              </Tooltip>
+            ) : (
+              <div className="flex items-center justify-between">
+                <span className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Menu</span>
+                <Tooltip
+                  content="Close sidebar"
+                  delay={150}
+                  className="inline-flex"
+                >
+                  <SidebarToggle
+                    ref={sidebarToggleRef}
+                    collapsed={collapsed}
+                    onToggle={handleSidebarToggle}
+                  />
+                </Tooltip>
+              </div>
+            )}
           </div>
           <div ref={sidebarNavScrollRef} className="flex-1 overflow-y-auto">
             <nav className="space-y-1 px-1 pb-3">

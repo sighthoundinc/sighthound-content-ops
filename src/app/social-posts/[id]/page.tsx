@@ -10,6 +10,11 @@ import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { AppIcon } from "@/lib/icons";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import { validateBlogRelation } from "@/lib/shape-validation";
 import {
   SOCIAL_PLATFORMS,
@@ -405,24 +410,9 @@ export default function SocialPostEditorPage() {
         return true;
       }
       const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[fromStatus] ?? [];
-      if (!allowedTransitions.includes(toStatus)) {
-        return false;
-      }
-      const isExecutionRollback =
-        toStatus === "changes_requested" &&
-        (fromStatus === "ready_to_publish" || fromStatus === "awaiting_live_link");
-      if (isExecutionRollback && !isAdmin) {
-        return false;
-      }
-      if (
-        !isAdmin &&
-        (fromStatus === "in_review" || toStatus === "creative_approved")
-      ) {
-        return false;
-      }
-      return true;
+      return allowedTransitions.includes(toStatus);
     },
-    [isAdmin]
+    []
   );
 
   const transitionPostStatus = useCallback(
@@ -458,24 +448,56 @@ export default function SocialPostEditorPage() {
       }
 
       setIsSaving(true);
+      const payload: Record<string, unknown> = { nextStatus: toStatus };
+      if (reason) {
+        payload.reason = reason;
+      }
+      // Include brief field updates with transition
+      if (form) {
+        const normalizedTitle = form.title.trim();
+        const normalizedCanvaUrl =
+          typeof form.canva_url === "string" && form.canva_url.trim().length > 0
+            ? form.canva_url.trim()
+            : "";
+        const canvaPage =
+          typeof form.canva_page === "string"
+            ? form.canva_page.length > 0
+              ? Number(form.canva_page)
+              : null
+            : null;
+        const normalizedCaption = form.caption.trim();
+        const normalizedPlatforms = form.platforms.filter((p) => typeof p === "string" && p.length > 0) as SocialPlatform[];
+        const normalizedScheduledDate = form.scheduled_date.trim();
+
+        payload.title = normalizedTitle;
+        payload.product = form.product;
+        payload.type = form.type;
+        payload.canva_url = normalizedCanvaUrl;
+        payload.canva_page = canvaPage;
+        payload.caption = normalizedCaption;
+        payload.platforms = normalizedPlatforms;
+        payload.scheduled_date = normalizedScheduledDate;
+      }
       const response = await fetch(`/api/social-posts/${post.id}/transition`, {
         method: "POST",
         headers: {
-          authorization: `Bearer ${session.access_token}`,
           "content-type": "application/json",
+          authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ toStatus, reason }),
+        body: JSON.stringify(payload),
       }).catch(() => null);
       if (!response) {
         showError(VALIDATION_MESSAGES.couldNotChangeStatus);
         setIsSaving(false);
         return false;
       }
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        showError(payload.error ?? VALIDATION_MESSAGES.couldNotChangeStatus);
+      const responsePayload = await parseApiResponseJson<Record<string, unknown>>(response);
+      if (isApiFailure(response, responsePayload)) {
+        const errorMessage = getApiErrorMessage(
+          responsePayload,
+          VALIDATION_MESSAGES.couldNotChangeStatus
+        );
+        showError(errorMessage);
         setIsSaving(false);
         return false;
       }
@@ -510,7 +532,7 @@ export default function SocialPostEditorPage() {
       setIsSaving(false);
       return true;
     },
-    [post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess, canCurrentUserTransition]
+    [form, post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess, canCurrentUserTransition]
   );
 
   useEffect(() => {
@@ -825,11 +847,9 @@ export default function SocialPostEditorPage() {
       setIsSaving(false);
       return;
     }
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      showError(payload.error ?? VALIDATION_MESSAGES.couldNotReopenBrief);
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+    if (isApiFailure(response, payload)) {
+      showError(getApiErrorMessage(payload, VALIDATION_MESSAGES.couldNotReopenBrief));
       setIsSaving(false);
       return;
     }
@@ -899,9 +919,9 @@ export default function SocialPostEditorPage() {
         "content-type": "application/json",
       },
     });
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+    if (isApiFailure(response, payload)) {
+      showError(getApiErrorMessage(payload, "Failed to delete post."));
       showError(payload.error ?? "Failed to delete post.");
       setIsDeletingPost(false);
       return;

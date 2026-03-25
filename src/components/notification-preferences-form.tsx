@@ -5,6 +5,11 @@ import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { UserNotificationPreferences } from "@/lib/notification-helpers";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 
 const API_BASE = "/api/users/notification-preferences";
 const INTEGRATIONS_API = "/api/users/integrations";
@@ -90,12 +95,17 @@ export function NotificationPreferencesForm({
             "Content-Type": "application/json",
           },
         });
-
-        if (!prefsResponse.ok) {
-          throw new Error(`Failed to fetch preferences: ${prefsResponse.statusText}`);
+        const prefsData = await parseApiResponseJson<UserNotificationPreferences>(
+          prefsResponse
+        );
+        if (isApiFailure(prefsResponse, prefsData)) {
+          throw new Error(
+            getApiErrorMessage(
+              prefsData,
+              "Failed to fetch notification preferences."
+            )
+          );
         }
-
-        const prefsData = (await prefsResponse.json()) as UserNotificationPreferences;
         setPreferences(prefsData);
 
         // Fetch integration status
@@ -107,10 +117,12 @@ export function NotificationPreferencesForm({
               "Content-Type": "application/json",
             },
           });
-
-          if (integrationsResponse.ok) {
-            const integrationsData = (await integrationsResponse.json()) as IntegrationStatus;
-            setIntegrations(integrationsData);
+          const integrationsData =
+            await parseApiResponseJson<IntegrationStatus>(integrationsResponse);
+          if (!isApiFailure(integrationsResponse, integrationsData)) {
+            setIntegrations({
+              slack_connected: Boolean(integrationsData.slack_connected),
+            });
           }
         } catch (intError) {
           console.warn("Warning: Could not fetch integration status", intError);
@@ -232,9 +244,11 @@ export function NotificationPreferencesForm({
         },
         body: JSON.stringify(preferences),
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to save preferences: ${response.statusText}`);
+      const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+      if (isApiFailure(response, payload)) {
+        throw new Error(
+          getApiErrorMessage(payload, "Failed to save notification preferences.")
+        );
       }
 
       setHasChanges(false);

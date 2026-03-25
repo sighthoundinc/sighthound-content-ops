@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticateRequest, hasPermission } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
 const updateProfileSchema = z.object({
   targetUserId: z.string().uuid().optional(),
@@ -25,7 +26,7 @@ function toNullableTrimmed(value: string | null | undefined) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withApiContract(async function PATCH(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request);
     if ("error" in auth) {
@@ -148,4 +149,4 @@ export async function PATCH(request: NextRequest) {
     console.error(error);
     return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
   }
-}
+});

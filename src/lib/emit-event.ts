@@ -6,6 +6,11 @@
 
 import type { NotificationInput } from "@/lib/notification-types";
 import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
+import {
   UNIFIED_EVENT_TO_NOTIFICATION_TYPE,
   unifiedEventToActivityRecord,
   validateUnifiedEvent,
@@ -173,12 +178,12 @@ async function recordActivityHistory(event: UnifiedEvent): Promise<boolean> {
         contentType: event.contentType,
       }),
     });
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
 
-    if (!response.ok) {
-      const error = await response.text();
+    if (isApiFailure(response, payload)) {
       console.error("API error recording activity history", {
         status: response.status,
-        error,
+        error: getApiErrorMessage(payload, "Failed to record activity history."),
         event,
       });
       return false;

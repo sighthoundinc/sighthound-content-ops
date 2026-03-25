@@ -3,12 +3,13 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/server-permissions";
 import { resolveNames } from "@/lib/user-matching";
+import { withApiContract } from "@/lib/api-contract";
 
 const resolveNamesRequestSchema = z.object({
   names: z.array(z.string().min(1)).min(1),
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withApiContract(async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, "run_data_import");
     if ("error" in auth) {
@@ -46,4 +47,4 @@ export async function POST(request: NextRequest) {
     console.error(error);
     return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
   }
-}
+});

@@ -22,8 +22,6 @@ export interface DataTableColumn<TData> {
   align?: "left" | "center" | "right";
   /** Custom renderer for cell content */
   render: (item: TData, index: number) => React.ReactNode;
-  /** Auto-truncate plain text cells and apply native tooltip */
-  autoTruncate?: boolean;
   /** Minimum width for the column */
   minWidth?: string;
   /** Whether the column is visible */
@@ -280,13 +278,11 @@ export function DataTable<TData>({
                   )}
                   {visibleColumns.map((column) => {
                     const renderedCell = column.render(item, index);
-                    const shouldAutoTruncate =
-                      column.autoTruncate !== false &&
-                      (typeof renderedCell === "string" ||
-                        typeof renderedCell === "number");
-                    const textValue = shouldAutoTruncate
-                      ? String(renderedCell)
-                      : null;
+                    const textValue =
+                      typeof renderedCell === "string" ||
+                      typeof renderedCell === "number"
+                        ? String(renderedCell)
+                        : null;
 
                     return (
                       <td

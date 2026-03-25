@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/server-permissions";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { AppRole, BlogSite } from "@/lib/types";
+import { withApiContract } from "@/lib/api-contract";
 
 const importRowSchema = z.object({
   rowNumber: z.number().int().min(1),
@@ -368,7 +369,7 @@ async function resolveOrCreateProfileId(
   return created.user.id;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withApiContract(async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, "run_data_import");
     if ("error" in auth) {
@@ -567,4 +568,4 @@ export async function POST(request: NextRequest) {
     console.error(error);
     return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
   }
-}
+});

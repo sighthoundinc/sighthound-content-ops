@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { hasWorkflowOverridePermission } from "@/lib/permissions";
 import { authenticateRequest, hasPermission } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
 const reassignSchema = z.object({
   fromUserId: z.string().uuid(),
@@ -31,7 +32,7 @@ function createActorClient(token: string) {
   });
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withApiContract(async function POST(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request);
     if ("error" in auth) {
@@ -152,4 +153,4 @@ export async function POST(request: NextRequest) {
     console.error(error);
     return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
   }
-}
+});

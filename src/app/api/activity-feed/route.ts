@@ -4,6 +4,7 @@ import {
   formatActivityChangeDescription,
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
+import { withApiContract } from "@/lib/api-contract";
 
 interface ActivityRecord {
   id: string;
@@ -25,7 +26,7 @@ interface ActivityRecord {
  * Fetches recent blog activity history for display in the notifications bell
  * Includes writer/publisher status changes, assignments, and metadata updates
  */
-export async function GET(request: NextRequest) {
+export const GET = withApiContract(async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "view_dashboard");
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -154,4 +155,4 @@ export async function GET(request: NextRequest) {
       count: activities.length,
     },
   });
-}
+});

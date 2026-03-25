@@ -58,6 +58,11 @@ import {
 import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
 import { getUserRoles } from "@/lib/roles";
 import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
+import {
   SEGMENTED_CONTROL_CLASS,
   segmentedControlItemClass,
 } from "@/lib/segmented-control";
@@ -991,19 +996,25 @@ function SocialPostsPageContent() {
       reason = raw.trim();
     }
 
+    const transitionPayload: Record<string, unknown> = { nextStatus: toStatus };
+    if (reason) {
+      transitionPayload.reason = reason;
+    }
     const response = await fetch(`/api/social-posts/${postId}/transition`, {
       method: "POST",
       headers: {
         authorization: `Bearer ${session.access_token}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ toStatus, reason }),
-    });
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      setError(payload.error ?? "Couldn't change post status.");
+      body: JSON.stringify(transitionPayload),
+    }).catch(() => null);
+    if (!response) {
+      setError("Couldn't change post status.");
+      return false;
+    }
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Couldn't change post status."));
       return false;
     }
     pushNotification(
@@ -1187,12 +1198,14 @@ function SocialPostsPageContent() {
             ? reasonInput.trim()
             : null,
       }),
-    });
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      setPanelError(payload.error ?? "Couldn't reopen brief.");
+    }).catch(() => null);
+    if (!response) {
+      setPanelError("Couldn't reopen brief.");
+      return;
+    }
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+    if (isApiFailure(response, payload)) {
+      setPanelError(getApiErrorMessage(payload, "Couldn't reopen brief."));
       return;
     }
     setPosts((previous) =>
@@ -1375,8 +1388,8 @@ function SocialPostsPageContent() {
           "content-type": "application/json",
         },
       });
-
-      if (response.ok) {
+      const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+      if (!isApiFailure(response, payload)) {
         successCount++;
       } else {
         failureCount++;
@@ -1437,13 +1450,13 @@ function SocialPostsPageContent() {
           "content-type": "application/json",
         },
       });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+      if (isApiFailure(response, payload)) {
+        const errorMessage = getApiErrorMessage(payload, "Failed to delete post.");
         if (postIdParam) {
-          showError(payload.error ?? "Failed to delete post.");
+          showError(errorMessage);
         } else {
-          setPanelError(payload.error ?? "Failed to delete post.");
+          setPanelError(errorMessage);
         }
         setIsDeletingPost(false);
         return;

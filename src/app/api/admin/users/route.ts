@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiContract } from "@/lib/api-contract";
 
 import { hasPermission, requirePermission } from "@/lib/server-permissions";
 import type { AppRole } from "@/lib/types";
@@ -16,7 +17,7 @@ const deleteUsersSchema = z.object({
 });
 
 
-export async function POST(request: NextRequest) {
+export const POST = withApiContract(async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, "manage_users");
     if ("error" in auth) {
@@ -94,9 +95,9 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withApiContract(async function DELETE(request: NextRequest) {
   try {
     const auth = await requirePermission(request, "delete_user");
     if ("error" in auth) {
@@ -248,4 +249,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

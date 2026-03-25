@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/server-permissions";
 import { getUserRoles } from "@/lib/roles";
+import { withApiContract } from "@/lib/api-contract";
 
 interface DashboardSummary {
   writerCounts: Record<string, number>;
@@ -9,7 +10,7 @@ interface DashboardSummary {
   userRoles: string[];
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, "view_writing_queue");
     if ("error" in auth) {
@@ -112,4 +113,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

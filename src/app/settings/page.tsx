@@ -22,6 +22,11 @@ import {
   saveQuickViewSnapshot,
   type QuickViewSnapshot,
 } from "@/lib/quick-view";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import { getUserRoles } from "@/lib/roles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
@@ -240,19 +245,31 @@ function SettingsPageContent() {
     if (Object.keys(updates).length === 0) return;
 
     // Mark as connected via API
-    void fetch("/api/users/integrations", {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(updates),
-    }).then(() => {
-      showSuccess(`${reconnectService === "google" ? "Google" : "Slack"} connected successfully.`);
-    }).catch((error) => {
-      console.error("Failed to mark service as connected:", error);
-    });
-  }, [searchParams, session, showSuccess]);
+    void (async () => {
+      try {
+        const response = await fetch("/api/users/integrations", {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updates),
+        });
+        const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+        if (isApiFailure(response, payload)) {
+          throw new Error(
+            getApiErrorMessage(payload, "Failed to mark service as connected.")
+          );
+        }
+        showSuccess(
+          `${reconnectService === "google" ? "Google" : "Slack"} connected successfully.`
+        );
+      } catch (error) {
+        console.error("Failed to mark service as connected:", error);
+        showError("Failed to update connected service status.");
+      }
+    })();
+  }, [searchParams, session, showError, showSuccess]);
 
   const loadUsers = async () => {
     const supabase = getSupabaseBrowserClient();
@@ -316,14 +333,14 @@ function SettingsPageContent() {
         targetUserId: quickViewTargetUserId,
       }),
     });
-    const payload = (await response.json()) as {
+    const payload = await parseApiResponseJson<{
       error?: string;
       tokenHash?: string;
       targetUserId?: string;
       targetDisplayName?: string;
-    };
-    if (!response.ok || !payload.tokenHash || !payload.targetUserId) {
-      setError(payload.error ?? "Failed to start quick-view mode.");
+    }>(response);
+    if (isApiFailure(response, payload) || !payload.tokenHash || !payload.targetUserId) {
+      setError(getApiErrorMessage(payload, "Failed to start quick-view mode."));
       setIsSwitchingQuickViewUser(false);
       return;
     }
@@ -466,9 +483,9 @@ function SettingsPageContent() {
         isActive: canManageUsers ? edits.isActive : undefined,
       }),
     });
-    const payload = (await response.json()) as { error?: string };
-    if (!response.ok) {
-      setError(`Couldn't update profile. ${payload.error ?? "Try again."}`);
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Couldn't update profile. Try again."));
       return false;
     }
 
@@ -505,9 +522,9 @@ function SettingsPageContent() {
       }),
     });
 
-    const payload = (await response.json()) as { error?: string };
-    if (!response.ok) {
-      setError(`Couldn't create user. ${payload.error ?? "Try again."}`);
+    const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Couldn't create user. Try again."));
       return;
     }
 
@@ -543,12 +560,12 @@ function SettingsPageContent() {
       }),
     });
 
-    const payload = (await response.json()) as {
+    const payload = await parseApiResponseJson<{
       error?: string;
       deletedCount?: number;
       failed?: Array<{ userId: string; error: string }>;
-    };
-    if (!response.ok) {
+    }>(response);
+    if (isApiFailure(response, payload)) {
       const reassignmentFailurePrefix =
         "unable to reassign authored content before delete:";
       const normalizedTopLevelError = payload.error?.toLowerCase() ?? "";
@@ -573,8 +590,8 @@ function SettingsPageContent() {
         setError(
           `Could not delete user because authored content could not be reassigned automatically. Reassign that user's authored records, then try again.${technicalDetails}`
         );
-    } else {
-        setError(payload.error ?? "Couldn't delete users. Try again.");
+      } else {
+        setError(getApiErrorMessage(payload, "Couldn't delete users. Try again."));
       }
       setIsDeletingUsers(false);
       return;
@@ -641,9 +658,9 @@ function SettingsPageContent() {
         password: resetPasswordInput,
       }),
     });
-    const payload = (await response.json()) as { error?: string; message?: string };
-    if (!response.ok) {
-      setResetPasswordError(payload.error ?? "Failed to reset password.");
+    const payload = await parseApiResponseJson<{ message?: string }>(response);
+    if (isApiFailure(response, payload)) {
+      setResetPasswordError(getApiErrorMessage(payload, "Failed to reset password."));
       setIsResettingPassword(false);
       return;
     }
@@ -696,14 +713,14 @@ function SettingsPageContent() {
         includePublisherAssignments,
       }),
     });
-    const payload = (await response.json()) as {
+    const payload = await parseApiResponseJson<{
       error?: string;
       transferredWriterAssignments?: number;
       transferredPublisherAssignments?: number;
       totalTransferred?: number;
-    };
-    if (!response.ok) {
-      setError(`Couldn't reassign. ${payload.error ?? "Try again."}`);
+    }>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Couldn't reassign. Try again."));
       return;
     }
 
@@ -751,7 +768,7 @@ function SettingsPageContent() {
       }),
     });
 
-    const payload = (await response.json()) as {
+    const payload = await parseApiResponseJson<{
       error?: string;
       totalDeleted?: number;
       blogAssignmentHistoryDeleted?: number;
@@ -759,9 +776,9 @@ function SettingsPageContent() {
       permissionAuditLogsDeleted?: number;
       blogCommentsDeleted?: number;
       socialPostCommentsDeleted?: number;
-    };
-    if (!response.ok) {
-      setError(payload.error ?? "Failed to delete activity history.");
+    }>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Failed to delete activity history."));
       setIsDeletingActivityHistory(false);
       return;
     }
@@ -806,7 +823,7 @@ function SettingsPageContent() {
         removeOtherAdminProfiles: wipeAppCleanRemoveOtherAdminProfiles,
       }),
     });
-    const payload = (await response.json()) as {
+    const payload = await parseApiResponseJson<{
       error?: string;
       deletedAuthUsers?: number;
       preservedAuthUsers?: number;
@@ -817,9 +834,9 @@ function SettingsPageContent() {
       wipeSummary?: {
         truncated_table_count?: number;
       };
-    };
-    if (!response.ok) {
-      setError(payload.error ?? "Failed to wipe app data.");
+    }>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Failed to wipe app data."));
       setIsWipingAppClean(false);
       return;
     }
@@ -897,14 +914,14 @@ function SettingsPageContent() {
       }),
     });
 
-    const payload = (await response.json()) as {
+    const payload = await parseApiResponseJson<{
       error?: string;
       candidateCount?: number;
       deletedCount?: number;
       failed?: Array<{ userId: string; error: string }>;
-    };
-    if (!response.ok) {
-      setError(payload.error ?? "Failed to delete inactive users.");
+    }>(response);
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Failed to delete inactive users."));
       setIsDeletingInactiveUsers(false);
       return;
     }

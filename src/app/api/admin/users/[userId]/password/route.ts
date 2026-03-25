@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requirePermission } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
 const resetPasswordSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-export async function PATCH(
+export const PATCH = withApiContract(async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
@@ -75,4 +76,4 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+});

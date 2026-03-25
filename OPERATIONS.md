@@ -19,6 +19,24 @@ For end-user manual instructions, see `HOW_TO_USE_APP.md`.
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
 For social execution-stage completion, live links are entered from `/social-posts/[id]` Step 4 (`Review & Publish` → `Live Links`) and persisted in `social_post_links`.
 
+### Contract enforcement model
+- API contract normalization is centralized in `src/lib/api-contract.ts` and applied to all route handlers in `src/app/api/**/route.ts`.
+- Response invariants:
+  - success responses include `success: true`
+  - error responses include `success: false`, `error`, and `errorCode`
+  - contract version header `x-api-contract-version` is always present
+- Frontend consumption invariant:
+  - client fetch handlers must use `src/lib/api-response.ts` helpers to parse envelopes and evaluate failures via both HTTP status and `success` flag.
+- Edge response invariant:
+  - non-JSON/download/stream responses, redirects, and no-body statuses (`204/205/304`) are pass-through responses with `x-api-contract-version` only (no forced JSON envelope).
+  - `parseApiResponseJson` must safely no-op (empty object) for non-JSON/no-body responses to prevent parser crashes.
+- Boundary validation expectation:
+  - request bodies are schema-validated at route boundaries
+  - workflow transitions must be validated by API/DB authority before mutation
+- No-bypass operational rule:
+  - do not run direct DB mutations for workflow state changes outside approved API contract paths
+  - preferred path is client action → API route validation → DB mutation
+
 ### UI Architecture (Phase 4A-4C)
 **Phase 4A**: Core UI components (AppShell, DataPageHeader, FilterBar, StatusBadgeSystem)
 **Phase 4B**: Global command palette + quick create modal  
@@ -71,6 +89,7 @@ For social execution-stage completion, live links are entered from `/social-post
 - `src/app/api/social-posts/[postId]/transition/` — canonical social status transition API
 - `src/app/api/social-posts/[postId]/reopen-brief/` — admin execution-stage brief reopen API
 - `src/app/api/social-posts/reminders/` — awaiting-live-link reminder sweep API
+- `src/app/api/ideas/[id]/delete/` — idea deletion API (creator/admin-gated, idempotent response)
 - `src/lib/quick-view.ts` — quick-view snapshot storage helpers
 - `supabase/migrations/` — schema/history migrations
 - `supabase/functions/` — edge functions
@@ -200,6 +219,11 @@ When debugging access:
 2. verify `role_permissions` rows for role
 3. confirm permission key naming (canonical vs legacy aliases)
 4. refresh profile/session permissions cache
+
+Ideas delete behavior:
+- Route: `DELETE /api/ideas/[id]/delete`
+- Authorization: creator of the idea or admin
+- Operational safety: idempotent success response when idea is already deleted
 
 ## 7) Assignment transfer operations
 API:

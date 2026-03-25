@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { invalidateUserPreferencesCache } from "@/lib/notification-preferences-cache";
+import { withApiContract } from "@/lib/api-contract";
 
 interface NotificationPreferencesUpdate {
   notifications_enabled?: boolean;
@@ -19,7 +20,7 @@ interface NotificationPreferencesUpdate {
  * GET /api/users/notification-preferences
  * Get the current user's notification preferences
  */
-export async function GET(request: NextRequest) {
+export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
@@ -82,13 +83,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/users/notification-preferences
  * Update the current user's notification preferences
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withApiContract(async function PATCH(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
@@ -198,4 +199,4 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

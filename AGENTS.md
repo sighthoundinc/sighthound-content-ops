@@ -107,6 +107,32 @@ For every non-trivial UI or workflow change:
 3. Destructive actions must require confirmation.
 4. No partial silent updates.
 
+## Contract-Driven Engineering (MUST)
+
+1. **API Contracts are locked**:
+   - Every API route must define and enforce input shape, output shape, and error format.
+   - Use shared API contract normalization (`src/lib/api-contract.ts`) so responses are predictable and versioned.
+   - Error responses must always include a stable machine-readable `errorCode` and human-readable `error` message.
+   - Non-JSON or edge responses (downloads, streams, redirects, 204/205/304 no-body responses) must be explicit pass-through responses and must not be force-wrapped into JSON envelopes.
+   - Frontend API parsing must go through `src/lib/api-response.ts`, which must safely handle non-JSON and no-body responses without throwing.
+2. **Component Contracts are locked**:
+   - Reusable UI primitives behave as APIs and must not have page-specific exceptions.
+   - `DataTable` invariants are global: fixed row-height classes by density, single-line truncation for plain-text cells, and pagination compatibility through shared table controls.
+3. **Workflow Contracts are locked**:
+   - Stage transitions and required fields must be centralized and enforced by API/DB authority.
+   - UI may guide transitions but cannot bypass workflow constraints.
+4. **UX Contracts are locked**:
+   - Tables, drawers, toasts, and navigation patterns must remain behaviorally consistent across pages.
+   - New pages reuse existing interaction contracts instead of introducing variants.
+5. **No Bypass Rule**:
+   - Do not mutate operational workflow state by bypassing contract boundaries.
+   - Preferred path: client action → API contract validation → DB mutation.
+6. **Boundary Validation is mandatory**:
+   - API request bodies validated at route boundaries.
+   - UI props and import payloads validated against explicit schemas/types before mutation.
+7. **Contracts must stay visible**:
+   - Keep contract rules synchronized across `AGENTS.md`, `SPECIFICATION.md`, and source-level types/interfaces.
+
 ## Documentation Update Rule (MUST)
 
 After any feature or behavior change (when applicable):
@@ -481,3 +507,57 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 3. Clicking `+N more` transitions to week view focused on that date so hidden month items remain quickly accessible.
 4. Dense calendar cards must prefer lightweight hover behavior (native `title` metadata) over heavy inline hover popovers.
 5. Calendar visual polish should prioritize subtle depth (borders/shadows/gradients) without introducing motion-heavy effects (for example, backdrop blur in dense grids).
+
+## Social Post Ownership & Transition Enforcement (MUST)
+
+**Authority Layer**: Ownership replaces role-based permissions. The database field `assigned_to_user_id` is the single source of truth for who can act on a post at each stage.
+
+**Schema**:
+- `social_posts.created_by` (immutable, creator identity)
+- `social_posts.editor_id` (nullable, assigned editor for review stages)
+- `social_posts.assigned_to_user_id` (non-null for non-published, owner of current action)
+
+**Transition Authority**:
+- Single endpoint: `POST /api/social-posts/[id]/transition`
+- Enforces ownership check: 403 if `assigned_to_user_id !== currentUserId`
+- Enforces transition matrix: 400 if not in `TRANSITION_GRAPH[currentStatus]`
+- Validates required fields: 400 if missing for next status
+- Requires reason for rollbacks: 400 if reason missing on backward transitions
+- Atomic update: status + assignment + activity log in single transaction
+- Concurrency protection: `WHERE status = currentStatus` prevents race conditions
+
+**Ownership Derivation** (deterministic per `getNextAssignment()`):
+- `draft` → creator
+- `in_review` → editor_id
+- `changes_requested` → creator
+- `creative_approved` → editor_id
+- `ready_to_publish` → creator
+- `awaiting_live_link` → creator
+- `published` → null (terminal)
+
+**Field Locking During Execution**:
+- Execution stages (`ready_to_publish`, `awaiting_live_link`) lock brief fields: `title`, `platforms`, `product`, `type`, `canva_url`, `canva_page`
+- Only `POST /api/social-posts/[id]/reopen-brief` (admin-only) can unlock by reopening to `creative_approved`
+- Transition endpoint rejects ANY locked field in payload
+
+**Live Link Gate**:
+- `published` status requires at least one valid row in `social_post_links`
+- Validation checks DB state (not request payload)
+- Returns 400 if no links exist
+
+**Activity Logging**:
+- Non-blocking fire-and-forget insert to `social_post_activity_history`
+- Logs: `activity_type`, `old_status`, `new_status`, `reason`, `user_id`, `created_at`
+- Failures do not block transition response
+
+**UI Implications**:
+- Show assigned owner and next action in list/card views
+- Only display primary CTA for assigned user
+- Show "waiting" state for non-assigned users
+- No role-based UI branching (ownership is the control)
+- Use `useSocialPostTransition` hook for safe client-side checks
+
+**Testing**:
+- Test cases in `tests/api/social-posts-transition.test.ts`
+- Critical: ownership enforcement (403), transition validation (400), field locking, concurrency (409), required fields, live links
+- Full workflow cycle: creator draft → editor review → creator publish

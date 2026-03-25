@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getUserRoles } from "@/lib/roles";
 import { requirePermission } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
 const INACTIVE_USERS_PURGE_CONFIRMATION_TEXT = "DELETE INACTIVE USERS";
 
@@ -16,7 +17,7 @@ type InactiveProfile = {
   is_active: boolean;
 };
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withApiContract(async function DELETE(request: NextRequest) {
   try {
     const auth = await requirePermission(request, "delete_user");
     if ("error" in auth) {
@@ -224,4 +225,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

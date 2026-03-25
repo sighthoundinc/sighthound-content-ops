@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getUserRoles } from "@/lib/roles";
 import { authenticateRequest } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
-export async function POST(request: NextRequest) {
+export const POST = withApiContract(async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -84,4 +85,4 @@ export async function POST(request: NextRequest) {
       title: post.title,
     })),
   });
-}
+});

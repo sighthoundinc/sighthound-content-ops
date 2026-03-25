@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
-export async function GET(request: NextRequest) {
+export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request);
     if ("error" in auth) {
@@ -94,4 +95,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

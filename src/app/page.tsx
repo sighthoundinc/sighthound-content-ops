@@ -5,6 +5,11 @@ import Link from "next/link";
 import { AppIcon, type AppIconName } from "@/lib/icons";
 import { setDashboardFilterIntent } from "@/lib/dashboard-filter-state";
 import { useAuth } from "@/providers/auth-provider";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 
 interface DashboardSummary {
   writerCounts: Record<string, number>;
@@ -68,11 +73,11 @@ export default function HomePage() {
             authorization: `Bearer ${session.access_token}`,
           },
         });
-        if (!response.ok) {
-          throw new Error("Failed to fetch work summary");
+        const payload = await parseApiResponseJson<DashboardSummary>(response);
+        if (isApiFailure(response, payload)) {
+          throw new Error(getApiErrorMessage(payload, "Failed to fetch work summary"));
         }
-        const data = (await response.json()) as DashboardSummary;
-        setSummary(data);
+        setSummary(payload);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error loading summary");

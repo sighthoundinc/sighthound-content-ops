@@ -47,6 +47,7 @@ Use `My Tasks` as your first stop each day.
 - Returning from execution to `Changes Requested` requires a reason.
 - `Published` requires at least one valid live link (LinkedIn, Facebook, or Instagram).
 - On Ideas, comments and references stay visible and are edited through `Edit Idea` (not inline).
+- On Ideas, creators and admins can delete an idea from the card action row after a confirmation prompt.
 
 ## 4. Filters and search
 - Search is case-insensitive and supports partial matches.
@@ -58,6 +59,12 @@ Use `My Tasks` as your first stop each day.
 - Click table headers to sort ascending/descending.
 - Sort indicators: `↕` (unsorted), `↑` (ascending), `↓` (descending).
 - Global action order: `Copy` → `Customize` → `Import` → `Export`.
+
+### Consistency guarantees
+- Core table behavior is standardized across pages (sorting, truncation, row density, pagination controls).
+- Drawers and action feedback follow shared patterns; behavior should feel the same regardless of module.
+- Workflow actions are validated before they are accepted, so invalid transitions are blocked consistently.
+- When an action fails, feedback uses standardized error wording (and may include a short error code) for easier troubleshooting.
 
 ## 5. Import workflow
 1. Upload your sheet.
@@ -102,6 +109,7 @@ Required key columns:
 ### Action feedback
 - Success/error alerts appear at the bottom-left and auto-dismiss quickly.
 - Copy actions show a visual copied confirmation.
+- CSV/PDF export flows remain direct browser downloads/print flows and are not blocked by JSON API parsing behavior.
 
 ### Activity history wording
 - Assignment and change logs are intentionally non-technical for operators.

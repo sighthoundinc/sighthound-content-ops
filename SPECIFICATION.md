@@ -214,6 +214,7 @@ Key behavior:
 - idea intake and management
 - comments/references remain visible by default on idea cards
 - single edit path through the `Edit Idea` modal (title/site/comments-references)
+- creator/admin-gated delete action on idea cards with destructive-action confirmation
 - conversion paths toward:
   - blog workflow (`Convert to Blog`)
   - social post workflow (`Convert to Social Post`)
@@ -391,6 +392,40 @@ Filters must:
 ### Empty results
 - show clear no-results-found state
 - never show blank or broken UI
+
+## 8.5) Contract-Driven Engineering Baseline (MUST)
+All behavior-critical interfaces are treated as explicit contracts to prevent drift and silent regressions.
+
+### API contract baseline
+- All API routes under `src/app/api/**/route.ts` are normalized through `src/lib/api-contract.ts`.
+- Success responses include `success: true`.
+- Error responses include:
+  - `success: false`
+  - `error` (human-readable)
+  - `errorCode` (machine-readable, stable)
+- Contract version is exposed in `x-api-contract-version` response header.
+- Request bodies are validated at route boundaries (schema-first).
+- Frontend consumers must parse API responses through `src/lib/api-response.ts` and treat either `!response.ok` or `success: false` as failures.
+- User-facing and logged error paths should read normalized `error` and `errorCode` instead of raw transport text.
+- Non-JSON and edge responses (file downloads, streaming responses, redirects, `204/205/304` no-body responses) are explicit pass-through responses and are not force-wrapped into JSON envelopes.
+- Frontend parsing for these edge responses must remain safe (`parseApiResponseJson` returns an empty object for non-JSON/no-body responses).
+
+### Component contract baseline
+- Reusable components are treated as API surfaces.
+- `DataTable` contract invariants:
+  - fixed row heights by density
+  - plain-text cells always single-line truncate with tooltip fallback
+  - pagination compatibility via shared table controls/utilities (`src/lib/table.ts`, `src/components/table-controls.tsx`)
+
+### Workflow contract baseline
+- Workflow transitions and required-field gates remain centralized and authoritative.
+- UI cannot bypass transition constraints.
+- Social transition authority remains API-first via `/api/social-posts/[postId]/transition`.
+
+### No-bypass mutation rule
+- Operational state mutations must flow through contract boundaries:
+  - client action → validated API route → DB mutation
+- Direct/bypass mutation paths are not allowed for workflow state changes.
 
 ## 9) Data model (logical)
 Core tables:

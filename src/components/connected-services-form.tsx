@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 import { AppIcon } from "@/lib/icons";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 
 interface ConnectedServicesState {
   google_connected: boolean;
@@ -54,13 +59,18 @@ export function ConnectedServicesForm() {
           "Content-Type": "application/json",
         },
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch integrations: ${response.statusText}`);
+      const payload = await parseApiResponseJson<ConnectedServicesState>(response);
+      if (isApiFailure(response, payload)) {
+        throw new Error(
+          getApiErrorMessage(payload, "Failed to fetch connected services.")
+        );
       }
-
-      const data = (await response.json()) as ConnectedServicesState;
-      setServices(data);
+      setServices({
+        google_connected: Boolean(payload.google_connected),
+        google_connected_at: payload.google_connected_at ?? null,
+        slack_connected: Boolean(payload.slack_connected),
+        slack_connected_at: payload.slack_connected_at ?? null,
+      });
     } catch (error) {
       console.error("Error fetching connected services:", error);
       showError("Failed to load connected services. Please refresh.");
@@ -99,13 +109,16 @@ export function ConnectedServicesForm() {
         },
         body: JSON.stringify(updates),
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to disconnect: ${response.statusText}`);
+      const payload = await parseApiResponseJson<ConnectedServicesState>(response);
+      if (isApiFailure(response, payload)) {
+        throw new Error(getApiErrorMessage(payload, "Failed to disconnect service."));
       }
-
-      const updated = (await response.json()) as ConnectedServicesState;
-      setServices(updated);
+      setServices({
+        google_connected: Boolean(payload.google_connected),
+        google_connected_at: payload.google_connected_at ?? null,
+        slack_connected: Boolean(payload.slack_connected),
+        slack_connected_at: payload.slack_connected_at ?? null,
+      });
       showSuccess(`${SERVICES.find(s => s.key === serviceKey)?.name} disconnected.`);
     } catch (error) {
       console.error("Error disconnecting service:", error);

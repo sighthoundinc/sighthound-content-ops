@@ -16,6 +16,11 @@ import {
   TABLE_TEXT_TRUNCATE_CLASS,
 } from "@/lib/table";
 import { AppIcon } from "@/lib/icons";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import { useAuth } from "@/providers/auth-provider";
 
 const REQUIRED_COLUMNS_SET = new Set([
@@ -468,11 +473,15 @@ export function BlogImportModal({
             },
             body: JSON.stringify({ names: uniqueNames }),
           });
-          const payload = (await response.json()) as { resolutions: NameResolutionResult[] } & { error?: string };
-          if (!response.ok) throw new Error(payload.error ?? "Failed to resolve names");
-          setNameResolutions(payload.resolutions);
+          const payload = await parseApiResponseJson<{
+            resolutions?: NameResolutionResult[];
+          }>(response);
+          if (isApiFailure(response, payload)) {
+            throw new Error(getApiErrorMessage(payload, "Failed to resolve names"));
+          }
+          setNameResolutions(payload.resolutions ?? []);
           const autoResolved: NameResolutionState = {};
-          for (const resolution of payload.resolutions) {
+          for (const resolution of payload.resolutions ?? []) {
             if (resolution.bestMatch) {
               autoResolved[resolution.inputName] = {
                 action: "use_existing",
@@ -593,9 +602,9 @@ export function BlogImportModal({
           nameResolutions: selectedNameResolutions,
         }),
       });
-      const payload = (await response.json()) as ImportResponse & { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Import failed");
+      const payload = await parseApiResponseJson<ImportResponse>(response);
+      if (isApiFailure(response, payload)) {
+        throw new Error(getApiErrorMessage(payload, "Import failed"));
       }
       setResult(payload);
       await onImported({
@@ -638,13 +647,15 @@ export function BlogImportModal({
         },
         body: JSON.stringify({ names: uniqueNames }),
       });
-      const payload = (await response.json()) as { resolutions: NameResolutionResult[] } & { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to resolve names");
+      const payload = await parseApiResponseJson<{
+        resolutions?: NameResolutionResult[];
+      }>(response);
+      if (isApiFailure(response, payload)) {
+        throw new Error(getApiErrorMessage(payload, "Failed to resolve names"));
       }
-      setNameResolutions(payload.resolutions);
+      setNameResolutions(payload.resolutions ?? []);
       const autoResolved: NameResolutionState = {};
-      for (const resolution of payload.resolutions) {
+      for (const resolution of payload.resolutions ?? []) {
         if (resolution.bestMatch) {
           autoResolved[resolution.inputName] = {
             action: "use_existing",

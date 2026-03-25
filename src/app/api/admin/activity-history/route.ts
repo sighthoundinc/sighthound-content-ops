@@ -8,6 +8,7 @@ import {
   getActivityTypeCategory,
   getActivityTypeLabel,
 } from "@/lib/activity-history-format";
+import { withApiContract } from "@/lib/api-contract";
 
 type ActivityType =
   | "login"
@@ -77,7 +78,7 @@ async function batchLoadProfiles(
   return profileMap;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withApiContract(async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "manage_users");
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -290,7 +291,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 const deleteActivityHistorySchema = z.object({
   scope: z.enum(["all", "users"]).default("all"),
@@ -304,7 +305,7 @@ type ActivityHistoryTable =
   | "permission_audit_logs";
 type CommentActivityTable = "blog_comments" | "social_post_comments";
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withApiContract(async function DELETE(request: NextRequest) {
   try {
     console.log("[Activity History] DELETE request received");
     const auth = await authenticateRequest(request);
@@ -463,4 +464,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

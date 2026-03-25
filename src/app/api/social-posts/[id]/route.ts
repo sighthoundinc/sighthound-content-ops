@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getUserRoles } from "@/lib/roles";
 import { authenticateRequest } from "@/lib/server-permissions";
+import { withApiContract } from "@/lib/api-contract";
 
-export async function DELETE(
+export const DELETE = withApiContract(async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -29,7 +30,7 @@ export async function DELETE(
   if (!post) {
     return NextResponse.json(
       { success: true, message: "Post already deleted" },
-      { status: 204 }
+      { status: 200 }
     );
   }
 
@@ -73,6 +74,6 @@ export async function DELETE(
       deletedPostId: id,
       deletedPostTitle: post.title,
     },
-    { status: 204 }
+    { status: 200 }
   );
-}
+});

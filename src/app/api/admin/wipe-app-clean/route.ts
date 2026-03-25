@@ -175,7 +175,8 @@ async function wipePublicDataWithFallback(
   preserveUserId: string
 ): Promise<WipeAppCleanRpcResult> {
   const { data: wipeData, error: wipeError } = await adminClient.rpc(
-    "wipe_app_clean_data"
+    "wipe_app_clean_data",
+    { preserved_user_id: preserveUserId }
   );
   if (!wipeError) {
     return (wipeData as WipeAppCleanRpcResult | null) ?? {};
@@ -187,12 +188,15 @@ async function wipePublicDataWithFallback(
 
   const wipedTables: string[] = [];
   for (const entry of FULL_WIPE_TABLES) {
-    const { table, markerColumn } = entry;
+    const { table } = entry;
     let deleteQuery = adminClient.from(table).delete();
     if (table === "profiles") {
+      // Delete all profiles except the preserved admin
       deleteQuery = deleteQuery.neq("id", preserveUserId);
     } else {
-      deleteQuery = deleteQuery.not(markerColumn, "is", null);
+      // For other tables, delete ALL rows (matching RPC behavior).
+      // Use .neq("id", null) as a universal match since all rows have non-null IDs.
+      deleteQuery = deleteQuery.neq("id", null);
     }
     const { error: deleteError } = await deleteQuery;
     if (!deleteError) {
@@ -267,6 +271,13 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
       ...otherAdminProfiles.map((nextProfile) => nextProfile.id),
     ]);
     const wipeData = await wipePublicDataWithFallback(adminClient, auth.context.userId);
+    const normalizedWipeData = wipeData as WipeAppCleanRpcResult;
+    const tablesWiped = normalizedWipeData.truncated_table_count ?? 0;
+    if (tablesWiped === 0) {
+      throw new Error(
+        "Wipe operation completed but deleted no public data. The cleanup did not run successfully."
+      );
+    }
     await restorePreservedAdminProfiles(adminClient, [
       preservedAdminProfile,
       ...otherAdminProfiles,
@@ -290,7 +301,6 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
       deletedAuthUsers += 1;
     }
 
-    const normalizedWipeData = wipeData as WipeAppCleanRpcResult;
 
     if (failedUserDeletes.length > 0) {
       return NextResponse.json(

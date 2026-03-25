@@ -103,8 +103,24 @@ Required key columns:
 
 ### Notification preferences
 - `Settings → Notification Preferences` controls all notification types.
-- Use global on/off plus per-type toggles.
-- Slack delivery follows the same preference toggles.
+- **Global toggle**: Master switch to enable or disable all notifications.
+- **Per-type toggles**: Enable/disable specific notification types (task assignments, stage changes, submissions, etc.).
+- **In-app**: Always available when enabled.
+- **Slack**: Only sends if Slack is connected AND notification type is enabled.
+- **Slack delivery method**: Choose between direct messages (coming soon, pending approval) or #content-ops-alerts channel.
+
+### Slack notification format
+Slack notifications follow a clear, actionable format:
+```
+[Blog|Social] Event Label • Title (Site)
+Action: What needs to happen or what just happened
+Owner: Role responsible (when relevant)
+Open: Link to content
+```
+
+Example: `[Social] Awaiting live link • "Campaign Post" (SH)` with action "Awaiting live link — awaiting creator submission"
+
+This format enables quick scanning in busy channels and shows exactly who is responsible for the next step.
 
 ### Action feedback
 - Success/error alerts appear at the bottom-left and auto-dismiss quickly.

@@ -116,10 +116,26 @@ Required key columns:
 - You will see readable labels (like "Writing Stage", "Publishing Stage", "Draft Link", "Live Link") instead of internal field keys.
 - User IDs are not shown in history rows; assignments show names when available.
 
-## 9. Troubleshooting quick fixes
+## 9. Connected services (Google and Slack)
+### Connect a provider
+1. Open Settings → Connected Services
+2. Find the service (Google or Slack) and click `Connect`
+3. Complete the provider's sign-in flow in the browser
+4. You'll be returned to Settings; the service now shows `Connected`
+
+### Disconnect a provider
+1. Open Settings → Connected Services
+2. Find the service and click `Disconnect`
+3. Confirm the action
+
+**Note**: Connecting a provider from Settings does not change your sign-in method. OAuth connection is independent of how you log in each time.
+
+## 10. Troubleshooting quick fixes
 - Cannot move status: finish required checklist items and save first.
 - Social post stuck before completion: add at least one valid public live link.
 - Missing results: clear filters/search and reapply one by one.
 - Import errors: unselect invalid rows, verify required columns, then retry.
 - Missing notifications: verify notification toggles and connector status in `Settings`.
+- Provider connect failed: ensure you have an active session, then retry from Settings → Connected Services.
+- Cannot access Activity History or system/import log views: confirm your account has admin access and required permissions.
 - Unexpected UI state: refresh once, retry action, then report the item ID and failed step.

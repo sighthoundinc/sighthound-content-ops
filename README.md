@@ -125,6 +125,11 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 
 ### Settings and Permissions
 - `My Profile` for all personal preferences (name, timezone, week start, draft attention threshold)
+- `Connected Services` for Google and Slack OAuth management:
+  - Click `Connect` to link a provider's account
+  - OAuth flow opens directly from Settings (no login page redirect)
+  - After auth, you're returned to Settings with updated connection status
+  - Click `Disconnect` to unlink a provider anytime
 - `Access & Oversight` for quick-view and permissions panel entry
 - `Create User Account`, `Reassign User Work`, and `User Directory` for team administration
 - Permission matrix management (`/settings/permissions`)
@@ -218,6 +223,7 @@ npm run dev
 - Reusable UI components are treated as contracts (not per-page variants).
 - `DataTable` keeps fixed row-height and forced single-line text truncation invariants.
 - Workflow state mutations must follow: client action → API contract → DB mutation (no bypass).
+- Public-schema tables exposed to PostgREST must keep RLS enabled; admin maintenance endpoints use `service_role` server clients instead of disabling RLS.
 
 ## Supabase migrations
 Apply in timestamp order from `supabase/migrations/`.
@@ -243,6 +249,7 @@ Current set:
 - `20260320195000_add_activity_history_delete_policies.sql`
 - `20260320195100_fix_activity_history_rls.sql`
 - `20260321133000_social_workflow_authority_and_event_normalization.sql`
+- `20260325111500_enable_public_table_rls.sql`
 
 ## Slack edge function
 Path:

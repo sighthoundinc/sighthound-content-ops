@@ -154,6 +154,7 @@ export default function BlogDetailPage() {
   const [pendingCompletionAction, setPendingCompletionAction] = useState<
     "writer" | "publisher" | null
   >(null);
+  const [blogVersion, setBlogVersion] = useState<string | null>(null);
 
   useEffect(() => {
     if (!error) {
@@ -250,6 +251,8 @@ export default function BlogDetailPage() {
         (blogData ?? {}) as Record<string, unknown>
       ) as unknown as BlogRecord;
       setBlog(nextBlog);
+      // Store version (updated_at) to detect concurrent changes
+      setBlogVersion(nextBlog.updated_at);
       setForm({
         title: nextBlog.title,
         site: nextBlog.site,
@@ -352,6 +355,15 @@ export default function BlogDetailPage() {
     setError(null);
     setSuccessMessage(null);
 
+    // Prevent race condition: check if blog was modified by another client
+    if (blogVersion && blog.updated_at !== blogVersion) {
+      setError(
+        "Blog was modified by another user. Please refresh to see the latest changes."
+      );
+      setIsSaving(false);
+      return;
+    }
+
     const supabase = getSupabaseBrowserClient();
     let { data, error: updateError } = await supabase
       .from("blogs")
@@ -389,6 +401,8 @@ export default function BlogDetailPage() {
       (data ?? {}) as Record<string, unknown>
     ) as unknown as BlogRecord;
     setBlog(nextBlog);
+    // Update version after successful save to prevent stale version on concurrent changes
+    setBlogVersion(nextBlog.updated_at);
     setForm({
       title: nextBlog.title,
       site: nextBlog.site,
@@ -423,7 +437,7 @@ export default function BlogDetailPage() {
 
   const handleDetailsSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!form || !blog || !canSaveDetails) {
+    if (!form || !blog || !canSaveDetails || isSaving) {
       return;
     }
     const previousWriterId = blog.writer_id ?? "";
@@ -818,7 +832,7 @@ export default function BlogDetailPage() {
   };
 
   const handleMarkWritingComplete = async () => {
-    if (!form || !blog || !canWriterEdit) {
+    if (!form || !blog || !canWriterEdit || isSaving) {
       return;
     }
     if (!canTransitionWriterStatus(blog.writer_status, "completed", hasPermission)) {
@@ -849,14 +863,7 @@ export default function BlogDetailPage() {
             blog.id
           )
         );
-        await notifySlack({
-          eventType: "writer_completed",
-          blogId: blog.id,
-          title: blog.title,
-          site: blog.site,
-          actorName: profile?.full_name ?? "Writer",
-          targetEmail: blog.writer?.email ?? undefined,
-        });
+        // Only send "ready_to_publish" to publisher (writer_completed is redundant)
         await notifySlack({
           eventType: "ready_to_publish",
           blogId: blog.id,
@@ -870,7 +877,7 @@ export default function BlogDetailPage() {
   };
 
   const handleMarkPublishingComplete = async () => {
-    if (!form || !blog || !canPublisherEdit) {
+    if (!form || !blog || !canPublisherEdit || isSaving) {
       return;
     }
     if (!canTransitionPublisherStatus(blog.publisher_status, "completed", hasPermission)) {

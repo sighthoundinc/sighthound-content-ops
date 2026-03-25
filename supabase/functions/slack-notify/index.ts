@@ -35,13 +35,55 @@ const EVENT_LABELS: Record<EventType, string> = {
   writer_completed: "Writing complete",
   ready_to_publish: "Ready to publish",
   published: "Published",
-  social_submitted_for_review: "Social submitted for review",
-  social_changes_requested: "Social changes requested",
-  social_creative_approved: "Social creative approved",
-  social_ready_to_publish: "Social ready to publish",
-  social_awaiting_live_link: "Social awaiting live link",
-  social_published: "Social published",
-  social_live_link_reminder: "Social live link reminder",
+  social_submitted_for_review: "Submitted for review",
+  social_changes_requested: "Changes requested",
+  social_creative_approved: "Creative approved",
+  social_ready_to_publish: "Ready to publish",
+  social_awaiting_live_link: "Awaiting live link",
+  social_published: "Published",
+  social_live_link_reminder: "Live link reminder",
+};
+
+const EVENT_CONTENT_TYPE: Record<EventType, string> = {
+  writer_assigned: "Blog",
+  writer_completed: "Blog",
+  ready_to_publish: "Blog",
+  published: "Blog",
+  social_submitted_for_review: "Social",
+  social_changes_requested: "Social",
+  social_creative_approved: "Social",
+  social_ready_to_publish: "Social",
+  social_awaiting_live_link: "Social",
+  social_published: "Social",
+  social_live_link_reminder: "Social",
+};
+
+const EVENT_ACTION: Record<EventType, string> = {
+  writer_assigned: "Writer assigned — awaiting writing",
+  writer_completed: "Writing complete — ready for publisher review",
+  ready_to_publish: "Ready to publish — awaiting publisher action",
+  published: "Published",
+  social_submitted_for_review: "Submitted for review — awaiting editorial approval",
+  social_changes_requested: "Changes requested — awaiting creator revisions",
+  social_creative_approved: "Creative approved",
+  social_ready_to_publish: "Ready to publish — awaiting creator action",
+  social_awaiting_live_link: "Awaiting live link — awaiting creator submission",
+  social_published: "Published",
+  social_live_link_reminder: "Reminder: awaiting live link submission",
+};
+
+const EVENT_OWNER: Record<EventType, string | null> = {
+  writer_assigned: "Writer",
+  writer_completed: "Publisher",
+  ready_to_publish: "Publisher",
+  published: null,
+  social_submitted_for_review: "Editor",
+  social_changes_requested: "Creator",
+  social_creative_approved: null,
+  social_ready_to_publish: "Creator",
+  social_awaiting_live_link: "Creator",
+  social_published: null,
+  social_live_link_reminder: "Creator",
 };
 
 function buildMessage(payload: NotifyPayload) {
@@ -52,12 +94,29 @@ function buildMessage(payload: NotifyPayload) {
         ? `${payload.appUrl}/blogs/${payload.blogId}`
         : null
     : null;
-  const intro = `*${EVENT_LABELS[payload.eventType]}* • ${payload.title} (${payload.site})`;
-  const actor = `Actor: ${payload.actorName}`;
-  if (!deepLink) {
-    return `${intro}\n${actor}`;
-  }
-  return `${intro}\n${actor}\n${deepLink}`;
+  
+  const contentType = EVENT_CONTENT_TYPE[payload.eventType];
+  const label = EVENT_LABELS[payload.eventType];
+  const action = EVENT_ACTION[payload.eventType];
+  const owner = EVENT_OWNER[payload.eventType];
+  
+  // Header: [Content Type] Label • Title (Site)
+  const header = `*[${contentType}]* ${label} • ${payload.title} (${payload.site})`;
+  
+  // Action line (always included)
+  const actionLine = `Action: ${action}`;
+  
+  // Owner line (only if relevant)
+  const ownerLine = owner ? `Owner: ${owner}` : null;
+  
+  // Open link (always included if available)
+  const openLine = deepLink ? `Open: ${deepLink}` : null;
+  
+  const parts = [header, actionLine];
+  if (ownerLine) parts.push(ownerLine);
+  if (openLine) parts.push(openLine);
+  
+  return parts.join("\n");
 }
 
 async function callSlackApi(token: string, endpoint: string, body: Record<string, unknown>) {
@@ -111,7 +170,7 @@ serve(async (request) => {
 
     const text = buildMessage(payload);
     const botToken = Deno.env.get("SLACK_BOT_TOKEN");
-    const marketingChannel = Deno.env.get("SLACK_MARKETING_CHANNEL") ?? "#marketing";
+    const marketingChannel = Deno.env.get("SLACK_MARKETING_CHANNEL") ?? "#content-ops-alerts";
     const webhookUrl = Deno.env.get("SLACK_WEBHOOK_URL");
 
     if (botToken) {

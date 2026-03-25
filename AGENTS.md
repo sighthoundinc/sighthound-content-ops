@@ -66,6 +66,7 @@ For every non-trivial UI or workflow change:
 2. Frontend permission checks are UX-only and never a security boundary.
 3. Every feature must define who can view, edit, and perform privileged actions (create/delete/import/publish).
 4. No feature ships without RLS coverage.
+5. Do not disable RLS on PostgREST-exposed tables in `public`; use explicit policies and service-role API paths for maintenance operations.
 
 ## Forms & Input Behavior (MUST)
 
@@ -149,6 +150,17 @@ After any feature or behavior change (when applicable):
    - Why it changed
    - Constraints/edge cases
 3. Definition of done: implementation is incomplete until docs reflect reality.
+
+## OAuth Provider Connection Flow (MUST)
+
+1. **Connection initiation**: Users connect Google/Slack from Settings, not from login page
+2. **Direct OAuth flow**: Settings renders `Connect` button (not anchor link); clicking initiates `signInWithOAuth()` directly without redirect to login
+3. **Post-OAuth redirect**: After provider auth completes, user is returned to `/settings?reconnect=provider` (not `/login?reconnect=...`)
+4. **Status persistence**: Connected status (google_connected, slack_connected) is stored in `user_integrations` and fetched on Settings mount
+5. **Independence principle**: Logging in with a provider does not auto-mark it as "connected" in Settings. Users explicitly control connection status.
+6. **Error handling**: OAuth errors are caught and displayed as user-friendly alerts in Settings without page navigation
+7. **Loading states**: Connect/Disconnect buttons show loading text ("Connecting...", "Disconnecting...") during API operations
+8. **No breaking changes**: This is a UX fix only; no API contracts or data shapes were modified
 
 ## Change Risk Classification (SHOULD)
 

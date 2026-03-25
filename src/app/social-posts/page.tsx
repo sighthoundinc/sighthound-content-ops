@@ -39,6 +39,7 @@ import {
 import { ExternalLink } from "@/components/external-link";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
+import { SocialPostStatusInfo } from "@/components/social-post-status-info";
 import {
   TablePaginationControls,
   TableResultsSummary,
@@ -81,9 +82,9 @@ import type {
   SocialPostCommentRecord,
   SocialPostLinkRecord,
   SocialPostProduct,
-  SocialPostRecord,
   SocialPostStatus,
   SocialPostType,
+  SocialPostWithRelations as SocialPostWithRelationsType,
 } from "@/lib/types";
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
@@ -104,9 +105,11 @@ type BlogLookupResult = {
   site: BlogSite;
 };
 
-type SocialPostWithRelations = SocialPostRecord & {
+type SocialPostWithRelations = SocialPostWithRelationsType & {
   associated_blog?: BlogLookupResult | null;
   creator?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+  worker?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+  reviewer?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
 };
 
 type SocialCommentRecord = SocialPostCommentRecord & {
@@ -151,11 +154,26 @@ function normalizeSocialPostRows(rows: Array<Record<string, unknown>>) {
     const creator = normalizeRelationObject<
       Pick<ProfileRecord, "id" | "full_name" | "email">
     >(row.creator);
+    const worker = normalizeRelationObject<
+      Pick<ProfileRecord, "id" | "full_name" | "email">
+    >(row.worker);
+    const reviewer = normalizeRelationObject<
+      Pick<ProfileRecord, "id" | "full_name" | "email">
+    >(row.reviewer);
     const platforms = Array.isArray(row.platforms)
       ? row.platforms.filter((platform): platform is SocialPlatform =>
           typeof platform === "string"
         )
       : [];
+
+    // Derive assigned_to_user_id based on status and ownership model
+    const status = (row.status as SocialPostStatus) ?? "draft";
+    const workerUserId = typeof row.worker_user_id === "string" ? row.worker_user_id : null;
+    const reviewerUserId = typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null;
+    const assigned_to_user_id =
+      status === "in_review" || status === "creative_approved"
+        ? reviewerUserId
+        : workerUserId;
 
     return {
       id: String(row.id ?? ""),
@@ -173,8 +191,11 @@ function normalizeSocialPostRows(rows: Array<Record<string, unknown>>) {
       platforms,
       scheduled_date:
         typeof row.scheduled_date === "string" ? row.scheduled_date : null,
-      status: (row.status as SocialPostStatus) ?? "draft",
+      status,
       created_by: String(row.created_by ?? ""),
+      worker_user_id: workerUserId,
+      reviewer_user_id: reviewerUserId,
+      assigned_to_user_id,
       editor_user_id: typeof row.editor_user_id === "string" ? row.editor_user_id : null,
       admin_owner_id: typeof row.admin_owner_id === "string" ? row.admin_owner_id : null,
       last_live_link_reminder_at: typeof row.last_live_link_reminder_at === "string" ? row.last_live_link_reminder_at : null,
@@ -184,6 +205,11 @@ function normalizeSocialPostRows(rows: Array<Record<string, unknown>>) {
       updated_at: String(row.updated_at ?? ""),
       associated_blog: associatedBlog,
       creator,
+      worker,
+      reviewer,
+      worker_name: worker?.full_name ?? null,
+      reviewer_name: reviewer?.full_name ?? null,
+      creator_name: creator?.full_name ?? null,
     } satisfies SocialPostWithRelations;
   });
 }
@@ -253,12 +279,14 @@ function SocialPostCard({
   onOpen,
   onDelete,
   isDeleting,
+  currentUserId,
 }: {
   post: SocialPostWithRelations;
   linkCount: number;
   onOpen: () => void;
   onDelete: (postId: string) => void;
   isDeleting: boolean;
+  currentUserId?: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: post.id,
@@ -311,6 +339,16 @@ function SocialPostCard({
             Blog: {post.associated_blog.title}
           </p>
         ) : null}
+        <div className="mt-3">
+          <SocialPostStatusInfo
+            status={post.status}
+            workerUserId={post.worker_user_id}
+            workerUserName={post.worker_name}
+            reviewerUserId={post.reviewer_user_id}
+            reviewerUserName={post.reviewer_name}
+            currentUserId={currentUserId}
+          />
+        </div>
         <p className="mt-2 text-[11px] text-slate-400">{linkCount} published links</p>
       </button>
       <div className="absolute right-2 top-2">
@@ -363,6 +401,7 @@ function SocialStatusColumn({
   onOpenPost,
   onDeletePost,
   isDeletingPost,
+  currentUserId,
 }: {
   status: SocialPostStatus;
   posts: SocialPostWithRelations[];
@@ -370,6 +409,7 @@ function SocialStatusColumn({
   onOpenPost: (postId: string) => void;
   onDeletePost: (postId: string) => void;
   isDeletingPost: boolean;
+  currentUserId?: string;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `${STATUS_DROP_ZONE_PREFIX}${status}`,
@@ -406,6 +446,7 @@ function SocialStatusColumn({
               }}
               onDelete={onDeletePost}
               isDeleting={isDeletingPost}
+              currentUserId={currentUserId}
             />
           ))
         )}
@@ -450,7 +491,12 @@ function SocialPostsPageContent() {
   const [newProduct, setNewProduct] = useState<SocialPostProduct>("general_company");
   const [newType, setNewType] = useState<SocialPostType>("image");
   const [newScheduledDate, setNewScheduledDate] = useState("");
+  const [newWorkerUserId, setNewWorkerUserId] = useState<string | null>(null);
+  const [newReviewerUserId, setNewReviewerUserId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<
+    Array<{ id: string; full_name: string; email: string }>
+  >([]);
 
   const [panelForm, setPanelForm] = useState<SocialPostFormState | null>(null);
   const [panelLinksDraft, setPanelLinksDraft] = useState<Record<SocialPlatform, string>>({
@@ -479,46 +525,71 @@ function SocialPostsPageContent() {
     })
   );
 
-  const loadPosts = async () => {
-    const supabase = getSupabaseBrowserClient();
-    setIsLoading(true);
-    setError(null);
-
-    const [{ data: postsData, error: postsError }, { data: linksData, error: linksError }] =
-      await Promise.all([
-        supabase
-          .from("social_posts")
-          .select(
-            "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,created_by,created_at,updated_at,associated_blog_id,associated_blog:associated_blog_id(id,title,slug,site),creator:created_by(id,full_name,email)"
-          )
-          .order("updated_at", { ascending: false }),
-        supabase
-          .from("social_post_links")
-          .select("id,social_post_id,platform,url,created_by,created_at,updated_at")
-          .order("created_at", { ascending: true }),
-      ]);
-
-    if (postsError) {
-      setError(`Couldn't load posts. ${postsError.message}`);
-      setIsLoading(false);
-      return;
-    }
-    if (linksError) {
-      setError(`Couldn't load links. ${linksError.message}`);
-      setIsLoading(false);
-      return;
-    }
-
-    setPosts(normalizeSocialPostRows((postsData ?? []) as Array<Record<string, unknown>>));
-    setPostLinks(
-      normalizeSocialPostLinkRows((linksData ?? []) as Array<Record<string, unknown>>)
-    );
-    setIsLoading(false);
-  };
 
   useEffect(() => {
+    const loadPosts = async () => {
+      const supabase = getSupabaseBrowserClient();
+      setIsLoading(true);
+      setError(null);
+
+      const [{ data: postsData, error: postsError }, { data: linksData, error: linksError }] =
+        await Promise.all([
+          supabase
+            .from("social_posts")
+            .select(
+              `id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,created_by,worker_user_id,reviewer_user_id,created_at,updated_at,associated_blog_id,
+              associated_blog:associated_blog_id(id,title,slug,site),
+              creator:created_by(id,full_name,email),
+              worker:worker_user_id(id,full_name,email),
+              reviewer:reviewer_user_id(id,full_name,email)`
+            )
+            .order("updated_at", { ascending: false }),
+          supabase
+            .from("social_post_links")
+            .select("id,social_post_id,platform,url,created_by,created_at,updated_at")
+            .order("created_at", { ascending: true }),
+        ]);
+
+      if (postsError) {
+        setError(`Couldn't load posts. ${postsError.message}`);
+        setIsLoading(false);
+        return;
+      }
+      if (linksError) {
+        setError(`Couldn't load links. ${linksError.message}`);
+        setIsLoading(false);
+        return;
+      }
+
+      setPosts(normalizeSocialPostRows((postsData ?? []) as Array<Record<string, unknown>>));
+      setPostLinks(
+        normalizeSocialPostLinkRows((linksData ?? []) as Array<Record<string, unknown>>)
+      );
+      setIsLoading(false);
+    };
+
+    const loadAvailableUsers = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data, error: usersError } = await supabase
+        .from("profiles")
+        .select("id,full_name,email")
+        .order("full_name", { ascending: true });
+      if (usersError) {
+        showError(`Couldn't load users. ${usersError.message}`);
+        return;
+      }
+      setAvailableUsers(
+        (data ?? []).map((row) => ({
+          id: String(row.id ?? ""),
+          full_name: String(row.full_name ?? ""),
+          email: String(row.email ?? ""),
+        }))
+      );
+    };
+
     void loadPosts();
-  }, []);
+    void loadAvailableUsers();
+  }, [showError]);
 
   useEffect(() => {
     if (!error) {
@@ -912,6 +983,17 @@ function SocialPostsPageContent() {
       return;
     }
 
+    const workerUserId = isAdmin ? newWorkerUserId : user.id;
+    const reviewerUserId = newReviewerUserId;
+    if (!workerUserId) {
+      setError("Assigned to is required.");
+      return;
+    }
+    if (!reviewerUserId) {
+      setError("Reviewer is required.");
+      return;
+    }
+
     setIsCreating(true);
     setError(null);
 
@@ -926,9 +1008,11 @@ function SocialPostsPageContent() {
         status: "draft",
         platforms: [],
         created_by: user.id,
+        worker_user_id: workerUserId,
+        reviewer_user_id: reviewerUserId,
       })
       .select(
-        "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,created_by,created_at,updated_at,associated_blog_id,associated_blog:associated_blog_id(id,title,slug,site),creator:created_by(id,full_name,email)"
+        "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,created_by,worker_user_id,reviewer_user_id,created_at,updated_at,associated_blog_id,associated_blog:associated_blog_id(id,title,slug,site),creator:created_by(id,full_name,email),worker:worker_user_id(id,full_name,email),reviewer:reviewer_user_id(id,full_name,email)"
       )
       .single();
 
@@ -949,6 +1033,8 @@ function SocialPostsPageContent() {
     setNewProduct("general_company");
     setNewType("image");
     setNewScheduledDate("");
+    setNewWorkerUserId(isAdmin ? null : user.id);
+    setNewReviewerUserId(null);
     setIsCreateModalOpen(false);
     showSuccess("Social post created");
     setIsCreating(false);
@@ -1533,9 +1619,18 @@ function SocialPostsPageContent() {
       {
         id: "status",
         label: "Status",
-        align: "center",
+        align: "left",
         sortable: true,
-        render: (post) => <SocialPostStatusBadge status={post.status} />,
+        render: (post) => (
+          <SocialPostStatusInfo
+            status={post.status}
+            workerUserId={post.worker_user_id}
+            workerUserName={post.worker_name}
+            reviewerUserId={post.reviewer_user_id}
+            reviewerUserName={post.reviewer_name}
+            currentUserId={user?.id}
+          />
+        ),
       },
       {
         id: "created",
@@ -1728,6 +1823,7 @@ function SocialPostsPageContent() {
                     onOpenPost={openPostPanel}
                     onDeletePost={(postId) => void handleDeletePost(postId)}
                     isDeletingPost={isDeletingPost}
+                    currentUserId={user?.id}
                   />
                 ))}
               </section>
@@ -2473,6 +2569,11 @@ function SocialPostsPageContent() {
               onClick={() => {
                 if (!isCreating) {
                   setNewScheduledDate("");
+                  setNewWorkerUserId(isAdmin ? null : user?.id ?? null);
+                  setNewReviewerUserId(null);
+                  setNewTitle("");
+                  setNewProduct("general_company");
+                  setNewType("image");
                   setIsCreateModalOpen(false);
                 }
               }}
@@ -2491,6 +2592,11 @@ function SocialPostsPageContent() {
                   onClick={() => {
                     if (!isCreating) {
                       setNewScheduledDate("");
+                      setNewWorkerUserId(isAdmin ? null : user?.id ?? null);
+                      setNewReviewerUserId(null);
+                      setNewTitle("");
+                      setNewProduct("general_company");
+                      setNewType("image");
                       setIsCreateModalOpen(false);
                     }
                   }}
@@ -2547,6 +2653,51 @@ function SocialPostsPageContent() {
                     </select>
                   </label>
                 </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {isAdmin ? (
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">Assigned to</span>
+                      <select
+                        value={newWorkerUserId ?? ""}
+                        onChange={(event) => {
+                          setNewWorkerUserId(event.target.value || null);
+                        }}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      >
+                        <option value="">— Select person —</option>
+                        {availableUsers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.full_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <div>
+                      <span className="mb-1 block text-sm font-medium text-slate-700">Assigned to</span>
+                      <div className="rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                        You
+                      </div>
+                    </div>
+                  )}
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-slate-700">Reviewer</span>
+                    <select
+                      value={newReviewerUserId ?? ""}
+                      onChange={(event) => {
+                        setNewReviewerUserId(event.target.value || null);
+                      }}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="">— Select reviewer —</option>
+                      {availableUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="submit"
@@ -2561,6 +2712,11 @@ function SocialPostsPageContent() {
                     onClick={() => {
                       if (!isCreating) {
                         setNewScheduledDate("");
+                        setNewWorkerUserId(isAdmin ? null : user?.id ?? null);
+                        setNewReviewerUserId(null);
+                        setNewTitle("");
+                        setNewProduct("general_company");
+                        setNewType("image");
                         setIsCreateModalOpen(false);
                       }
                     }}

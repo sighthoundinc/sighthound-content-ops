@@ -42,33 +42,9 @@ export const POST = withApiContract(async function POST(
     return NextResponse.json({ error: reopenError.message }, { status: 400 });
   }
   if (reopenedPost) {
-    const reopenedRecord = reopenedPost as {
-      id: string;
-      title: string;
-      admin_owner_id: string | null;
-    };
-    let targetEmail: string | null = null;
-    if (reopenedRecord.admin_owner_id) {
-      const { data: targetProfile } = await auth.context.adminClient
-        .from("profiles")
-        .select("email")
-        .eq("id", reopenedRecord.admin_owner_id)
-        .maybeSingle();
-      targetEmail = targetProfile?.email ?? null;
-    }
-    await auth.context.adminClient.functions
-      .invoke("slack-notify", {
-        body: {
-          eventType: "social_creative_approved",
-          socialPostId: reopenedRecord.id,
-          title: reopenedRecord.title,
-          site: "social",
-          actorName: "Admin",
-          targetEmail,
-          appUrl: process.env.NEXT_PUBLIC_APP_URL,
-        },
-      })
-      .catch(() => null);
+    // Note: Skipping Slack notification on reopen for brief edits
+    // Activity history is still recorded; Slack notification is low-value noise
+    // If needed in future, emit dedicated "post_reopened_for_editing" event instead
   }
 
   return NextResponse.json({

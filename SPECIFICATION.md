@@ -55,6 +55,7 @@ Control plane:
 Authorization source of truth:
 - content mutations are DB-authorized via policies/functions/triggers (UI is assistive, not authoritative)
 - administrative endpoints are authorized in the application layer before `service_role` execution
+- tables in PostgREST-exposed schemas (for example `public`) must keep RLS enabled; maintenance flows run through authorized server APIs instead of disabling RLS
 
 ## 4) Workflow model
 Stages:
@@ -118,6 +119,30 @@ Key behavior:
   - unauthenticated requests to protected routes → /login (via middleware)
   - successful sign-in → workspace home (`/`)
   - app header brand click → workspace home (`/`)
+
+### Connected Services management (`/settings`)
+Allows logged-in users to manage provider (Google/Slack) account linking.
+
+Key behavior:
+- **OAuth connect flow**:
+  - User clicks `Connect` for Google or Slack in Settings
+  - App directly initiates `signInWithOAuth()` without leaving Settings
+  - Provider login opens in browser (Google Workspace or Slack workspace required)
+  - After auth completes, user is redirected back to `/settings?reconnect=provider`
+  - Post-OAuth handler detects the reconnect parameter and marks provider as connected via API
+  - UI updates immediately with `Connected` badge and `Disconnect` button
+- **OAuth disconnect flow**:
+  - User clicks `Disconnect` for a provider
+  - App sends PATCH request to mark provider as disconnected
+  - UI updates with `Connect` button restored
+- **Status persistence**:
+  - Integration state (google_connected, slack_connected) is fetched on component mount
+  - State is cached in local component state during user's Settings session
+  - Note: This is independent of sign-in method; connecting a provider does not affect how user logs in next time
+- **Connection independence**:
+  - Logging in with Google does not automatically mark Google as "connected" in Settings
+  - Users control which providers show as connected via explicit Settings actions
+  - This respects user privacy and avoids forcing provider linkage when they may not want notifications/integrations from that provider
 ### Dashboard (`/dashboard`)
 Primary operations page.
 
@@ -568,6 +593,7 @@ The project is migration-driven (`supabase/migrations`) with compatibility layer
 - comments actor compatibility (`user_id` / `created_by`)
 - import collision prevention via deterministic hash
 - permission matrix introduction + expansion migrations
+- public-table RLS hardening + import-log policies (`20260325111500_enable_public_table_rls.sql`)
 ## 14) Non-functional requirements
 - fast workflow execution
 - deterministic DB-level invariants for workflow integrity
@@ -607,6 +633,7 @@ A feature is considered complete only if all of the following are satisfied:
 ### Permissions
 - Supabase RLS policies implemented and verified
 - access rules enforced independently of UI
+- no PostgREST-exposed `public` table is left with RLS disabled
 ## 17) Blog import name resolution (Step 1.75) (MUST)
 This step is mandatory for blog import and exists to prevent duplicate profile creation.
 ### Functional behavior

@@ -64,6 +64,8 @@ type SocialPostEditorRecord = {
   associated_blog_id: string | null;
   associated_blog: BlogLookupResult | null;
   updated_at: string;
+  worker_user_id: string | null;
+  reviewer_user_id: string | null;
 };
 
 type EditorFormState = {
@@ -199,6 +201,8 @@ function normalizePostRow(row: Record<string, unknown>): SocialPostEditorRecord 
     associated_blog_id: typeof row.associated_blog_id === "string" ? row.associated_blog_id : null,
     associated_blog: associatedBlog,
     updated_at: String(row.updated_at ?? ""),
+    worker_user_id: typeof row.worker_user_id === "string" ? row.worker_user_id : null,
+    reviewer_user_id: typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null,
   };
 }
 
@@ -243,6 +247,13 @@ export default function SocialPostEditorPage() {
   );
   const [isLiveLinksSaving, setIsLiveLinksSaving] = useState(false);
   const isExecutionLocked = post ? isExecutionStage(post.status) : false;
+  const [availableUsers, setAvailableUsers] = useState<
+    Array<{ id: string; full_name: string; email: string }>
+  >([]);
+  const [editingAssignment, setEditingAssignment] = useState(false);
+  const [editWorkerUserId, setEditWorkerUserId] = useState<string | null>(null);
+  const [editReviewerUserId, setEditReviewerUserId] = useState<string | null>(null);
+  const [isAssignmentSaving, setIsAssignmentSaving] = useState(false);
 
   const loadPost = useCallback(async () => {
     if (!postId) {
@@ -256,7 +267,7 @@ export default function SocialPostEditorPage() {
         supabase
           .from("social_posts")
           .select(
-            "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,associated_blog_id,updated_at,associated_blog:associated_blog_id(id,title,slug,site,live_url)"
+            "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,associated_blog_id,updated_at,worker_user_id,reviewer_user_id,associated_blog:associated_blog_id(id,title,slug,site,live_url)"
           )
           .eq("id", postId)
           .single(),
@@ -292,6 +303,26 @@ export default function SocialPostEditorPage() {
   useEffect(() => {
     void loadPost();
   }, [loadPost]);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data, error: usersError } = await supabase
+        .from("profiles")
+        .select("id,full_name,email")
+        .order("full_name", { ascending: true });
+      if (!usersError && data) {
+        setAvailableUsers(
+          data.map((row) => ({
+            id: String(row.id ?? ""),
+            full_name: String(row.full_name ?? ""),
+            email: String(row.email ?? ""),
+          }))
+        );
+      }
+    };
+    void loadUsers();
+  }, []);
 
   useEffect(() => {
     const query = blogSearchQuery.trim();
@@ -535,8 +566,38 @@ export default function SocialPostEditorPage() {
     [form, post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess, canCurrentUserTransition]
   );
 
+  const saveAssignments = useCallback(async () => {
+    if (!post || !editWorkerUserId || !editReviewerUserId) {
+      showError("Assigned to and Reviewer are required.");
+      return;
+    }
+    setIsAssignmentSaving(true);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error: saveError } = await supabase
+      .from("social_posts")
+      .update({
+        worker_user_id: editWorkerUserId,
+        reviewer_user_id: editReviewerUserId,
+      })
+      .eq("id", post.id)
+      .select(
+        "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,associated_blog_id,updated_at,worker_user_id,reviewer_user_id,associated_blog:associated_blog_id(id,title,slug,site,live_url)"
+      )
+      .single();
+    if (saveError) {
+      showError(`Couldn't save assignments. ${saveError.message}`);
+      setIsAssignmentSaving(false);
+      return;
+    }
+    const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
+    setPost(normalized);
+    setEditingAssignment(false);
+    showSuccess("Assignments saved");
+    setIsAssignmentSaving(false);
+  }, [post, editWorkerUserId, editReviewerUserId, showError, showSuccess]);
+
   useEffect(() => {
-    if (!form || !post || isExecutionStage(post.status)) {
+    if (!form || !post || isExecutionStage(post.status) || isSaving) {
       return;
     }
     const timeout = window.setTimeout(() => {
@@ -545,7 +606,7 @@ export default function SocialPostEditorPage() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [form, post, persistBrief]);
+  }, [form, post, persistBrief, isSaving]);
 
   const captionLength = form?.caption.length ?? 0;
   const isOverLimit = captionLength > LINKEDIN_CAPTION_LIMIT;
@@ -1150,6 +1211,101 @@ export default function SocialPostEditorPage() {
                     </div>
                   </div>
                 </fieldset>
+              </section>
+
+              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">Assignment</h3>
+                    <p className="text-sm text-slate-600">Manage who is working on and reviewing this post.</p>
+                  </div>
+                  {isAdmin && !editingAssignment ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setEditWorkerUserId(post?.worker_user_id ?? null);
+                        setEditReviewerUserId(post?.reviewer_user_id ?? null);
+                        setEditingAssignment(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  ) : null}
+                </div>
+                {editingAssignment && isAdmin ? (
+                  <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50 p-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">Assigned to</span>
+                        <select
+                          value={editWorkerUserId ?? ""}
+                          onChange={(event) => {
+                            setEditWorkerUserId(event.target.value || null);
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          <option value="">— Select person —</option>
+                          {availableUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.full_name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">Reviewer</span>
+                        <select
+                          value={editReviewerUserId ?? ""}
+                          onChange={(event) => {
+                            setEditReviewerUserId(event.target.value || null);
+                          }}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        >
+                          <option value="">— Select reviewer —</option>
+                          {availableUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.full_name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        disabled={isAssignmentSaving}
+                        onClick={() => void saveAssignments()}
+                      >
+                        {isAssignmentSaving ? "Saving..." : "Save"}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={isAssignmentSaving}
+                        onClick={() => setEditingAssignment(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Assigned to</p>
+                      <p className="mt-1 text-sm text-slate-900">
+                        {availableUsers.find((u) => u.id === post?.worker_user_id)?.full_name || "Not assigned"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Reviewer</p>
+                      <p className="mt-1 text-sm text-slate-900">
+                        {availableUsers.find((u) => u.id === post?.reviewer_user_id)?.full_name || "Not assigned"}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </section>
 
               <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">

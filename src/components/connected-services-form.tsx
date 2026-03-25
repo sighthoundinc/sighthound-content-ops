@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 import { AppIcon } from "@/lib/icons";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   getApiErrorMessage,
   isApiFailure,
@@ -45,6 +46,7 @@ export function ConnectedServicesForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [services, setServices] = useState<ConnectedServicesState | null>(null);
   const [disconnectingService, setDisconnectingService] = useState<string | null>(null);
+  const [connectingService, setConnectingService] = useState<string | null>(null);
 
   // Helper function to fetch services
   const fetchServices = useCallback(async (token: string | undefined) => {
@@ -90,6 +92,40 @@ export function ConnectedServicesForm() {
   useEffect(() => {
     void fetchServices(session?.access_token);
   }, [user?.id, session?.access_token, fetchServices]);
+
+  const handleConnect = async (serviceKey: string) => {
+    if (!session?.access_token) return;
+
+    try {
+      setConnectingService(serviceKey);
+      const supabase = getSupabaseBrowserClient();
+      const appUrl =
+        process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+        window.location.origin;
+
+      const provider = serviceKey === "google" ? "google" : "slack_oidc";
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: provider as "google" | "slack_oidc",
+        options: {
+          redirectTo: `${appUrl}/settings?reconnect=${serviceKey}`,
+        },
+      });
+
+      if (oauthError) {
+        showError(
+          getApiErrorMessage(
+            { error: oauthError.message },
+            `Failed to connect ${serviceKey === "google" ? "Google" : "Slack"}.`
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error initiating OAuth connect:", error);
+      showError("Failed to connect. Please try again.");
+    } finally {
+      setConnectingService(null);
+    }
+  };
 
   const handleDisconnect = async (serviceKey: string) => {
     if (!user?.id || !services || !session?.access_token) return;
@@ -226,12 +262,14 @@ export function ConnectedServicesForm() {
                   {disconnectingService === service.key ? "Disconnecting…" : "Disconnect"}
                 </button>
               ) : (
-                <a
-                  href={`/login?reconnect=${service.key}`}
-                  className="ml-4 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-700"
+                <button
+                  type="button"
+                  disabled={connectingService === service.key}
+                  className="ml-4 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => handleConnect(service.key)}
                 >
-                  Connect
-                </a>
+                  {connectingService === service.key ? "Connecting…" : "Connect"}
+                </button>
               )}
             </div>
           );

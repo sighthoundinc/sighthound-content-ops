@@ -254,12 +254,26 @@ export interface SocialPostRecord {
   scheduled_date: string | null;
   status: SocialPostStatus;
   created_by: string;
-  editor_user_id: string | null;
-  admin_owner_id: string | null;
+  worker_user_id: string | null;
+  reviewer_user_id: string | null;
+  // Deprecated fields (kept for backward compatibility)
+  editor_user_id?: string | null;
+  admin_owner_id?: string | null;
   last_live_link_reminder_at: string | null;
   associated_blog_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Extended SocialPost with computed ownership fields and related profiles.
+ * Used in UI surfaces to display current owner and action context.
+ */
+export interface SocialPostWithRelations extends SocialPostRecord {
+  assigned_to_user_id: string | null; // Derived: current owner based on status
+  worker_name?: string | null;
+  reviewer_name?: string | null;
+  creator_name?: string | null;
 }
 
 export interface SocialPostLinkRecord {

@@ -180,6 +180,7 @@ npm run check
 |- `20260320220000_create_access_logs.sql` (access_logs table with RLS)
 |- `20260320223000_update_access_logs_rls.sql` (RLS policy updates for user self-access)
 |- `20260321133000_social_workflow_authority_and_event_normalization.sql` (canonical social transition authority, event normalization, reminder tracking)
+|- `20260325111500_enable_public_table_rls.sql` (re-enables RLS on audit/comment/import log tables and adds `blog_import_logs` policies)
 
 ## 5.5) User preferences
 Per-user preferences are stored in `profiles`:
@@ -284,7 +285,7 @@ Operational notes:
 - endpoint is hard-gated to admin role
 - destructive operation; no restore path
 - intended for test-data cleanup and environment hygiene
-- RLS is disabled on activity history maintenance tables to allow service-role cleanup (`20260320195000` and `20260320195100`)
+- RLS remains enabled on maintenance-related public tables; cleanup endpoints still work because server-side admin clients use `service_role` (which bypasses RLS)
 - delete-all cleanup paths use `.gt("id", "00000000-0000-0000-0000-000000000000")` to safely match all UUID rows
 
 ## 9) Admin password reset (test-only) operations
@@ -319,12 +320,12 @@ Return flow:
 
 **Environment variables**:
 - `SLACK_BOT_TOKEN` (preferred method) — Bot user OAuth token
-- `SLACK_MARKETING_CHANNEL` (optional) — Default channel for notifications (default: `#marketing`)
+- `SLACK_MARKETING_CHANNEL` (optional) — Default channel for notifications (default: `#content-ops-alerts`)
 - `SLACK_WEBHOOK_URL` (fallback method) — Incoming Webhook URL
 
 **How it works**:
 1. If `SLACK_BOT_TOKEN` is configured:
-   - Posts to configured channel (`SLACK_MARKETING_CHANNEL` or `#marketing`)
+   - Posts to configured channel (`SLACK_MARKETING_CHANNEL` or `#content-ops-alerts`)
    - Sends DMs to users if `targetEmail` matches Slack user email
    - Uses `chat.postMessage` API
 2. If only `SLACK_WEBHOOK_URL` is configured:
@@ -370,11 +371,14 @@ emitEvent() call
 - `social_post_status_changed` — Social post status transitions
 - `social_post_assignment_changed` — Editor/admin reassignments
 
-**Slack event types**:
-- `writer_assigned`, `writer_completed`, `ready_to_publish`, `published`
+**Slack event types** (active):
+- `writer_assigned`, `ready_to_publish`, `published`
 - `social_submitted_for_review`, `social_changes_requested`
-- `social_creative_approved`, `social_ready_to_publish`
-- `social_awaiting_live_link`, `social_published`, `social_live_link_reminder`
+- `social_ready_to_publish`, `social_awaiting_live_link`, `social_published`, `social_live_link_reminder`
+
+**Removed events** (no longer sent):
+- `writer_completed` — redundant signal; `ready_to_publish` carries actionable next step
+- `social_creative_approved` — low-urgency internal state with no required next action
 
 ### Notification preferences enforcement
 
@@ -586,6 +590,12 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 ### “Enum/status mismatch during writes”
 1. verify latest status compatibility migrations are applied
 2. verify local/remote migration alignment
+### “Supabase reports `rls_disabled_in_public`”
+1. confirm latest migrations are applied (`supabase ... db push --yes`)
+2. verify `20260325111500_enable_public_table_rls.sql` has run in the target project
+3. run SQL check:
+   - `select schemaname, tablename, rowsecurity from pg_tables where schemaname = 'public' and rowsecurity = false;`
+4. if rows remain, enable RLS and add/verify policies before re-checking Supabase security advisor
 
 ### General runtime issue
 1. run `npm run check`

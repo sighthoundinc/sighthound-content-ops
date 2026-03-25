@@ -176,6 +176,8 @@ function SettingsPageContent() {
   const [editTargetUserId, setEditTargetUserId] = useState<string | null>(null);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [isSavingEditedUser, setIsSavingEditedUser] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [isReassigningAssignments, setIsReassigningAssignments] = useState(false);
   const [resetPasswordInput, setResetPasswordInput] = useState("");
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -188,17 +190,6 @@ function SettingsPageContent() {
     null
   );
 
-  useEffect(() => {
-    if (!canReassignWriterAssignments) {
-      setIncludeWriterAssignments(false);
-    }
-  }, [canReassignWriterAssignments]);
-
-  useEffect(() => {
-    if (!canReassignPublisherAssignments) {
-      setIncludePublisherAssignments(false);
-    }
-  }, [canReassignPublisherAssignments]);
 
   useEffect(() => {
     if (activityHistoryDeleteScope === "all") {
@@ -499,13 +490,17 @@ function SettingsPageContent() {
 
   const createUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!session?.access_token || !canManageUsers || !canManageRoles) {
+    if (!session?.access_token || !canManageUsers || !canManageRoles || isCreatingUser) {
+      if (isCreatingUser) {
+        return; // Prevent concurrent calls
+      }
       setError("User management permission is required.");
       return;
     }
 
     setError(null);
     setSuccess(null);
+    setIsCreatingUser(true);
 
     const response = await fetch("/api/admin/users", {
       method: "POST",
@@ -525,6 +520,7 @@ function SettingsPageContent() {
     const payload = await parseApiResponseJson<Record<string, unknown>>(response);
     if (isApiFailure(response, payload)) {
       setError(getApiErrorMessage(payload, "Couldn't create user. Try again."));
+      setIsCreatingUser(false);
       return;
     }
 
@@ -533,6 +529,7 @@ function SettingsPageContent() {
     setNewPassword("");
     setNewFullName("");
     setNewRole("writer");
+    setIsCreatingUser(false);
     await loadUsers();
   };
   const deleteUsers = async () => {
@@ -672,7 +669,10 @@ function SettingsPageContent() {
 
   const reassignEverythingFromUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!session?.access_token || !canReassignAssignments) {
+    if (!session?.access_token || !canReassignAssignments || isReassigningAssignments) {
+      if (isReassigningAssignments) {
+        return; // Prevent concurrent calls
+      }
       setError("Assignment permission is required.");
       return;
     }
@@ -699,6 +699,7 @@ function SettingsPageContent() {
 
     setError(null);
     setSuccess(null);
+    setIsReassigningAssignments(true);
 
     const response = await fetch("/api/admin/reassign-assignments", {
       method: "POST",
@@ -721,6 +722,7 @@ function SettingsPageContent() {
     }>(response);
     if (isApiFailure(response, payload)) {
       setError(getApiErrorMessage(payload, "Couldn't reassign. Try again."));
+      setIsReassigningAssignments(false);
       return;
     }
 
@@ -729,6 +731,7 @@ function SettingsPageContent() {
         (payload.totalTransferred ?? 0) === 1 ? "" : "s"
       }`
     );
+    setIsReassigningAssignments(false);
   };
 
   const deleteActivityHistory = async () => {
@@ -1546,9 +1549,10 @@ function SettingsPageContent() {
                       <div className="md:col-span-4">
                         <button
                           type="submit"
-                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                          disabled={isCreatingUser}
+                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Create User
+                          {isCreatingUser ? "Creating..." : "Create User"}
                         </button>
                       </div>
                       </form>
@@ -1633,9 +1637,10 @@ function SettingsPageContent() {
                       <div className="md:col-span-2">
                         <button
                           type="submit"
-                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                          disabled={isReassigningAssignments}
+                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Reassign Assignments
+                          {isReassigningAssignments ? "Reassigning..." : "Reassign Assignments"}
                         </button>
                       </div>
                       </form>

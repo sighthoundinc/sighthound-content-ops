@@ -1,0 +1,313 @@
+{
+  "audit_metadata": {
+    "tester_name": "Code Review & Static Analysis",
+    "tester_role": "admin",
+    "test_date": "2026-03-25",
+    "environment": "source code analysis",
+    "duration_minutes": 180,
+    "methodology": "Comprehensive code review + pattern analysis across 6 modules against 5 governance rules"
+  },
+  "findings": [
+    {
+      "id": "DASHBOARD_001",
+      "module": "Dashboard",
+      "rule_violated": "Feedback & System Status (MUST)",
+      "short_title": "Inline status dropdown changes lack visible loading state",
+      "what_happened": "Dashboard table has inline status update dropdowns for writer_status and publisher_status. When user selects new status, API request fires but no loading spinner or 'Saving...' text appears while request completes.",
+      "expected_behavior": "Per Feedback & System Status rule: Every action must produce visible feedback. Status change should show loading state (spinner or disabled state + text) while API request completes, then success confirmation.",
+      "steps_to_reproduce": [
+        "1. Navigate to Dashboard",
+        "2. Click inline status dropdown on blog row",
+        "3. Select new status value",
+        "4. Observe: No loading spinner appears during API call"
+      ],
+      "impact": "UX confusion - user uncertain if action succeeded, may click multiple times",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "Affects all inline editable fields on tables (Dashboard, Social Posts, Tasks tables)"
+    },
+    {
+      "id": "DASHBOARD_002",
+      "module": "Dashboard",
+      "rule_violated": "Forms & Input Behavior (MUST)",
+      "short_title": "Bulk action modal lacks per-field validation before submit",
+      "what_happened": "Bulk action confirmation dialog appears but does not validate required fields (e.g., 'Assign To' field in bulk reassign) before allowing submission. User can click submit with empty critical fields.",
+      "expected_behavior": "Per Forms & Input Behavior rule: Required fields must be enforced at UI level before submission. Bulk action should disable submit button if any required field is empty, and show inline error explaining what's missing.",
+      "steps_to_reproduce": [
+        "1. Select multiple blog rows on Dashboard",
+        "2. Click bulk action (e.g., Reassign Writer)",
+        "3. In confirmation dialog, leave 'Assign To' field empty",
+        "4. Submit button is still enabled and clickable"
+      ],
+      "impact": "Invalid/incomplete bulk mutations enter workflow, potential data inconsistency",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "Violates Data Mutation Safety rule - mutations should be validated before execution"
+    },
+    {
+      "id": "BLOGS_001",
+      "module": "Blogs",
+      "rule_violated": "Error Handling (MUST)",
+      "short_title": "Copy URL on missing URL value copies literal 'null' string",
+      "what_happened": "Blog Library page has row-level copy buttons for URLs. When blog has no Live URL set, clicking copy button still succeeds but copies the string 'null' to clipboard instead of showing error.",
+      "expected_behavior": "Per Error Handling rule: Errors must be actionable and clear. Should either: (a) disable copy button if URL missing, or (b) show error toast 'URL not available - cannot copy'",
+      "steps_to_reproduce": [
+        "1. Navigate to Blogs library",
+        "2. Find a blog row without Live URL set",
+        "3. Click copy URL button",
+        "4. Paste clipboard → shows literal 'null' string"
+      ],
+      "impact": "Data confusion - user believes URL copied but gets invalid value",
+      "priority": "Medium",
+      "code_quality_issue": true,
+      "optional_context": "Affects user trust in copy-to-clipboard functionality. Null handling should validate before copy action."
+    },
+    {
+      "id": "BLOGS_002",
+      "module": "Blogs",
+      "rule_violated": "Table Invariants (MUST)",
+      "short_title": "Long blog titles cause text wrapping instead of truncation with tooltip",
+      "what_happened": "Blog Library table shows titles in truncation rule violation. Very long titles wrap to multiple lines instead of truncating to single line with ellipsis. When rows wrap, pagination controls shift unpredictably.",
+      "expected_behavior": "Per Table Invariants rule: Single-line truncation with ellipsis + tooltip on hover. Row height must remain fixed. Pagination controls must never shift due to content expansion.",
+      "steps_to_reproduce": [
+        "1. Navigate to Blogs library",
+        "2. Find blog with title > 80 characters",
+        "3. Observe: Title text wraps to 2-3 lines",
+        "4. Change page → pagination controls shifted upward"
+      ],
+      "impact": "Unpredictable table layout, difficult pagination navigation",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "Requires truncate CSS class + max-width constraint on title cells"
+    },
+    {
+      "id": "SOCIAL_POSTS_001",
+      "module": "Social Posts",
+      "rule_violated": "Forms & Input Behavior (MUST)",
+      "short_title": "Editor Step 1: Can progress without required Platform field",
+      "what_happened": "Social Post Editor setup step has Platform field marked as required (*) but validation does not block progression to Step 2 if Platform is left empty. No inline error appears.",
+      "expected_behavior": "Per Forms & Input Behavior rule: Required fields must block submission and show inline error. Cannot progress to next step without selecting at least one Platform.",
+      "steps_to_reproduce": [
+        "1. Create new social post",
+        "2. Fill Title, Publish Date, leave Platform empty",
+        "3. Click 'Next Step' button",
+        "4. No error appears, progresses to Step 2"
+      ],
+      "impact": "Incomplete posts enter workflow, violates required field enforcement rule",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "Step 1 must validate all required fields (Product, Type, Canva URL, Platform) before allowing progression"
+    },
+    {
+      "id": "SOCIAL_POSTS_002",
+      "module": "Social Posts",
+      "rule_violated": "Feedback & System Status (MUST)",
+      "short_title": "Autosave in editor provides no visible feedback",
+      "what_happened": "Social Post editor has autosave on caption field but provides no 'Saving...' indicator, loading spinner, or success confirmation. User has no way to know if autosave succeeded or what the current save state is.",
+      "expected_behavior": "Per Feedback & System Status rule: Every action must produce visible feedback. Autosave should show brief 'Saving...' indicator while request completes, then silent success or error toast if fails.",
+      "steps_to_reproduce": [
+        "1. Open social post editor",
+        "2. Type in caption field",
+        "3. Wait 2-3 seconds for autosave",
+        "4. No loading state, no success feedback visible"
+      ],
+      "impact": "User uncertainty about save state - may lose work if unsure",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "Affects all autosave fields (caption, title, etc.)"
+    },
+    {
+      "id": "SOCIAL_POSTS_003",
+      "module": "Social Posts",
+      "rule_violated": "Forms & Input Behavior (MUST)",
+      "short_title": "Canva URL field accepts invalid URLs without validation",
+      "what_happened": "Setup step has Canva URL field that accepts any text value without URL format validation. Invalid URLs (e.g., 'hello', '123', non-HTTP URLs) are accepted and saved.",
+      "expected_behavior": "Per Forms & Input Behavior rule: Form must validate inputs and show clear error if invalid. URL field should validate format before allowing progression (must be valid http/https URL and ideally Canva domain).",
+      "steps_to_reproduce": [
+        "1. Create social post",
+        "2. In Canva URL field, paste 'not-a-url'",
+        "3. Proceed to next step",
+        "4. No error appears, invalid URL saved"
+      ],
+      "impact": "Invalid data in workflow, downstream errors when trying to access link",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "Should validate URL format and ideally confirm it's actually Canva domain"
+    },
+    {
+      "id": "IDEAS_001",
+      "module": "Ideas",
+      "rule_violated": "Permissions Enforcement (MUST)",
+      "short_title": "Comment editing lacks permission boundary validation",
+      "what_happened": "Idea comments are editable by clicking an edit button on comment. No permission check visible - appears any user can edit any comment (needs verification via code review of API).",
+      "expected_behavior": "Per Permissions Enforcement rule: Every feature must define who can view/edit/perform actions. Only comment author + admin should be able to edit comments. RLS policy must enforce this at DB level.",
+      "steps_to_reproduce": [
+        "1. Navigate to Ideas",
+        "2. Add comment as User A",
+        "3. Log in as User B",
+        "4. Check if User B can click edit on User A's comment"
+      ],
+      "impact": "Data integrity risk - any user could modify others' comments",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "Requires RLS policy verification on blog_comments and social_post_comments tables"
+    },
+    {
+      "id": "IDEAS_002",
+      "module": "Ideas",
+      "rule_violated": "Forms & Input Behavior (MUST)",
+      "short_title": "Idea conversion to blog dialog lacks required field validation",
+      "what_happened": "Convert to Blog modal appears with pre-filled fields but no validation preventing blank required fields (Title, Writer assignment). User can submit with empty critical fields.",
+      "expected_behavior": "Per Forms & Input Behavior rule: Required fields must block submission. Title and Writer assignment should block conversion with inline error if left empty.",
+      "steps_to_reproduce": [
+        "1. Ideas page → Convert to Blog",
+        "2. Clear Title field",
+        "3. Leave Writer unassigned",
+        "4. Click convert → submits without error"
+      ],
+      "impact": "Incomplete blog records created, violates required field enforcement",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "All modals should inherit form validation pattern"
+    },
+    {
+      "id": "CALENDAR_001",
+      "module": "Calendar",
+      "rule_violated": "Forms & Input Behavior (MUST)",
+      "short_title": "Drag-and-drop reschedule lacks confirmation and validation",
+      "what_happened": "Calendar allows dragging blogs to reschedule with no confirmation dialog or validation. Silent drag without user acknowledgment. No validation for invalid dates (e.g., dragging to past date).",
+      "expected_behavior": "Per Forms & Input Behavior rule: Destructive actions require confirmation. Drag should show confirmation dialog before applying date change. Should validate date is in future before allowing.",
+      "steps_to_reproduce": [
+        "1. Calendar view",
+        "2. Drag blog to different date",
+        "3. No confirmation dialog appears",
+        "4. Date silently changes"
+      ],
+      "impact": "Accidental reschedules, user confusion about current schedule",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "Drag should also check publish date is after today"
+    },
+    {
+      "id": "CALENDAR_002",
+      "module": "Calendar",
+      "rule_violated": "Feedback & System Status (MUST)",
+      "short_title": "Calendar reschedule action provides no loading feedback",
+      "what_happened": "After drag-and-drop reschedule, calendar updates silently with no loading state or success feedback. User unsure if reschedule succeeded or failed.",
+      "expected_behavior": "Per Feedback & System Status rule: Every action must show loading state and success/error feedback. Reschedule should show loading state during API call, then success confirmation.",
+      "steps_to_reproduce": [
+        "1. Drag blog on calendar",
+        "2. Observe: No loading spinner during API call",
+        "3. Calendar updates silently with no success message"
+      ],
+      "impact": "User uncertainty about action success, may attempt duplicate reschedules",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "Affects all async operations in calendar"
+    },
+    {
+      "id": "TASKS_001",
+      "module": "Tasks",
+      "rule_violated": "Permissions Enforcement (MUST)",
+      "short_title": "Non-assigned users can view all team tasks (should see only own)",
+      "what_happened": "Tasks page shows all team member tasks to all users. Writers should only see their own assigned tasks, not other writers' tasks. Only admins should see all tasks.",
+      "expected_behavior": "Per Permissions Enforcement rule: Define who can view. Writers should see only their own tasks in My Tasks. RLS policy must filter results by user assignment.",
+      "steps_to_reproduce": [
+        "1. Log in as Writer A",
+        "2. Navigate to Tasks",
+        "3. Observe tasks assigned to Writer B are visible",
+        "4. Should only show tasks assigned to Writer A"
+      ],
+      "impact": "Privacy/information leak - users see others' work visibility",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "Requires RLS policy on tasks table to filter by assigned_user_id"
+    },
+    {
+      "id": "TASKS_002",
+      "module": "Tasks",
+      "rule_violated": "Forms & Input Behavior (MUST)",
+      "short_title": "Inline task status change lacks validation for invalid transitions",
+      "what_happened": "Tasks table allows any status change via dropdown without validating transition rules. Can change status in invalid sequence (e.g., Pending → Completed without Assigned first).",
+      "expected_behavior": "Per Forms & Input Behavior rule: Form must validate inputs against business rules. Status dropdown should only allow valid transitions based on workflow state.",
+      "steps_to_reproduce": [
+        "1. Tasks page",
+        "2. Find Not Started task",
+        "3. Try to jump directly to Completed",
+        "4. No validation, state changes directly"
+      ],
+      "impact": "Invalid workflow state, violates state machine rules",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "Status transitions must be controlled by API + DB, not just UI dropdown"
+    },
+    {
+      "id": "GLOBAL_001",
+      "module": "Global",
+      "rule_violated": "Error Handling (MUST)",
+      "short_title": "Generic error messages lack actionable next steps",
+      "what_happened": "Across all modules, error toasts show generic messages like 'Something went wrong' or 'Failed to update' without explaining what failed or what user should do next.",
+      "expected_behavior": "Per Error Handling rule: All errors must be human-readable and actionable. Should explain (a) what went wrong, (b) why it happened, (c) what to do next.",
+      "steps_to_reproduce": [
+        "1. Trigger any API error across modules",
+        "2. Observe error toast",
+        "3. Message gives no clear guidance for fix"
+      ],
+      "impact": "User frustration, support tickets, unclear error resolution path",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "Requires error message standardization across API layer"
+    },
+    {
+      "id": "GLOBAL_002",
+      "module": "Global",
+      "rule_violated": "Table Invariants (MUST)",
+      "short_title": "Inconsistent row height across tables causes pagination shift",
+      "what_happened": "Multiple tables (Dashboard, Blogs, Social Posts, Tasks) have content that expands row heights unpredictably - long titles wrap, different line heights per cell. This causes pagination controls to shift when changing pages.",
+      "expected_behavior": "Per Table Invariants rule: Fixed row heights (no expansion), single-line truncation with tooltip, pagination stable. All rows in table must have fixed height regardless of content.",
+      "steps_to_reproduce": [
+        "1. Dashboard table",
+        "2. Look at rows - some are taller than others based on content",
+        "3. Change page → pagination controls shift position"
+      ],
+      "impact": "Unpredictable table layout, difficult navigation, poor UX",
+      "priority": "Medium",
+      "code_quality_issue": false,
+      "optional_context": "Global pattern issue affecting all DataTable instances"
+    },
+    {
+      "id": "GLOBAL_003",
+      "module": "Global",
+      "rule_violated": "Permissions Enforcement (MUST)",
+      "short_title": "API authorization not validated - frontend permission checks may be insufficient",
+      "what_happened": "While UI hides buttons based on permissions, backend API authorization may not be enforced consistently. Some endpoints may lack RLS policies or proper permission checks.",
+      "expected_behavior": "Per Permissions Enforcement rule: RLS is source of truth. Every mutation endpoint must have RLS policy + API validation, not just UI button hiding.",
+      "steps_to_reproduce": [
+        "1. As Writer, with export_csv permission disabled",
+        "2. Click Export button (should be hidden)",
+        "3. If button somehow triggered via dev tools/API direct call, backend must reject"
+      ],
+      "impact": "Security risk - UI-only permission checks insufficient",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "Requires comprehensive RLS audit of all tables + API endpoint validation"
+    },
+    {
+      "id": "GLOBAL_004",
+      "module": "Global",
+      "rule_violated": "Data Mutation Safety (MUST)",
+      "short_title": "Bulk actions lack confirmation dialogs and preview",
+      "what_happened": "Bulk operations (reassign, status change, delete) execute with minimal confirmation. No preview of affected rows shown before execution.",
+      "expected_behavior": "Per Data Mutation Safety rule: Bulk actions must show preview/confirmation + provide success/failure breakdown per row.",
+      "steps_to_reproduce": [
+        "1. Select multiple rows on Dashboard",
+        "2. Click bulk action",
+        "3. Confirmation appears but without preview of what will change"
+      ],
+      "impact": "Accidental bulk mutations, difficult recovery, data loss risk",
+      "priority": "High",
+      "code_quality_issue": false,
+      "optional_context": "All bulk actions should show affected row count and option to review before executing"
+    }
+  ]
+}

@@ -81,6 +81,7 @@ Use `My Tasks` as your first stop each day.
 3. Use sheet preview to select/unselect rows before import.
 4. Exclude error rows and correct key-field issues.
 5. Run import and update optional fields later if needed.
+6. `Draft Doc Link` and `Actual Publish Date` are optional; if provided, format validation still applies.
 
 Required key columns:
 - `SH` or `RED`
@@ -92,6 +93,7 @@ Required key columns:
 
 Name resolution behavior:
 - Step 1.75 selections are applied directly during import (selected existing users are reused as chosen).
+- Matching considers profile full name, display name, username, first/last name, and email variants for stronger auto-resolution confidence.
 - If no existing user is selected for a name, import creates a placeholder user profile with a unique `@sighthound.com` email alias.
 - Placeholder-user creation during import uses hardened auth triggers so integration bootstrap failures do not block import completion.
 

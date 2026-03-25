@@ -284,6 +284,8 @@ function CandidateButton({
     exact_full_name: "Exact Full Name",
     exact_display_name: "Exact Display Name",
     exact_username: "Exact Username",
+    exact_email: "Exact Email",
+    exact_email_local_part: "Exact Email Prefix",
     first_and_last_name: "First & Last Name",
     first_name: "First Name",
     last_name: "Last Name",

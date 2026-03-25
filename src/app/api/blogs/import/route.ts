@@ -261,6 +261,10 @@ async function loadProfileCache(adminClient: ReturnType<typeof createAdminClient
     if (username) {
       cache.byNormalizedName.set(username, profile.id);
     }
+    const email = normalizeName(profile.email ?? "");
+    if (email) {
+      cache.byNormalizedName.set(email, profile.id);
+    }
     const emailLocal = normalizeName(profile.email.split("@")[0] ?? "");
     if (emailLocal) {
       cache.byNormalizedName.set(emailLocal, profile.id);

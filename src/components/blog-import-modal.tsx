@@ -210,9 +210,7 @@ function validateRows(rows: ImportRow[], selectedColumns: Set<string>) {
       });
     }
     if (selectedColumns.has("actualPublishDate")) {
-      if (!row.actualPublishDate.trim()) {
-        errors.push({ rowNumber: row.rowNumber, message: "Missing Actual Publish Date" });
-      } else if (!isValidDate(row.actualPublishDate.trim())) {
+      if (row.actualPublishDate.trim() && !isValidDate(row.actualPublishDate.trim())) {
         errors.push({
           rowNumber: row.rowNumber,
           message: "Invalid date format for Actual Publish Date",

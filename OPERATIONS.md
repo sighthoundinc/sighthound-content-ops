@@ -486,10 +486,12 @@ Matches are scored by confidence level (highest to lowest priority):
 1. **Exact full name** (100%) - normalized case-insensitive comparison
 2. **Exact display name** (100%) - if user has a custom display name
 3. **Exact username** (100%) - if imported name matches user account username
-4. **First + Last name match** (95%) - first and last word of imported name match user's name parts
-5. **First name only** (70%) - first word matches first name part
-6. **Last name only** (60%) - last word matches last name part
-7. **No match** - system marks for new user creation
+4. **Exact email** (100%) - if imported value equals profile email
+5. **Exact email local-part** (96%) - imported value matches profile email prefix before `@`
+6. **First + Last name match** (95%) - first and last word of imported name match user's name parts
+7. **First name only** (70%) - first word matches first name part
+8. **Last name only** (60%) - last word matches last name part
+9. **No match** - system marks for new user creation
 
 ### Resolution flow
 1. **Background auto-trigger** (after column selection, Step 1.75):
@@ -514,6 +516,7 @@ Matches are scored by confidence level (highest to lowest priority):
    - `nameResolutions` map is passed to `/api/blogs/import`
    - Backend respects user's selections (no re-matching)
    - Import accepts both `userId` and `selectedUserId` in resolution payloads for compatibility and normalizes internally
+   - `Draft Doc Link` and `Actual Publish Date` remain optional; when present, format checks still apply
 
 ### Database schema
 - `profiles.username` - unique text field, indexed for fast lookup
@@ -537,8 +540,9 @@ Matches are scored by confidence level (highest to lowest priority):
 **"Names don't match expected users"**
 1. Check that `profiles.username` is populated
 2. Verify user full_name, display_name, and username values
-3. Ensure imported names are not misspelled (e.g., "John Doe" vs "Jon Doe")
-4. Try Re-run Resolution to see fresh candidates
+3. Verify profile email values for users expected to match email-based imports
+4. Ensure imported names are not misspelled (e.g., \"John Doe\" vs \"Jon Doe\")
+5. Try Re-run Resolution to see fresh candidates
 
 **"Modal doesn't appear"**
 1. Check browser console for fetch errors

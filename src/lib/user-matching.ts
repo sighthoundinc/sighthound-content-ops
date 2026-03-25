@@ -3,7 +3,16 @@
  * Handles exact and partial matching against existing users
  */
 
-export type MatchType = 'exact_full_name' | 'exact_display_name' | 'exact_username' | 'first_and_last_name' | 'first_name' | 'last_name' | 'none';
+export type MatchType =
+  | 'exact_full_name'
+  | 'exact_display_name'
+  | 'exact_username'
+  | 'exact_email'
+  | 'exact_email_local_part'
+  | 'first_and_last_name'
+  | 'first_name'
+  | 'last_name'
+  | 'none';
 
 export type UserCandidate = {
   id: string;
@@ -74,6 +83,16 @@ export function findMatches(
       matchType = 'exact_username';
       confidence = 100;
     }
+    // Exact email match
+    else if (normalizeName(user.email) === normalized) {
+      matchType = 'exact_email';
+      confidence = 100;
+    }
+    // Exact email local-part match (before @)
+    else if (normalizeName(user.email.split('@')[0] ?? '') === normalized) {
+      matchType = 'exact_email_local_part';
+      confidence = 96;
+    }
     // First + Last name match
     else if (inputFirst && inputLast) {
       const userFirst = getFirstName(user.full_name);
@@ -125,9 +144,11 @@ export function findMatches(
     exact_full_name: 0,
     exact_display_name: 1,
     exact_username: 2,
-    first_and_last_name: 3,
-    first_name: 4,
-    last_name: 5,
+    exact_email: 3,
+    exact_email_local_part: 4,
+    first_and_last_name: 5,
+    first_name: 6,
+    last_name: 7,
     none: 999,
   };
 

@@ -208,6 +208,8 @@ npm run dev
 - `/api/admin/users` — admin user operations
 - `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion
 - `/api/blogs/import` — blog import endpoint (supports `nameResolutions` with `userId`/`selectedUserId` compatibility)
+  - `draftDocLink` and `actualPublishDate` are optional import fields
+  - writer/publisher resolution supports full/display/username/first/last plus email-based matching
 - `/api/social-posts/[postId]/transition` — canonical social status transitions
 - `/api/social-posts/[postId]/reopen-brief` — admin execution-stage brief reopen
 - `/api/social-posts/reminders` — awaiting-live-link reminder sweep

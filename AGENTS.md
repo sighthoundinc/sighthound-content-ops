@@ -576,47 +576,25 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 
 ## Social Post Field Requirements (MUST)
 
-**Mandatory Field Progression**: When a social post is created, ONLY three fields are mandatory initially. Additional fields become mandatory as Admin reviews and prepares the post.
+**⚠️ Reference**: See `docs/SOCIAL_POST_WORKFLOW_SIMPLIFIED.md` for the complete model and examples.
 
-### Draft Stage (Worker)
-**Mandatory** (minimum viable setup):
-- Product
-- Type
-- Canva URL
+**Core principle**: Fields become mandatory **only at transitions**, not during stages.
 
-**Optional**:
-- Title
-- Platforms
-- Scheduled Publish Date
-- Caption
-- Associated Blog
+### Field Ownership
+- **Worker**: Product, Type, Canva URL, Live Links
+- **Admin**: Title, Platforms, Caption, Scheduled Date
+- **Optional**: Associated Blog, Canva Page (either can edit anytime)
 
-**Worker can transition to In Review without Title or Platforms.**
-
-### In Review & Beyond (Admin Must Provide)
-**Newly mandatory**:
-- Title
-- Platforms
-
-**Admin must add these before the post can move to Creative Approved.**
-
-### Ready to Publish & Beyond (Admin Must Provide)
-**Newly mandatory**:
-- Caption
-- Scheduled Publish Date
-
-**Admin must add these before the post can move to Ready to Publish.**
-
-### Published (Worker Must Provide)
-**Newly mandatory**:
-- At least one valid live link (LinkedIn, Facebook, or Instagram) in `social_post_links` table
-
-**Worker must add this before the post can move to Published.**
+### Required Fields at Transitions
+1. `draft` → `in_review`: Product, Type, Canva URL
+2. `in_review` → `creative_approved`: + Title, Platforms
+3. `creative_approved` → `ready_to_publish`: + Caption, Scheduled Date
+4. `awaiting_live_link` → `published`: + ≥1 Live Link
 
 ### Enforcement
-- API validation at `/api/social-posts/[id]/transition` checks required fields for target status
-- `REQUIRED_FIELDS_FOR_STATUS` in `src/lib/social-post-workflow.ts` is the canonical truth
-- UI checklist provides user-friendly feedback on mandatory field completion
-- Field locking during execution stages (`ready_to_publish`, `awaiting_live_link`) prevents accidental edits to brief fields
+- API: `REQUIRED_FIELDS_FOR_STATUS` in `src/lib/social-post-workflow.ts`
+- DB: RLS trigger `enforce_social_post_workflow_transition`
+- UI: Checklist shows fields required for **next transition** only
+- Field locking: `LOCKED_BRIEF_FIELDS` locked during execution stages (`ready_to_publish`, `awaiting_live_link`)
 
-**Rationale**: Worker-owned fields (Product, Type, Canva URL, Live Link) don't block Admin work. Admin-owned fields (Title, Platforms, Caption, Scheduled Date) are required only when Admin reviews the post. No unnecessary blockers.
+**Rationale**: Worker isn't blocked by Admin fields early. Admin can review at their own pace. Each transition has one clear responsibility.

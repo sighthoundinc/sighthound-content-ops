@@ -224,6 +224,16 @@ function comparePublishDatesAsc(leftDate: string | null, rightDate: string | nul
   return 0;
 }
 
+function isMissingSocialOwnershipColumnError(message: string) {
+  return (
+    message.includes("assigned_to_user_id") ||
+    message.includes("worker_user_id") ||
+    message.includes("reviewer_user_id") ||
+    message.includes("editor_user_id") ||
+    message.includes("admin_owner_id")
+  );
+}
+
 function getTaskReason({
   isDelayed,
   statusPriority,
@@ -426,6 +436,18 @@ export default function MyTasksPage() {
       ascending: true,
       nullsFirst: false,
     });
+
+    if (socialError && isMissingSocialOwnershipColumnError(socialError.message)) {
+      const fallbackWithLegacyOwners = await supabase
+        .from("social_posts")
+        .select("id,title,status,scheduled_date,created_at,created_by,editor_user_id,admin_owner_id")
+        .neq("status", "published")
+        .or(`created_by.eq.${user.id},editor_user_id.eq.${user.id},admin_owner_id.eq.${user.id}`)
+        .order("scheduled_date", { ascending: true, nullsFirst: false });
+
+      socialRows = fallbackWithLegacyOwners.data as typeof socialRows;
+      socialError = fallbackWithLegacyOwners.error;
+    }
 
     if (
       socialError &&

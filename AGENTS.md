@@ -108,6 +108,13 @@ For every non-trivial UI or workflow change:
 3. Destructive actions must require confirmation.
 4. No partial silent updates.
 
+## Destructive SQL Safety (MUST)
+
+1. SQL maintenance routines (for example wipe/reset/cleanup functions) must never use bare `DELETE FROM ...` statements; always include an explicit predicate.
+2. For intentional full-table cleanup, use explicit predicates such as `WHERE true` to satisfy safe-delete guards consistently across environments.
+3. API routes that depend on maintenance RPCs must handle recoverable SQL safety failures (for example `DELETE requires a WHERE clause`) and provide a safe fallback path with explicit-predicate deletes.
+4. Treat SQLSTATE `21000` + `DELETE requires a WHERE clause` as a regression signal that requires immediate forward-migration correction.
+
 ## Contract-Driven Engineering (MUST)
 
 1. **API Contracts are locked**:

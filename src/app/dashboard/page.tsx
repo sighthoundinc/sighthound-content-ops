@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { AppShell } from "@/components/app-shell";
 import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
 import { BlogImportModal } from "@/components/blog-import-modal";
+import { BulkActionPreviewModal } from "@/components/bulk-action-preview-modal";
 import { Button } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ColumnEditor } from "@/components/column-editor";
@@ -537,6 +538,8 @@ export default function DashboardPage() {
   const [bulkPublisherId, setBulkPublisherId] = useState("");
   const [bulkWriterStatus, setBulkWriterStatus] = useState<WriterStageStatus | "">("");
   const [bulkPublisherStatus, setBulkPublisherStatus] = useState<PublisherStageStatus | "">("");
+  const [showBulkPreviewModal, setShowBulkPreviewModal] = useState(false);
+  const [bulkPreviewChangesSummary, setBulkPreviewChangesSummary] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
@@ -1897,7 +1900,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleBulkApplyChanges = async () => {
+  const handleBulkApplyChanges = () => {
     if (!ensureBulkSelection()) {
       return;
     }
@@ -1983,6 +1986,31 @@ export default function DashboardPage() {
       return;
     }
 
+    // Build changes summary for preview modal
+    const changeLabels: string[] = [];
+    if (isSettingWriter) {
+      changeLabels.push("writer assignment");
+    }
+    if (isSettingPublisher) {
+      changeLabels.push("publisher assignment");
+    }
+    if (bulkWriterStatus !== "") {
+      changeLabels.push("writer status");
+    }
+    if (bulkPublisherStatus !== "") {
+      changeLabels.push("publisher status");
+    }
+    const summary = `Apply ${changeLabels.join(", ")} to ${selectedBlogIds.length} blog${selectedBlogIds.length !== 1 ? "s" : ""}.`;
+
+    // Show preview modal instead of immediate execution
+    setBulkPreviewChangesSummary(summary);
+    setShowBulkPreviewModal(true);
+  };
+
+  const handleConfirmBulkChanges = async () => {
+    const isSettingWriter = Boolean(bulkWriterId);
+    const isSettingPublisher = Boolean(bulkPublisherId);
+
     const updatePayload: Partial<
       Pick<BlogRecord, "writer_id" | "publisher_id" | "writer_status" | "publisher_status">
     > = {};
@@ -2026,6 +2054,9 @@ export default function DashboardPage() {
 
       return `Applied ${appliedChangeLabels.join(", ")} to ${selectedBlogIds.length} blog(s).`;
     });
+
+    // Close modal after mutation completes
+    setShowBulkPreviewModal(false);
   };
 
   const handleBulkDelete = async () => {
@@ -3629,6 +3660,19 @@ export default function DashboardPage() {
               setIsPanelEditMode((previous) => !previous);
             }}
           />
+
+        <BulkActionPreviewModal
+          isOpen={showBulkPreviewModal}
+          blogs={selectedBlogs}
+          changesSummary={bulkPreviewChangesSummary}
+          onConfirm={() => {
+            void handleConfirmBulkChanges();
+          }}
+          onCancel={() => {
+            setShowBulkPreviewModal(false);
+          }}
+          isLoading={isBulkSaving}
+        />
         </div>
       </AppShell>
     </ProtectedPage>

@@ -57,8 +57,23 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       });
 
     if (createUserError || !createdUserData.user) {
+      const errorMsg = createUserError?.message ?? "Could not create user";
+      console.error(`User creation failed for ${email}:`, {
+        error: errorMsg,
+        code: createUserError?.code,
+        details: createUserError?.status,
+      });
+      // Provide more actionable error for common cases
+      if (errorMsg.toLowerCase().includes("already exists")) {
+        return NextResponse.json(
+          {
+            error: `User with email "${email}" already exists in auth system. Try cleanup endpoint or contact admin.`,
+          },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
-        { error: createUserError?.message ?? "Could not create user" },
+        { error: `Database error creating new user: ${errorMsg}` },
         { status: 400 }
       );
     }

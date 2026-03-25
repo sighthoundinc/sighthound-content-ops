@@ -482,16 +482,18 @@ await emitEvent({
 The system automatically matches imported writer/publisher names against existing users to prevent duplicate user creation. This runs as a mandatory step before final import.
 
 ### Matching algorithm
-Matches are scored by confidence level (highest to lowest priority):
+Matches are scored by confidence level, then tie-broken by match priority:
 1. **Exact full name** (100%) - normalized case-insensitive comparison
 2. **Exact display name** (100%) - if user has a custom display name
 3. **Exact username** (100%) - if imported name matches user account username
 4. **Exact email** (100%) - if imported value equals profile email
 5. **Exact email local-part** (96%) - imported value matches profile email prefix before `@`
-6. **First + Last name match** (95%) - first and last word of imported name match user's name parts
-7. **First name only** (70%) - first word matches first name part
-8. **Last name only** (60%) - last word matches last name part
-9. **No match** - system marks for new user creation
+6. **First + Last name match** (95%) - imported first/last name matches `profiles.first_name`/`profiles.last_name` (or derived name parts when those fields are empty)
+7. **Contains full/display/username/email-prefix** (~66-92%) - loose contains matching in either direction with ratio-based confidence
+8. **Token overlap** (~55-88%) - partial shared-token similarity across identity fields
+9. **First name only** (70%) - first token matches first-name candidates
+10. **Last name only** (60%) - last token matches last-name candidates
+11. **No match** - system marks for new user creation
 
 ### Resolution flow
 1. **Background auto-trigger** (after column selection, Step 1.75):

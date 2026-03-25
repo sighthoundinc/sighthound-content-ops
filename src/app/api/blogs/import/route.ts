@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/server-permissions";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { AppRole, BlogSite } from "@/lib/types";
 import { withApiContract } from "@/lib/api-contract";
+import { findMatches } from "@/lib/user-matching";
 
 const importRowSchema = z.object({
   rowNumber: z.number().int().min(1),
@@ -63,6 +64,9 @@ type ProfileCache = {
     display_name: string | null;
     username: string | null;
     email: string;
+    role: string;
+    first_name: string | null;
+    last_name: string | null;
   }>;
 };
 
@@ -226,10 +230,40 @@ function getLastName(fullName: string): string {
   return parts.length > 1 ? parts[parts.length - 1] : "";
 }
 
+function getProfileFirstName(profile: {
+  first_name: string | null;
+  full_name: string;
+  display_name: string | null;
+  username: string | null;
+  email: string;
+}) {
+  return normalizeName(
+    profile.first_name ||
+      getFirstName(profile.full_name) ||
+      getFirstName(profile.display_name ?? "") ||
+      profile.username ||
+      profile.email.split("@")[0] ||
+      ""
+  );
+}
+
+function getProfileLastName(profile: {
+  last_name: string | null;
+  full_name: string;
+  display_name: string | null;
+}) {
+  return normalizeName(
+    profile.last_name ||
+      getLastName(profile.full_name) ||
+      getLastName(profile.display_name ?? "") ||
+      ""
+  );
+}
+
 async function loadProfileCache(adminClient: ReturnType<typeof createAdminClient>) {
   const { data, error } = await adminClient
     .from("profiles")
-    .select("id,full_name,display_name,username,email")
+    .select("id,full_name,display_name,username,email,role,first_name,last_name")
     .eq("is_active", true);
 
   if (error) {
@@ -244,6 +278,9 @@ async function loadProfileCache(adminClient: ReturnType<typeof createAdminClient
       display_name: string | null;
       username: string | null;
       email: string;
+      role: string;
+      first_name: string | null;
+      last_name: string | null;
     }>,
   };
 
@@ -271,12 +308,12 @@ async function loadProfileCache(adminClient: ReturnType<typeof createAdminClient
     }
     
     // First/last name matches
-    const firstName = normalizeName(getFirstName(profile.full_name));
+    const firstName = getProfileFirstName(profile);
     if (firstName) {
       // Store with a prefix to distinguish from full matches
       cache.byNormalizedName.set(`_first:${firstName}`, profile.id);
     }
-    const lastName = normalizeName(getLastName(profile.full_name));
+    const lastName = getProfileLastName(profile);
     if (lastName) {
       cache.byNormalizedName.set(`_last:${lastName}`, profile.id);
     }
@@ -315,33 +352,9 @@ async function resolveOrCreateProfileId(
     return existing;
   }
   
-  // Try first+last name match
-  const inputFirst = normalizeName(getFirstName(name));
-  const inputLast = normalizeName(getLastName(name));
-  if (inputFirst && inputLast) {
-    for (const profile of cache.profiles) {
-      const profileFirst = normalizeName(getFirstName(profile.full_name));
-      const profileLast = normalizeName(getLastName(profile.full_name));
-      if (profileFirst === inputFirst && profileLast === inputLast) {
-        return profile.id;
-      }
-    }
-  }
-  
-  // Try first name only match
-  if (inputFirst) {
-    const firstNameMatch = cache.byNormalizedName.get(`_first:${inputFirst}`);
-    if (firstNameMatch) {
-      return firstNameMatch;
-    }
-  }
-  
-  // Try last name only match
-  if (inputLast) {
-    const lastNameMatch = cache.byNormalizedName.get(`_last:${inputLast}`);
-    if (lastNameMatch) {
-      return lastNameMatch;
-    }
+  const scoredResolution = findMatches(name, cache.profiles);
+  if (scoredResolution.bestMatch) {
+    return scoredResolution.bestMatch.id;
   }
 
   // No match found, create new user

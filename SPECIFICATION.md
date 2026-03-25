@@ -664,16 +664,18 @@ This step is mandatory for blog import and exists to prevent duplicate profile c
 - Import remains blocked until the user confirms/accepts resolutions.
 - `draftDocLink` and `actualPublishDate` are optional import fields; when present, they must pass URL/date format checks.
 ### Matching fields and priority
-Matching attempts against active profiles use this priority:
+Matching attempts against active profiles are confidence-scored first, then tie-broken by this priority:
 1. exact `full_name` (100)
 2. exact `display_name` (100)
 3. exact `username` (100)
 4. exact `email` (100)
 5. exact email local-part (before `@`) (96)
-6. first+last name match (95)
-7. first-name only (70)
-8. last-name only (60)
-9. none (fallback to create new)
+6. first+last name match via `first_name`/`last_name` (or derived name parts) (95)
+7. loose contains match across full/display/username/email-local (~66-92)
+8. token-overlap similarity (~55-88)
+9. first-name only (70)
+10. last-name only (60)
+11. none (fallback to create new)
 ### Data contract updates
 - `POST /api/users/resolve-names`
   - input: `{ names: string[] }`

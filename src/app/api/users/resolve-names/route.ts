@@ -30,7 +30,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     // Fetch all active users with necessary fields
     const { data: users, error: usersError } = await adminClient
       .from("profiles")
-      .select("id,full_name,display_name,username,email,role")
+      .select("id,full_name,display_name,username,email,role,first_name,last_name")
       .eq("is_active", true);
 
     if (usersError) {

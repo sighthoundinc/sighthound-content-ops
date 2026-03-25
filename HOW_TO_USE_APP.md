@@ -93,7 +93,7 @@ Required key columns:
 
 Name resolution behavior:
 - Step 1.75 selections are applied directly during import (selected existing users are reused as chosen).
-- Matching considers profile full name, display name, username, first/last name, and email variants for stronger auto-resolution confidence.
+- Matching is confidence-scored using exact and loose contains/token-overlap checks across full name, display name, username, first/last name, and email variants.
 - If no existing user is selected for a name, import creates a placeholder user profile with a unique `@sighthound.com` email alias.
 - Placeholder-user creation during import uses hardened auth triggers so integration bootstrap failures do not block import completion.
 

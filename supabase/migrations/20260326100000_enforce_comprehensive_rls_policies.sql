@@ -68,8 +68,8 @@ for select
 to authenticated
 using (
   created_by = auth.uid()
-  or assigned_to_user_id = auth.uid()
-  or editor_id = auth.uid()
+  or worker_user_id = auth.uid()
+  or reviewer_user_id = auth.uid()
   or public.is_admin()
 );
 
@@ -90,14 +90,14 @@ for update
 to authenticated
 using (
   created_by = auth.uid()
-  or assigned_to_user_id = auth.uid()
-  or editor_id = auth.uid()
+  or worker_user_id = auth.uid()
+  or reviewer_user_id = auth.uid()
   or public.is_admin()
 )
 with check (
   created_by = auth.uid()
-  or assigned_to_user_id = auth.uid()
-  or editor_id = auth.uid()
+  or worker_user_id = auth.uid()
+  or reviewer_user_id = auth.uid()
   or public.is_admin()
 );
 
@@ -241,7 +241,7 @@ with check (
   exists (
     select 1 from public.social_posts
     where id = social_post_links.social_post_id
-    and (created_by = auth.uid() or assigned_to_user_id = auth.uid() or public.is_admin())
+    and (created_by = auth.uid() or worker_user_id = auth.uid() or reviewer_user_id = auth.uid() or public.is_admin())
   )
 );
 
@@ -254,14 +254,14 @@ using (
   exists (
     select 1 from public.social_posts
     where id = social_post_links.social_post_id
-    and (created_by = auth.uid() or assigned_to_user_id = auth.uid() or public.is_admin())
+    and (created_by = auth.uid() or worker_user_id = auth.uid() or reviewer_user_id = auth.uid() or public.is_admin())
   )
 )
 with check (
   exists (
     select 1 from public.social_posts
     where id = social_post_links.social_post_id
-    and (created_by = auth.uid() or assigned_to_user_id = auth.uid() or public.is_admin())
+    and (created_by = auth.uid() or worker_user_id = auth.uid() or reviewer_user_id = auth.uid() or public.is_admin())
   )
 );
 
@@ -274,7 +274,7 @@ using (
   exists (
     select 1 from public.social_posts
     where id = social_post_links.social_post_id
-    and (created_by = auth.uid() or assigned_to_user_id = auth.uid() or public.is_admin())
+    and (created_by = auth.uid() or worker_user_id = auth.uid() or reviewer_user_id = auth.uid() or public.is_admin())
   )
 );
 

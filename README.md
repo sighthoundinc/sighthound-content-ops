@@ -213,6 +213,7 @@ npm run dev
 - `/api/social-posts/reminders` — awaiting-live-link reminder sweep
 - `/api/ideas/[id]/delete` — creator/admin idea deletion
 - `/api/users/profile` — current user profile operations
+- `/api/users/notification-preferences` — normalized preference keys (`task_assigned` etc.) with legacy `notify_on_*` column compatibility
 
 ## Contract-driven engineering baseline
 - API routes are normalized via `src/lib/api-contract.ts` to prevent drift:
@@ -257,6 +258,13 @@ Current set:
 - `20260320195100_fix_activity_history_rls.sql`
 - `20260321133000_social_workflow_authority_and_event_normalization.sql`
 - `20260325111500_enable_public_table_rls.sql`
+- `20260325201000_harden_auth_user_creation_trigger.sql`
+- `20260325202500_auth_user_creation_diagnostics.sql`
+- `20260326100000_enforce_comprehensive_rls_policies.sql`
+- `20260326103000_harden_auth_user_integrations_trigger.sql`
+
+Auth provisioning hardening note:
+- `20260326103000_harden_auth_user_integrations_trigger.sql` fixes auth user creation failures caused by unqualified trigger writes (`INSERT INTO user_integrations`) by enforcing `public.user_integrations`, `SECURITY DEFINER`, and exception-safe trigger behavior.
 
 ## Slack edge function
 Path:
@@ -268,6 +276,11 @@ Secrets:
 - `SLACK_WEBHOOK_URL` (fallback)
 
 Event coverage includes blog workflow events and social workflow events (`social_submitted_for_review`, `social_changes_requested`, `social_creative_approved`, `social_ready_to_publish`, `social_awaiting_live_link`, `social_published`, `social_live_link_reminder`).
+
+Delivery behavior:
+- default channel: `#content-ops-alerts` (or override with `SLACK_MARKETING_CHANNEL`)
+- resilient delivery: channel post failure no longer aborts DM/webhook attempts
+- returns success when at least one configured delivery path succeeds
 
 ## Quality checks
 ```bash

@@ -544,15 +544,17 @@ Event examples:
 - social live-link reminder
 
 Delivery:
-- configured channel
-- optional DM resolution by email
-- webhook fallback
+- configured channel (default `#content-ops-alerts` unless overridden by `SLACK_MARKETING_CHANNEL`)
+- optional DM resolution by email (attempted even if channel post fails)
+- webhook fallback when bot-token deliveries do not succeed
+- connected-services bootstrap rows in `user_integrations` are created by an auth trigger path that must not block user provisioning
 ## 11b) Unified Events System
 The application uses a unified event emission system that consolidates notifications and activity history recording into single `emitEvent()` calls. This ensures a single source of truth for workflow events.
 ### Architecture
 - **Event type definition**: `src/lib/unified-events.ts` defines supported event types (e.g., `blog_writer_status_changed`, `blog_publisher_status_changed`, `blog_writer_assigned`)
 - **Emission service**: `src/lib/emit-event.ts` handles both notification emission and activity history recording
 - **Preference enforcement**: Notifications respect user preferences via `src/lib/notification-helpers.ts`
+- **Preference compatibility normalization**: API/cache normalize legacy DB `notify_on_*` fields into canonical keys (`task_assigned`, `stage_changed`, `awaiting_action`, `mention`, `submitted_for_review`, `published`, `assignment_changed`)
 - **React components**: Dynamic imports of `emitEvent()` in handlers (React context requires async imports)
 ### Event Types (Blog Workflow)
 - `blog_writer_status_changed` — Writer stage transition (triggers `stage_changed` notification type)
@@ -608,6 +610,10 @@ The project is migration-driven (`supabase/migrations`) with compatibility layer
 - import collision prevention via deterministic hash
 - permission matrix introduction + expansion migrations
 - public-table RLS hardening + import-log policies (`20260325111500_enable_public_table_rls.sql`)
+- auth-user creation trigger hardening (`20260325201000_harden_auth_user_creation_trigger.sql`)
+- auth-user trigger diagnostics RPC (`20260325202500_auth_user_creation_diagnostics.sql`)
+- comprehensive RLS normalization (`20260326100000_enforce_comprehensive_rls_policies.sql`)
+- auth integrations trigger hardening (`20260326103000_harden_auth_user_integrations_trigger.sql`) to prevent `relation "user_integrations" does not exist` failures from aborting auth user creation
 ## 14) Non-functional requirements
 - fast workflow execution
 - deterministic DB-level invariants for workflow integrity

@@ -162,6 +162,13 @@ After any feature or behavior change (when applicable):
 7. **Loading states**: Connect/Disconnect buttons show loading text ("Connecting...", "Disconnecting...") during API operations
 8. **No breaking changes**: This is a UX fix only; no API contracts or data shapes were modified
 
+## Auth User Provisioning Trigger Safety (MUST)
+
+1. Any trigger attached to `auth.users` that writes to `public` schema tables must use fully-qualified table references (for example `public.user_integrations`).
+2. Sync/side-effect trigger functions on `auth.users` must be `SECURITY DEFINER` and exception-safe (log warning, return `NEW`).
+3. Optional sync failures (for example integrations/preferences bootstrap rows) must never abort auth user creation.
+4. Regression signal: errors such as `relation "user_integrations" does not exist` during `auth.admin.createUser` indicate trigger qualification drift and require immediate migration fix.
+
 ## Change Risk Classification (SHOULD)
 
 All changes should be categorized before implementation:
@@ -300,6 +307,7 @@ To keep idea intake predictable and avoid split editing patterns:
 #### Database Schema
 - Table: `notification_preferences` in public schema
 - Columns: `user_id` (FK to auth.users), `notifications_enabled`, 7 type toggles, timestamps
+- Compatibility: if DB stores legacy `notify_on_*` toggle columns, API/cache must normalize to canonical keys (`task_assigned`, `stage_changed`, `awaiting_action`, `mention`, `submitted_for_review`, `published`, `assignment_changed`)
 - RLS: Users see/edit only own preferences; admins can audit all
 - Trigger: Auto-creates preferences for new auth users
 

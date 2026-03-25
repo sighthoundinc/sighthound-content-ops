@@ -93,6 +93,7 @@ Required key columns:
 Name resolution behavior:
 - Step 1.75 selections are applied directly during import (selected existing users are reused as chosen).
 - If no existing user is selected for a name, import creates a placeholder user profile with a unique `@sighthound.com` email alias.
+- Placeholder-user creation during import uses hardened auth triggers so integration bootstrap failures do not block import completion.
 
 ## 6. Calendar workflow and navigation
 - Use `Month` view for planning density and `Week` view for detailed daily execution.
@@ -121,6 +122,7 @@ Name resolution behavior:
 - **In-app**: Always available when enabled.
 - **Slack**: Only sends if Slack is connected AND notification type is enabled.
 - **Slack delivery method**: Choose between direct messages (coming soon, pending approval) or #content-ops-alerts channel.
+- **Slack delivery fallback**: If channel delivery fails, the system still attempts DM/webhook paths when configured.
 
 ### Slack notification format
 Slack notifications follow a clear, actionable format:
@@ -164,6 +166,7 @@ This format enables quick scanning in busy channels and shows exactly who is res
 - Social post stuck before completion: add at least one valid public live link.
 - Missing results: clear filters/search and reapply one by one.
 - Import errors: unselect invalid rows, verify required columns, then retry.
+- Add User or import fails with `Database error creating new user`: ask an admin to run latest Supabase migrations (including `20260326103000_harden_auth_user_integrations_trigger.sql`) and retry.
 - Missing notifications: verify notification toggles and connector status in `Settings`.
 - Provider connect failed: ensure you have an active session, then retry from Settings → Connected Services.
 - Cannot access Activity History or system/import log views: confirm your account has admin access and required permissions.

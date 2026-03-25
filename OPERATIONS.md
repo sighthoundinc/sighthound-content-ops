@@ -191,6 +191,10 @@ npm run check
 |- `20260320223000_update_access_logs_rls.sql` (RLS policy updates for user self-access)
 |- `20260321133000_social_workflow_authority_and_event_normalization.sql` (canonical social transition authority, event normalization, reminder tracking)
 |- `20260325111500_enable_public_table_rls.sql` (re-enables RLS on audit/comment/import log tables and adds `blog_import_logs` policies)
+|- `20260325201000_harden_auth_user_creation_trigger.sql` (consolidated safe auth-user profile/notification bootstrap trigger)
+|- `20260325202500_auth_user_creation_diagnostics.sql` (service-role RPC for auth trigger/constraint inspection)
+|- `20260326100000_enforce_comprehensive_rls_policies.sql` (comprehensive CRUD policy normalization)
+|- `20260326103000_harden_auth_user_integrations_trigger.sql` (fixes unqualified `user_integrations` insert in auth trigger)
 
 ## 5.5) User preferences
 Per-user preferences are stored in `profiles`:
@@ -583,6 +587,11 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 2. rerun `supabase ... db push --yes`
 3. verify local/remote parity with `supabase ... migration list`
 
+### “relation `user_integrations` does not exist” during user create/invite/import
+1. confirm migration `20260326103000_harden_auth_user_integrations_trigger.sql` is applied
+2. verify auth trigger function writes to `public.user_integrations` (not unqualified `user_integrations`)
+3. re-run auth diagnostic create-user check and confirm trigger no longer aborts transaction
+
 ### “Queue sections empty unexpectedly”
 1. verify assignment (`writer_id` / `publisher_id`)
 2. verify current queue filter and stage state
@@ -736,7 +745,7 @@ Settings UI grouping (for operator orientation):
 ### Channel and DM configuration
 
 **Channel notifications**:
-- Default channel: `#marketing`
+- Default channel: `#content-ops-alerts`
 - Configurable via `SLACK_MARKETING_CHANNEL` env var
 - Message format: `*Event Label* • Post Title (site)`
 - Includes: Actor name, deep link to app, timestamp
@@ -755,14 +764,15 @@ Settings UI grouping (for operator orientation):
 
 ### Delivery order and fallbacks
 1. **Bot Token method** (preferred):
-   - Posts to channel (`SLACK_MARKETING_CHANNEL` or `#marketing`)
-   - Attempts DM to `targetEmail` if configured
+   - Attempts channel post (`SLACK_MARKETING_CHANNEL` or `#content-ops-alerts`)
+   - Attempts DM to `targetEmail` if configured (even when channel post fails)
    - Uses `chat.postMessage` API
 2. **Webhook method** (fallback):
-   - Posts only to webhook URL's configured channel
+   - Used if bot-token deliveries did not succeed
+   - Posts to webhook URL's configured channel
    - No DM capability
 3. **No credentials**:
-   - Returns configuration error
+   - Returns delivery/configuration error
    - Does NOT break in-app notifications
 
 ### Failure handling
@@ -775,6 +785,7 @@ Settings UI grouping (for operator orientation):
 All Slack notifications respect user preferences:
 - Global `notifications_enabled` toggle
 - Individual event type toggles
+- Legacy DB toggle columns (`notify_on_*`) are normalized to canonical event keys by API/cache compatibility logic
 - If disabled, Slack notification is skipped silently
 
 ### Deployment and debug checklist

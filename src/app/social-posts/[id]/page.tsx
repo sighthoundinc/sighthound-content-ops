@@ -108,6 +108,8 @@ const VALIDATION_MESSAGES = {
   postReopened: "Post reopened to Creative Approved for brief edits.",
   linksSaved: "Live links saved",
   postSaved: "Post saved",
+  platformRequired: "Select at least one platform.",
+  canvaUrlInvalid: "Canva link must start with https:// or http://",
 } as const;
 
 // Unicode bold sans-serif characters for LinkedIn-compatible bold text
@@ -117,6 +119,14 @@ const BOLD_SANS_DIGITS = "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵";
 
 function isExecutionStage(status: SocialPostStatus) {
   return status === "ready_to_publish" || status === "awaiting_live_link";
+}
+
+function validateCanvaUrl(url: string): boolean {
+  if (!url || !url.trim()) {
+    return false;
+  }
+  const trimmed = url.trim();
+  return trimmed.startsWith("https://") || trimmed.startsWith("http://");
 }
 
 function normalizePostLinkRows(rows: Array<Record<string, unknown>>) {
@@ -615,21 +625,22 @@ export default function SocialPostEditorPage() {
   const hasPlatform = Boolean(form && form.platforms.length > 0);
   const hasPublishDate = Boolean(form?.scheduled_date);
   const hasCanvaLink = Boolean(form?.canva_url.trim());
+  const hasValidCanvaUrl = form ? validateCanvaUrl(form.canva_url) : false;
   const hasLinkedBlog = Boolean(form?.associated_blog_id);
   const hasLiveLink = liveLinks.some((link) => link.url.trim().length > 0);
   const isDraftComplete =
-    hasTitle && hasCaption && hasPlatform && hasPublishDate && hasCanvaLink;
+    hasTitle && hasCaption && hasPlatform && hasPublishDate && hasCanvaLink && hasValidCanvaUrl;
 
   const checklistItems = useMemo(
     () => [
       { label: "Add post title", done: hasTitle, required: true },
       { label: "Select platform(s)", done: hasPlatform, required: true },
       { label: "Set publish date", done: hasPublishDate, required: true },
-      { label: "Add Canva link", done: hasCanvaLink, required: true },
+      { label: "Add Canva link", done: hasCanvaLink && hasValidCanvaUrl, required: true },
       { label: "Write caption", done: hasCaption, required: true },
       { label: "Link blog (optional)", done: hasLinkedBlog, required: false },
     ],
-    [hasCanvaLink, hasCaption, hasLinkedBlog, hasPlatform, hasPublishDate, hasTitle]
+    [hasCanvaLink, hasCaption, hasLinkedBlog, hasPlatform, hasPublishDate, hasTitle, hasValidCanvaUrl]
   );
   const finalAction = useMemo(() => {
     if (form?.status === "draft") {
@@ -1136,6 +1147,9 @@ export default function SocialPostEditorPage() {
                           className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                           placeholder="https://www.canva.com/..."
                         />
+                        {form.canva_url.trim() && !hasValidCanvaUrl && (
+                          <p className="text-xs text-rose-700">{VALIDATION_MESSAGES.canvaUrlInvalid}</p>
+                        )}
                       </label>
                     </div>
                   </div>
@@ -1207,6 +1221,9 @@ export default function SocialPostEditorPage() {
                             );
                           })}
                         </div>
+                        {!hasPlatform && (
+                          <p className="text-xs text-rose-700">{VALIDATION_MESSAGES.platformRequired}</p>
+                        )}
                       </label>
                     </div>
                   </div>
@@ -1696,6 +1713,8 @@ export default function SocialPostEditorPage() {
                     disabled={
                       isSaving ||
                       isOverLimit ||
+                      !hasPlatform ||
+                      !hasValidCanvaUrl ||
                       !canCurrentUserTransition(form.status, finalAction.nextStatus) ||
                       (finalAction.nextStatus === form.status &&
                         isExecutionStage(form.status))

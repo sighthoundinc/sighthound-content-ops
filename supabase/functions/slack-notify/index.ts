@@ -173,11 +173,18 @@ serve(async (request) => {
     const marketingChannel = Deno.env.get("SLACK_MARKETING_CHANNEL") ?? "#content-ops-alerts";
     const webhookUrl = Deno.env.get("SLACK_WEBHOOK_URL");
 
+    let delivered = false;
+
     if (botToken) {
-      await callSlackApi(botToken, "chat.postMessage", {
-        channel: marketingChannel,
-        text,
-      });
+      try {
+        await callSlackApi(botToken, "chat.postMessage", {
+          channel: marketingChannel,
+          text,
+        });
+        delivered = true;
+      } catch (error) {
+        console.error("Could not send channel notification", error);
+      }
 
       if (payload.targetEmail) {
         try {
@@ -190,26 +197,36 @@ serve(async (request) => {
               channel: slackUserId,
               text,
             });
+            delivered = true;
           }
         } catch (error) {
           console.error("Could not send DM notification", error);
         }
       }
-    } else if (webhookUrl) {
-      const webhookResponse = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          text,
-        }),
-      });
-      if (!webhookResponse.ok) {
-        throw new Error(`Webhook post failed with status ${webhookResponse.status}`);
+    }
+
+    if (!delivered && webhookUrl) {
+      try {
+        const webhookResponse = await fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            text,
+          }),
+        });
+        if (!webhookResponse.ok) {
+          throw new Error(`Webhook post failed with status ${webhookResponse.status}`);
+        }
+        delivered = true;
+      } catch (error) {
+        console.error("Could not send webhook notification", error);
       }
-    } else {
-      throw new Error("No Slack credentials configured");
+    }
+
+    if (!delivered) {
+      throw new Error("No Slack deliveries succeeded");
     }
 
     return new Response(

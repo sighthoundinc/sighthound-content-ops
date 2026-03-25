@@ -573,3 +573,50 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 - Test cases in `tests/api/social-posts-transition.test.ts`
 - Critical: ownership enforcement (403), transition validation (400), field locking, concurrency (409), required fields, live links
 - Full workflow cycle: creator draft → editor review → creator publish
+
+## Social Post Field Requirements (MUST)
+
+**Mandatory Field Progression**: When a social post is created, ONLY three fields are mandatory initially. Additional fields become mandatory as Admin reviews and prepares the post.
+
+### Draft Stage (Worker)
+**Mandatory** (minimum viable setup):
+- Product
+- Type
+- Canva URL
+
+**Optional**:
+- Title
+- Platforms
+- Scheduled Publish Date
+- Caption
+- Associated Blog
+
+**Worker can transition to In Review without Title or Platforms.**
+
+### In Review & Beyond (Admin Must Provide)
+**Newly mandatory**:
+- Title
+- Platforms
+
+**Admin must add these before the post can move to Creative Approved.**
+
+### Ready to Publish & Beyond (Admin Must Provide)
+**Newly mandatory**:
+- Caption
+- Scheduled Publish Date
+
+**Admin must add these before the post can move to Ready to Publish.**
+
+### Published (Worker Must Provide)
+**Newly mandatory**:
+- At least one valid live link (LinkedIn, Facebook, or Instagram) in `social_post_links` table
+
+**Worker must add this before the post can move to Published.**
+
+### Enforcement
+- API validation at `/api/social-posts/[id]/transition` checks required fields for target status
+- `REQUIRED_FIELDS_FOR_STATUS` in `src/lib/social-post-workflow.ts` is the canonical truth
+- UI checklist provides user-friendly feedback on mandatory field completion
+- Field locking during execution stages (`ready_to_publish`, `awaiting_live_link`) prevents accidental edits to brief fields
+
+**Rationale**: Worker-owned fields (Product, Type, Canva URL, Live Link) don't block Admin work. Admin-owned fields (Title, Platforms, Caption, Scheduled Date) are required only when Admin reviews the post. No unnecessary blockers.

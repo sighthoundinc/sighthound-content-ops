@@ -70,6 +70,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
 type TaskKind = "writer" | "publisher";
+type TaskActionState = "action_required" | "waiting_on_others";
 
 type TaskItem = {
   id: string;
@@ -87,6 +88,7 @@ type TaskItem = {
   writerStatus: WriterStageStatus;
   publisherStatus: PublisherStageStatus;
   reason: string | null;
+  actionState: TaskActionState;
   // Assignment metadata for admin review tasks
   assignmentInfo?: {
     isAdminAssignment: boolean;
@@ -102,6 +104,7 @@ type SocialTaskItem = {
   createdAt: string;
   nextActor: ReturnType<typeof getNextActor>;
   nextAction: string;
+  actionState: TaskActionState;
 };
 type TaskTableColumnKey =
   | "site"
@@ -224,10 +227,15 @@ function comparePublishDatesAsc(leftDate: string | null, rightDate: string | nul
 function getTaskReason({
   isDelayed,
   statusPriority,
+  actionState,
 }: {
   isDelayed: boolean;
   statusPriority: number;
+  actionState: TaskActionState;
 }) {
+  if (actionState === "waiting_on_others") {
+    return "Waiting on others";
+  }
   if (isDelayed) {
     return "Overdue";
   }
@@ -235,6 +243,46 @@ function getTaskReason({
     return "Upcoming";
   }
   return "Due Soon";
+}
+
+function getWriterTaskActionState(writerStatus: WriterStageStatus): TaskActionState {
+  if (
+    writerStatus === "not_started" ||
+    writerStatus === "in_progress" ||
+    writerStatus === "needs_revision"
+  ) {
+    return "action_required";
+  }
+  return "waiting_on_others";
+}
+
+function getPublisherTaskActionState(
+  writerStatus: WriterStageStatus,
+  publisherStatus: PublisherStageStatus
+): TaskActionState {
+  if (writerStatus !== "completed") {
+    return "waiting_on_others";
+  }
+  if (
+    publisherStatus === "not_started" ||
+    publisherStatus === "in_progress"
+  ) {
+    return "action_required";
+  }
+  return "waiting_on_others";
+}
+
+function getAdminAssignmentTaskActionState(
+  taskType: "writer_review" | "publisher_review",
+  writerStatus: WriterStageStatus,
+  publisherStatus: PublisherStageStatus
+): TaskActionState {
+  if (taskType === "writer_review") {
+    return writerStatus === "pending_review" ? "action_required" : "waiting_on_others";
+  }
+  return publisherStatus === "pending_review" || publisherStatus === "publisher_approved"
+    ? "action_required"
+    : "waiting_on_others";
 }
 
 export default function MyTasksPage() {
@@ -279,6 +327,7 @@ export default function MyTasksPage() {
   );
   const [rowDensity, setRowDensity] = useState<"compact" | "comfortable">("compact");
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "personal" | "admin">("all");
+  const [actionFilter, setActionFilter] = useState<"all" | TaskActionState>("all");
   const [taskAssignments, setTaskAssignments] = useState<Map<string, { taskType: 'writer_review' | 'publisher_review'; assignedAt: string }>>(new Map());
   const taskRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const loadTasks = useCallback(async () => {
@@ -323,7 +372,8 @@ export default function MyTasksPage() {
     let query = supabase
       .from("blogs")
       .select(BLOG_SELECT_WITH_DATES)
-      .eq("is_archived", false);
+      .eq("is_archived", false)
+      .neq("overall_status", "published");
 
     if (assignedBlogIds.length > 0) {
       query = query.or(`writer_id.eq.${user.id},publisher_id.eq.${user.id},id.in.(${assignedBlogIds.join(',')})`)
@@ -339,7 +389,8 @@ export default function MyTasksPage() {
       let fallbackQuery = supabase
         .from("blogs")
         .select(BLOG_SELECT_LEGACY)
-        .eq("is_archived", false);
+        .eq("is_archived", false)
+        .neq("overall_status", "published");
 
       if (assignedBlogIds.length > 0) {
         fallbackQuery = fallbackQuery.or(`writer_id.eq.${user.id},publisher_id.eq.${user.id},id.in.(${assignedBlogIds.join(',')})`);
@@ -365,14 +416,12 @@ export default function MyTasksPage() {
     let socialQuery = supabase
       .from("social_posts")
       .select(
-        "id,title,status,scheduled_date,created_at,created_by,editor_user_id,admin_owner_id"
+        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,editor_user_id,admin_owner_id"
       )
       .neq("status", "published");
-    if (!isAdmin) {
-      socialQuery = socialQuery.or(
-        `created_by.eq.${user.id},editor_user_id.eq.${user.id},admin_owner_id.eq.${user.id}`
-      );
-    }
+    socialQuery = socialQuery.or(
+      `assigned_to_user_id.eq.${user.id},worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id},editor_user_id.eq.${user.id},admin_owner_id.eq.${user.id}`
+    );
     let { data: socialRows, error: socialError } = await socialQuery.order("scheduled_date", {
       ascending: true,
       nullsFirst: false,
@@ -411,19 +460,24 @@ export default function MyTasksPage() {
         }
         const nextActor = getNextActor(status);
         const createdBy = typeof row.created_by === "string" ? row.created_by : null;
+        const workerUserId =
+          typeof row.worker_user_id === "string" ? row.worker_user_id : null;
+        const reviewerUserId =
+          typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null;
+        const assignedToUserId =
+          typeof row.assigned_to_user_id === "string" ? row.assigned_to_user_id : null;
         const editorUserId =
           typeof row.editor_user_id === "string" ? row.editor_user_id : createdBy;
         const adminOwnerId =
           typeof row.admin_owner_id === "string" ? row.admin_owner_id : null;
-        const shouldInclude =
-          nextActor === "editor"
-            ? editorUserId === user.id || createdBy === user.id
-            : nextActor === "admin"
-              ? isAdmin || adminOwnerId === user.id
-              : false;
-        if (!shouldInclude) {
-          return null;
-        }
+        const isActionRequired =
+          assignedToUserId !== null
+            ? assignedToUserId === user.id
+            : nextActor === "editor"
+              ? workerUserId === user.id || editorUserId === user.id || createdBy === user.id
+              : nextActor === "admin"
+                ? reviewerUserId === user.id || adminOwnerId === user.id || isAdmin
+                : false;
         return {
           id: String(row.id ?? ""),
           title: String(row.title ?? "Untitled social post"),
@@ -433,6 +487,7 @@ export default function MyTasksPage() {
           createdAt: String(row.created_at ?? ""),
           nextActor,
           nextAction: SOCIAL_POST_NEXT_ACTION_LABELS[status],
+          actionState: isActionRequired ? "action_required" : "waiting_on_others",
         } satisfies SocialTaskItem;
       })
       .filter((item): item is SocialTaskItem => item !== null)
@@ -586,6 +641,9 @@ export default function MyTasksPage() {
     const processedBlogIds = new Set<string>();
 
     for (const blog of blogs) {
+      if (blog.overall_status === "published") {
+        continue;
+      }
       const scheduledDate = getBlogPublishDate(blog);
       const diffDays =
         scheduledDate !== null
@@ -596,7 +654,8 @@ export default function MyTasksPage() {
       const isAdminAssignment = assignment !== undefined;
 
       // Personal writer task
-      if (blog.writer_id === user.id && blog.writer_status !== "completed") {
+      if (blog.writer_id === user.id) {
+        const actionState = getWriterTaskActionState(blog.writer_status);
         const statusPriority = getTaskStatusPriority(
           blog.writer_status,
           scheduledDate,
@@ -617,16 +676,22 @@ export default function MyTasksPage() {
           liveUrl: blog.live_url,
           writerStatus: blog.writer_status,
           publisherStatus: blog.publisher_status,
+          actionState,
           reason: getTaskReason({
             isDelayed,
             statusPriority,
+            actionState,
           }),
         });
         processedBlogIds.add(blog.id);
       }
 
       // Personal publisher task
-      if (blog.publisher_id === user.id && blog.publisher_status !== "completed") {
+      if (blog.publisher_id === user.id) {
+        const actionState = getPublisherTaskActionState(
+          blog.writer_status,
+          blog.publisher_status
+        );
         const statusPriority = getTaskStatusPriority(
           blog.publisher_status,
           scheduledDate,
@@ -650,9 +715,11 @@ export default function MyTasksPage() {
           liveUrl: blog.live_url,
           writerStatus: blog.writer_status,
           publisherStatus: blog.publisher_status,
+          actionState,
           reason: getTaskReason({
             isDelayed,
             statusPriority,
+            actionState,
           }),
         });
         processedBlogIds.add(blog.id);
@@ -662,6 +729,11 @@ export default function MyTasksPage() {
       if (isAdminAssignment && !processedBlogIds.has(blog.id)) {
         const taskKind: TaskKind = assignment.taskType === 'writer_review' ? 'writer' : 'publisher';
         const blogStatus = taskKind === 'writer' ? blog.writer_status : blog.publisher_status;
+        const actionState = getAdminAssignmentTaskActionState(
+          assignment.taskType,
+          blog.writer_status,
+          blog.publisher_status
+        );
         const statusPriority = getTaskStatusPriority(
           blogStatus,
           scheduledDate,
@@ -682,9 +754,11 @@ export default function MyTasksPage() {
           liveUrl: blog.live_url,
           writerStatus: blog.writer_status,
           publisherStatus: blog.publisher_status,
+          actionState,
           reason: getTaskReason({
             isDelayed,
             statusPriority,
+            actionState,
           }),
           assignmentInfo: {
             isAdminAssignment: true,
@@ -697,6 +771,9 @@ export default function MyTasksPage() {
     }
 
     return items.sort((left, right) => {
+      if (left.actionState !== right.actionState) {
+        return left.actionState === "action_required" ? -1 : 1;
+      }
       if (left.isDelayed !== right.isDelayed) {
         return left.isDelayed ? -1 : 1;
       }
@@ -729,6 +806,9 @@ export default function MyTasksPage() {
       if (assignmentFilter === "admin" && !task.assignmentInfo?.isAdminAssignment) {
         return false;
       }
+      if (actionFilter !== "all" && task.actionState !== actionFilter) {
+        return false;
+      }
       
       if (kindFilter !== "all" && task.kind !== kindFilter) {
         return false;
@@ -745,7 +825,7 @@ export default function MyTasksPage() {
       const searchText = `${task.title} ${task.liveUrl ?? ""}`.toLowerCase();
       return searchText.includes(normalizedSearch);
     });
-  }, [assignmentFilter, kindFilter, searchQuery, siteFilter, statusFilter, taskItems]);
+  }, [actionFilter, assignmentFilter, kindFilter, searchQuery, siteFilter, statusFilter, taskItems]);
 
   const sortedTaskItems = useMemo(() => {
     const sorted = [...filteredTaskItems];
@@ -778,13 +858,16 @@ export default function MyTasksPage() {
       if (socialStatusFilter !== "all" && task.status !== socialStatusFilter) {
         return false;
       }
+      if (actionFilter !== "all" && task.actionState !== actionFilter) {
+        return false;
+      }
       if (!normalizedSearch) {
         return true;
       }
       const haystack = `${task.title} ${task.nextAction}`.toLowerCase();
       return haystack.includes(normalizedSearch);
     });
-  }, [searchQuery, socialStatusFilter, socialTasks]);
+  }, [actionFilter, searchQuery, socialStatusFilter, socialTasks]);
 
   const nextTasks = useMemo(() => sortedTaskItems.slice(0, 3), [sortedTaskItems]);
   const nextSocialTasks = useMemo(
@@ -857,6 +940,7 @@ export default function MyTasksPage() {
     setSocialStatusFilter("all");
     setSiteFilter("all");
     setAssignmentFilter("all");
+    setActionFilter("all");
     setCurrentPage(1);
   }, []);
   const copyAllTasks = async (field: "title" | "url") => {
@@ -1061,6 +1145,18 @@ export default function MyTasksPage() {
               },
             }
           : null,
+        actionFilter !== "all"
+          ? {
+              id: "action",
+              label:
+                actionFilter === "action_required"
+                  ? "Action: Required by Me"
+                  : "Action: Waiting on Others",
+              onRemove: () => {
+                setActionFilter("all");
+              },
+            }
+          : null,
         kindFilter !== "all"
           ? {
               id: "kind",
@@ -1098,7 +1194,7 @@ export default function MyTasksPage() {
             }
           : null,
       ].filter((pill) => pill !== null),
-    [assignmentFilter, kindFilter, searchQuery, siteFilter, socialStatusFilter, statusFilter]
+    [actionFilter, assignmentFilter, kindFilter, searchQuery, siteFilter, socialStatusFilter, statusFilter]
   );
 
 
@@ -1202,6 +1298,9 @@ export default function MyTasksPage() {
           <p className="mt-1 text-xs text-slate-500">
             {task.kind === "writer" ? "Writer task" : "Publisher task"}
             {task.isDelayed ? " · Overdue" : ""}
+            {task.actionState === "action_required"
+              ? " · Action required by you"
+              : " · Waiting on others"}
           </p>
         </div>
       ),
@@ -1307,6 +1406,19 @@ export default function MyTasksPage() {
                   <option value="all">All Tasks</option>
                   <option value="personal">My Tasks</option>
                   <option value="admin">Admin Reviews</option>
+                </select>
+                <select
+                  aria-label="Task Action State"
+                  value={actionFilter}
+                  onChange={(event) => {
+                    setActionFilter(event.target.value as "all" | TaskActionState);
+                    setCurrentPage(1);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Action States</option>
+                  <option value="action_required">Required by Me</option>
+                  <option value="waiting_on_others">Waiting on Others</option>
                 </select>
                 <select
                   aria-label="Task Status"

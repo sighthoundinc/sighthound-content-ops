@@ -219,6 +219,13 @@ Key behavior:
 - top-3 priority items first
 - full list expansion with pagination
 - urgency tags (`Overdue`, `Due Soon`, `Upcoming`)
+- assignment-based visibility:
+  - show all non-published items assigned to the current user
+  - include rows even when next action is currently owned by another user
+- action-state controls:
+  - `All Action States`
+  - `Required by Me`
+  - `Waiting on Others`
 
 ### Calendar (`/calendar`)
 - month/week views

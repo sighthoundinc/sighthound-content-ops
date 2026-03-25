@@ -62,6 +62,10 @@ For social execution-stage completion, live links are entered from `/social-post
 - Active nav item in collapsed mode is intentionally high-contrast (dark background + white icon) so state is clear without labels/tooltips
 - Collapsed nav item hit area is constrained to ~44px minimum row height with centered icon and full-row click target
 - Zero dead code, production-ready quality (TypeScript 0 errors, ESLint 0 errors)
+- `/tasks` follows assignment-based visibility:
+  - shows all non-published work assigned to the current user (not only currently actionable rows)
+  - includes rows waiting on another actor to preserve end-to-end assignment visibility
+  - provides `Action State` filtering (`Required by Me` / `Waiting on Others`) for triage
 
 ### Icon system operations standard
 - Icon provider: `lucide-react` (open-source SVG icon set)

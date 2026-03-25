@@ -104,6 +104,8 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - `Overdue` / `Due Soon` / `Upcoming` indicators
 - Priority sorting by schedule urgency and status state
 - Social task queue with next-action labels and social status filtering
+- Assignment-based visibility for non-published work tied to current user
+- Action-state filtering for `Required by Me` vs `Waiting on Others`
 
 ## Icon system standard
 - Emoji-based icons are banned from UI iconography.

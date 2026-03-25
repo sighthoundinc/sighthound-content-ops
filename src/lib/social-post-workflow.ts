@@ -145,39 +145,45 @@ export function isFieldLocked(
 
 /**
  * Required fields for each transition checkpoint
+ *
+ * Workflow:
+ * - draft → in_review: Worker only needs Product, Type, Canva URL
+ * - in_review & beyond: Admin must provide Title, Platforms (mandatory from in_review onward)
+ * - ready_to_publish & beyond: Admin must also provide Caption, Scheduled Date
+ * - published: Plus at least one valid live link (checked separately)
  */
 export const REQUIRED_FIELDS_FOR_STATUS: Record<
   SocialPostStatus,
   string[] | null
 > = {
-  draft: null, // Can be incomplete
-  in_review: ["title", "platforms", "product", "type", "canva_url"],
+  draft: null, // Worker can submit with just Product, Type, Canva URL
+  in_review: ["product", "type", "canva_url", "title", "platforms"], // Admin adds title + platforms before transitioning here
   changes_requested: null, // Revising, no new requirements
-  creative_approved: ["title", "platforms", "product", "type", "canva_url"], // Still has brief
+  creative_approved: ["product", "type", "canva_url", "title", "platforms"], // Title + platforms still required
   ready_to_publish: [
-    "title",
-    "platforms",
     "product",
     "type",
     "canva_url",
+    "title",
+    "platforms",
     "caption",
     "scheduled_date",
   ],
   awaiting_live_link: [
-    "title",
-    "platforms",
     "product",
     "type",
     "canva_url",
+    "title",
+    "platforms",
     "caption",
     "scheduled_date",
   ],
   published: [
-    "title",
-    "platforms",
     "product",
     "type",
     "canva_url",
+    "title",
+    "platforms",
     "caption",
     "scheduled_date",
   ], // Plus at least one live link (checked separately)

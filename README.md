@@ -207,6 +207,7 @@ npm run dev
 - `/api/admin/quick-view` — admin quick-view session switch
 - `/api/admin/users` — admin user operations
 - `/api/admin/wipe-app-clean` — full factory reset with optional other-admin deletion
+- `/api/blogs/import` — blog import endpoint (supports `nameResolutions` with `userId`/`selectedUserId` compatibility)
 - `/api/social-posts/[postId]/transition` — canonical social status transitions
 - `/api/social-posts/[postId]/reopen-brief` — admin execution-stage brief reopen
 - `/api/social-posts/reminders` — awaiting-live-link reminder sweep

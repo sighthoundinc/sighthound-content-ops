@@ -26,9 +26,12 @@ interface AuthContextValue {
   user: User | null;
   profile: ProfileRecord | null;
   permissions: AppPermissionKey[];
+  googleConnected: boolean;
+  slackConnected: boolean;
   hasPermission: (permissionKey: AppPermissionKey) => boolean;
   refreshProfile: () => Promise<void>;
   refreshPermissions: () => Promise<void>;
+  refreshIntegrations: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -47,6 +50,28 @@ async function fetchProfile(userId: string) {
   }
 
   return data as ProfileRecord | null;
+}
+
+async function fetchIntegrations(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("user_integrations")
+    .select("google_connected,slack_connected")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Failed to fetch integrations", error);
+    return {
+      googleConnected: false,
+      slackConnected: false,
+    };
+  }
+
+  return {
+    googleConnected: data?.google_connected ?? false,
+    slackConnected: data?.slack_connected ?? false,
+  };
 }
 
 async function resolvePermissionsForProfile(profile: ProfileRecord | null) {
@@ -78,6 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [permissions, setPermissions] = useState<AppPermissionKey[]>([]);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [slackConnected, setSlackConnected] = useState(false);
 
   const applySession = async (nextSession: Session | null) => {
     setSession(nextSession);
@@ -86,13 +113,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!nextSession?.user?.id) {
       setProfile(null);
       setPermissions([]);
+      setGoogleConnected(false);
+      setSlackConnected(false);
       return;
     }
 
     try {
-      const nextProfile = await fetchProfile(nextSession.user.id);
+      const [nextProfile, nextIntegrations] = await Promise.all([
+        fetchProfile(nextSession.user.id),
+        fetchIntegrations(nextSession.user.id),
+      ]);
       setProfile(nextProfile);
       setPermissions(await resolvePermissionsForProfile(nextProfile));
+      setGoogleConnected(nextIntegrations.googleConnected);
+      setSlackConnected(nextIntegrations.slackConnected);
       
       // Log login event when session is first established
       // Use fire-and-forget to avoid blocking auth flow
@@ -105,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error(error);
       setProfile(null);
       setPermissions([]);
+      setGoogleConnected(false);
+      setSlackConnected(false);
     }
   };
   const refreshPermissions = useCallback(async () => {
@@ -115,12 +151,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user?.id) {
       setProfile(null);
       setPermissions([]);
+      setGoogleConnected(false);
+      setSlackConnected(false);
       return;
     }
     const nextProfile = await fetchProfile(user.id);
     setProfile(nextProfile);
     setPermissions(await resolvePermissionsForProfile(nextProfile));
   };
+
+  const refreshIntegrations = useCallback(async () => {
+    if (!user?.id) {
+      setGoogleConnected(false);
+      setSlackConnected(false);
+      return;
+    }
+    const nextIntegrations = await fetchIntegrations(user.id);
+    setGoogleConnected(nextIntegrations.googleConnected);
+    setSlackConnected(nextIntegrations.slackConnected);
+  }, [user?.id]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -184,9 +233,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     profile,
     permissions,
+    googleConnected,
+    slackConnected,
     hasPermission,
     refreshProfile,
     refreshPermissions,
+    refreshIntegrations,
     signOut: async () => {
       const supabase = getSupabaseBrowserClient();
       await supabase.auth.signOut();

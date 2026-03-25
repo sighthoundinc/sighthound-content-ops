@@ -671,7 +671,9 @@ Matching attempts against active profiles use this priority:
   - output: `{ resolutions: NameResolutionResult[] }`
 - `POST /api/blogs/import`
   - accepts `nameResolutions`:
-    - `{ [name]: { action: 'use_existing' | 'create_new', userId?: string } }`
+    - `{ [name]: { action: 'use_existing' | 'create_new', userId?: string, selectedUserId?: string } }`
+  - both `userId` and `selectedUserId` are accepted for compatibility
+  - unmatched names are provisioned as placeholder users with unique `@sighthound.com` emails
 ### DB support
 - `profiles.username` added as unique indexed column for matching.
 - Existing profiles can be backfilled from email local-part during migration.

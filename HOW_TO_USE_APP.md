@@ -90,6 +90,10 @@ Required key columns:
 - `Person who published`
 - `Date shown on blog (YYYY-MM-DD)`
 
+Name resolution behavior:
+- Step 1.75 selections are applied directly during import (selected existing users are reused as chosen).
+- If no existing user is selected for a name, import creates a placeholder user profile with a unique `@sighthound.com` email alias.
+
 ## 6. Calendar workflow and navigation
 - Use `Month` view for planning density and `Week` view for detailed daily execution.
 - Month tiles intentionally show a compact list; when a day has many items, click `+N more` to jump directly to that week.

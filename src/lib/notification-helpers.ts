@@ -24,51 +24,46 @@ import { SOCIAL_POST_STATUS_LABELS, getNextActor } from "@/lib/status";
  * Map notification types to user preference toggle fields.
  * Each notification type must be explicitly mapped to a preference toggle.
  * This ensures clear accountability: if it's not in the map, it's not enforced.
+ * Keys match the notification_preferences table column names exactly.
  */
 export const NOTIFICATION_TYPE_TO_PREFERENCE_KEY: Record<
   NotificationInput["type"],
   keyof {
-    notify_on_task_assigned: boolean;
-    notify_on_stage_changed: boolean;
-    notify_on_awaiting_action: boolean;
-    notify_on_mention: boolean;
-    notify_on_submitted_for_review: boolean;
-    notify_on_published: boolean;
-    notify_on_assignment_changed: boolean;
+    task_assigned: boolean;
+    stage_changed: boolean;
+    awaiting_action: boolean;
+    mention: boolean;
+    submitted_for_review: boolean;
+    published: boolean;
+    assignment_changed: boolean;
   }
 > = {
-  task_assigned: "notify_on_task_assigned",
-  stage_changed: "notify_on_stage_changed",
-  awaiting_action: "notify_on_awaiting_action",
-  mention: "notify_on_mention",
-  submitted_for_review: "notify_on_submitted_for_review",
-  published: "notify_on_published",
-  assignment_changed: "notify_on_assignment_changed",
+  task_assigned: "task_assigned",
+  stage_changed: "stage_changed",
+  awaiting_action: "awaiting_action",
+  mention: "mention",
+  submitted_for_review: "submitted_for_review",
+  published: "published",
+  assignment_changed: "assignment_changed",
 };
 
 /**
  * User notification preferences structure
  * Enforced before any notification is emitted (in-app or Slack).
- * Each notification type can be toggled independently for in-app and Slack channels.
+ * Matches the notification_preferences table schema.
  */
 export interface UserNotificationPreferences {
+  user_id?: string;
   notifications_enabled: boolean;
-  notify_on_task_assigned: boolean;
-  notify_on_stage_changed: boolean;
-  notify_on_awaiting_action: boolean;
-  notify_on_mention: boolean;
-  notify_on_submitted_for_review: boolean;
-  notify_on_published: boolean;
-  notify_on_assignment_changed: boolean;
-  slack_notify_on_task_assigned?: boolean;
-  slack_notify_on_stage_changed?: boolean;
-  slack_notify_on_awaiting_action?: boolean;
-  slack_notify_on_mention?: boolean;
-  slack_notify_on_submitted_for_review?: boolean;
-  slack_notify_on_published?: boolean;
-  slack_notify_on_assignment_changed?: boolean;
-  slack_delivery_dm?: boolean;
-  slack_delivery_channel?: boolean;
+  task_assigned: boolean;
+  stage_changed: boolean;
+  awaiting_action: boolean;
+  mention: boolean;
+  submitted_for_review: boolean;
+  published: boolean;
+  assignment_changed: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**

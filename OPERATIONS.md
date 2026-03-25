@@ -509,6 +509,7 @@ Matches are scored by confidence level (highest to lowest priority):
 4. **Import with resolutions**:
    - `nameResolutions` map is passed to `/api/blogs/import`
    - Backend respects user's selections (no re-matching)
+   - Import accepts both `userId` and `selectedUserId` in resolution payloads for compatibility and normalizes internally
 
 ### Database schema
 - `profiles.username` - unique text field, indexed for fast lookup
@@ -524,8 +525,9 @@ Matches are scored by confidence level (highest to lowest priority):
   - `bestMatch`: highest-confidence candidate (null if no matches)
 
 **POST /api/blogs/import** (updated)
-- Input includes: `nameResolutions: Record<string, { action: 'use_existing' | 'create_new', userId?: string }>`
+- Input includes: `nameResolutions: Record<string, { action: 'use_existing' | 'create_new', userId?: string, selectedUserId?: string }>`
 - Backend uses provided resolutions instead of re-matching
+- For unmatched names, backend creates placeholder user profiles using unique `@sighthound.com` email aliases
 
 ### Troubleshooting
 **"Names don't match expected users"**

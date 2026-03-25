@@ -29,6 +29,7 @@ const importRequestSchema = z.object({
     z.object({
       action: z.enum(["use_existing", "create_new"]),
       userId: z.string().optional(),
+      selectedUserId: z.string().optional(),
     })
   ).optional(),
 });
@@ -199,6 +200,12 @@ function validateRow(row: z.infer<typeof importRowSchema>, selectedColumns?: Set
   };
 }
 
+
+type NameResolutionInput = {
+  action: "use_existing" | "create_new";
+  userId?: string;
+  selectedUserId?: string;
+};
 function buildImportEmail(name: string) {
   const local = name
     .toLowerCase()
@@ -207,7 +214,7 @@ function buildImportEmail(name: string) {
     .replace(/^\.+|\.+$/g, "")
     .slice(0, 40);
   const safeLocal = local.length > 0 ? local : "import.user";
-  return `${safeLocal}.${randomUUID().slice(0, 8)}@bulk-import.local`;
+  return `${safeLocal}.${randomUUID().slice(0, 8)}@sighthound.com`;
 }
 
 function getFirstName(fullName: string): string {
@@ -279,14 +286,15 @@ async function resolveOrCreateProfileId(
   cache: ProfileCache,
   name: string,
   defaultRole: AppRole,
-  nameResolutions?: Record<string, { action: 'use_existing' | 'create_new'; userId?: string }>
+  nameResolutions?: Record<string, NameResolutionInput>
 ) {
   // Check if user provided explicit resolution for this name
   if (nameResolutions) {
     const resolution = nameResolutions[name];
     if (resolution) {
-      if (resolution.action === 'use_existing' && resolution.userId) {
-        return resolution.userId;
+      const resolvedUserId = resolution.userId ?? resolution.selectedUserId;
+      if (resolution.action === "use_existing" && resolvedUserId) {
+        return resolvedUserId;
       }
       // If action is 'create_new', fall through to creation logic
     }

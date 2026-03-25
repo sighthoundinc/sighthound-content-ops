@@ -584,6 +584,16 @@ export function BlogImportModal({
     setError(null);
     setIsImporting(true);
     try {
+      const normalizedNameResolutions = Object.fromEntries(
+        Object.entries(selectedNameResolutions).map(([name, resolution]) => [
+          name,
+          {
+            action: resolution.action,
+            userId: resolution.selectedUserId,
+            selectedUserId: resolution.selectedUserId,
+          },
+        ])
+      );
       const rowsToImport = selectedRows.map((row) => ({
         ...row,
         actualPublishDate: selectedColumns.has("actualPublishDate") ? row.actualPublishDate : "",
@@ -599,7 +609,7 @@ export function BlogImportModal({
           fileName,
           rows: rowsToImport,
           selectedColumns: Array.from(selectedColumns),
-          nameResolutions: selectedNameResolutions,
+          nameResolutions: normalizedNameResolutions,
         }),
       });
       const payload = await parseApiResponseJson<ImportResponse>(response);

@@ -12,20 +12,15 @@ import {
 } from "@/lib/api-response";
 
 const API_BASE = "/api/users/notification-preferences";
-const INTEGRATIONS_API = "/api/users/integrations";
 
 interface NotificationPreferencesFormProps {
   onSaveSuccess?: () => void;
 }
 
-interface IntegrationStatus {
-  slack_connected: boolean;
-}
-
 type ContentType = "blogs" | "social_posts";
 
 interface NotificationType {
-  key: keyof Omit<UserNotificationPreferences, "notifications_enabled" | "slack_delivery_dm" | "slack_delivery_channel">;
+  key: keyof Omit<UserNotificationPreferences, "notifications_enabled" | "user_id" | "created_at" | "updated_at">;
   label: string;
   blogDescription: string;
   socialPostDescription: string;
@@ -33,53 +28,49 @@ interface NotificationType {
 
 const NOTIFICATION_TYPES: NotificationType[] = [
   {
-    key: "notify_on_task_assigned" as const,
+    key: "task_assigned" as const,
     label: "Task Assignment",
     blogDescription: "When a blog is assigned to you as writer or publisher",
     socialPostDescription: "When a social post is assigned to you for creation or review",
   },
   {
-    key: "notify_on_stage_changed" as const,
+    key: "stage_changed" as const,
     label: "Stage Changes",
     blogDescription: "When a blog moves between writing and publishing stages",
     socialPostDescription: "When a social post progresses through review, approval, or publication stages",
   },
   {
-    key: "notify_on_awaiting_action" as const,
+    key: "awaiting_action" as const,
     label: "Awaiting Action",
     blogDescription: "When a blog needs your revision or review",
     socialPostDescription: "When a social post is awaiting your input (e.g., live links needed)",
   },
   {
-    key: "notify_on_mention" as const,
+    key: "mention" as const,
     label: "Mentions",
     blogDescription: "When you're mentioned in blog comments",
     socialPostDescription: "When you're mentioned in social post comments",
   },
   {
-    key: "notify_on_submitted_for_review" as const,
+    key: "submitted_for_review" as const,
     label: "Submissions",
     blogDescription: "When a blog is submitted for review",
     socialPostDescription: "When a social post is submitted for review",
   },
   {
-    key: "notify_on_published" as const,
+    key: "published" as const,
     label: "Publications",
     blogDescription: "When a blog is published live",
     socialPostDescription: "When a social post is published",
   },
   {
-    key: "notify_on_assignment_changed" as const,
+    key: "assignment_changed" as const,
     label: "Assignment Changes",
     blogDescription: "When your assignment changes or is removed",
     socialPostDescription: "When your assignment changes or is removed",
   },
 ];
 
-const CHANNEL_NAMES = {
-  in_app: "In-App",
-  slack: "Slack",
-};
 
 const CONTENT_TYPES: Array<{ id: ContentType; label: string }> = [
   { id: "blogs", label: "Blogs" },
@@ -98,9 +89,7 @@ export function NotificationPreferencesForm({
   const [activeTab, setActiveTab] = useState<ContentType>("blogs");
   const [preferences, setPreferences] = useState<UserNotificationPreferences | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-  const [integrations, setIntegrations] = useState<IntegrationStatus>({ slack_connected: false });
   const [allInAppChecked, setAllInAppChecked] = useState(true);
-  const [allSlackChecked, setAllSlackChecked] = useState(true);
 
   // Fetch preferences and integration status on mount
   useEffect(() => {
@@ -138,26 +127,6 @@ export function NotificationPreferencesForm({
         }
         setPreferences(prefsData);
 
-        // Fetch integration status
-        try {
-          const integrationsResponse = await fetch(INTEGRATIONS_API, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          });
-          const integrationsData =
-            await parseApiResponseJson<IntegrationStatus>(integrationsResponse);
-          if (!isApiFailure(integrationsResponse, integrationsData)) {
-            setIntegrations({
-              slack_connected: Boolean(integrationsData.slack_connected),
-            });
-          }
-        } catch (intError) {
-          console.warn("Warning: Could not fetch integration status", intError);
-          // Continue with defaults if integration fetch fails
-        }
 
         setHasChanges(false);
       } catch (error) {
@@ -168,13 +137,13 @@ export function NotificationPreferencesForm({
         // Set defaults on error
         setPreferences({
           notifications_enabled: true,
-          notify_on_task_assigned: true,
-          notify_on_stage_changed: true,
-          notify_on_awaiting_action: true,
-          notify_on_mention: true,
-          notify_on_submitted_for_review: true,
-          notify_on_published: true,
-          notify_on_assignment_changed: true,
+          task_assigned: true,
+          stage_changed: true,
+          awaiting_action: true,
+          mention: true,
+          submitted_for_review: true,
+          published: true,
+          assignment_changed: true,
         });
       } finally {
         setIsLoading(false);
@@ -189,23 +158,15 @@ export function NotificationPreferencesForm({
     setPreferences({
       ...preferences,
       notifications_enabled: enabled,
-      notify_on_task_assigned: enabled,
-      notify_on_stage_changed: enabled,
-      notify_on_awaiting_action: enabled,
-      notify_on_mention: enabled,
-      notify_on_submitted_for_review: enabled,
-      notify_on_published: enabled,
-      notify_on_assignment_changed: enabled,
-      slack_notify_on_task_assigned: enabled,
-      slack_notify_on_stage_changed: enabled,
-      slack_notify_on_awaiting_action: enabled,
-      slack_notify_on_mention: enabled,
-      slack_notify_on_submitted_for_review: enabled,
-      slack_notify_on_published: enabled,
-      slack_notify_on_assignment_changed: enabled,
+      task_assigned: enabled,
+      stage_changed: enabled,
+      awaiting_action: enabled,
+      mention: enabled,
+      submitted_for_review: enabled,
+      published: enabled,
+      assignment_changed: enabled,
     });
     setAllInAppChecked(enabled);
-    setAllSlackChecked(enabled);
     setHasChanges(true);
   };
 
@@ -213,36 +174,23 @@ export function NotificationPreferencesForm({
     if (!preferences) return;
     setPreferences({
       ...preferences,
-      notify_on_task_assigned: enabled,
-      notify_on_stage_changed: enabled,
-      notify_on_awaiting_action: enabled,
-      notify_on_mention: enabled,
-      notify_on_submitted_for_review: enabled,
-      notify_on_published: enabled,
-      notify_on_assignment_changed: enabled,
+      task_assigned: enabled,
+      stage_changed: enabled,
+      awaiting_action: enabled,
+      mention: enabled,
+      submitted_for_review: enabled,
+      published: enabled,
+      assignment_changed: enabled,
     });
     setAllInAppChecked(enabled);
     setHasChanges(true);
   };
 
-  const handleToggleAllSlack = (enabled: boolean) => {
-    if (!preferences) return;
-    setPreferences({
-      ...preferences,
-      slack_notify_on_task_assigned: enabled,
-      slack_notify_on_stage_changed: enabled,
-      slack_notify_on_awaiting_action: enabled,
-      slack_notify_on_mention: enabled,
-      slack_notify_on_submitted_for_review: enabled,
-      slack_notify_on_published: enabled,
-      slack_notify_on_assignment_changed: enabled,
-    });
-    setAllSlackChecked(enabled);
-    setHasChanges(true);
-  };
-
   const handleTogglePreference = (
-    key: keyof Omit<UserNotificationPreferences, "notifications_enabled">,
+    key: keyof Omit<
+      UserNotificationPreferences,
+      "notifications_enabled" | "user_id" | "created_at" | "updated_at"
+    >,
     enabled: boolean
   ) => {
     if (!preferences) return;
@@ -368,33 +316,14 @@ export function NotificationPreferencesForm({
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">
                       <div className="flex flex-col items-center gap-1">
-                        <span>{CHANNEL_NAMES.in_app}</span>
+                        <span>Enabled</span>
                         <input
                           type="checkbox"
                           checked={allInAppChecked}
                           onChange={(e) => handleToggleAllInApp(e.target.checked)}
                           className="h-4 w-4 cursor-pointer rounded border-slate-300 text-slate-600 focus:ring-2 focus:ring-slate-500"
-                          title="Toggle all in-app notifications"
-                          aria-label="Toggle all in-app notifications"
-                        />
-                      </div>
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">
-                      <div className="flex flex-col items-center gap-1">
-                        <div>
-                          {CHANNEL_NAMES.slack}
-                          {!integrations.slack_connected && (
-                            <span className="ml-1 text-xs font-normal text-slate-500">(not connected)</span>
-                          )}
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={allSlackChecked}
-                          onChange={(e) => handleToggleAllSlack(e.target.checked)}
-                          disabled={!integrations.slack_connected}
-                          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-slate-500"
-                          title={!integrations.slack_connected ? "Connect Slack to enable notifications" : "Toggle all Slack notifications"}
-                          aria-label="Toggle all Slack notifications"
+                          title="Toggle all notifications"
+                          aria-label="Toggle all notifications"
                         />
                       </div>
                     </th>
@@ -403,7 +332,6 @@ export function NotificationPreferencesForm({
                 <tbody className="divide-y divide-slate-200">
                   {NOTIFICATION_TYPES.map((notif) => {
                     const key = notif.key;
-                    const slackKey = `slack_${key}` as keyof UserNotificationPreferences;
                     const description = activeTab === "blogs" ? notif.blogDescription : notif.socialPostDescription;
                     return (
                       <tr key={key} className="hover:bg-slate-50">
@@ -417,24 +345,7 @@ export function NotificationPreferencesForm({
                             checked={preferences[key]}
                             onChange={(e) => handleTogglePreference(key, e.target.checked)}
                             className="h-5 w-5 cursor-pointer rounded border-slate-300 text-slate-600 focus:ring-2 focus:ring-slate-500"
-                            aria-label={`${notif.label} - In-App`}
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={(preferences[slackKey] as boolean) ?? preferences[key]}
-                            onChange={(e) => {
-                              setPreferences({
-                                ...preferences,
-                                [slackKey]: e.target.checked,
-                              });
-                              setHasChanges(true);
-                            }}
-                            disabled={!integrations.slack_connected}
-                            className="h-5 w-5 cursor-pointer rounded border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-slate-500"
-                            aria-label={`${notif.label} - Slack`}
-                            title={!integrations.slack_connected ? "Connect Slack to enable notifications" : undefined}
+                            aria-label={`${notif.label}`}
                           />
                         </td>
                       </tr>
@@ -443,71 +354,6 @@ export function NotificationPreferencesForm({
                 </tbody>
               </table>
             </div>
-            {!integrations.slack_connected && (
-              <p className="text-xs text-slate-500">
-                Connect your Slack account above to receive Slack notifications.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Slack Delivery Methods */}
-        {preferences.notifications_enabled && integrations.slack_connected && (
-          <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-900">
-              Slack Delivery Method
-            </p>
-            <p className="text-xs text-slate-600">
-              Choose how Slack notifications are delivered when enabled above.
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-start gap-3 opacity-50">
-                <input
-                  type="checkbox"
-                  disabled
-                  checked={false}
-                  className="mt-0.5 h-5 w-5 cursor-not-allowed rounded border-slate-300 text-slate-300 focus:ring-2 focus:ring-slate-500"
-                />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-900">
-                      Direct Message (DM)
-                    </span>
-                    <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                      Coming Soon
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600">
-                    Send notifications as direct messages to you in Slack (pending approval)
-                  </p>
-                </div>
-              </div>
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={preferences.slack_delivery_channel ?? true}
-                  onChange={(e) => {
-                    setPreferences({
-                      ...preferences,
-                      slack_delivery_channel: e.target.checked,
-                    });
-                    setHasChanges(true);
-                  }}
-                  className="h-5 w-5 cursor-pointer rounded border-slate-300 text-slate-600 focus:ring-2 focus:ring-slate-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-slate-900">
-                    #content-ops-alerts Channel
-                  </span>
-                  <p className="text-xs text-slate-600">
-                    Post notifications in the #content-ops-alerts channel
-                  </p>
-                </div>
-              </label>
-            </div>
-            <p className="text-xs text-slate-500">
-              Notifications will be posted to the #content-ops-alerts channel.
-            </p>
           </div>
         )}
       </div>

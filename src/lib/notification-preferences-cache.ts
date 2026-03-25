@@ -51,13 +51,13 @@ export async function getUserNotificationPreferencesWithCache(
   // Cache and return actual preferences
   const result: UserNotificationPreferences = {
     notifications_enabled: preferences.notifications_enabled ?? true,
-    notify_on_task_assigned: preferences.notify_on_task_assigned ?? true,
-    notify_on_stage_changed: preferences.notify_on_stage_changed ?? true,
-    notify_on_awaiting_action: preferences.notify_on_awaiting_action ?? true,
-    notify_on_mention: preferences.notify_on_mention ?? true,
-    notify_on_submitted_for_review: preferences.notify_on_submitted_for_review ?? true,
-    notify_on_published: preferences.notify_on_published ?? true,
-    notify_on_assignment_changed: preferences.notify_on_assignment_changed ?? true,
+    task_assigned: preferences.task_assigned ?? true,
+    stage_changed: preferences.stage_changed ?? true,
+    awaiting_action: preferences.awaiting_action ?? true,
+    mention: preferences.mention ?? true,
+    submitted_for_review: preferences.submitted_for_review ?? true,
+    published: preferences.published ?? true,
+    assignment_changed: preferences.assignment_changed ?? true,
   };
 
   preferencesCache.set(userId, result);
@@ -71,13 +71,13 @@ export async function getUserNotificationPreferencesWithCache(
 export function getDefaultPreferences(): UserNotificationPreferences {
   return {
     notifications_enabled: true,
-    notify_on_task_assigned: true,
-    notify_on_stage_changed: true,
-    notify_on_awaiting_action: true,
-    notify_on_mention: true,
-    notify_on_submitted_for_review: true,
-    notify_on_published: true,
-    notify_on_assignment_changed: true,
+    task_assigned: true,
+    stage_changed: true,
+    awaiting_action: true,
+    mention: true,
+    submitted_for_review: true,
+    published: true,
+    assignment_changed: true,
   };
 }
 

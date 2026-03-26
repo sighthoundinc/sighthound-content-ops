@@ -4,7 +4,7 @@ import { formatDateInTimezone } from "@/lib/format-date";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
@@ -201,6 +201,14 @@ function getDateDifferenceInDays(dateKey: string, todayDateKey: string) {
   );
 }
 
+export default function MyTasksPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-slate-600">Loading tasks…</div>}>
+      <MyTasksPageContent />
+    </Suspense>
+  );
+}
+
 function getTaskStatusPriority(
   statusValue: WriterStageStatus | PublisherStageStatus,
   scheduledDate: string | null,
@@ -306,7 +314,7 @@ function getAdminAssignmentTaskActionState(
     : "waiting_on_others";
 }
 
-export default function MyTasksPage() {
+function MyTasksPageContent() {
   const searchParams = useSearchParams();
   const { user, hasPermission, profile } = useAuth();
   const requiredByLabel = profile?.display_name || profile?.full_name || "You";

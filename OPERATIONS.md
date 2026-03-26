@@ -18,6 +18,8 @@ For end-user manual instructions, see `HOW_TO_USE_APP.md`.
 
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
 For social execution-stage completion, live links are entered from `/social-posts/[id]` Step 4 (`Review & Publish` → `Live Links`) and persisted in `social_post_links`.
+- Social status transition API writes record-level activity using canonical fields (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `metadata`) to avoid schema drift between activity writers and readers.
+- Record-level assignment/comments/activity visibility in drawers and full pages is available to all authenticated users; admin-only restrictions apply only to global Settings activity pages.
 
 ### Contract enforcement model
 - API contract normalization is centralized in `src/lib/api-contract.ts` and applied to all route handlers in `src/app/api/**/route.ts`.
@@ -58,6 +60,7 @@ For social execution-stage completion, live links are entered from `/social-post
 - Tooltip position is viewport-clamped to prevent edge clipping
 - Collapsed sidebar links expose keyboard-first UX: visible focus ring (`focus-visible` inset ring) and tooltip opening on focus
 - CardBoard nav item uses a dedicated kanban icon to improve icon-only state recognition
+- Link target invariant: internal app links open in same tab; external URLs open in new tab with safe rel attributes
 - Sidebar toggle includes focus-retention handling: if focus was inside sidebar during toggle, focus is preserved predictably (fallback to toggle control) instead of dropping to document body
 - Active nav item in collapsed mode is intentionally high-contrast (dark background + white icon) so state is clear without labels/tooltips
 - Collapsed nav item hit area is constrained to ~44px minimum row height with centered icon and full-row click target
@@ -65,11 +68,30 @@ For social execution-stage completion, live links are entered from `/social-post
 - `/tasks` follows assignment-based visibility:
   - shows all non-published work assigned to the current user (not only currently actionable rows)
   - includes rows waiting on another actor to preserve end-to-end assignment visibility
-  - provides `Action State` filtering (`Required by Me` / `Waiting on Others`) for triage
+  - social `Action State` is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` → worker-owned, `in_review/creative_approved` → reviewer-owned) so handoff stages classify consistently even if assignment metadata lags
+  - `Next Tasks` priority list is computed across both blog and social datasets (not blog-only)
+  - social list section renders all matching rows for current filters (not capped preview)
+  - provides `Action State` filtering (`Required by: <username>` / `Waiting on Others`) for triage
 - `/` home page includes `My Tasks Snapshot`:
   - mixed blog + social items (max 8)
-  - grouped as `Required by Me` and `Waiting on Others`
-  - backed by assignment-based task model to match `/tasks`
+  - grouped as `Required by: <username>` and `Waiting on Others`
+  - uses the same stage-derived social ownership model as `/tasks` so handoff visibility stays aligned across both surfaces
+  - summary buckets include writer-facing social handoff stage `ready_to_publish` in addition to review/live-link stages
+- notification bell panel includes actionable task shortcuts sourced from `/api/dashboard/tasks-snapshot` (`requiredByMe` group), keeping navigation shortcuts aligned with the same ownership/action-state contract
+- admin quick-view session entry starts on `/tasks?action=action_required` so impersonated workflow checks begin with next-step-required-by-user work
+- `/dashboard` overview cards are cross-content and combine blog + social post counts:
+  - `Open Work`
+  - `Scheduled Next 7 Days`
+  - `Awaiting Review`
+  - `Ready to Publish`
+  - `Awaiting Live Link`
+  - `Published Last 7 Days`
+- `/dashboard` filter controls are intentionally role-agnostic and rendered as a denser 4-column grid on wide viewports
+- `/dashboard` filter groups are explicit:
+  - Row 1 (Search Context): `Sites`, `Writers`, `Publishers`, `Stage`
+  - Row 2 (Workflow State): `Writer Status`, `Publisher Status`, `Cross Workflow`, `Cross Delivery`
+- `/dashboard` uses a single active-filter pill surface and avoids duplicated chip bars
+- `/dashboard` bulk panel is selection-driven; permission-restricted mutation controls remain visible but disabled with helper text
 
 ### Icon system operations standard
 - Icon provider: `lucide-react` (open-source SVG icon set)
@@ -287,6 +309,18 @@ Notification bell integration:
 - "View History" link navigates to full Activity History page
 - "Clear All" button dismisses only bell dropdown view (does not delete full history)
 - Bell activity entries use the same plain-language formatter as timeline/history views to keep wording consistent across surfaces
+
+## 8.3) Social post transition field gates
+- Social post creation requires `product`, `type`, and `reviewer_user_id`; title may be empty.
+- Transition requirement checkpoints:
+  - `draft` → `in_review`: `product`, `type`, `canva_url`
+  - `in_review` → `creative_approved`: `product`, `type`, `canva_url`, `platforms`, `caption`, `scheduled_date`
+  - `awaiting_live_link` → `published`: at least one saved live link in `social_post_links`
+- Guardrails:
+  - non-admin writers can edit brief fields in `draft` and `changes_requested`
+  - admins can edit brief fields in any stage
+  - in `awaiting_live_link`, non-admin users are restricted to live-link submission
+- Stage transition payloads include `associated_blog_id` to prevent linked blog context loss during status moves.
 
 ## 8.5) Admin maintenance operations
 Activity history cleanup API:
@@ -604,6 +638,28 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 1. verify assignment (`writer_id` / `publisher_id`)
 2. verify current queue filter and stage state
 3. confirm `view_writing_queue` / `view_publishing_queue` permission
+### “Dashboard row click opened a different surface than expected”
+1. verify `content_type` for the row (`blog` vs `social_post`)
+2. expected behavior: blog row opens drawer; social row navigates to `/social-posts/[id]`
+3. if selection/bulk appears inconsistent, confirm selection mix:
+   - mixed row selection is allowed (blogs + social)
+   - blog mutation controls are disabled whenever social rows are selected
+### “Dashboard filters seem to affect the wrong content type”
+1. verify which filter group is active:
+   - Cross-Content Scope affects both blogs and social rows
+   - Blog Filters affect blogs only
+   - Social Filters affect social rows only
+2. check active filter pills for scoped labels (`Blog ...`, `Social ...`, `Workflow (All Content)`, `Delivery (All Content)`)
+3. use `Clear all filters` to reset staged filter groups quickly during triage
+
+### “Open/Copy link controls missing on workflow URL fields”
+1. verify the surface uses shared `LinkQuickActions` instead of ad-hoc links/buttons
+2. check URL value is present (empty values intentionally render disabled controls)
+3. confirm alert provider is mounted so copy success/error feedback appears
+### “Dashboard export/copy output looks incomplete”
+1. confirm whether selected rows include social posts (mixed selected export is supported in Phase A)
+2. confirm visible columns in Customize panel (exports follow visible column order)
+3. note: URL copy currently exports blog live URLs only by design
 
 ### “Calendar month view feels janky or seems to hide items”
 1. confirm users are on current build with compact month rendering (`+N more` behavior)

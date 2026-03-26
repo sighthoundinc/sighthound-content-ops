@@ -12,6 +12,7 @@ import {
   REQUIRED_FIELDS_FOR_STATUS,
   type SocialPostStatus,
 } from "@/lib/social-post-workflow";
+import { getUserRoles } from "@/lib/roles";
 const SOCIAL_POST_STATUSES = [
   "draft",
   "in_review",
@@ -43,6 +44,7 @@ const transitionPayloadSchema = z
     caption: z.string().trim().optional(),
     platforms: z.array(z.enum(["linkedin", "facebook", "instagram"])).optional(),
     scheduled_date: z.string().date().optional(),
+    associated_blog_id: z.string().uuid().nullable().optional(),
   })
   .passthrough();
 
@@ -70,6 +72,7 @@ export const POST = withApiContract(async function POST(
       );
     }
     const payload = parsedPayload.data;
+    const isAdmin = getUserRoles(auth.context.profile).includes("admin");
 
     // 1. Parse and validate next status
     const nextStatus = payload.nextStatus as SocialPostStatus;
@@ -97,7 +100,8 @@ export const POST = withApiContract(async function POST(
         canva_url,
         canva_page,
         caption,
-        scheduled_date
+        scheduled_date,
+        associated_blog_id
       `
       )
       .eq("id", id)
@@ -127,7 +131,7 @@ export const POST = withApiContract(async function POST(
     };
     
     const allowedOwner = allowedActors[currentStatus];
-    if (allowedOwner && allowedOwner !== auth.context.userId) {
+    if (!isAdmin && allowedOwner && allowedOwner !== auth.context.userId) {
       return NextResponse.json(
         {
           error: "Permission denied: You are not authorized to transition this post at this stage.",
@@ -170,6 +174,7 @@ export const POST = withApiContract(async function POST(
       "caption",
       "platforms",
       "scheduled_date",
+      "associated_blog_id",
     ];
 
     for (const field of BRIEF_FIELDS) {
@@ -180,8 +185,21 @@ export const POST = withApiContract(async function POST(
       }
     }
 
-    // 8. Check field locking: no locked brief fields during execution stages
-    if (isExecutionStage(currentStatus)) {
+    // 8. Check field locking for execution stages
+    if (
+      !isAdmin &&
+      currentStatus === "awaiting_live_link" &&
+      Object.keys(briefFieldUpdates).length > 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Awaiting Live Link is read-only. Only live links can be submitted in this stage.",
+        },
+        { status: 400 }
+      );
+    }
+    if (!isAdmin && isExecutionStage(currentStatus)) {
       const lockedFieldsPresent = Object.keys(briefFieldUpdates).filter(
         (field) => LOCKED_BRIEF_FIELDS.includes(field as typeof LOCKED_BRIEF_FIELDS[number])
       );
@@ -270,21 +288,28 @@ export const POST = withApiContract(async function POST(
       throw updateError;
     }
 
-    // 12. Log activity event (non-blocking, fire and forget)
+    // 12. Log canonical activity event (non-blocking)
     const activityType = isBackwardTransition(currentStatus, nextStatus)
       ? "social_post_rolled_back"
       : "social_post_status_changed";
-
     auth.context.adminClient
       .from("social_post_activity_history")
       .insert({
         social_post_id: id,
-        user_id: auth.context.userId,
-        activity_type: activityType,
-        old_status: currentStatus,
-        new_status: nextStatus,
-        reason: normalizedReason,
-        created_at: new Date().toISOString(),
+        changed_by: auth.context.userId,
+        event_type: activityType,
+        field_name: "status",
+        old_value: currentStatus,
+        new_value: nextStatus,
+        metadata: normalizedReason ? { reason: normalizedReason } : {},
+      })
+      .then(({ error: activityError }) => {
+        if (activityError) {
+          console.warn(
+            "[POST /api/social-posts/[id]/transition] failed to record status activity",
+            activityError.message
+          );
+        }
       });
 
     // 13. Insert live links if provided

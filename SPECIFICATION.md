@@ -6,6 +6,13 @@ Sighthound Content Operations is a workflow application for managing content pro
 
 It is an operations system (not a CMS). It tracks ownership, workflow stage, scheduling, publication metadata, comments, and audit history.
 
+### Record-level visibility contract
+- Blogs and social posts expose assignment, comments, and record-level activity history to all authenticated users in:
+  - detail drawers (latest activity shown first)
+  - full record pages/editors
+- This is read visibility only and does not change mutation permissions.
+- Global/system activity history pages under Settings remain admin-only.
+
 ## 2) Scope
 ### In scope
 - blog planning/writing/publishing lifecycle
@@ -75,6 +82,7 @@ Rules:
 - assignee must exist for non-default stage progression
 - `overall_status` is derived from stage statuses
 - `status_updated_at` advances with stage transitions
+- Social record-level activity history readers and writers use canonical history keys (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `changed_at`) for consistent formatting across UI surfaces.
 
 ## 5) Date model
 Primary fields:
@@ -104,8 +112,11 @@ Key behavior:
 - **Bottom buttons**: persistent quick links to `Dashboard` and `Calendar` for context switching
 - **My Tasks Snapshot**:
   - shows top mixed assigned items (blogs + social, max 8)
-  - grouped into `Required by Me` and `Waiting on Others`
+  - grouped into `Required by: <username>` and `Waiting on Others`
   - includes `View all` action to `/tasks`
+- **Notification shortcuts alignment**:
+  - bell drawer includes `Required by: <username>` shortcut rows sourced from the same tasks-snapshot ownership model
+  - shortcut rows deep-link directly to the relevant blog/social detail page
 - **Data sources**:
   - `/api/dashboard/summary` for standup counts
   - `/api/dashboard/tasks-snapshot` for grouped mixed-task snapshot
@@ -183,7 +194,20 @@ Key behavior:
   - no dead zones around icon (row remains clickable)
 - icon-only recognition must avoid reused ambiguous icons (CardBoard uses dedicated kanban icon)
 - left sidebar stays intentionally clean (no quick filter groups and no recently published block)
-- today strip (scheduled this week / ready / delayed) with clickable metric filtering
+- overview strip uses cross-content cards with clickable filtering:
+  - `Open Work`
+  - `Scheduled Next 7 Days`
+  - `Awaiting Review`
+  - `Ready to Publish`
+  - `Awaiting Live Link`
+  - `Published Last 7 Days`
+- filter surface is role-agnostic (all users get the same dashboard filters)
+- filter grid scales to a 4-column layout on large screens
+- filter groups are explicit:
+  - Row 1 (Search Context): `Sites`, `Writers`, `Publishers`, `Stage`
+  - Row 2 (Workflow State): `Writer Status`, `Publisher Status`, `Cross Workflow`, `Cross Delivery`
+- active filters are rendered via a single canonical pill surface (no duplicate chip bars)
+- bulk panel appears whenever rows are selected; mutation controls stay permission-gated but visible in disabled state with helper text
 - delayed definition: scheduled publish date passed while `overall_status != published`
 - active filter chips and clear-all control
 - action-led empty states:
@@ -223,15 +247,20 @@ Key behavior:
 
 ### Tasks (`/tasks`)
 - top-3 priority items first
+- top-3 priority list is mixed across blogs + social posts
 - full list expansion with pagination
 - urgency tags (`Overdue`, `Due Soon`, `Upcoming`)
 - assignment-based visibility:
   - show all non-published items assigned to the current user
   - include rows even when next action is currently owned by another user
+- social action ownership is stage-derived for action-state classification:
+  - `draft`, `changes_requested`, `ready_to_publish`, `awaiting_live_link` → worker-owned
+  - `in_review`, `creative_approved` → reviewer-owned
 - action-state controls:
   - `All Action States`
-  - `Required by Me`
+  - `Required by: <username>`
   - `Waiting on Others`
+- social tasks section reflects all rows that match current filters (not capped preview-only subset)
 
 ### Calendar (`/calendar`)
 - month/week views
@@ -315,6 +344,9 @@ Key behavior:
 - admin-only wipe app clean (full factory reset)
   - preserves only currently signed-in admin account
   - removes all other auth users, including other admins
+- quick-view entry behavior:
+  - admin quick-view mode redirects impersonated sessions to `/tasks?action=action_required`
+  - this ensures quick-view sessions begin on next-step-required-by-user workload
 
 ### Activity History (`/settings/access-logs`)
 Admin-accessible unified activity history page for tracking all operational events across the system.
@@ -459,6 +491,15 @@ All behavior-critical interfaces are treated as explicit contracts to prevent dr
 - Workflow transitions and required-field gates remain centralized and authoritative.
 - UI cannot bypass transition constraints.
 - Social transition authority remains API-first via `/api/social-posts/[postId]/transition`.
+- Social transition field contract:
+  - create (`draft`): requires `product`, `type`, `reviewer_user_id`; `title` is optional
+  - `draft` → `in_review`: requires `product`, `type`, `canva_url`
+  - `in_review` → `creative_approved`: requires `product`, `type`, `canva_url`, `platforms`, `caption`, `scheduled_date`
+  - `awaiting_live_link` → `published`: requires at least one persisted live link
+  - non-admin writers can edit brief fields in `draft` and `changes_requested`
+  - admins can edit brief fields in any stage
+  - in `awaiting_live_link`, non-admin users are restricted to live-link submission
+  - transition payloads persist `associated_blog_id` to avoid linked-blog value loss between stages
 
 ### No-bypass mutation rule
 - Operational state mutations must flow through contract boundaries:
@@ -586,6 +627,34 @@ pushNotification(getNotificationFromEvent(unifiedEvent));  // Emits in-app notif
 All unified events are automatically recorded to `blog_assignment_history` or `social_post_activity_history` tables via `/api/events/record-activity` endpoint. This provides a complete audit trail without requiring separate logging logic.
 ### Migration Path
 Legacy `pushNotification()` calls continue working. New code adopts `emitEvent()` incrementally. See `docs/UNIFIED_EVENTS_MIGRATION.md` for detailed migration guide and examples.
+## 11c) Dashboard Unified Content Table Contract
+The dashboard list surface is a unified cross-content table driven by a shared row contract (`DashboardContentRow`) that merges blog and social records.
+### Core row fields (required)
+- `content_type`
+- `site`
+- `id`
+- `title`
+- `status_display`
+- `lifecycle_bucket`
+- `scheduled_date`
+- `published_date`
+- `owner_display`
+- `updated_at`
+### Optional fields
+- `product` (social-focused, customizable column)
+### Interaction contract
+- Blog row click opens blog details drawer.
+- Social row click navigates to `/social-posts/[id]`.
+- Phase A enables mixed checkbox selection across blogs and social rows.
+- Blog mutation actions remain gated to blog-only selections; controls disable when social rows are included.
+- Social bulk mutations are intentionally deferred and not executed in Phase A.
+### Staged filter rollout contract
+- Stage 1 (UI + safety): explicit grouped headings and renamed scoped labels for cross-content/blog/social filter sets.
+- Stage 1 (scope safety): blog-only filters are pass-through for social rows, and social-only filters are pass-through for blog rows.
+- Stage 2 (social-aware wiring): social-specific predicates are active for `Social Status` and `Social Product` when filtering unified dashboard rows.
+### Export/copy contract
+- CSV/PDF export runs on the unified visible column model.
+- URL copy is blog-only (social rows contribute no blog live URL values).
 ## 12) Environment requirements
 Frontend:
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -695,6 +764,7 @@ Matching attempts against active profiles are confidence-scored first, then tie-
 - UI reflects correct loading/success/error states
 - no silent failures in any user flow
 - inline validation implemented for all required inputs
+- high-value workflow URLs use shared in-place `Open` + `Copy` actions (`LinkQuickActions`) with global feedback and disabled-empty states
 - edge cases handled:
   - empty states
   - invalid input

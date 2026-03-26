@@ -3,6 +3,7 @@
 import { formatDateInTimezone } from "@/lib/format-date";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
 import {
   Suspense,
   useCallback,
@@ -17,6 +18,7 @@ import { BlogImportModal } from "@/components/blog-import-modal";
 import { Button, buttonClass } from "@/components/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DetailDrawerField } from "@/components/detail-drawer";
+import { LinkQuickActions } from "@/components/link-quick-actions";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
   DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
@@ -36,9 +38,14 @@ import {
   BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogPublishDate,
+  isMissingBlogCommentsTableError,
   isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
+import {
+  formatActivityChangeDescription,
+  formatActivityEventTitle,
+} from "@/lib/activity-history-format";
 import { PUBLISHER_STATUS_LABELS, WRITER_STATUS_LABELS } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
@@ -51,8 +58,10 @@ import {
 } from "@/lib/segmented-control";
 import { getSiteBadgeClasses, getSiteLabel, getSiteShortLabel } from "@/lib/site";
 import type {
+  BlogHistoryRecord,
   BlogRecord,
   BlogSite,
+  ProfileRecord,
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
@@ -303,6 +312,43 @@ function getStageBadgeClasses(stage: LibraryStage) {
 function getAssigneeLabel(name: string | null | undefined) {
   return name && name.trim().length > 0 ? name : "Unassigned";
 }
+type BlogCommentRecord = {
+  id: string;
+  blog_id: string;
+  comment: string;
+  created_by: string;
+  created_at: string;
+  author?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+};
+function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
+  return rows.map((row) => {
+    return {
+      id: String(row.id ?? ""),
+      blog_id: String(row.blog_id ?? ""),
+      comment: String(row.comment ?? ""),
+      created_by: String(row.user_id ?? row.created_by ?? ""),
+      created_at: String(row.created_at ?? ""),
+      author: (Array.isArray(row.author) ? row.author[0] : row.author) as
+        | Pick<ProfileRecord, "id" | "full_name" | "email">
+        | null
+        | undefined,
+    } satisfies BlogCommentRecord;
+  });
+}
+function isMissingBlogCommentUserIdColumnError(error: {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+} | null) {
+  if (!error) {
+    return false;
+  }
+  const code = (error.code ?? "").toUpperCase();
+  const text =
+    `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return code === "42703" && text.includes("user_id");
+}
 
 
 function isBoardStageQueryFilter(value: string | null): value is BoardStageQueryFilter {
@@ -340,6 +386,10 @@ function BlogLibraryPageContent() {
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
   const [focusedBlogId, setFocusedBlogId] = useState<string | null>(null);
   const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
+  const [panelHistory, setPanelHistory] = useState<BlogHistoryRecord[]>([]);
+  const [panelComments, setPanelComments] = useState<BlogCommentRecord[]>([]);
+  const [isPanelLoading, setIsPanelLoading] = useState(false);
+  const [panelError, setPanelError] = useState<string | null>(null);
   const [copiedCell, setCopiedCell] = useState<{
     blogId: string;
     field: "title" | "url";
@@ -561,6 +611,83 @@ function BlogLibraryPageContent() {
       setActiveBlogId(null);
     }
   }, [activeBlogId, blogs]);
+  useEffect(() => {
+    if (!activeBlogId) {
+      setPanelHistory([]);
+      setPanelComments([]);
+      setPanelError(null);
+      return;
+    }
+    const loadPanelData = async () => {
+      setIsPanelLoading(true);
+      setPanelError(null);
+      const supabase = getSupabaseBrowserClient();
+      const fetchComments = async () => {
+        let { data, error } = await supabase
+          .schema("public")
+          .from("blog_comments")
+          .select("id,blog_id,comment,user_id,created_at,author:user_id(id,full_name,email)")
+          .eq("blog_id", activeBlogId)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        if (isMissingBlogCommentUserIdColumnError(error)) {
+          const fallback = await supabase
+            .schema("public")
+            .from("blog_comments")
+            .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
+            .eq("blog_id", activeBlogId)
+            .order("created_at", { ascending: false })
+            .limit(5);
+          data = fallback.data as typeof data;
+          error = fallback.error;
+        }
+        return { data, error };
+      };
+      const [{ data: historyData, error: historyError }, { data: commentsData, error: commentsError }] =
+        await Promise.all([
+          supabase
+            .from("blog_assignment_history")
+            .select("*")
+            .eq("blog_id", activeBlogId)
+            .order("changed_at", { ascending: false })
+            .limit(5),
+          fetchComments(),
+        ]);
+      if (historyError) {
+        setPanelError(historyError.message);
+        setPanelHistory([]);
+      } else {
+        setPanelHistory((historyData ?? []) as BlogHistoryRecord[]);
+      }
+      if (commentsError) {
+        if (isMissingBlogCommentsTableError(commentsError)) {
+          setPanelError(
+            "Comments table is missing from schema cache. Run latest migrations and refresh schema cache."
+          );
+        } else {
+          setPanelError(commentsError.message);
+        }
+        setPanelComments([]);
+      } else {
+        setPanelComments(normalizeCommentRows((commentsData ?? []) as Array<Record<string, unknown>>));
+      }
+      setIsPanelLoading(false);
+    };
+    void loadPanelData();
+  }, [activeBlogId]);
+  const panelHistoryUserNameById = useMemo(() => {
+    const entries: Array<[string, string]> = [];
+    for (const nextBlog of blogs) {
+      if (nextBlog.writer?.id && nextBlog.writer.full_name) {
+        entries.push([nextBlog.writer.id, nextBlog.writer.full_name]);
+      }
+      if (nextBlog.publisher?.id && nextBlog.publisher.full_name) {
+        entries.push([nextBlog.publisher.id, nextBlog.publisher.full_name]);
+      }
+    }
+    return Object.fromEntries(entries);
+  }, [blogs]);
 
   const filteredBlogs = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -1725,37 +1852,94 @@ function BlogLibraryPageContent() {
                 <div className="space-y-3 text-sm text-slate-700">
                   <div className="space-y-1">
                     <p className="text-xs text-slate-500">Google Doc</p>
-                    {activeBlog.google_doc_url ? (
-                      <Link
-                        href={activeBlog.google_doc_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="interactive-link block truncate text-blue-600"
-                        title={activeBlog.google_doc_url}
-                      >
-                        {activeBlog.google_doc_url}
-                      </Link>
-                    ) : (
-                      <p>—</p>
-                    )}
+                    <LinkQuickActions
+                      href={activeBlog.google_doc_url}
+                      label="Google Doc URL"
+                      size="xs"
+                    />
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-slate-500">Live URL</p>
-                    {activeBlog.live_url ? (
-                      <Link
-                        href={activeBlog.live_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="interactive-link block truncate text-blue-600"
-                        title={activeBlog.live_url}
-                      >
-                        {activeBlog.live_url}
-                      </Link>
-                    ) : (
-                      <p>—</p>
-                    )}
+                    <LinkQuickActions
+                      href={activeBlog.live_url}
+                      label="Live URL"
+                      size="xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500">Blog Page</p>
+                    <LinkQuickActions
+                      href={`/blogs/${activeBlog.id}`}
+                      label="Blog page URL"
+                      size="xs"
+                    />
                   </div>
                 </div>
+              ) : undefined
+            }
+            commentsCount={panelComments.length}
+            timelineCount={panelHistory.length}
+            commentsContent={
+              activeBlog ? (
+                <div className="space-y-2">
+                  {panelError ? (
+                    <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      {panelError}
+                    </p>
+                  ) : null}
+                  {isPanelLoading ? (
+                    <p className="text-sm text-slate-500">Loading comments…</p>
+                  ) : panelComments.length === 0 ? (
+                    <p className="text-sm text-slate-500">No comments yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {panelComments.map((comment) => (
+                        <li key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                          <p className="text-xs font-semibold text-slate-600">
+                            {comment.author?.full_name ?? "Unknown"} —{" "}
+                            {formatDistanceToNow(new Date(comment.created_at), {
+                              addSuffix: true,
+                            })}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-800">{comment.comment}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : undefined
+            }
+            timelineContent={
+              activeBlog ? (
+                isPanelLoading ? (
+                  <p className="text-sm text-slate-500">Loading activity…</p>
+                ) : panelHistory.length === 0 ? (
+                  <p className="text-sm text-slate-500">No activity history yet.</p>
+                ) : (
+                  <ol className="space-y-2">
+                    {panelHistory.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-slate-800">
+                          {formatActivityEventTitle(entry)}
+                        </p>
+                        {(() => {
+                          const detail = formatActivityChangeDescription(entry, {
+                            userNameById: panelHistoryUserNameById,
+                          });
+                          return detail ? (
+                            <p className="text-xs text-slate-600">{detail}</p>
+                          ) : null;
+                        })()}
+                        <p className="text-xs text-slate-400">
+                          {formatDateInTimezone(entry.changed_at, profile?.timezone)}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                )
               ) : undefined
             }
           />

@@ -36,7 +36,7 @@ import {
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
-import { ExternalLink } from "@/components/external-link";
+import { LinkQuickActions } from "@/components/link-quick-actions";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { SocialPostStatusInfo } from "@/components/social-post-status-info";
@@ -56,6 +56,7 @@ import {
   SOCIAL_POST_TYPES,
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
+import { canUserActOnStatus } from "@/lib/social-post-workflow";
 import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
 import { getUserRoles } from "@/lib/roles";
 import {
@@ -134,6 +135,7 @@ type SocialPostFormState = {
 };
 
 const STATUS_DROP_ZONE_PREFIX = "social-status-";
+const ASSIGNED_USER_HELPER_TEXT = "Only assigned user can perform this action";
 
 function normalizeRelationObject<T>(value: unknown): T | null {
   if (Array.isArray(value)) {
@@ -142,9 +144,6 @@ function normalizeRelationObject<T>(value: unknown): T | null {
   return (value ?? null) as T | null;
 }
 
-function isExecutionStage(status: SocialPostStatus) {
-  return status === "ready_to_publish" || status === "awaiting_live_link";
-}
 
 function normalizeSocialPostRows(rows: Array<Record<string, unknown>>) {
   return rows.map((row) => {
@@ -280,6 +279,7 @@ function SocialPostCard({
   onDelete,
   isDeleting,
   currentUserId,
+  canTransition,
 }: {
   post: SocialPostWithRelations;
   linkCount: number;
@@ -287,9 +287,11 @@ function SocialPostCard({
   onDelete: (postId: string) => void;
   isDeleting: boolean;
   currentUserId?: string;
+  canTransition: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: post.id,
+    disabled: !canTransition,
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -313,7 +315,9 @@ function SocialPostCard({
     >
       <button
         type="button"
-        className="block w-full rounded-md p-3 text-left hover:border-slate-300 hover:bg-slate-50"
+        className={`block w-full rounded-md p-3 text-left hover:border-slate-300 hover:bg-slate-50 ${
+          !canTransition ? "cursor-not-allowed" : ""
+        }`}
         onClick={onOpen}
         {...attributes}
         {...listeners}
@@ -349,6 +353,9 @@ function SocialPostCard({
             currentUserId={currentUserId}
           />
         </div>
+        {!canTransition && post.status !== "published" ? (
+          <p className="mt-1 text-[11px] text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
+        ) : null}
         <p className="mt-2 text-[11px] text-slate-400">{linkCount} published links</p>
       </button>
       <div className="absolute right-2 top-2">
@@ -402,6 +409,7 @@ function SocialStatusColumn({
   onDeletePost,
   isDeletingPost,
   currentUserId,
+  canCurrentUserActOnPost,
 }: {
   status: SocialPostStatus;
   posts: SocialPostWithRelations[];
@@ -410,6 +418,7 @@ function SocialStatusColumn({
   onDeletePost: (postId: string) => void;
   isDeletingPost: boolean;
   currentUserId?: string;
+  canCurrentUserActOnPost: (post: SocialPostWithRelations) => boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `${STATUS_DROP_ZONE_PREFIX}${status}`,
@@ -447,6 +456,7 @@ function SocialStatusColumn({
               onDelete={onDeletePost}
               isDeleting={isDeletingPost}
               currentUserId={currentUserId}
+              canTransition={canCurrentUserActOnPost(post)}
             />
           ))
         )}
@@ -757,7 +767,20 @@ function SocialPostsPageContent() {
     }
     return Object.fromEntries(entries);
   }, [panelActivity, posts]);
-  const panelExecutionLocked = activePost ? isExecutionStage(activePost.status) : false;
+  const panelCanEditBrief = activePost
+    ? isAdmin || activePost.status === "draft" || activePost.status === "changes_requested"
+    : false;
+  const canCurrentUserActOnPost = useCallback(
+    (post: SocialPostWithRelations) =>
+      canUserActOnStatus({
+        status: post.status,
+        workerUserId: post.worker_user_id,
+        reviewerUserId: post.reviewer_user_id,
+        userId: user?.id ?? null,
+        isAdmin,
+      }),
+    [isAdmin, user?.id]
+  );
 
   const loadPanelDetails = async (postId: string) => {
     const supabase = getSupabaseBrowserClient();
@@ -978,10 +1001,6 @@ function SocialPostsPageContent() {
     }
 
     const trimmedTitle = newTitle.trim();
-    if (!trimmedTitle) {
-      setError("Title is required.");
-      return;
-    }
 
     const workerUserId = isAdmin ? newWorkerUserId : user.id;
     const reviewerUserId = newReviewerUserId;
@@ -1041,18 +1060,21 @@ function SocialPostsPageContent() {
   };
 
   const transitionPostStatus = async ({
-    postId,
-    title,
-    currentStatus,
+    post,
     toStatus,
   }: {
-    postId: string;
-    title: string;
-    currentStatus: SocialPostStatus;
+    post: SocialPostWithRelations;
     toStatus: SocialPostStatus;
   }) => {
+    const postId = post.id;
+    const title = post.title;
+    const currentStatus = post.status;
     if (currentStatus === toStatus) {
       return true;
+    }
+    if (!canCurrentUserActOnPost(post)) {
+      setError(ASSIGNED_USER_HELPER_TEXT);
+      return false;
     }
     const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[currentStatus] ?? [];
     if (!allowedTransitions.includes(toStatus)) {
@@ -1129,11 +1151,13 @@ function SocialPostsPageContent() {
     if (!post || post.status === nextStatus) {
       return;
     }
+    if (!canCurrentUserActOnPost(post)) {
+      setError(ASSIGNED_USER_HELPER_TEXT);
+      return;
+    }
 
     const transitioned = await transitionPostStatus({
-      postId: post.id,
-      title: post.title,
-      currentStatus: post.status,
+      post,
       toStatus: nextStatus,
     });
     if (!transitioned) {
@@ -1159,10 +1183,6 @@ function SocialPostsPageContent() {
       return;
     }
     const trimmedTitle = panelForm.title.trim();
-    if (!trimmedTitle) {
-      setPanelError("Title is required.");
-      return;
-    }
 
     setIsPanelSaving(true);
     setPanelError(null);
@@ -1182,7 +1202,7 @@ function SocialPostsPageContent() {
         ? Math.max(1, Number(canvaPageRaw))
         : null;
     const normalizedPlatforms = Array.from(new Set(panelForm.platforms));
-    const executionLocked = isExecutionStage(activePost.status);
+    const canEditBrief = isAdmin || activePost.status === "draft" || activePost.status === "changes_requested";
     const statusChanged = panelForm.status !== activePost.status;
     const briefChanged =
       trimmedTitle !== activePost.title ||
@@ -1195,9 +1215,9 @@ function SocialPostsPageContent() {
       panelForm.associated_blog_id !== activePost.associated_blog_id ||
       normalizedPlatforms.join(",") !== activePost.platforms.join(",");
 
-    if (executionLocked && briefChanged) {
+    if (!canEditBrief && briefChanged) {
       setPanelError(
-        "Execution-stage brief fields are read-only. Use Edit Brief to reopen this post."
+        "Brief fields are read-only at this stage for non-admin users."
       );
       setIsPanelSaving(false);
       return;
@@ -1241,9 +1261,7 @@ function SocialPostsPageContent() {
 
     if (statusChanged) {
       const transitioned = await transitionPostStatus({
-        postId: activePost.id,
-        title: activePost.title,
-        currentStatus: activePost.status,
+        post: activePost,
         toStatus: panelForm.status,
       });
       if (!transitioned) {
@@ -1824,6 +1842,7 @@ function SocialPostsPageContent() {
                     onDeletePost={(postId) => void handleDeletePost(postId)}
                     isDeletingPost={isDeletingPost}
                     currentUserId={user?.id}
+                    canCurrentUserActOnPost={canCurrentUserActOnPost}
                   />
                 ))}
               </section>
@@ -2141,9 +2160,9 @@ function SocialPostsPageContent() {
                   </h4>
                   <SocialPostStatusBadge status={panelForm.status} />
                 </div>
-                {panelExecutionLocked ? (
+                {!panelCanEditBrief ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                    <span>Read-only. Work in Full View to edit.</span>
+                    <span>Brief fields are read-only at this stage for non-admin users.</span>
                     {isAdmin ? (
                       <Button
                         type="button"
@@ -2160,7 +2179,7 @@ function SocialPostsPageContent() {
                 ) : null}
 
                 {/* STAGE 1: EDITOR CREATES */}
-                {!panelExecutionLocked && (
+                {panelCanEditBrief && (
                   <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Required</p>
                     <div className="grid gap-3 md:grid-cols-2">
@@ -2237,7 +2256,7 @@ function SocialPostsPageContent() {
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      disabled={panelExecutionLocked}
+                      disabled={!panelCanEditBrief}
                     />
                   </label>
                   <label className="block">
@@ -2250,7 +2269,7 @@ function SocialPostsPageContent() {
                         );
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      disabled={panelExecutionLocked}
+                      disabled={!panelCanEditBrief}
                     />
                   </label>
                   <label className="block">
@@ -2264,7 +2283,7 @@ function SocialPostsPageContent() {
                       }}
                       className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                       placeholder="Main social caption..."
-                      disabled={panelExecutionLocked}
+                      disabled={!panelCanEditBrief}
                     />
                   </label>
                   <label className="block">
@@ -2280,7 +2299,7 @@ function SocialPostsPageContent() {
                       }}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                       placeholder="Search blog title or slug..."
-                      disabled={panelExecutionLocked}
+                      disabled={!panelCanEditBrief}
                     />
                     {panelForm.associated_blog_id ? (
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
@@ -2296,13 +2315,13 @@ function SocialPostsPageContent() {
                             setBlogSearchResults([]);
                             setIsBlogSearchOpen(false);
                           }}
-                          disabled={panelExecutionLocked}
+                          disabled={!panelCanEditBrief}
                         >
                           Clear
                         </button>
                       </div>
                     ) : null}
-                    {isBlogSearchOpen && !panelExecutionLocked ? (
+                    {isBlogSearchOpen && panelCanEditBrief ? (
                       <div className="mt-2 max-h-52 overflow-y-auto rounded-md border border-slate-200 bg-white">
                         {isBlogSearchLoading ? (
                           <p className="px-3 py-2 text-sm text-slate-500">Searching blogs…</p>
@@ -2388,9 +2407,9 @@ function SocialPostsPageContent() {
                             isSelected
                               ? "border-slate-900 bg-slate-900 text-white"
                               : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                          } ${panelExecutionLocked ? "cursor-not-allowed opacity-60" : ""}`}
+                          } ${!panelCanEditBrief ? "cursor-not-allowed opacity-60" : ""}`}
                           onClick={() => {
-                            if (!panelExecutionLocked) {
+                            if (panelCanEditBrief) {
                               setPanelForm((previous) => {
                                 if (!previous) return previous;
                                 const nextPlatforms = previous.platforms.includes(platform)
@@ -2400,7 +2419,7 @@ function SocialPostsPageContent() {
                               });
                             }
                           }}
-                          disabled={panelExecutionLocked}
+                          disabled={!panelCanEditBrief}
                         >
                           {SOCIAL_PLATFORM_LABELS[platform]}
                         </button>
@@ -2412,7 +2431,7 @@ function SocialPostsPageContent() {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    disabled={isPanelSaving || panelExecutionLocked}
+                    disabled={isPanelSaving || !panelCanEditBrief}
                     className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleSavePostDetails();
@@ -2420,6 +2439,29 @@ function SocialPostsPageContent() {
                   >
                     {isPanelSaving ? "Saving..." : "Save Details"}
                   </button>
+                </div>
+              </section>
+              <section className="mt-4 rounded-lg border border-slate-200 p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Assignment
+                </h4>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-600">
+                      Assigned to
+                    </p>
+                    <p className="mt-1 text-sm text-slate-900">
+                      {activePost.worker?.full_name ?? "Not assigned"}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-600">
+                      Reviewer
+                    </p>
+                    <p className="mt-1 text-sm text-slate-900">
+                      {activePost.reviewer?.full_name ?? "Not assigned"}
+                    </p>
+                  </div>
                 </div>
               </section>
 
@@ -2449,10 +2491,17 @@ function SocialPostsPageContent() {
                   {activePostLinks.length > 0 ? (
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                       <p className="font-medium text-slate-700">Saved Links</p>
-                      <ul className="mt-1 space-y-1">
+                      <ul className="mt-2 space-y-2">
                         {activePostLinks.map((link) => (
-                          <li key={link.id} className="truncate">
-                            {SOCIAL_PLATFORM_LABELS[link.platform]}: <ExternalLink href={link.url} className="text-blue-600 underline">{link.url}</ExternalLink>
+                          <li key={link.id} className="space-y-1">
+                            <p className="font-medium text-slate-700">
+                              {SOCIAL_PLATFORM_LABELS[link.platform]}
+                            </p>
+                            <LinkQuickActions
+                              href={link.url}
+                              label={`${SOCIAL_PLATFORM_LABELS[link.platform]} live URL`}
+                              size="xs"
+                            />
                           </li>
                         ))}
                       </ul>
@@ -2523,7 +2572,7 @@ function SocialPostsPageContent() {
 
               <section className="mt-4 rounded-lg border border-slate-200 p-4">
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Recent Changes
+                  Recent Changes (latest 5)
                 </h4>
                 {isPanelLoading ? (
                   <p className="mt-3 text-sm text-slate-500">Loading activity…</p>
@@ -2531,7 +2580,7 @@ function SocialPostsPageContent() {
                   <p className="mt-3 text-sm text-slate-500">No activity yet.</p>
                 ) : (
                   <ul className="mt-3 space-y-2">
-                    {panelActivity.map((entry) => (
+                    {panelActivity.slice(0, 5).map((entry) => (
                       <li
                         key={entry.id}
                         className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
@@ -2613,7 +2662,6 @@ function SocialPostsPageContent() {
                       setNewTitle(event.target.value);
                     }}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    required
                     maxLength={200}
                   />
                 </label>

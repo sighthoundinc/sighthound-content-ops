@@ -116,6 +116,8 @@ export default function ResourcesPage() {
                 "Combine filters to narrow to actionable work quickly.",
                 "Filters persist until changed or cleared.",
                 "If no results appear, clear one filter at a time to isolate the blocker.",
+                "Grouped dashboard filters: Cross-Content Scope, Blog Filters, and Social Filters.",
+                "Scope-safe behavior: blog-only filters pass through social rows, and social-only filters pass through blog rows.",
               ]}
             />
             <p className="font-semibold text-slate-900">Table sorting and controls:</p>
@@ -124,6 +126,9 @@ export default function ResourcesPage() {
                 "Click table headers to sort ascending/descending.",
                 "Sort indicators: ↕ (unsorted), ↑ (ascending), ↓ (descending).",
                 "Global action order: Copy → Customize → Import → Export.",
+                "Phase A selection: both blog and social rows can be selected in the first column.",
+                "Safety gate: blog mutation controls are disabled whenever any social row is selected.",
+                "Selected CSV/PDF export supports mixed selected rows.",
               ]}
             />
           </Section>

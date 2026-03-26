@@ -114,6 +114,54 @@ export function getNextAssignment(
 }
 
 /**
+ * Returns the current stage owner for a social post status.
+ * Worker executes: draft, changes_requested, ready_to_publish, awaiting_live_link
+ * Reviewer acts: in_review, creative_approved
+ * Published is terminal (no owner)
+ */
+export function getStatusActorId(
+  status: SocialPostStatus,
+  workerUserId: string | null,
+  reviewerUserId: string | null
+): string | null {
+  switch (status) {
+    case "draft":
+    case "changes_requested":
+    case "ready_to_publish":
+    case "awaiting_live_link":
+      return workerUserId;
+    case "in_review":
+    case "creative_approved":
+      return reviewerUserId;
+    case "published":
+      return null;
+    default:
+      return null;
+  }
+}
+
+export function canUserActOnStatus(options: {
+  status: SocialPostStatus;
+  workerUserId: string | null;
+  reviewerUserId: string | null;
+  userId: string | null;
+  isAdmin: boolean;
+}): boolean {
+  if (options.isAdmin) {
+    return true;
+  }
+  if (!options.userId) {
+    return false;
+  }
+  const actorId = getStatusActorId(
+    options.status,
+    options.workerUserId,
+    options.reviewerUserId
+  );
+  return Boolean(actorId && actorId === options.userId);
+}
+
+/**
  * Check if a status is an execution stage (brief fields are locked)
  */
 export function isExecutionStage(status: SocialPostStatus): boolean {
@@ -147,24 +195,30 @@ export function isFieldLocked(
  * Required fields for each transition checkpoint
  *
  * Workflow:
- * - draft → in_review: Worker only needs Product, Type, Canva URL
- * - in_review & beyond: Admin must provide Title, Platforms (mandatory from in_review onward)
- * - ready_to_publish & beyond: Admin must also provide Caption, Scheduled Date
+ * - draft → in_review: Worker needs Product, Type, Canva URL
+ * - creative approval path requires Platforms, Caption, Scheduled Date
+ * - handoff to execution keeps those requirements
  * - published: Plus at least one valid live link (checked separately)
  */
 export const REQUIRED_FIELDS_FOR_STATUS: Record<
   SocialPostStatus,
   string[] | null
 > = {
-  draft: null, // Worker can submit with just Product, Type, Canva URL
-  in_review: ["product", "type", "canva_url", "title", "platforms"], // Admin adds title + platforms before transitioning here
+  draft: null, // Create stage
+  in_review: ["product", "type", "canva_url"],
   changes_requested: null, // Revising, no new requirements
-  creative_approved: ["product", "type", "canva_url", "title", "platforms"], // Title + platforms still required
+  creative_approved: [
+    "product",
+    "type",
+    "canva_url",
+    "platforms",
+    "caption",
+    "scheduled_date",
+  ],
   ready_to_publish: [
     "product",
     "type",
     "canva_url",
-    "title",
     "platforms",
     "caption",
     "scheduled_date",
@@ -173,7 +227,6 @@ export const REQUIRED_FIELDS_FOR_STATUS: Record<
     "product",
     "type",
     "canva_url",
-    "title",
     "platforms",
     "caption",
     "scheduled_date",
@@ -182,7 +235,6 @@ export const REQUIRED_FIELDS_FOR_STATUS: Record<
     "product",
     "type",
     "canva_url",
-    "title",
     "platforms",
     "caption",
     "scheduled_date",

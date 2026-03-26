@@ -65,6 +65,7 @@ export default function HomePage() {
   const getUserDisplayName = () => {
     return profile?.display_name || profile?.full_name || "there";
   };
+  const requiredByLabel = profile?.display_name || profile?.full_name || "You";
 
   const getRoleDisplay = () => {
     if (!summary?.userRoles) return "";
@@ -223,10 +224,23 @@ export default function HomePage() {
     if (
       data.userRoles.includes("admin") ||
       data.userRoles.includes("publisher") ||
-      data.userRoles.includes("editor")
+      data.userRoles.includes("editor") ||
+      data.userRoles.includes("writer")
     ) {
       const awaitingLink = data.socialPostCounts.awaiting_live_link ?? 0;
       const inReview = data.socialPostCounts.in_review ?? 0;
+      const readyToPublish = data.socialPostCounts.ready_to_publish ?? 0;
+
+      if (readyToPublish > 0) {
+        buckets.push({
+          id: "social-ready-to-publish",
+          title: "Social Posts Ready to Publish",
+          count: readyToPublish,
+          href: "/social-posts",
+          icon: "writing",
+          priority: "high",
+        });
+      }
 
       if (awaitingLink > 0) {
         buckets.push({
@@ -289,6 +303,7 @@ export default function HomePage() {
       }
     } else if (bucket.id.startsWith("social-")) {
       const statusMap: Record<string, string> = {
+        "social-ready-to-publish": "ready_to_publish",
         "social-awaiting-link": "awaiting_live_link",
         "social-in-review": "in_review",
       };
@@ -386,7 +401,7 @@ export default function HomePage() {
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Required by Me
+                  Required by: {requiredByLabel}
                 </p>
                 {tasksSnapshot.requiredByMe.length === 0 ? (
                   <p className="mt-2 text-sm text-slate-500">No items right now.</p>

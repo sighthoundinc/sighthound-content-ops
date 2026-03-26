@@ -70,7 +70,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         type: "magiclink",
         email: targetProfile.email,
         options: {
-          redirectTo: `${request.nextUrl.origin}/dashboard`,
+          redirectTo: `${request.nextUrl.origin}/tasks?action=action_required`,
         },
       });
 

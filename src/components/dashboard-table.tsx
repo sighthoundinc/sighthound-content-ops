@@ -1,20 +1,7 @@
 "use client";
 
-import { parseISO, isBefore } from "date-fns";
-import {
-  PublisherStatusBadge,
-  StatusBadge,
-  WriterStatusBadge,
-} from "./status-badge";
 import { formatDisplayDate } from "@/lib/utils";
-import { getSiteBadgeClasses, getSiteShortLabel } from "@/lib/site";
-import { getWorkflowStage } from "@/lib/status";
-import { AppIcon } from "@/lib/icons";
-import type {
-  BlogRecord,
-  PublisherStageStatus,
-  WriterStageStatus,
-} from "@/lib/types";
+import { formatDateInTimezone } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import {
   getTableBodyCellClass,
@@ -28,119 +15,95 @@ import {
 } from "@/lib/table";
 
 export type DashboardTableColumnKey =
-  | "title"
+  | "content_type"
   | "site"
-  | "writer"
-  | "writer_status"
-  | "publisher"
-  | "publisher_status"
-  | "overall_status"
-  | "publish_date";
+  | "id"
+  | "title"
+  | "status_display"
+  | "lifecycle_bucket"
+  | "scheduled_date"
+  | "published_date"
+  | "owner_display"
+  | "updated_at"
+  | "product";
 
 export const DASHBOARD_COLUMN_LABELS: Record<DashboardTableColumnKey, string> = {
-  title: "Title",
+  content_type: "Type",
   site: "Site",
-  writer: "Writer",
-  writer_status: "Writer Status",
-  publisher: "Publisher",
-  publisher_status: "Publisher Status",
-  overall_status: "Stage",
-  publish_date: "Publish Date",
+  id: "ID",
+  title: "Title",
+  status_display: "Status",
+  lifecycle_bucket: "Lifecycle",
+  scheduled_date: "Scheduled",
+  published_date: "Published",
+  owner_display: "Assigned to",
+  updated_at: "Updated",
+  product: "Product",
 };
 
-export const CENTER_ALIGNED_COLUMNS: DashboardTableColumnKey[] = [
-  "writer_status",
-  "publisher_status",
-  "overall_status",
+const CENTER_ALIGNED_COLUMNS: DashboardTableColumnKey[] = [
+  "content_type",
+  "status_display",
+  "lifecycle_bucket",
 ];
 
-export interface DashboardTableProps {
-  blogs: BlogRecord[];
-  visibleColumns: DashboardTableColumnKey[];
-  activeBlogId: string | null;
-  selectedIds: Set<string>;
-  rowDensity: "compact" | "comfortable";
-  canSelectRows: boolean;
-  canEditWritingStage: boolean;
-  canEditPublishingStage: boolean;
-  sortField: DashboardTableColumnKey;
-  sortDirection: SortDirection;
-  staleDraftDays: number;
-  onRowClick: (blogId: string) => void;
-  onSortChange: (column: DashboardTableColumnKey) => void;
-  onToggleAll: (checked: boolean) => void;
-  onToggleSingle: (blogId: string, checked: boolean) => void;
-  onWriterStatusChange: (blog: BlogRecord, status: WriterStageStatus) => void;
-  onPublisherStatusChange: (blog: BlogRecord, status: PublisherStageStatus) => void;
+export interface DashboardTableRow {
+  content_type: "blog" | "social_post";
+  site: string;
+  id: string;
+  title: string;
+  status_display: string;
+  lifecycle_bucket:
+    | "open_work"
+    | "awaiting_review"
+    | "ready_to_publish"
+    | "awaiting_live_link"
+    | "published";
+  scheduled_date: string | null;
+  published_date: string | null;
+  owner_display: string;
+  updated_at: string;
+  product?: string | null;
 }
 
+export interface DashboardTableProps {
+  rows: DashboardTableRow[];
+  visibleColumns: DashboardTableColumnKey[];
+  activeRowId: string | null;
+  selectedRowKeys: Set<string>;
+  rowDensity: "compact" | "comfortable";
+  canSelectRows: boolean;
+  sortField: DashboardTableColumnKey;
+  sortDirection: SortDirection;
+  timezone?: string | null;
+  onRowClick: (row: DashboardTableRow) => void;
+  onSortChange: (column: DashboardTableColumnKey) => void;
+  onToggleAll: (checked: boolean) => void;
+  onToggleSingle: (row: DashboardTableRow, checked: boolean) => void;
+}
 
-const WRITER_STATUSES: WriterStageStatus[] = [
-  "not_started",
-  "in_progress",
-  "pending_review",
-  "needs_revision",
-  "completed",
-];
-const PUBLISHER_STATUSES: PublisherStageStatus[] = [
-  "not_started",
-  "in_progress",
-  "pending_review",
-  "publisher_approved",
-  "completed",
-];
-const WRITER_STAGE_DISPLAY_LABELS: Record<WriterStageStatus, string> = {
-  not_started: "Draft",
-  in_progress: "Writing in Progress",
-  pending_review: "Waiting for Approval",
-  needs_revision: "Needs Revision",
-  completed: "Writing Approved",
-};
-const PUBLISHER_STAGE_DISPLAY_LABELS: Record<PublisherStageStatus, string> = {
-  not_started: "Not Started",
-  in_progress: "Publishing in Progress",
-  pending_review: "Waiting for Approval",
-  publisher_approved: "Publishing Approved",
-  completed: "Published",
-};
-
-/**
- * Dashboard table component for displaying and interacting with blog records.
- * Handles sorting, selection, status editing, and row styling.
- */
 export function DashboardTable({
-  blogs,
+  rows,
   visibleColumns,
-  activeBlogId,
-  selectedIds,
+  activeRowId,
+  selectedRowKeys,
   rowDensity,
   canSelectRows,
-  canEditWritingStage,
-  canEditPublishingStage,
   sortField,
   sortDirection,
-  staleDraftDays,
+  timezone,
   onRowClick,
   onSortChange,
   onToggleAll,
   onToggleSingle,
-  onWriterStatusChange,
-  onPublisherStatusChange,
 }: DashboardTableProps) {
   const bodyCellClass = getTableBodyCellClass(rowDensity);
+  const getRowKey = (row: DashboardTableRow) => `${row.content_type}:${row.id}`;
+  const allSelected =
+    rows.length > 0 && rows.every((row) => selectedRowKeys.has(getRowKey(row)));
+  const someSelected =
+    rows.some((row) => selectedRowKeys.has(getRowKey(row))) && !allSelected;
 
-  const allSelected = blogs.length > 0 && selectedIds.size === blogs.length;
-  const someSelected = selectedIds.size > 0 && !allSelected;
-
-  const getBlogPublishDate = (blog: BlogRecord): string | null => {
-    const scheduled = blog.scheduled_publish_date;
-    const published = blog.actual_published_at ?? blog.published_at;
-    return scheduled || published || null;
-  };
-
-  const getBlogScheduledDate = (blog: BlogRecord): string | null => {
-    return blog.scheduled_publish_date || null;
-  };
   const getColumnSortIndicator = (column: DashboardTableColumnKey) => {
     if (sortField !== column) {
       return "↕";
@@ -153,8 +116,21 @@ export function DashboardTable({
     }
     return sortDirection === "asc" ? "ascending" : "descending";
   };
-
-  const now = new Date();
+  const getLifecycleToneClass = (bucket: DashboardTableRow["lifecycle_bucket"]) => {
+    if (bucket === "awaiting_live_link") {
+      return "bg-rose-50";
+    }
+    if (bucket === "ready_to_publish") {
+      return "bg-amber-50";
+    }
+    if (bucket === "awaiting_review" || bucket === "open_work") {
+      return "bg-blue-50";
+    }
+    if (bucket === "published") {
+      return "bg-emerald-50/40";
+    }
+    return "bg-white";
+  };
 
   return (
     <div className={TABLE_CONTAINER_CLASS}>
@@ -216,76 +192,29 @@ export function DashboardTable({
           </tr>
         </thead>
         <tbody className={TABLE_BODY_CLASS}>
-          {blogs.length === 0 ? (
+          {rows.length === 0 ? (
             <tr>
               <td
-                className={cn(
-                  bodyCellClass,
-                  "text-center text-slate-500 text-sm"
-                )}
+                className={cn(bodyCellClass, "text-center text-slate-500 text-sm")}
                 colSpan={visibleColumns.length + (canSelectRows ? 1 : 0)}
               >
-                No blogs found with current filters.
+                No content found with current filters.
               </td>
             </tr>
           ) : (
-            blogs.map((blog) => {
-              const displayPublishDate = getBlogPublishDate(blog);
-              const scheduledPublishDate = getBlogScheduledDate(blog);
-              const publishDate = scheduledPublishDate
-                ? parseISO(scheduledPublishDate)
-                : null;
-              const publishedTimestamp =
-                blog.actual_published_at ?? blog.published_at;
-              const publishedDelayDays =
-                scheduledPublishDate && publishedTimestamp
-                  ? Math.floor(
-                      (new Date(publishedTimestamp).getTime() -
-                        new Date(
-                          `${scheduledPublishDate}T00:00:00Z`
-                        ).getTime()) /
-                        (24 * 60 * 60 * 1000)
-                    )
-                  : null;
-              const isOverdue =
-                publishDate !== null &&
-                isBefore(publishDate, new Date()) &&
-                blog.publisher_status !== "completed";
-              const isStaleDraft =
-                blog.writer_status !== "completed" &&
-                isBefore(
-                  parseISO(blog.status_updated_at),
-                  new Date(now.getTime() - staleDraftDays * 24 * 60 * 60 * 1000)
-                );
-
-              const rowWorkflowStage = getWorkflowStage({
-                writerStatus: blog.writer_status,
-                publisherStatus: blog.publisher_status,
-              });
-
-              const rowToneClass = isOverdue
-                ? "bg-rose-50"
-                : rowWorkflowStage === "ready"
-                  ? "bg-amber-50"
-                  : rowWorkflowStage === "publishing"
-                    ? "bg-blue-50"
-                    : rowWorkflowStage === "writing"
-                      ? "bg-white"
-                      : "bg-emerald-50/40";
-
-              const isSelected = selectedIds.has(blog.id);
-
+            rows.map((row) => {
+              const isSelected = selectedRowKeys.has(getRowKey(row));
               return (
                 <tr
-                  key={blog.id}
+                  key={`${row.content_type}:${row.id}`}
                   className={cn(
                     "table-row-focus cursor-pointer",
-                    activeBlogId === blog.id
+                    activeRowId === row.id
                       ? "bg-slate-100"
-                      : `${rowToneClass} hover:bg-slate-100`
+                      : `${getLifecycleToneClass(row.lifecycle_bucket)} hover:bg-slate-100`
                   )}
                   onClick={() => {
-                    onRowClick(blog.id);
+                    onRowClick(row);
                   }}
                 >
                   {canSelectRows && (
@@ -299,189 +228,102 @@ export function DashboardTable({
                         type="checkbox"
                         checked={isSelected}
                         onChange={(event) => {
-                          onToggleSingle(blog.id, event.target.checked);
+                          onToggleSingle(row, event.target.checked);
                         }}
-                        aria-label={`Select ${blog.title}`}
+                        aria-label={`Select ${row.title}`}
                       />
                     </td>
                   )}
-
                   {visibleColumns.map((column) => {
-                    if (column === "title") {
+                    if (column === "content_type") {
                       return (
-                        <td
-                          key={column}
-                          className={cn(
-                            bodyCellClass,
-                            "max-w-[26rem] font-medium text-slate-900"
-                          )}
-                        >
-                          <span className="block truncate" title={blog.title}>
-                            {blog.title}
-                          </span>
+                        <td key={column} className={cn(bodyCellClass, "text-center")}>
+                          {row.content_type === "blog" ? "Blog" : "Social Post"}
                         </td>
                       );
                     }
-
                     if (column === "site") {
                       return (
-                        <td key={column} className={cn(bodyCellClass)}>
-                          <span
-                            className={cn(
-                              "inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium",
-                              getSiteBadgeClasses(blog.site)
-                            )}
-                          >
-                            {getSiteShortLabel(blog.site)}
+                        <td key={column} className={bodyCellClass}>
+                          <span className="truncate text-slate-800" title={row.site}>
+                            {row.site}
                           </span>
                         </td>
                       );
                     }
-
-                    if (column === "writer") {
+                    if (column === "id") {
                       return (
                         <td key={column} className={bodyCellClass}>
-                          <span
-                            className="block max-w-[10rem] truncate text-slate-800"
-                            title={blog.writer?.full_name ?? "Unassigned"}
-                          >
-                            {blog.writer?.full_name ?? "Unassigned"}
+                          <span className="truncate text-slate-700" title={row.id}>
+                            {row.id}
                           </span>
                         </td>
                       );
                     }
-
-                    if (column === "writer_status") {
+                    if (column === "title") {
                       return (
-                        <td
-                          key={column}
-                          className={cn(bodyCellClass, "text-center")}
-                        >
-                          {canEditWritingStage ? (
-                            <select
-                              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-                              value={blog.writer_status}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                              }}
-                              onChange={(event) => {
-                                event.stopPropagation();
-                                onWriterStatusChange(
-                                  blog,
-                                  event.target.value as WriterStageStatus
-                                );
-                              }}
-                            >
-                              {WRITER_STATUSES.map((status) => (
-                                <option key={status} value={status}>
-                                  {WRITER_STAGE_DISPLAY_LABELS[status]}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div className="inline-flex items-center gap-1.5">
-                              <span className="text-xs text-slate-500">
-                                Writer:
-                              </span>
-                              <WriterStatusBadge status={blog.writer_status} />
-                            </div>
-                          )}
+                        <td key={column} className={cn(bodyCellClass, "max-w-[26rem] font-medium")}>
+                          <span className="block truncate text-slate-900" title={row.title}>
+                            {row.title}
+                          </span>
                         </td>
                       );
                     }
-
-                    if (column === "publisher") {
+                    if (column === "status_display") {
+                      return (
+                        <td key={column} className={cn(bodyCellClass, "text-center")}>
+                          <span className="truncate text-slate-800" title={row.status_display}>
+                            {row.status_display}
+                          </span>
+                        </td>
+                      );
+                    }
+                    if (column === "lifecycle_bucket") {
+                      return (
+                        <td key={column} className={cn(bodyCellClass, "text-center")}>
+                          <span
+                            className="truncate text-slate-700"
+                            title={row.lifecycle_bucket.replaceAll("_", " ")}
+                          >
+                            {row.lifecycle_bucket.replaceAll("_", " ")}
+                          </span>
+                        </td>
+                      );
+                    }
+                    if (column === "scheduled_date") {
                       return (
                         <td key={column} className={bodyCellClass}>
-                          <span
-                            className="block max-w-[10rem] truncate text-slate-800"
-                            title={blog.publisher?.full_name ?? "Unassigned"}
-                          >
-                            {blog.publisher?.full_name ?? "Unassigned"}
+                          {formatDisplayDate(row.scheduled_date) || "—"}
+                        </td>
+                      );
+                    }
+                    if (column === "published_date") {
+                      return (
+                        <td key={column} className={bodyCellClass}>
+                          {formatDisplayDate(row.published_date) || "—"}
+                        </td>
+                      );
+                    }
+                    if (column === "owner_display") {
+                      return (
+                        <td key={column} className={bodyCellClass}>
+                          <span className="block max-w-[11rem] truncate" title={row.owner_display}>
+                            {row.owner_display}
                           </span>
                         </td>
                       );
                     }
-
-                    if (column === "publisher_status") {
+                    if (column === "updated_at") {
                       return (
-                        <td
-                          key={column}
-                          className={cn(bodyCellClass, "text-center")}
-                        >
-                          {canEditPublishingStage ? (
-                            <select
-                              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-                              value={blog.publisher_status}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                              }}
-                              onChange={(event) => {
-                                event.stopPropagation();
-                                onPublisherStatusChange(
-                                  blog,
-                                  event.target.value as PublisherStageStatus
-                                );
-                              }}
-                            >
-                              {PUBLISHER_STATUSES.map((status) => (
-                                <option key={status} value={status}>
-                                  {
-                                    PUBLISHER_STAGE_DISPLAY_LABELS[status]
-                                  }
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div className="inline-flex items-center gap-1.5">
-                              <span className="text-xs text-slate-500">
-                                Publisher:
-                              </span>
-                              <PublisherStatusBadge
-                                status={blog.publisher_status}
-                              />
-                            </div>
-                          )}
+                        <td key={column} className={bodyCellClass}>
+                          {formatDateInTimezone(row.updated_at, timezone ?? undefined)}
                         </td>
                       );
                     }
-
-                    if (column === "overall_status") {
-                      return (
-                        <td key={column} className={cn(bodyCellClass)}>
-                          <div className="flex items-center justify-center gap-2">
-                            <StatusBadge status={blog.overall_status} />
-                            {isOverdue ? (
-                              <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
-                                Overdue
-                              </span>
-                            ) : null}
-                            {isStaleDraft ? (
-                              <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                Stale draft
-                              </span>
-                            ) : null}
-                            {rowWorkflowStage === "published" &&
-                            (publishedDelayDays ?? 0) > 0 ? (
-                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                <AppIcon
-                                  name="warning"
-                                  boxClassName="h-3.5 w-3.5"
-                                  size={11}
-                                />
-                                Delayed {publishedDelayDays} days
-                              </span>
-                            ) : null}
-                          </div>
-                        </td>
-                      );
-                    }
-
-                    // publish_date column
                     return (
                       <td key={column} className={bodyCellClass}>
-                        <span className="text-slate-800">
-                          {formatDisplayDate(displayPublishDate) || "—"}
+                        <span className="truncate text-slate-800" title={row.product ?? "—"}>
+                          {row.product ?? "—"}
                         </span>
                       </td>
                     );

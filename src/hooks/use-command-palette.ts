@@ -1,7 +1,12 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { searchCommands, groupCommandsByCategory } from "@/lib/command-palette-search";
 import { allCommands } from "@/lib/command-palette-config";
 import type { Command } from "@/lib/command-palette-config";
+import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
+import { getUserRoles } from "@/lib/roles";
+import { useAuth } from "@/providers/auth-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 export interface UseCommandPaletteReturn {
   isOpen: boolean;
@@ -18,13 +23,73 @@ export interface UseCommandPaletteReturn {
 }
 
 export function useCommandPalette(): UseCommandPaletteReturn {
+  const pathname = usePathname();
+  const { hasPermission, profile } = useAuth();
+  const { showError } = useSystemFeedback();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const resultsRef = useRef<Command[]>([]);
+  const permissionContract = useMemo(
+    () => createUiPermissionContract(hasPermission),
+    [hasPermission]
+  );
+  const isAdmin = useMemo(
+    () => (profile ? getUserRoles(profile).includes("admin") : false),
+    [profile]
+  );
+  const canManageSocialPosts =
+    permissionContract.canViewDashboard || permissionContract.canOverrideWorkflow;
+  const isActionCommandContext =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/blogs") ||
+    pathname.startsWith("/tasks");
 
-  // Get search results
-  const results = searchCommands(allCommands, searchTerm, 10);
+  const isCommandAllowed = useCallback(
+    (command: Command) => {
+      switch (command.id) {
+        case "nav-dashboard":
+        case "nav-blogs":
+        case "nav-social-posts":
+        case "nav-tasks":
+          return permissionContract.canViewDashboard;
+        case "nav-calendar":
+          return hasPermission("view_calendar");
+        case "nav-settings":
+        case "nav-ideas":
+          return true;
+        case "create-blog":
+          return permissionContract.canCreateBlog;
+        case "create-social-post":
+          return canManageSocialPosts;
+        case "create-idea":
+          return true;
+        case "action-import-blogs":
+          return hasPermission("run_data_import");
+        case "action-export-current-view":
+          return permissionContract.canExportCsv && isActionCommandContext;
+        case "action-clear-all-filters":
+          return isActionCommandContext;
+        default:
+          return isAdmin;
+      }
+    },
+    [
+      canManageSocialPosts,
+      hasPermission,
+      isActionCommandContext,
+      isAdmin,
+      permissionContract.canCreateBlog,
+      permissionContract.canExportCsv,
+      permissionContract.canViewDashboard,
+    ]
+  );
+
+  const availableCommands = useMemo(
+    () => allCommands.filter((command) => isCommandAllowed(command)),
+    [isCommandAllowed]
+  );
+  const results = searchCommands(availableCommands, searchTerm, 10);
   resultsRef.current = results;
 
   const groupedResults = groupCommandsByCategory(results);
@@ -49,6 +114,11 @@ export function useCommandPalette(): UseCommandPaletteReturn {
   const executeSelected = useCallback(() => {
     const command = results[selectedIndex];
     if (command) {
+      if (!isCommandAllowed(command)) {
+        showError("You do not have permission to run this command.");
+        close();
+        return;
+      }
       // Execute command based on action type
       if (command.actionType === "navigate" && command.targetUrl) {
         window.location.href = command.targetUrl;
@@ -70,7 +140,7 @@ export function useCommandPalette(): UseCommandPaletteReturn {
       }
       close();
     }
-  }, [results, selectedIndex, close]);
+  }, [close, isCommandAllowed, results, selectedIndex, showError]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

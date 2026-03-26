@@ -2,11 +2,12 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { DataPageHeader } from "@/components/data-page";
-import { ExternalLink } from "@/components/external-link";
+import { LinkQuickActions } from "@/components/link-quick-actions";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { AppIcon } from "@/lib/icons";
@@ -16,6 +17,7 @@ import {
   parseApiResponseJson,
 } from "@/lib/api-response";
 import { validateBlogRelation } from "@/lib/shape-validation";
+import { canUserActOnStatus } from "@/lib/social-post-workflow";
 import {
   SOCIAL_PLATFORMS,
   SOCIAL_POST_ALLOWED_TRANSITIONS,
@@ -27,10 +29,17 @@ import {
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
 import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
+import {
+  formatActivityChangeDescription,
+  formatActivityEventTitle,
+} from "@/lib/activity-history-format";
 import { getUserRoles } from "@/lib/roles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
   BlogSite,
+  ProfileRecord,
+  SocialPostActivityRecord,
+  SocialPostCommentRecord,
   SocialPlatform,
   SocialPostLinkRecord,
   SocialPostProduct,
@@ -38,6 +47,7 @@ import type {
   SocialPostType,
 } from "@/lib/types";
 import { formatDateInput } from "@/lib/utils";
+import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
 import { useNotifications } from "@/providers/notifications-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
@@ -80,6 +90,12 @@ type EditorFormState = {
   status: SocialPostStatus;
   associated_blog_id: string | null;
 };
+type SocialCommentRecord = SocialPostCommentRecord & {
+  author?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+};
+type SocialActivityRecord = SocialPostActivityRecord & {
+  actor?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+};
 
 const LINKEDIN_CAPTION_LIMIT = 3000;
 const AUTOSAVE_DEBOUNCE_MS = 30000;
@@ -111,6 +127,7 @@ const VALIDATION_MESSAGES = {
   platformRequired: "Select at least one platform.",
   canvaUrlInvalid: "Canva link must start with https:// or http://",
 } as const;
+const ASSIGNED_USER_HELPER_TEXT = "Only assigned user can perform this action";
 
 // Unicode bold sans-serif characters for LinkedIn-compatible bold text
 const BOLD_SANS_UPPER = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭";
@@ -143,6 +160,55 @@ function normalizePostLinkRows(rows: Array<Record<string, unknown>>) {
   });
 }
 
+function normalizeRelationObject<T>(value: unknown): T | null {
+  if (Array.isArray(value)) {
+    return (value[0] ?? null) as T | null;
+  }
+  return (value ?? null) as T | null;
+}
+function normalizeSocialCommentRows(rows: Array<Record<string, unknown>>) {
+  return rows.map((row) => {
+    const author = normalizeRelationObject<
+      Pick<ProfileRecord, "id" | "full_name" | "email">
+    >(row.author);
+    return {
+      id: String(row.id ?? ""),
+      social_post_id: String(row.social_post_id ?? ""),
+      user_id: String(row.user_id ?? row.created_by ?? ""),
+      created_by:
+        typeof row.created_by === "string" ? String(row.created_by) : null,
+      parent_comment_id:
+        typeof row.parent_comment_id === "string" ? row.parent_comment_id : null,
+      comment: String(row.comment ?? ""),
+      created_at: String(row.created_at ?? ""),
+      updated_at: String(row.updated_at ?? ""),
+      author,
+    } satisfies SocialCommentRecord;
+  });
+}
+function normalizeSocialActivityRows(rows: Array<Record<string, unknown>>) {
+  return rows.map((row) => {
+    const actor = normalizeRelationObject<
+      Pick<ProfileRecord, "id" | "full_name" | "email">
+    >(row.actor);
+    return {
+      id: String(row.id ?? ""),
+      social_post_id: String(row.social_post_id ?? ""),
+      changed_by:
+        typeof row.changed_by === "string" ? String(row.changed_by) : null,
+      event_type: String(row.event_type ?? ""),
+      field_name: typeof row.field_name === "string" ? row.field_name : null,
+      old_value: typeof row.old_value === "string" ? row.old_value : null,
+      new_value: typeof row.new_value === "string" ? row.new_value : null,
+      metadata:
+        row.metadata && typeof row.metadata === "object"
+          ? (row.metadata as Record<string, unknown>)
+          : {},
+      changed_at: String(row.changed_at ?? ""),
+      actor,
+    } satisfies SocialActivityRecord;
+  });
+}
 function createEmptyLiveLinkDrafts(): Record<SocialPlatform, string> {
   return {
     linkedin: "",
@@ -256,7 +322,19 @@ export default function SocialPostEditorPage() {
     createEmptyLiveLinkDrafts()
   );
   const [isLiveLinksSaving, setIsLiveLinksSaving] = useState(false);
-  const isExecutionLocked = post ? isExecutionStage(post.status) : false;
+  const [comments, setComments] = useState<SocialCommentRecord[]>([]);
+  const [activity, setActivity] = useState<SocialActivityRecord[]>([]);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [isCommentSaving, setIsCommentSaving] = useState(false);
+  const canEditBrief = useMemo(() => {
+    if (!post) {
+      return false;
+    }
+    if (isAdmin) {
+      return true;
+    }
+    return post.status === "draft" || post.status === "changes_requested";
+  }, [isAdmin, post]);
   const [availableUsers, setAvailableUsers] = useState<
     Array<{ id: string; full_name: string; email: string }>
   >([]);
@@ -264,6 +342,18 @@ export default function SocialPostEditorPage() {
   const [editWorkerUserId, setEditWorkerUserId] = useState<string | null>(null);
   const [editReviewerUserId, setEditReviewerUserId] = useState<string | null>(null);
   const [isAssignmentSaving, setIsAssignmentSaving] = useState(false);
+  const canActOnCurrentStatus = useMemo(() => {
+    if (!post) {
+      return false;
+    }
+    return canUserActOnStatus({
+      status: post.status,
+      workerUserId: post.worker_user_id,
+      reviewerUserId: post.reviewer_user_id,
+      userId: user?.id ?? null,
+      isAdmin,
+    });
+  }, [isAdmin, post, user?.id]);
 
   const loadPost = useCallback(async () => {
     if (!postId) {
@@ -272,7 +362,12 @@ export default function SocialPostEditorPage() {
     setIsLoading(true);
     setError(null);
     const supabase = getSupabaseBrowserClient();
-    const [{ data, error: loadError }, { data: linksData, error: linksError }] =
+    const [
+      { data, error: loadError },
+      { data: linksData, error: linksError },
+      { data: commentsData, error: commentsError },
+      { data: activityData, error: activityError },
+    ] =
       await Promise.all([
         supabase
           .from("social_posts")
@@ -286,6 +381,21 @@ export default function SocialPostEditorPage() {
           .select("id,social_post_id,platform,url,created_by,created_at,updated_at")
           .eq("social_post_id", postId)
           .order("created_at", { ascending: true }),
+        supabase
+          .from("social_post_comments")
+          .select(
+            "id,social_post_id,user_id,created_by,parent_comment_id,comment,created_at,updated_at,author:user_id(id,full_name,email)"
+          )
+          .eq("social_post_id", postId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("social_post_activity_history")
+          .select(
+            "id,social_post_id,changed_by,event_type,field_name,old_value,new_value,metadata,changed_at,actor:changed_by(id,full_name,email)"
+          )
+          .eq("social_post_id", postId)
+          .order("changed_at", { ascending: false })
+          .limit(50),
       ]);
     if (loadError) {
       setError(`${VALIDATION_MESSAGES.couldNotLoad} ${loadError.message}`);
@@ -306,6 +416,18 @@ export default function SocialPostEditorPage() {
       );
       setLiveLinks(normalizedLinks);
       setLiveLinkDrafts(toLiveLinkDrafts(normalizedLinks));
+    }
+    if (commentsError) {
+      showError(`Couldn't load comments. ${commentsError.message}`);
+      setComments([]);
+    } else {
+      setComments(normalizeSocialCommentRows((commentsData ?? []) as Array<Record<string, unknown>>));
+    }
+    if (activityError) {
+      showError(`Couldn't load activity. ${activityError.message}`);
+      setActivity([]);
+    } else {
+      setActivity(normalizeSocialActivityRows((activityData ?? []) as Array<Record<string, unknown>>));
     }
     setIsLoading(false);
   }, [postId, showError]);
@@ -336,7 +458,7 @@ export default function SocialPostEditorPage() {
 
   useEffect(() => {
     const query = blogSearchQuery.trim();
-    if (isExecutionLocked || !isBlogSearchOpen || query.length === 0) {
+    if (!canEditBrief || !isBlogSearchOpen || query.length === 0) {
       setBlogSearchResults([]);
       return;
     }
@@ -361,7 +483,7 @@ export default function SocialPostEditorPage() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [blogSearchQuery, isBlogSearchOpen, isExecutionLocked, showError]);
+  }, [blogSearchQuery, canEditBrief, isBlogSearchOpen, showError]);
 
   const persistBrief = useCallback(
     async (
@@ -371,7 +493,7 @@ export default function SocialPostEditorPage() {
       if (!post) {
         return false;
       }
-      if (isExecutionStage(post.status)) {
+      if (!canEditBrief) {
         if (reason === "manual") {
           showError(VALIDATION_MESSAGES.briefReadOnly);
         }
@@ -442,7 +564,7 @@ export default function SocialPostEditorPage() {
       setIsSaving(false);
       return true;
     },
-    [post, showError, showSaving, updateStatus]
+    [canEditBrief, post, showError, showSaving, updateStatus]
   );
 
   const canCurrentUserTransition = useCallback(
@@ -450,10 +572,23 @@ export default function SocialPostEditorPage() {
       if (fromStatus === toStatus) {
         return true;
       }
+      if (!post) {
+        return false;
+      }
+      const canAct = canUserActOnStatus({
+        status: fromStatus,
+        workerUserId: post.worker_user_id,
+        reviewerUserId: post.reviewer_user_id,
+        userId: user?.id ?? null,
+        isAdmin,
+      });
+      if (!canAct) {
+        return false;
+      }
       const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[fromStatus] ?? [];
       return allowedTransitions.includes(toStatus);
     },
-    []
+    [isAdmin, post, user?.id]
   );
 
   const transitionPostStatus = useCallback(
@@ -463,9 +598,20 @@ export default function SocialPostEditorPage() {
       }
       const currentStatus = post.status;
       if (!canCurrentUserTransition(currentStatus, toStatus)) {
-        showError(
-          `${VALIDATION_MESSAGES.invalidTransition} from ${SOCIAL_POST_STATUS_LABELS[currentStatus]} to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`
-        );
+        const canAct = canUserActOnStatus({
+          status: currentStatus,
+          workerUserId: post.worker_user_id,
+          reviewerUserId: post.reviewer_user_id,
+          userId: user?.id ?? null,
+          isAdmin,
+        });
+        if (!canAct) {
+          showError(ASSIGNED_USER_HELPER_TEXT);
+        } else {
+          showError(
+            `${VALIDATION_MESSAGES.invalidTransition} from ${SOCIAL_POST_STATUS_LABELS[currentStatus]} to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`
+          );
+        }
         return false;
       }
       if (!session?.access_token) {
@@ -493,8 +639,8 @@ export default function SocialPostEditorPage() {
       if (reason) {
         payload.reason = reason;
       }
-      // Include brief field updates with transition
-      if (form) {
+      // Include brief field updates with transition only in editable stages.
+      if (form && (isAdmin || !isExecutionStage(currentStatus))) {
         const normalizedTitle = form.title.trim();
         const normalizedCanvaUrl =
           typeof form.canva_url === "string" && form.canva_url.trim().length > 0
@@ -513,11 +659,16 @@ export default function SocialPostEditorPage() {
         payload.title = normalizedTitle;
         payload.product = form.product;
         payload.type = form.type;
-        payload.canva_url = normalizedCanvaUrl;
+        if (normalizedCanvaUrl) {
+          payload.canva_url = normalizedCanvaUrl;
+        }
         payload.canva_page = canvaPage;
         payload.caption = normalizedCaption;
         payload.platforms = normalizedPlatforms;
-        payload.scheduled_date = normalizedScheduledDate;
+        if (normalizedScheduledDate) {
+          payload.scheduled_date = normalizedScheduledDate;
+        }
+        payload.associated_blog_id = form.associated_blog_id;
       }
       const response = await fetch(`/api/social-posts/${post.id}/transition`, {
         method: "POST",
@@ -571,9 +722,10 @@ export default function SocialPostEditorPage() {
       );
       showSuccess(`Moved to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`);
       setIsSaving(false);
+      void loadPost();
       return true;
     },
-    [form, post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess, canCurrentUserTransition]
+    [form, isAdmin, post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess, canCurrentUserTransition, user?.id, loadPost]
   );
 
   const saveAssignments = useCallback(async () => {
@@ -599,15 +751,57 @@ export default function SocialPostEditorPage() {
       setIsAssignmentSaving(false);
       return;
     }
+    const previousWorkerUserId = post.worker_user_id;
+    const previousReviewerUserId = post.reviewer_user_id;
     const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
+    if (
+      previousWorkerUserId !== normalized.worker_user_id ||
+      previousReviewerUserId !== normalized.reviewer_user_id
+    ) {
+      const { emitEvent } = await import("@/lib/emit-event");
+      const actorId = user?.id ?? "";
+      await Promise.all([
+        previousWorkerUserId !== normalized.worker_user_id
+          ? emitEvent({
+              type: "social_post_assigned",
+              contentType: "social_post",
+              contentId: normalized.id,
+              oldValue: previousWorkerUserId ?? undefined,
+              newValue: normalized.worker_user_id ?? undefined,
+              fieldName: "worker_user_id",
+              actor: actorId,
+              actorName: profile?.full_name ?? undefined,
+              contentTitle: normalized.title,
+              metadata: { role: "assigned_to" },
+              timestamp: Date.now(),
+            })
+          : Promise.resolve({ success: true }),
+        previousReviewerUserId !== normalized.reviewer_user_id
+          ? emitEvent({
+              type: "social_post_assigned",
+              contentType: "social_post",
+              contentId: normalized.id,
+              oldValue: previousReviewerUserId ?? undefined,
+              newValue: normalized.reviewer_user_id ?? undefined,
+              fieldName: "reviewer_user_id",
+              actor: actorId,
+              actorName: profile?.full_name ?? undefined,
+              contentTitle: normalized.title,
+              metadata: { role: "reviewer" },
+              timestamp: Date.now(),
+            })
+          : Promise.resolve({ success: true }),
+      ]);
+    }
     setPost(normalized);
     setEditingAssignment(false);
+    await loadPost();
     showSuccess("Assignments saved");
     setIsAssignmentSaving(false);
-  }, [post, editWorkerUserId, editReviewerUserId, showError, showSuccess]);
+  }, [post, editWorkerUserId, editReviewerUserId, showError, showSuccess, loadPost, user?.id, profile?.full_name]);
 
   useEffect(() => {
-    if (!form || !post || isExecutionStage(post.status) || isSaving) {
+    if (!form || !post || !canEditBrief || isSaving) {
       return;
     }
     const timeout = window.setTimeout(() => {
@@ -616,39 +810,63 @@ export default function SocialPostEditorPage() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [form, post, persistBrief, isSaving]);
+  }, [canEditBrief, form, post, persistBrief, isSaving]);
 
   const captionLength = form?.caption.length ?? 0;
   const isOverLimit = captionLength > LINKEDIN_CAPTION_LIMIT;
-  const hasTitle = Boolean(form?.title.trim());
   const hasCaption = Boolean(form?.caption.trim());
   const hasPlatform = Boolean(form && form.platforms.length > 0);
   const hasPublishDate = Boolean(form?.scheduled_date);
-  const hasCanvaLink = Boolean(form?.canva_url.trim());
   const hasValidCanvaUrl = form ? validateCanvaUrl(form.canva_url) : false;
+  const hasCanvaLink = Boolean(form?.canva_url.trim()) && hasValidCanvaUrl;
   const hasLinkedBlog = Boolean(form?.associated_blog_id);
   const hasLiveLink = liveLinks.some((link) => link.url.trim().length > 0);
-  const isDraftComplete =
-    hasTitle && hasCaption && hasPlatform && hasPublishDate && hasCanvaLink && hasValidCanvaUrl;
+  const hasDraftRequirements = hasCanvaLink;
+  const hasReviewRequirements = hasCanvaLink && hasCaption && hasPlatform && hasPublishDate;
 
   const checklistItems = useMemo(
-    () => [
-      { label: "Add post title", done: hasTitle, required: true },
-      { label: "Select platform(s)", done: hasPlatform, required: true },
-      { label: "Set publish date", done: hasPublishDate, required: true },
-      { label: "Add Canva link", done: hasCanvaLink && hasValidCanvaUrl, required: true },
-      { label: "Write caption", done: hasCaption, required: true },
-      { label: "Link blog (optional)", done: hasLinkedBlog, required: false },
-    ],
-    [hasCanvaLink, hasCaption, hasLinkedBlog, hasPlatform, hasPublishDate, hasTitle, hasValidCanvaUrl]
+    () => {
+      const status = form?.status;
+      if (status === "draft" || status === "changes_requested") {
+        return [
+          { label: "Product selected", done: true, required: true },
+          { label: "Type selected", done: true, required: true },
+          { label: "Add Canva link", done: hasCanvaLink, required: true },
+          { label: "Post title (optional)", done: true, required: false },
+          { label: "Link blog (optional)", done: hasLinkedBlog, required: false },
+        ];
+      }
+      if (status === "in_review" || status === "creative_approved") {
+        return [
+          { label: "Product selected", done: true, required: true },
+          { label: "Type selected", done: true, required: true },
+          { label: "Add Canva link", done: hasCanvaLink, required: true },
+          { label: "Select platform(s)", done: hasPlatform, required: true },
+          { label: "Write caption", done: hasCaption, required: true },
+          { label: "Set publish date", done: hasPublishDate, required: true },
+          { label: "Post title (optional)", done: true, required: false },
+          { label: "Link blog (optional)", done: hasLinkedBlog, required: false },
+        ];
+      }
+      if (status === "awaiting_live_link") {
+        return [
+          { label: "Add at least one live link", done: hasLiveLink, required: true },
+        ];
+      }
+      return [
+        { label: "Post title (optional)", done: true, required: false },
+        { label: "Link blog (optional)", done: hasLinkedBlog, required: false },
+      ];
+    },
+    [form?.status, hasCanvaLink, hasCaption, hasLinkedBlog, hasLiveLink, hasPlatform, hasPublishDate]
   );
   const finalAction = useMemo(() => {
     if (form?.status === "draft") {
-      if (!isDraftComplete) {
+      if (!hasDraftRequirements) {
         return {
           label: "Save Draft",
           nextStatus: "draft" as SocialPostStatus,
-          helper: "Complete required checklist items to move this to Review.",
+          helper: "Add Canva link, Product, and Type before submitting to review.",
         };
       }
       return {
@@ -658,7 +876,7 @@ export default function SocialPostEditorPage() {
       };
     }
     if (form?.status === "changes_requested") {
-      if (!isDraftComplete) {
+      if (!hasDraftRequirements) {
         return {
           label: "Save Changes",
           nextStatus: "changes_requested" as SocialPostStatus,
@@ -671,7 +889,23 @@ export default function SocialPostEditorPage() {
         helper: "Changes are ready. Send this post back to review.",
       };
     }
+    if (form?.status === "in_review" && isAdmin && !hasReviewRequirements) {
+      return {
+        label: "Complete Required Fields",
+        nextStatus: "in_review" as SocialPostStatus,
+        helper:
+          "Before creative approval, add Platforms, Caption, and Scheduled Publish Date.",
+      };
+    }
     if (form?.status === "creative_approved") {
+      if (!hasReviewRequirements) {
+        return {
+          label: "Save Changes",
+          nextStatus: "creative_approved" as SocialPostStatus,
+          helper:
+            "Add Platforms, Caption, and Scheduled Publish Date before moving to Ready to Publish.",
+        };
+      }
       return {
         label: "Move to Ready to Publish",
         nextStatus: "ready_to_publish" as SocialPostStatus,
@@ -715,7 +949,7 @@ export default function SocialPostEditorPage() {
       };
     }
     if (form?.status === "published") {
-      if (!isDraftComplete) {
+      if (!hasReviewRequirements) {
         return {
           label: "Save Changes",
           nextStatus: "published" as SocialPostStatus,
@@ -733,7 +967,41 @@ export default function SocialPostEditorPage() {
       nextStatus: "published" as SocialPostStatus,
       helper: "Update details for this published post.",
     };
-  }, [form?.status, hasLiveLink, isAdmin, isDraftComplete]);
+  }, [form?.status, hasDraftRequirements, hasLiveLink, hasReviewRequirements, isAdmin]);
+
+  const canSubmitFinalAction = useMemo(() => {
+    if (!form) {
+      return false;
+    }
+    if (finalAction.nextStatus === form.status) {
+      return !isExecutionStage(form.status);
+    }
+    if (form.status === "draft" || form.status === "changes_requested") {
+      return hasDraftRequirements;
+    }
+    if (form.status === "in_review" || form.status === "creative_approved") {
+      return hasReviewRequirements;
+    }
+    if (form.status === "awaiting_live_link") {
+      return hasLiveLink;
+    }
+    return true;
+  }, [finalAction.nextStatus, form, hasDraftRequirements, hasLiveLink, hasReviewRequirements]);
+  const activityUserNameById = useMemo(() => {
+    const entries: Array<[string, string]> = [];
+    for (const nextUser of availableUsers) {
+      if (nextUser.id && nextUser.full_name) {
+        entries.push([nextUser.id, nextUser.full_name]);
+      }
+    }
+    for (const entry of activity) {
+      if (entry.actor?.id && entry.actor.full_name) {
+        entries.push([entry.actor.id, entry.actor.full_name]);
+      }
+    }
+    return Object.fromEntries(entries);
+  }, [activity, availableUsers]);
+  const latestActivity = useMemo(() => activity.slice(0, 20), [activity]);
 
   const applyCaptionEdit = (nextCaption: string, selectionStart: number, selectionEnd: number) => {
     setForm((previous) => (previous ? { ...previous, caption: nextCaption } : previous));
@@ -817,6 +1085,34 @@ export default function SocialPostEditorPage() {
       showError(VALIDATION_MESSAGES.copyFailed);
     }
   };
+  const handleAddComment = async () => {
+    if (!post || !user?.id) {
+      showError(VALIDATION_MESSAGES.sessionExpired);
+      return;
+    }
+    const trimmedComment = commentDraft.trim();
+    if (!trimmedComment) {
+      showError("Comment cannot be empty.");
+      return;
+    }
+    setIsCommentSaving(true);
+    const supabase = getSupabaseBrowserClient();
+    const { error: insertError } = await supabase.from("social_post_comments").insert({
+      social_post_id: post.id,
+      comment: trimmedComment,
+      user_id: user.id,
+      parent_comment_id: null,
+    });
+    if (insertError) {
+      showError(`Couldn't add comment. ${insertError.message}`);
+      setIsCommentSaving(false);
+      return;
+    }
+    setCommentDraft("");
+    await loadPost();
+    showSuccess("Comment added");
+    setIsCommentSaving(false);
+  };
 
   const handleSaveLiveLinks = async () => {
     if (!post || !user?.id) {
@@ -878,6 +1174,7 @@ export default function SocialPostEditorPage() {
       );
       setLiveLinks(normalizedLinks);
       setLiveLinkDrafts(toLiveLinkDrafts(normalizedLinks));
+      await loadPost();
       showSuccess(VALIDATION_MESSAGES.linksSaved);
     } catch (saveError) {
       showError(
@@ -952,6 +1249,7 @@ export default function SocialPostEditorPage() {
         post.id
       )
     );
+    await loadPost();
     showSuccess(VALIDATION_MESSAGES.postReopened);
     setIsSaving(false);
   };
@@ -1059,11 +1357,10 @@ export default function SocialPostEditorPage() {
               </div>
             }
           />
-          {isExecutionLocked ? (
+          {!canEditBrief ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
               <span>
-                Execution stage is read-only. Reopen to Creative Approved before
-                editing brief fields.
+                Brief fields are read-only at this stage for non-admin users.
               </span>
               {isAdmin ? (
                 <Button
@@ -1090,7 +1387,7 @@ export default function SocialPostEditorPage() {
                   </p>
                 </div>
                 <fieldset
-                  disabled={isExecutionLocked}
+                  disabled={!canEditBrief}
                   className="disabled:opacity-70"
                 >
                   <div className="space-y-3 border-b border-slate-200 pb-3">
@@ -1334,7 +1631,7 @@ export default function SocialPostEditorPage() {
                     Link a related blog so caption and publishing context stay connected.
                   </p>
                 </div>
-                <fieldset disabled={isExecutionLocked} className="space-y-4 disabled:opacity-70">
+                <fieldset disabled={!canEditBrief} className="space-y-4 disabled:opacity-70">
                 <label className="space-y-1 text-sm text-slate-700">
                   <span className="font-medium">Associated Blog Search</span>
                   <input
@@ -1389,24 +1686,13 @@ export default function SocialPostEditorPage() {
                     <p className="text-xs text-slate-500">
                       {post.associated_blog?.site ?? "Linked blog"}
                     </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="secondary"
+                    <div className="mt-2 space-y-2">
+                      <LinkQuickActions
+                        href={post.associated_blog?.live_url ?? null}
+                        label="Associated blog URL"
                         size="xs"
-                        onClick={() => {
-                          void copyText(post.associated_blog?.live_url ?? "");
-                        }}
-                      >
-                        Copy URL
-                      </Button>
-                      {post.associated_blog?.live_url ? (
-                        <ExternalLink
-                          href={post.associated_blog.live_url}
-                          className="text-xs font-medium text-blue-600 underline"
-                        >
-                          Open Blog
-                        </ExternalLink>
-                      ) : null}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="secondary"
                         size="xs"
@@ -1426,6 +1712,7 @@ export default function SocialPostEditorPage() {
                       >
                         Clear Link
                       </Button>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -1441,7 +1728,7 @@ export default function SocialPostEditorPage() {
                     Use the editor like a focused notepad, then copy from one menu.
                   </p>
                 </div>
-                <fieldset disabled={isExecutionLocked} className="space-y-2 disabled:opacity-70">
+                <fieldset disabled={!canEditBrief} className="space-y-2 disabled:opacity-70">
                 <div className="space-y-2 rounded-lg border border-slate-200 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium text-slate-700">Caption Editor (UTF-8)</p>
@@ -1559,11 +1846,15 @@ export default function SocialPostEditorPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <select
                       value={form.status}
-                      disabled={isSaving}
+                      disabled={isSaving || !canActOnCurrentStatus}
                       onChange={(event) => {
                         const nextStatus = event.target.value as SocialPostStatus;
                         if (!canCurrentUserTransition(form.status, nextStatus)) {
-                          showError(VALIDATION_MESSAGES.noPermissionTransition);
+                          if (!canActOnCurrentStatus) {
+                            showError(ASSIGNED_USER_HELPER_TEXT);
+                          } else {
+                            showError(VALIDATION_MESSAGES.noPermissionTransition);
+                          }
                           return;
                         }
                         void transitionPostStatus(nextStatus);
@@ -1587,6 +1878,9 @@ export default function SocialPostEditorPage() {
                     </select>
                     <SocialPostStatusBadge status={form.status} />
                   </div>
+                  {!canActOnCurrentStatus ? (
+                    <p className="text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -1620,14 +1914,15 @@ export default function SocialPostEditorPage() {
                   ) : (
                     <ul className="space-y-1">
                       {liveLinks.map((link) => (
-                        <li key={link.id} className="truncate text-xs text-slate-600">
-                          {SOCIAL_PLATFORM_LABELS[link.platform]}:{" "}
-                          <ExternalLink
+                        <li key={link.id} className="space-y-1 text-xs text-slate-600">
+                          <p className="font-medium text-slate-700">
+                            {SOCIAL_PLATFORM_LABELS[link.platform]}
+                          </p>
+                          <LinkQuickActions
                             href={link.url}
-                            className="text-blue-600 underline"
-                          >
-                            {link.url}
-                          </ExternalLink>
+                            label={`${SOCIAL_PLATFORM_LABELS[link.platform]} live URL`}
+                            size="xs"
+                          />
                         </li>
                       ))}
                     </ul>
@@ -1646,6 +1941,95 @@ export default function SocialPostEditorPage() {
                     </Button>
                   </div>
                 </div>
+              </section>
+              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Comments</h3>
+                  <p className="text-sm text-slate-600">
+                    Collaboration notes are visible to everyone on this record.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <textarea
+                    value={commentDraft}
+                    onChange={(event) => {
+                      setCommentDraft(event.target.value);
+                    }}
+                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    placeholder="Add discussion or feedback..."
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={isCommentSaving}
+                      onClick={() => {
+                        void handleAddComment();
+                      }}
+                    >
+                      {isCommentSaving ? "Adding..." : "Add Comment"}
+                    </Button>
+                  </div>
+                </div>
+                {comments.length === 0 ? (
+                  <p className="text-sm text-slate-500">No comments yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {comments.slice(0, 20).map((comment) => (
+                      <li
+                        key={comment.id}
+                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <p className="text-xs font-semibold text-slate-600">
+                          {comment.author?.full_name ?? "Unknown"} —{" "}
+                          {formatDistanceToNow(new Date(comment.created_at), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
+                          {comment.comment}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Activity</h3>
+                  <p className="text-sm text-slate-600">
+                    Status and assignment changes are visible in latest-first order.
+                  </p>
+                </div>
+                {latestActivity.length === 0 ? (
+                  <p className="text-sm text-slate-500">No activity yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {latestActivity.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-slate-800">
+                          {formatActivityEventTitle(entry)}
+                        </p>
+                        {(() => {
+                          const detail = formatActivityChangeDescription(entry, {
+                            userNameById: activityUserNameById,
+                          });
+                          return detail ? (
+                            <p className="text-xs text-slate-600">{detail}</p>
+                          ) : null;
+                        })()}
+                        <p className="text-xs text-slate-400">
+                          {entry.actor?.full_name ?? "System"} •{" "}
+                          {formatDateInTimezone(entry.changed_at, profile?.timezone)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
             </div>
 
@@ -1713,11 +2097,9 @@ export default function SocialPostEditorPage() {
                     disabled={
                       isSaving ||
                       isOverLimit ||
-                      !hasPlatform ||
-                      !hasValidCanvaUrl ||
+                      !canActOnCurrentStatus ||
                       !canCurrentUserTransition(form.status, finalAction.nextStatus) ||
-                      (finalAction.nextStatus === form.status &&
-                        isExecutionStage(form.status))
+                      !canSubmitFinalAction
                     }
                     onClick={() => {
                       void handleFinalAction();
@@ -1725,6 +2107,9 @@ export default function SocialPostEditorPage() {
                   >
                     {isSaving ? "Saving…" : finalAction.label}
                   </Button>
+                  {!canActOnCurrentStatus ? (
+                    <p className="text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
+                  ) : null}
                 </div>
               </section>
             </aside>

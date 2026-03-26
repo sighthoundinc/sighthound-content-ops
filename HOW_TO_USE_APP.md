@@ -12,7 +12,7 @@ Use it to:
 Use `My Tasks` as your first stop each day.
 
 ## 2. Daily workflow (recommended order)
-1. Open `/` and review the `My Tasks Snapshot` groups (`Required by Me` and `Waiting on Others`).
+1. Open `/` and review the `My Tasks Snapshot` groups (`Required by: <username>` and `Waiting on Others`).
 2. Open `My Tasks` and review assigned and due work.
 3. Open each item and complete required fields/checklist items.
 4. Move status forward only when the current stage is complete.
@@ -22,10 +22,16 @@ Use `My Tasks` as your first stop each day.
 
 ### My Tasks visibility rule
 - `My Tasks` shows all of your assigned, non-published work (blogs + social), including items where the next step is currently on someone else.
+- For social posts, task ownership is derived from workflow stage ownership (`draft/changes_requested/ready_to_publish/awaiting_live_link` → worker, `in_review/creative_approved` → reviewer) so handoff items appear in the correct action bucket.
+- `Next Tasks` is mixed and prioritized across both blogs and social posts so actionable social handoffs (for example `Ready to Publish`) are not hidden behind blog-only ordering.
+- `Social Tasks` list shows all matching social rows for current filters (not only a small preview subset).
 - Use `Action State` filter to switch between:
-  - `Required by Me` (actionable now)
+  - `Required by: <username>` (actionable now)
   - `Waiting on Others` (assigned to you but blocked on another actor)
 - The home page uses the same model for `My Tasks Snapshot`, showing top mixed items grouped by those two states.
+- Home summary cards also include writer-relevant social handoff stage `Ready to Publish`.
+- Notification panel includes `Required by: <username>` shortcuts (top actionable items) that deep-link directly to the relevant blog/social record.
+- Admin quick-view mode opens on `My Tasks` with `Required by Me` filter intent so impersonated sessions start on actionable work.
 
 ## 3. Workflow rules and statuses
 ### Blog status language
@@ -50,9 +56,21 @@ Use `My Tasks` as your first stop each day.
 - Awaiting Live Link → Submit Link
 - Published → Done
 
+### Record visibility (blogs + social)
+- Detail drawers show latest assignment context and recent change history (latest-first) so anyone can quickly understand ownership and what changed.
+- Full record pages show assignment, comments, and activity history for all authenticated users.
+- Record-level history visibility is read-only and does not grant extra edit permissions.
+- Section order is standardized: when present, `Comments` and `Activity` appear as the final sections on record pages/drawers.
+
 ### Workflow rules to remember
 - Social editors can collaborate on the same post concurrently.
-- Execution stages keep brief fields read-only for stable handoff.
+- Social post create modal requires Product, Type, and Reviewer; Title is optional.
+- To submit for review, include Product, Type, and Canva link.
+- Creative approval requires Product, Type, Canva link, Platforms, Caption, and Scheduled Publish Date.
+- Non-admin writers can edit brief fields in Draft and Changes Requested.
+- Admin/reviewer can edit brief fields at any stage when needed.
+- In `Awaiting Live Link`, non-admin users can only add/update live links.
+- Associated blog linkage persists when moving between workflow stages.
 - Returning from execution to `Changes Requested` requires a reason.
 - `Published` requires at least one valid live link (LinkedIn, Facebook, or Instagram).
 - On Ideas, comments and references stay visible and are edited through `Edit Idea` (not inline).
@@ -63,11 +81,35 @@ Use `My Tasks` as your first stop each day.
 - Filters can be combined to isolate actionable work quickly.
 - Filters persist until changed or cleared.
 - If no results appear, clear one filter at a time to isolate the blocker.
+- Dashboard filter controls are available to all users regardless of role (same filter surface for everyone).
+- At wide breakpoints, dashboard filters render in a 4-column layout for denser control visibility.
+- Dashboard filters are grouped into explicit sections:
+  - Group 1 (Cross-Content Scope): `Sites`, `Content Type`, `Workflow (All Content)`, `Delivery (All Content)`
+  - Group 2 (Blog Filters): `Blog Stage`, `Blog Writers`, `Blog Publishers`, `Blog Writer Status`, `Blog Publisher Status`
+  - Group 3 (Social Filters): `Social Status`, `Social Product`
+- Scope-safe behavior:
+  - Blog-only filters do not hide social rows.
+  - Social-only filters do not hide blog rows.
+- Dashboard uses one filter-pill row as the single source of truth for active filters (each pill can be removed directly).
+- Bulk Actions panel appears whenever rows are selected; if you cannot run bulk mutations, controls remain visible but disabled with helper text.
+- Dashboard Overview cards are cross-content (blogs + social posts):
+  - `Open Work`
+  - `Scheduled Next 7 Days`
+  - `Awaiting Review`
+  - `Ready to Publish`
+  - `Awaiting Live Link`
+  - `Published Last 7 Days`
+- Dashboard header context is cross-content by design (blog + social pipeline health).
 
 ### Table sorting and controls
 - Click table headers to sort ascending/descending.
 - Sort indicators: `↕` (unsorted), `↑` (ascending), `↓` (descending).
 - Global action order: `Copy` → `Customize` → `Import` → `Export`.
+- Dashboard list is now a unified content table for blogs + social posts using core columns: `Type`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated` (with optional `Product`).
+- Clicking a blog row opens the blog detail drawer; clicking a social row opens its dedicated page.
+- Phase A selection behavior: both blog and social rows can be selected in-table.
+- Safety gating: mutation controls remain blog-only and are disabled whenever social rows are part of the current selection.
+- Selected CSV/PDF export supports mixed selected rows.
 
 ### Consistency guarantees
 - Core table behavior is standardized across pages (sorting, truncation, row density, pagination controls).
@@ -109,6 +151,7 @@ Name resolution behavior:
 - Command palette: `⌘K` (Mac) or `Ctrl+K` (Windows).
 - `Esc` closes open dropdowns and modals.
 - Quick Create: `↑/↓` to move, `Enter` to select, `Esc` to close.
+- Navigation behavior: internal app links open in the same tab; external links open in a new tab.
 
 ## 8. Notifications and feedback
 ### Notification bell
@@ -142,6 +185,8 @@ This format enables quick scanning in busy channels and shows exactly who is res
 ### Action feedback
 - Success/error alerts appear at the bottom-left and auto-dismiss quickly.
 - Copy actions show a visual copied confirmation.
+- Workflow links now include quick `Open` + `Copy` controls in-place for high-value URLs (for example Google Doc URL, blog Live URL, and social saved live links).
+- Missing URLs still show disabled `Open` + `Copy` controls so required workflow links are easy to scan.
 - CSV/PDF export flows remain direct browser downloads/print flows and are not blocked by JSON API parsing behavior.
 
 ### Activity history wording

@@ -11,8 +11,8 @@ import {
   PUBLISHER_STATUS_LABELS,
   SOCIAL_POST_STATUS_LABELS,
   WRITER_STATUS_LABELS,
-  getNextActor,
 } from "@/lib/status";
+import { getSocialTaskActionState, type TaskActionState } from "@/lib/task-action-state";
 import { requirePermission } from "@/lib/server-permissions";
 import type {
   BlogRecord,
@@ -21,7 +21,6 @@ import type {
   WriterStageStatus,
 } from "@/lib/types";
 
-type TaskActionState = "action_required" | "waiting_on_others";
 
 type SnapshotTask = {
   id: string;
@@ -114,6 +113,9 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     }
 
     const userId = profile.id;
+    const isAdmin =
+      profile.role === "admin" ||
+      (Array.isArray(profile.user_roles) && profile.user_roles.includes("admin"));
 
     const { data: assignments, error: assignmentError } = await adminClient
       .from("task_assignments")
@@ -314,7 +316,6 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         if (!(status in SOCIAL_POST_STATUS_LABELS)) {
           return [];
         }
-        const nextActor = getNextActor(status);
         const createdBy = typeof row.created_by === "string" ? row.created_by : null;
         const workerUserId =
           typeof row.worker_user_id === "string" ? row.worker_user_id : null;
@@ -326,14 +327,17 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           typeof row.editor_user_id === "string" ? row.editor_user_id : createdBy;
         const adminOwnerId =
           typeof row.admin_owner_id === "string" ? row.admin_owner_id : null;
-        const isActionRequired =
-          assignedToUserId !== null
-            ? assignedToUserId === userId
-            : nextActor === "editor"
-              ? workerUserId === userId || editorUserId === userId || createdBy === userId
-              : nextActor === "admin"
-                ? reviewerUserId === userId || adminOwnerId === userId
-                : false;
+        const actionState = getSocialTaskActionState({
+          status,
+          userId,
+          isAdmin,
+          createdBy,
+          workerUserId,
+          reviewerUserId,
+          assignedToUserId,
+          editorUserId,
+          adminOwnerId,
+        });
 
         return [{
           id: String(row.id ?? ""),
@@ -344,7 +348,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           scheduledDate:
             typeof row.scheduled_date === "string" ? row.scheduled_date : null,
           createdAt: String(row.created_at ?? ""),
-          actionState: isActionRequired ? "action_required" : "waiting_on_others",
+          actionState,
         } satisfies SnapshotTask];
       });
 

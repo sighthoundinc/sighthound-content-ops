@@ -30,3 +30,22 @@ export function formatDisplayDate(value: string | null | undefined) {
     year: "numeric",
   }).format(parsedDate);
 }
+
+export function isExternalHref(href: string) {
+  const normalized = href.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  if (
+    normalized.startsWith("/") ||
+    normalized.startsWith("#") ||
+    normalized.startsWith("?")
+  ) {
+    return false;
+  }
+  return (
+    normalized.startsWith("http://") ||
+    normalized.startsWith("https://") ||
+    normalized.startsWith("//")
+  );
+}

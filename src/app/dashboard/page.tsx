@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
@@ -14,7 +13,6 @@ import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ColumnEditor } from "@/components/column-editor";
 import { DashboardTable } from "@/components/dashboard-table";
 import { DetailDrawerField } from "@/components/detail-drawer";
-import { FilterBar } from "@/components/filter-bar";
 import {
   DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
   DATA_PAGE_CONTROL_ACTIONS_CLASS,
@@ -27,7 +25,7 @@ import {
   DataPageTableFeedback,
   DataPageToolbar,
 } from "@/components/data-page";
-import { ExternalLink } from "@/components/external-link";
+import { LinkQuickActions } from "@/components/link-quick-actions";
 import { KbdShortcut } from "@/components/kbd-shortcut";
 import { ProtectedPage } from "@/components/protected-page";
 import {
@@ -63,6 +61,7 @@ import {
   OVERALL_STATUSES,
   PUBLISHER_STATUS_LABELS,
   PUBLISHER_STATUSES,
+  SOCIAL_POST_STATUSES,
   SITES,
   STATUS_LABELS,
   getWorkflowStage,
@@ -87,6 +86,7 @@ import type {
   OverallBlogStatus,
   ProfileRecord,
   PublisherStageStatus,
+  SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
 import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
@@ -130,6 +130,13 @@ function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
   });
 }
 
+function normalizeRelationObject<T>(value: unknown): T | null {
+  if (Array.isArray(value)) {
+    return (value[0] ?? null) as T | null;
+  }
+  return (value ?? null) as T | null;
+}
+
 function isMissingBlogCommentUserIdColumnError(error: {
   code?: string | null;
   message?: string | null;
@@ -166,48 +173,82 @@ function isMissingBlogCommentsTableError(error: {
 }
 
 
-const WRITER_STATUS_ORDER = new Map(
-  WRITER_STATUSES.map((status, index) => [status, index])
-);
-const PUBLISHER_STATUS_ORDER = new Map(
-  PUBLISHER_STATUSES.map((status, index) => [status, index])
-);
-const OVERALL_STATUS_ORDER = new Map(
-  OVERALL_STATUSES.map((status, index) => [status, index])
-);
-
 type DashboardColumnKey =
-  | "title"
+  | "content_type"
   | "site"
-  | "writer"
-  | "writer_status"
-  | "publisher"
-  | "publisher_status"
-  | "overall_status"
-  | "publish_date";
+  | "id"
+  | "title"
+  | "status_display"
+  | "lifecycle_bucket"
+  | "scheduled_date"
+  | "published_date"
+  | "owner_display"
+  | "updated_at"
+  | "product";
 type DashboardSortField = DashboardColumnKey;
+type DashboardSocialPostMetric = {
+  id: string;
+  title: string;
+  product: string | null;
+  status: SocialPostStatus;
+  scheduled_date: string | null;
+  created_at: string;
+  updated_at: string;
+  associated_blog_site: string | null;
+  creator_name: string | null;
+  worker_name: string | null;
+  reviewer_name: string | null;
+};
+type DashboardContentType = "blog" | "social_post";
+type DashboardLifecycleBucket =
+  | "open_work"
+  | "awaiting_review"
+  | "ready_to_publish"
+  | "awaiting_live_link"
+  | "published";
+type DashboardContentRow = {
+  content_type: DashboardContentType;
+  site: string;
+  id: string;
+  title: string;
+  status_display: string;
+  lifecycle_bucket: DashboardLifecycleBucket;
+  scheduled_date: string | null;
+  published_date: string | null;
+  owner_display: string;
+  updated_at: string;
+  product?: string | null;
+  blog?: BlogRecord;
+  social_post?: DashboardSocialPostMetric;
+};
 
 const DASHBOARD_COLUMN_LABELS: Record<DashboardColumnKey, string> = {
-  title: "Title",
+  content_type: "Content Type",
   site: "Site",
-  writer: "Writer",
-  writer_status: "Writer Status",
-  publisher: "Publisher",
-  publisher_status: "Publisher Status",
-  overall_status: "Stage",
-  publish_date: "Publish Date",
+  id: "ID",
+  title: "Title",
+  status_display: "Status",
+  lifecycle_bucket: "Lifecycle",
+  scheduled_date: "Scheduled Date",
+  published_date: "Published Date",
+  owner_display: "Owner",
+  updated_at: "Updated",
+  product: "Product",
 };
-const DEFAULT_DASHBOARD_HIDDEN_COLUMNS: DashboardColumnKey[] = ["overall_status"];
+const DEFAULT_DASHBOARD_HIDDEN_COLUMNS: DashboardColumnKey[] = ["id", "product"];
 
 const DEFAULT_DASHBOARD_COLUMN_ORDER: DashboardColumnKey[] = [
+  "content_type",
   "site",
+  "id",
   "title",
-  "writer",
-  "writer_status",
-  "publisher",
-  "publisher_status",
-  "publish_date",
-  "overall_status",
+  "status_display",
+  "lifecycle_bucket",
+  "scheduled_date",
+  "published_date",
+  "owner_display",
+  "updated_at",
+  "product",
 ];
 const REQUIRED_DASHBOARD_COLUMNS: DashboardColumnKey[] = [];
 
@@ -272,39 +313,71 @@ const normalizeDashboardHiddenColumns = (value: unknown): DashboardColumnKey[] =
 };
 
 const DASHBOARD_SORT_FIELDS: DashboardSortField[] = [
-  "publish_date",
+  "scheduled_date",
+  "published_date",
+  "updated_at",
+  "content_type",
+  "status_display",
+  "lifecycle_bucket",
+  "owner_display",
   "title",
   "site",
-  "writer",
-  "publisher",
-  "overall_status",
-  "writer_status",
-  "publisher_status",
+  "id",
+  "product",
 ];
 type MetricFilterKey =
-  | "scheduled_this_week"
+  | "open_work"
+  | "scheduled_next_7_days"
+  | "awaiting_review"
   | "ready_to_publish"
-  | "currently_writing"
-  | "under_review"
-  | "needs_revision"
-  | "publishing_in_progress";
+  | "awaiting_live_link"
+  | "published_last_7_days";
+type CrossContentWorkflowFilter =
+  | "open_work"
+  | "awaiting_review"
+  | "ready_to_publish"
+  | "published_recent";
+type CrossContentDeliveryFilter = "scheduled" | "unscheduled" | "overdue";
+type DashboardContentTypeFilter = DashboardContentType;
 const METRIC_FILTER_LABELS: Record<MetricFilterKey, string> = {
-  scheduled_this_week: "Scheduled This Week",
+  open_work: "Open Work",
+  scheduled_next_7_days: "Scheduled Next 7 Days",
+  awaiting_review: "Awaiting Review",
   ready_to_publish: "Ready to Publish",
-  currently_writing: "Currently Writing",
-  under_review: "Under Review",
-  needs_revision: "Needs Revision",
-  publishing_in_progress: "Publishing In Progress",
+  awaiting_live_link: "Awaiting Live Link",
+  published_last_7_days: "Published Last 7 Days",
+};
+const CROSS_CONTENT_WORKFLOW_FILTER_LABELS: Record<
+  CrossContentWorkflowFilter,
+  string
+> = {
+  open_work: "Open Work",
+  awaiting_review: "Awaiting Review",
+  ready_to_publish: "Ready to Publish",
+  published_recent: "Published Last 7 Days",
+};
+const CROSS_CONTENT_DELIVERY_FILTER_LABELS: Record<
+  CrossContentDeliveryFilter,
+  string
+> = {
+  scheduled: "Scheduled",
+  unscheduled: "Unscheduled",
+  overdue: "Overdue",
 };
 
 type DashboardFilterState = {
   search: string;
   siteFilters: BlogSite[];
+  contentTypeFilters: DashboardContentTypeFilter[];
   statusFilters: OverallBlogStatus[];
   writerFilters: string[];
   publisherFilters: string[];
   writerStatusFilters: WriterStageStatus[];
   publisherStatusFilters: PublisherStageStatus[];
+  socialStatusFilters: SocialPostStatus[];
+  socialProductFilters: string[];
+  crossWorkflowFilters: CrossContentWorkflowFilter[];
+  crossDeliveryFilters: CrossContentDeliveryFilter[];
   sortField: DashboardSortField;
   sortDirection: SortDirection;
   rowDensity: "compact" | "comfortable";
@@ -327,21 +400,42 @@ const buildUserScopedStorageKey = (baseKey: string, userId: string | null | unde
   `${baseKey}:${userId ?? "anonymous"}`;
 
 const DASHBOARD_SORT_FIELD_SET = new Set<DashboardSortField>(DASHBOARD_SORT_FIELDS);
+const CONTENT_TYPE_FILTER_SET = new Set<DashboardContentTypeFilter>([
+  "blog",
+  "social_post",
+]);
 const SITE_SET = new Set<BlogSite>(SITES);
 const OVERALL_STATUS_SET = new Set<OverallBlogStatus>(OVERALL_STATUSES);
 const WRITER_STATUS_SET = new Set<WriterStageStatus>(WRITER_STATUSES);
 const PUBLISHER_STATUS_SET = new Set<PublisherStageStatus>(PUBLISHER_STATUSES);
+const SOCIAL_STATUS_SET = new Set<SocialPostStatus>(SOCIAL_POST_STATUSES);
+const CROSS_WORKFLOW_FILTER_SET = new Set<CrossContentWorkflowFilter>([
+  "open_work",
+  "awaiting_review",
+  "ready_to_publish",
+  "published_recent",
+]);
+const CROSS_DELIVERY_FILTER_SET = new Set<CrossContentDeliveryFilter>([
+  "scheduled",
+  "unscheduled",
+  "overdue",
+]);
 const ROW_LIMIT_SET = new Set<TableRowLimit>(TABLE_ROW_LIMIT_OPTIONS);
 
 const DEFAULT_DASHBOARD_FILTER_STATE: DashboardFilterState = {
   search: "",
   siteFilters: [],
+  contentTypeFilters: [],
   statusFilters: [],
   writerFilters: [],
   publisherFilters: [],
   writerStatusFilters: [],
   publisherStatusFilters: [],
-  sortField: "publish_date",
+  socialStatusFilters: [],
+  socialProductFilters: [],
+  crossWorkflowFilters: [],
+  crossDeliveryFilters: [],
+  sortField: "updated_at",
   sortDirection: "asc",
   rowDensity: "compact",
   rowLimit: DEFAULT_TABLE_ROW_LIMIT,
@@ -371,6 +465,10 @@ const normalizeDashboardFilterState = (value: unknown): DashboardFilterState => 
   const siteFilters = normalizeStringArray(state.siteFilters).filter((site): site is BlogSite =>
     SITE_SET.has(site as BlogSite)
   );
+  const contentTypeFilters = normalizeStringArray(state.contentTypeFilters).filter(
+    (value): value is DashboardContentTypeFilter =>
+      CONTENT_TYPE_FILTER_SET.has(value as DashboardContentTypeFilter)
+  );
   const statusFilters = normalizeStringArray(state.statusFilters).filter(
     (status): status is OverallBlogStatus =>
       OVERALL_STATUS_SET.has(status as OverallBlogStatus)
@@ -384,6 +482,19 @@ const normalizeDashboardFilterState = (value: unknown): DashboardFilterState => 
   const publisherStatusFilters = normalizeStringArray(state.publisherStatusFilters).filter(
     (status): status is PublisherStageStatus =>
       PUBLISHER_STATUS_SET.has(status as PublisherStageStatus)
+  );
+  const socialStatusFilters = normalizeStringArray(state.socialStatusFilters).filter(
+    (status): status is SocialPostStatus =>
+      SOCIAL_STATUS_SET.has(status as SocialPostStatus)
+  );
+  const socialProductFilters = normalizeStringArray(state.socialProductFilters);
+  const crossWorkflowFilters = normalizeStringArray(state.crossWorkflowFilters).filter(
+    (value): value is CrossContentWorkflowFilter =>
+      CROSS_WORKFLOW_FILTER_SET.has(value as CrossContentWorkflowFilter)
+  );
+  const crossDeliveryFilters = normalizeStringArray(state.crossDeliveryFilters).filter(
+    (value): value is CrossContentDeliveryFilter =>
+      CROSS_DELIVERY_FILTER_SET.has(value as CrossContentDeliveryFilter)
   );
 
   const sortField =
@@ -406,11 +517,16 @@ const normalizeDashboardFilterState = (value: unknown): DashboardFilterState => 
   return {
     search,
     siteFilters,
+    contentTypeFilters,
     statusFilters,
     writerFilters,
     publisherFilters,
     writerStatusFilters,
     publisherStatusFilters,
+    socialStatusFilters,
+    socialProductFilters,
+    crossWorkflowFilters,
+    crossDeliveryFilters,
     sortField,
     sortDirection,
     rowDensity,
@@ -505,11 +621,15 @@ export default function DashboardPage() {
     canDeleteBlog;
   const canSelectRows = canRunBulkActions || canExportSelectedCsv;
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
+  const [socialPosts, setSocialPosts] = useState<DashboardSocialPostMetric[]>([]);
   const [assignableUsers, setAssignableUsers] = useState<
     Array<Pick<ProfileRecord, "id" | "full_name" | "email">>
   >([]);
   const [search, setSearch] = useState("");
   const [siteFilters, setSiteFilters] = useState<BlogSite[]>([]);
+  const [contentTypeFilters, setContentTypeFilters] = useState<
+    DashboardContentTypeFilter[]
+  >([]);
   const [statusFilters, setStatusFilters] = useState<OverallBlogStatus[]>([]);
   const [writerFilters, setWriterFilters] = useState<string[]>([]);
   const [publisherFilters, setPublisherFilters] = useState<string[]>([]);
@@ -517,7 +637,15 @@ export default function DashboardPage() {
   const [publisherStatusFilters, setPublisherStatusFilters] = useState<
     PublisherStageStatus[]
   >([]);
-  const [sortField, setSortField] = useState<DashboardSortField>("publish_date");
+  const [socialStatusFilters, setSocialStatusFilters] = useState<SocialPostStatus[]>([]);
+  const [socialProductFilters, setSocialProductFilters] = useState<string[]>([]);
+  const [crossWorkflowFilters, setCrossWorkflowFilters] = useState<
+    CrossContentWorkflowFilter[]
+  >([]);
+  const [crossDeliveryFilters, setCrossDeliveryFilters] = useState<
+    CrossContentDeliveryFilter[]
+  >([]);
+  const [sortField, setSortField] = useState<DashboardSortField>("updated_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [rowDensity, setRowDensity] = useState<"compact" | "comfortable">("compact");
   const [columnOrder, setColumnOrder] = useState<DashboardColumnKey[]>(
@@ -530,10 +658,10 @@ export default function DashboardPage() {
   const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
-  const [staleDraftDays, setStaleDraftDays] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
+  const [selectedSocialPostIds, setSelectedSocialPostIds] = useState<string[]>([]);
   const [bulkWriterId, setBulkWriterId] = useState("");
   const [bulkPublisherId, setBulkPublisherId] = useState("");
   const [bulkWriterStatus, setBulkWriterStatus] = useState<WriterStageStatus | "">("");
@@ -610,11 +738,16 @@ export default function DashboardPage() {
   const applyFilterState = useCallback((nextState: DashboardFilterState) => {
     setSearch(nextState.search);
     setSiteFilters(nextState.siteFilters);
+    setContentTypeFilters(nextState.contentTypeFilters);
     setStatusFilters(nextState.statusFilters);
     setWriterFilters(nextState.writerFilters);
     setPublisherFilters(nextState.publisherFilters);
     setWriterStatusFilters(nextState.writerStatusFilters);
     setPublisherStatusFilters(nextState.publisherStatusFilters);
+    setSocialStatusFilters(nextState.socialStatusFilters);
+    setSocialProductFilters(nextState.socialProductFilters);
+    setCrossWorkflowFilters(nextState.crossWorkflowFilters);
+    setCrossDeliveryFilters(nextState.crossDeliveryFilters);
     setSortField(nextState.sortField);
     setSortDirection(nextState.sortDirection);
     setRowDensity(nextState.rowDensity);
@@ -626,11 +759,16 @@ export default function DashboardPage() {
     (): DashboardFilterState => ({
       search,
       siteFilters,
+      contentTypeFilters,
       statusFilters,
       writerFilters,
       publisherFilters,
       writerStatusFilters,
       publisherStatusFilters,
+      socialStatusFilters,
+      socialProductFilters,
+      crossWorkflowFilters,
+      crossDeliveryFilters,
       sortField,
       sortDirection,
       rowDensity,
@@ -641,23 +779,33 @@ export default function DashboardPage() {
       publisherStatusFilters,
       rowLimit,
       search,
+      socialProductFilters,
+      socialStatusFilters,
       siteFilters,
       sortDirection,
       sortField,
       statusFilters,
       writerFilters,
       writerStatusFilters,
+      contentTypeFilters,
+      crossDeliveryFilters,
+      crossWorkflowFilters,
       rowDensity,
     ]
   );
   const hasActiveDashboardFilters =
     search.trim().length > 0 ||
     siteFilters.length > 0 ||
+    contentTypeFilters.length > 0 ||
     statusFilters.length > 0 ||
     writerFilters.length > 0 ||
     publisherFilters.length > 0 ||
     writerStatusFilters.length > 0 ||
     publisherStatusFilters.length > 0 ||
+    socialStatusFilters.length > 0 ||
+    socialProductFilters.length > 0 ||
+    crossWorkflowFilters.length > 0 ||
+    crossDeliveryFilters.length > 0 ||
     activeMetricFilter !== null;
 
   const loadData = useCallback(async () => {
@@ -684,12 +832,19 @@ export default function DashboardPage() {
 
       return { data, error };
     };
+    const fetchSocialPosts = async () => {
+      const { data, error } = await supabase
+        .from("social_posts")
+        .select(
+          "id,title,product,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)"
+        );
+      return { data, error };
+    };
 
-    const [{ data: blogsData, error: blogsError }, { data: settingsData }] =
-      await Promise.all([
-        fetchBlogs(),
-        supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
-      ]);
+    const [
+      { data: blogsData, error: blogsError },
+      { data: socialPostsData, error: socialPostsError },
+    ] = await Promise.all([fetchBlogs(), fetchSocialPosts()]);
 
     if (blogsError) {
       setError(
@@ -703,6 +858,54 @@ export default function DashboardPage() {
       (blogsData ?? []) as Array<Record<string, unknown>>
     ) as BlogRecord[];
     setBlogs(nextBlogs);
+    if (socialPostsError) {
+      setSocialPosts([]);
+    } else {
+      const socialPostStatusSet = new Set<SocialPostStatus>(SOCIAL_POST_STATUSES);
+      const nextSocialPosts = ((socialPostsData ?? []) as Array<Record<string, unknown>>)
+        .map((row) => {
+          const associatedBlog = normalizeRelationObject<{ site?: unknown }>(
+            row.associated_blog
+          );
+          const creator = normalizeRelationObject<{ full_name?: unknown }>(row.creator);
+          const worker = normalizeRelationObject<{ full_name?: unknown }>(row.worker);
+          const reviewer = normalizeRelationObject<{ full_name?: unknown }>(
+            row.reviewer
+          );
+          if (
+            typeof row.status !== "string" ||
+            !socialPostStatusSet.has(row.status as SocialPostStatus)
+          ) {
+            return null;
+          }
+          return {
+            id: typeof row.id === "string" ? row.id : "",
+            title: typeof row.title === "string" ? row.title : "Untitled social post",
+            product: typeof row.product === "string" ? row.product : null,
+            status: row.status as SocialPostStatus,
+            scheduled_date:
+              typeof row.scheduled_date === "string" ? row.scheduled_date : null,
+            created_at:
+              typeof row.created_at === "string"
+                ? row.created_at
+                : new Date().toISOString(),
+            updated_at:
+              typeof row.updated_at === "string"
+                ? row.updated_at
+                : new Date().toISOString(),
+            associated_blog_site:
+              (associatedBlog?.site as string | undefined) ?? null,
+            creator_name:
+              (creator?.full_name as string | undefined) ?? null,
+            worker_name:
+              (worker?.full_name as string | undefined) ?? null,
+            reviewer_name:
+              (reviewer?.full_name as string | undefined) ?? null,
+          } satisfies DashboardSocialPostMetric;
+        })
+        .filter((row): row is DashboardSocialPostMetric => row !== null);
+      setSocialPosts(nextSocialPosts);
+    }
 
     const nextBlogIds = nextBlogs.map((blog) => blog.id);
     if (nextBlogIds.length > 0) {
@@ -748,9 +951,6 @@ export default function DashboardPage() {
     } else {
       setCompletionTimingsByBlog({});
     }
-    if (settingsData?.stale_draft_days) {
-      setStaleDraftDays(settingsData.stale_draft_days);
-    }
     setIsLoading(false);
   }, []);
 
@@ -759,11 +959,6 @@ export default function DashboardPage() {
   }, [loadData]);
 
   useEffect(() => {
-    if (!canChangeWriterAssignment && !canChangePublisherAssignment) {
-      setAssignableUsers([]);
-      return;
-    }
-
     const loadUsers = async () => {
       const supabase = getSupabaseBrowserClient();
       const { data, error: usersError } = await supabase
@@ -780,7 +975,7 @@ export default function DashboardPage() {
     };
 
     void loadUsers();
-  }, [canChangePublisherAssignment, canChangeWriterAssignment]);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1001,22 +1196,27 @@ export default function DashboardPage() {
     []
   );
 
-  const writerFilterOptions = useMemo(
+  const filterUserOptions = useMemo(
     () =>
-      writerOptions.map((writer) => ({
-        value: writer.id,
-        label: writer.full_name,
+      Array.from(
+        new Map(
+          (assignableUsers.length > 0
+            ? assignableUsers
+            : [...writerOptions, ...publisherOptions]
+          ).map((userOption) => [userOption.id, userOption.full_name])
+        ).entries()
+      ).map(([id, fullName]) => ({
+        value: id,
+        label: fullName,
       })),
-    [writerOptions]
+    [assignableUsers, publisherOptions, writerOptions]
   );
 
+  const writerFilterOptions = useMemo(() => filterUserOptions, [filterUserOptions]);
+
   const publisherFilterOptions = useMemo(
-    () =>
-      publisherOptions.map((publisher) => ({
-        value: publisher.id,
-        label: publisher.full_name,
-      })),
-    [publisherOptions]
+    () => filterUserOptions,
+    [filterUserOptions]
   );
 
   const writerStatusFilterOptions = useMemo(
@@ -1036,172 +1236,367 @@ export default function DashboardPage() {
       })),
     []
   );
-  const filteredBlogs = useMemo(() => {
-    const todayDate = new Date();
-    const weekStart = new Date(todayDate);
-    weekStart.setDate(todayDate.getDate() - todayDate.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
-
-    const isScheduledThisWeek = (blog: BlogRecord) => {
-      const scheduledDate = getBlogScheduledDate(blog);
-      if (!scheduledDate) {
+  const contentTypeFilterOptions = useMemo(
+    () => [
+      { value: "blog", label: "Blogs" },
+      { value: "social_post", label: "Social Posts" },
+    ],
+    []
+  );
+  const socialStatusFilterOptions = useMemo(
+    () =>
+      SOCIAL_POST_STATUSES.map((status) => ({
+        value: status,
+        label: status.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase()),
+      })),
+    []
+  );
+  const socialProductFilterOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          socialPosts
+            .map((post) => post.product?.trim() ?? "")
+            .filter((value) => value.length > 0)
+        )
+      )
+        .sort((left, right) => left.localeCompare(right))
+        .map((value) => ({ value, label: value })),
+    [socialPosts]
+  );
+  const crossWorkflowFilterOptions = useMemo(
+    () =>
+      (
+        Object.keys(
+          CROSS_CONTENT_WORKFLOW_FILTER_LABELS
+        ) as CrossContentWorkflowFilter[]
+      ).map((value) => ({
+        value,
+        label: CROSS_CONTENT_WORKFLOW_FILTER_LABELS[value],
+      })),
+    []
+  );
+  const crossDeliveryFilterOptions = useMemo(
+    () =>
+      (
+        Object.keys(
+          CROSS_CONTENT_DELIVERY_FILTER_LABELS
+        ) as CrossContentDeliveryFilter[]
+      ).map((value) => ({
+        value,
+        label: CROSS_CONTENT_DELIVERY_FILTER_LABELS[value],
+      })),
+    []
+  );
+  const dashboardRows = useMemo<DashboardContentRow[]>(() => {
+    const deriveBlogLifecycleBucket = (blog: BlogRecord): DashboardLifecycleBucket => {
+      if (blog.overall_status === "published") {
+        return "published";
+      }
+      if (
+        blog.writer_status === "pending_review" ||
+        blog.publisher_status === "pending_review" ||
+        blog.publisher_status === "publisher_approved"
+      ) {
+        return "awaiting_review";
+      }
+      if (blog.overall_status === "ready_to_publish") {
+        return "ready_to_publish";
+      }
+      return "open_work";
+    };
+    const deriveSocialLifecycleBucket = (
+      status: SocialPostStatus
+    ): DashboardLifecycleBucket => {
+      if (status === "published") {
+        return "published";
+      }
+      if (status === "in_review") {
+        return "awaiting_review";
+      }
+      if (status === "ready_to_publish") {
+        return "ready_to_publish";
+      }
+      if (status === "awaiting_live_link") {
+        return "awaiting_live_link";
+      }
+      return "open_work";
+    };
+    const blogRows = blogs.map((blog) => {
+      const lifecycleBucket = deriveBlogLifecycleBucket(blog);
+      const ownerDisplay =
+        lifecycleBucket === "published"
+          ? blog.publisher?.full_name ?? blog.writer?.full_name ?? "Unassigned"
+          : blog.writer_status !== "completed"
+            ? blog.writer?.full_name ?? "Unassigned"
+            : blog.publisher?.full_name ?? "Unassigned";
+      return {
+        content_type: "blog",
+        site: getSiteShortLabel(blog.site),
+        id: blog.id,
+        title: blog.title,
+        status_display: STATUS_LABELS[blog.overall_status],
+        lifecycle_bucket: lifecycleBucket,
+        scheduled_date: getBlogScheduledDate(blog),
+        published_date: getBlogPublishDate(blog),
+        owner_display: ownerDisplay,
+        updated_at: blog.updated_at,
+        product: null,
+        blog,
+      } satisfies DashboardContentRow;
+    });
+    const socialRows = socialPosts.map((post) => {
+      const lifecycleBucket = deriveSocialLifecycleBucket(post.status);
+      const ownerDisplay =
+        post.status === "in_review" || post.status === "creative_approved"
+          ? post.reviewer_name ?? "Unassigned"
+          : post.worker_name ?? post.creator_name ?? "Unassigned";
+      return {
+        content_type: "social_post",
+        site: getSiteShortLabel((post.associated_blog_site as BlogSite | null) ?? "sighthound.com"),
+        id: post.id,
+        title: post.title,
+        status_display: post.status.replaceAll("_", " ").replace(/\b\w/g, (char) =>
+          char.toUpperCase()
+        ),
+        lifecycle_bucket: lifecycleBucket,
+        scheduled_date: post.scheduled_date,
+        published_date: post.status === "published" ? post.updated_at : null,
+        owner_display: ownerDisplay,
+        updated_at: post.updated_at,
+        product: post.product,
+        social_post: post,
+      } satisfies DashboardContentRow;
+    });
+    return [...blogRows, ...socialRows];
+  }, [blogs, socialPosts]);
+  const filteredRows = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const nextSevenDaysEnd = new Date(todayStart);
+    nextSevenDaysEnd.setDate(todayStart.getDate() + 6);
+    nextSevenDaysEnd.setHours(23, 59, 59, 999);
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    const isInNextSevenDays = (dateValue: string | null) => {
+      if (!dateValue) {
         return false;
       }
-      const scheduledTime = new Date(`${scheduledDate}T00:00:00`).getTime();
-      return scheduledTime >= weekStart.getTime() && scheduledTime <= weekEnd.getTime();
+      const dateTime = new Date(`${dateValue}T00:00:00`).getTime();
+      return (
+        dateTime >= todayStart.getTime() && dateTime <= nextSevenDaysEnd.getTime()
+      );
     };
 
-    const matchesMetricFilter = (blog: BlogRecord) => {
+    const isPublishedInLastSevenDays = (row: DashboardContentRow) => {
+      if (row.lifecycle_bucket !== "published") {
+        return false;
+      }
+      const timestamp = row.published_date ?? row.updated_at;
+      if (!timestamp) {
+        return false;
+      }
+      const publishedAt = new Date(timestamp).getTime();
+      return publishedAt >= sevenDaysAgo.getTime() && publishedAt <= now.getTime();
+    };
+
+    const matchesMetricFilter = (row: DashboardContentRow) => {
       if (!activeMetricFilter) {
         return true;
       }
-
-      if (activeMetricFilter === "scheduled_this_week") {
-        return isScheduledThisWeek(blog);
+      if (activeMetricFilter === "open_work") {
+        return row.lifecycle_bucket !== "published";
       }
-      if (activeMetricFilter === "ready_to_publish") {
-        return blog.overall_status === "ready_to_publish";
-      }
-      if (activeMetricFilter === "currently_writing") {
-        return blog.writer_status === "in_progress";
-      }
-      if (activeMetricFilter === "under_review") {
+      if (activeMetricFilter === "scheduled_next_7_days") {
         return (
-          blog.writer_status === "needs_revision" ||
-          blog.publisher_status === "in_progress"
+          row.lifecycle_bucket !== "published" &&
+          isInNextSevenDays(row.scheduled_date)
         );
       }
-      if (activeMetricFilter === "needs_revision") {
-        return blog.writer_status === "needs_revision";
+      if (activeMetricFilter === "awaiting_review") {
+        return row.lifecycle_bucket === "awaiting_review";
       }
-      return (
-        blog.writer_status === "completed" &&
-        blog.publisher_status === "in_progress"
-      );
+      if (activeMetricFilter === "ready_to_publish") {
+        return row.lifecycle_bucket === "ready_to_publish";
+      }
+      if (activeMetricFilter === "awaiting_live_link") {
+        return row.lifecycle_bucket === "awaiting_live_link";
+      }
+      return isPublishedInLastSevenDays(row);
     };
-    return blogs.filter((blog) => {
+    const matchesCrossWorkflowFilters = (row: DashboardContentRow) => {
+      if (crossWorkflowFilters.length === 0) {
+        return true;
+      }
+      return crossWorkflowFilters.some((filterValue) => {
+        if (filterValue === "open_work") {
+          return row.lifecycle_bucket !== "published";
+        }
+        if (filterValue === "awaiting_review") {
+          return row.lifecycle_bucket === "awaiting_review";
+        }
+        if (filterValue === "ready_to_publish") {
+          return row.lifecycle_bucket === "ready_to_publish";
+        }
+        return isPublishedInLastSevenDays(row);
+      });
+    };
+    const matchesCrossDeliveryFilters = (row: DashboardContentRow) => {
+      if (crossDeliveryFilters.length === 0) {
+        return true;
+      }
+      const scheduledDate = row.scheduled_date;
+      const scheduledTimestamp = scheduledDate
+        ? new Date(`${scheduledDate}T00:00:00`).getTime()
+        : null;
+      return crossDeliveryFilters.some((filterValue) => {
+        if (filterValue === "scheduled") {
+          return scheduledDate !== null;
+        }
+        if (filterValue === "unscheduled") {
+          return scheduledDate === null;
+        }
+        return (
+          scheduledTimestamp !== null &&
+          scheduledTimestamp < todayStart.getTime() &&
+          row.lifecycle_bucket !== "published"
+        );
+      });
+    };
+    return dashboardRows.filter((row) => {
       const normalizedSearch = search.toLowerCase().trim();
       const searchHaystack = [
-        blog.title,
-        blog.writer?.full_name ?? "",
-        blog.publisher?.full_name ?? "",
-        blog.site,
-        blog.live_url ?? "",
+        row.title,
+        row.site,
+        row.owner_display,
+        row.status_display,
+        row.id,
+        row.product ?? "",
       ]
         .join(" ")
         .toLowerCase();
       const matchesSearch =
         normalizedSearch.length === 0 || searchHaystack.includes(normalizedSearch);
+      const matchesContentType =
+        contentTypeFilters.length === 0 ||
+        contentTypeFilters.includes(row.content_type);
       const matchesSite =
-        siteFilters.length === 0 || siteFilters.includes(blog.site);
+        siteFilters.length === 0 || siteFilters.includes(row.site as BlogSite);
       const matchesStatus =
-        statusFilters.length === 0 || statusFilters.includes(blog.overall_status);
+        statusFilters.length === 0 ||
+        (row.blog ? statusFilters.includes(row.blog.overall_status) : true);
       const matchesWriter =
         writerFilters.length === 0 ||
-        (blog.writer_id !== null && writerFilters.includes(blog.writer_id));
+        (row.content_type !== "blog" ||
+          (row.blog?.writer_id !== null &&
+            row.blog?.writer_id !== undefined &&
+            writerFilters.includes(row.blog.writer_id)));
       const matchesPublisher =
         publisherFilters.length === 0 ||
-        (blog.publisher_id !== null && publisherFilters.includes(blog.publisher_id));
+        (row.content_type !== "blog" ||
+          (row.blog?.publisher_id !== null &&
+            row.blog?.publisher_id !== undefined &&
+            publisherFilters.includes(row.blog.publisher_id)));
       const matchesWriterStatus =
         writerStatusFilters.length === 0 ||
-        writerStatusFilters.includes(blog.writer_status);
+        (row.blog ? writerStatusFilters.includes(row.blog.writer_status) : true);
       const matchesPublisherStatus =
         publisherStatusFilters.length === 0 ||
-        publisherStatusFilters.includes(blog.publisher_status);
+        (row.blog ? publisherStatusFilters.includes(row.blog.publisher_status) : true);
+      const matchesSocialStatus =
+        socialStatusFilters.length === 0 ||
+        (row.content_type !== "social_post" ||
+          (row.social_post
+            ? socialStatusFilters.includes(row.social_post.status)
+            : false));
+      const matchesSocialProduct =
+        socialProductFilters.length === 0 ||
+        (row.content_type !== "social_post" ||
+          (row.social_post?.product !== null &&
+            row.social_post?.product !== undefined &&
+            socialProductFilters.includes(row.social_post.product)));
       return (
-        matchesMetricFilter(blog) &&
+        matchesMetricFilter(row) &&
+        matchesCrossWorkflowFilters(row) &&
+        matchesCrossDeliveryFilters(row) &&
         matchesSearch &&
+        matchesContentType &&
         matchesSite &&
         matchesStatus &&
         matchesWriter &&
         matchesPublisher &&
         matchesWriterStatus &&
-        matchesPublisherStatus
+        matchesPublisherStatus &&
+        matchesSocialStatus &&
+        matchesSocialProduct
       );
     });
   }, [
-    blogs,
+    contentTypeFilters,
+    dashboardRows,
+    crossDeliveryFilters,
+    crossWorkflowFilters,
     publisherFilters,
     publisherStatusFilters,
     search,
     siteFilters,
+    socialProductFilters,
+    socialStatusFilters,
     statusFilters,
     activeMetricFilter,
     writerFilters,
     writerStatusFilters,
   ]);
 
-  const sortedBlogs = useMemo(() => {
+  const sortedRows = useMemo(() => {
     const collator = new Intl.Collator(undefined, { sensitivity: "base" });
     const directionMultiplier = sortDirection === "asc" ? 1 : -1;
-
-    return [...filteredBlogs].sort((left, right) => {
+    const compareDateValues = (leftDate: string | null, rightDate: string | null) => {
+      if (!leftDate && !rightDate) {
+        return 0;
+      }
+      if (!leftDate) {
+        return 1;
+      }
+      if (!rightDate) {
+        return -1;
+      }
+      return leftDate.localeCompare(rightDate);
+    };
+    return [...filteredRows].sort((left, right) => {
       let compareResult = 0;
-
-      if (sortField === "publish_date") {
-        const leftDate = getBlogPublishDate(left);
-        const rightDate = getBlogPublishDate(right);
-        if (!leftDate && !rightDate) {
-          compareResult = 0;
-        } else if (!leftDate) {
-          compareResult = 1;
-        } else if (!rightDate) {
-          compareResult = -1;
-        } else {
-          compareResult = leftDate.localeCompare(rightDate);
-        }
+      if (sortField === "scheduled_date") {
+        compareResult = compareDateValues(left.scheduled_date, right.scheduled_date);
+      } else if (sortField === "published_date") {
+        compareResult = compareDateValues(left.published_date, right.published_date);
+      } else if (sortField === "updated_at") {
+        compareResult = compareDateValues(left.updated_at, right.updated_at);
       } else if (sortField === "title") {
         compareResult = collator.compare(left.title, right.title);
       } else if (sortField === "site") {
         compareResult = collator.compare(left.site, right.site);
-      } else if (sortField === "writer") {
-        const leftWriter = left.writer?.full_name ?? "";
-        const rightWriter = right.writer?.full_name ?? "";
-        if (!leftWriter && !rightWriter) {
-          compareResult = 0;
-        } else if (!leftWriter) {
-          compareResult = 1;
-        } else if (!rightWriter) {
-          compareResult = -1;
-        } else {
-          compareResult = collator.compare(leftWriter, rightWriter);
-        }
-      } else if (sortField === "publisher") {
-        const leftPublisher = left.publisher?.full_name ?? "";
-        const rightPublisher = right.publisher?.full_name ?? "";
-        if (!leftPublisher && !rightPublisher) {
-          compareResult = 0;
-        } else if (!leftPublisher) {
-          compareResult = 1;
-        } else if (!rightPublisher) {
-          compareResult = -1;
-        } else {
-          compareResult = collator.compare(leftPublisher, rightPublisher);
-        }
-      } else if (sortField === "overall_status") {
-        compareResult =
-          (OVERALL_STATUS_ORDER.get(left.overall_status) ?? Number.MAX_SAFE_INTEGER) -
-          (OVERALL_STATUS_ORDER.get(right.overall_status) ?? Number.MAX_SAFE_INTEGER);
-      } else if (sortField === "writer_status") {
-        compareResult =
-          (WRITER_STATUS_ORDER.get(left.writer_status) ?? Number.MAX_SAFE_INTEGER) -
-          (WRITER_STATUS_ORDER.get(right.writer_status) ?? Number.MAX_SAFE_INTEGER);
-      } else if (sortField === "publisher_status") {
-        compareResult =
-          (PUBLISHER_STATUS_ORDER.get(left.publisher_status) ?? Number.MAX_SAFE_INTEGER) -
-          (PUBLISHER_STATUS_ORDER.get(right.publisher_status) ?? Number.MAX_SAFE_INTEGER);
+      } else if (sortField === "content_type") {
+        compareResult = collator.compare(left.content_type, right.content_type);
+      } else if (sortField === "id") {
+        compareResult = collator.compare(left.id, right.id);
+      } else if (sortField === "status_display") {
+        compareResult = collator.compare(left.status_display, right.status_display);
+      } else if (sortField === "lifecycle_bucket") {
+        compareResult = collator.compare(left.lifecycle_bucket, right.lifecycle_bucket);
+      } else if (sortField === "owner_display") {
+        compareResult = collator.compare(left.owner_display, right.owner_display);
+      } else if (sortField === "product") {
+        compareResult = collator.compare(left.product ?? "", right.product ?? "");
       }
 
       return compareResult * directionMultiplier;
     });
-  }, [filteredBlogs, sortDirection, sortField]);
+  }, [filteredRows, sortDirection, sortField]);
 
   const pageCount = useMemo(
-    () => getTablePageCount(sortedBlogs.length, rowLimit),
-    [rowLimit, sortedBlogs.length]
+    () => getTablePageCount(sortedRows.length, rowLimit),
+    [rowLimit, sortedRows.length]
   );
 
   useEffect(() => {
@@ -1212,11 +1607,16 @@ export default function DashboardPage() {
     setCurrentPage(1);
   }, [
     activeMetricFilter,
+    contentTypeFilters,
+    crossDeliveryFilters,
+    crossWorkflowFilters,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
     search,
     siteFilters,
+    socialProductFilters,
+    socialStatusFilters,
     sortDirection,
     sortField,
     statusFilters,
@@ -1230,11 +1630,16 @@ export default function DashboardPage() {
     tableContainerRef.current.scrollTop = 0;
   }, [
     activeMetricFilter,
+    contentTypeFilters,
+    crossDeliveryFilters,
+    crossWorkflowFilters,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
     search,
     siteFilters,
+    socialProductFilters,
+    socialStatusFilters,
     sortDirection,
     sortField,
     statusFilters,
@@ -1255,12 +1660,17 @@ export default function DashboardPage() {
   }, [
     activeMetricFilter,
     currentPage,
+    contentTypeFilters,
+    crossDeliveryFilters,
+    crossWorkflowFilters,
     isLoading,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
     search,
     siteFilters,
+    socialProductFilters,
+    socialStatusFilters,
     sortDirection,
     sortField,
     statusFilters,
@@ -1268,9 +1678,9 @@ export default function DashboardPage() {
     writerStatusFilters,
   ]);
 
-  const pagedBlogs = useMemo(
-    () => getTablePageRows(sortedBlogs, currentPage, rowLimit),
-    [currentPage, rowLimit, sortedBlogs]
+  const pagedRows = useMemo(
+    () => getTablePageRows(sortedRows, currentPage, rowLimit),
+    [currentPage, rowLimit, sortedRows]
   );
 
   const assignmentOptions = useMemo(
@@ -1294,63 +1704,135 @@ export default function DashboardPage() {
 
 
   const focusStripMetrics = useMemo(() => {
-    const todayDate = new Date();
-    const weekStart = new Date(todayDate);
-    weekStart.setDate(todayDate.getDate() - todayDate.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const nextSevenDaysEnd = new Date(todayStart);
+    nextSevenDaysEnd.setDate(todayStart.getDate() + 6);
+    nextSevenDaysEnd.setHours(23, 59, 59, 999);
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
 
-    const scheduledThisWeek = blogs.filter((blog) => {
-      const scheduledDate = getBlogScheduledDate(blog);
-      if (!scheduledDate) {
+    const isInNextSevenDays = (dateValue: string | null) => {
+      if (!dateValue) {
         return false;
       }
-      const scheduledTime = new Date(`${scheduledDate}T00:00:00`).getTime();
-      return scheduledTime >= weekStart.getTime() && scheduledTime <= weekEnd.getTime();
-    }).length;
+      const dateTime = new Date(`${dateValue}T00:00:00`).getTime();
+      return (
+        dateTime >= todayStart.getTime() && dateTime <= nextSevenDaysEnd.getTime()
+      );
+    };
+    const isInLastSevenDays = (dateValue: string | null) => {
+      if (!dateValue) {
+        return false;
+      }
+      const dateTime = new Date(dateValue).getTime();
+      return dateTime >= sevenDaysAgo.getTime() && dateTime <= now.getTime();
+    };
 
-    const readyToPublish = blogs.filter(
+    const openWorkBlogs = blogs.filter(
+      (blog) => blog.overall_status !== "published"
+    ).length;
+    const openWorkSocialPosts = socialPosts.filter(
+      (post) => post.status !== "published"
+    ).length;
+
+    const scheduledNextSevenDaysBlogs = blogs.filter((blog) => {
+      if (blog.overall_status === "published") {
+        return false;
+      }
+      return isInNextSevenDays(getBlogScheduledDate(blog));
+    }).length;
+    const scheduledNextSevenDaysSocialPosts = socialPosts.filter(
+      (post) => post.status !== "published" && isInNextSevenDays(post.scheduled_date)
+    ).length;
+
+    const awaitingReviewBlogs = blogs.filter(
+      (blog) =>
+        blog.writer_status === "pending_review" ||
+        blog.publisher_status === "pending_review" ||
+        blog.publisher_status === "publisher_approved"
+    ).length;
+    const awaitingReviewSocialPosts = socialPosts.filter(
+      (post) => post.status === "in_review"
+    ).length;
+
+    const readyToPublishBlogs = blogs.filter(
       (blog) => blog.overall_status === "ready_to_publish"
     ).length;
-
-
-    const currentlyWriting = blogs.filter(
-      (blog) => blog.writer_status === "in_progress"
+    const readyToPublishSocialPosts = socialPosts.filter(
+      (post) => post.status === "ready_to_publish"
     ).length;
 
-    const underReview = blogs.filter(
-      (blog) =>
-        blog.writer_status === "needs_revision" ||
-        blog.publisher_status === "in_progress"
+    const awaitingLiveLink = socialPosts.filter(
+      (post) => post.status === "awaiting_live_link"
     ).length;
 
-    const needsRevision = blogs.filter(
-      (blog) => blog.writer_status === "needs_revision"
-    ).length;
-
-
-    const publishingInProgress = blogs.filter(
-      (blog) =>
-        blog.writer_status === "completed" &&
-        blog.publisher_status === "in_progress"
+    const publishedLastSevenDaysBlogs = blogs.filter((blog) => {
+      if (blog.overall_status !== "published") {
+        return false;
+      }
+      const publishedTimestamp =
+        blog.actual_published_at ?? blog.published_at ?? blog.updated_at;
+      return isInLastSevenDays(publishedTimestamp);
+    }).length;
+    const publishedLastSevenDaysSocialPosts = socialPosts.filter(
+      (post) => post.status === "published" && isInLastSevenDays(post.updated_at)
     ).length;
 
     return {
-      scheduledThisWeek,
-      readyToPublish,
-      currentlyWriting,
-      underReview,
-      needsRevision,
-      publishingInProgress,
+      openWork: openWorkBlogs + openWorkSocialPosts,
+      scheduledNextSevenDays:
+        scheduledNextSevenDaysBlogs + scheduledNextSevenDaysSocialPosts,
+      awaitingReview: awaitingReviewBlogs + awaitingReviewSocialPosts,
+      readyToPublish: readyToPublishBlogs + readyToPublishSocialPosts,
+      awaitingLiveLink,
+      publishedLastSevenDays:
+        publishedLastSevenDaysBlogs + publishedLastSevenDaysSocialPosts,
+      breakdown: {
+        openWork: { blogs: openWorkBlogs, social: openWorkSocialPosts },
+        scheduledNextSevenDays: {
+          blogs: scheduledNextSevenDaysBlogs,
+          social: scheduledNextSevenDaysSocialPosts,
+        },
+        awaitingReview: {
+          blogs: awaitingReviewBlogs,
+          social: awaitingReviewSocialPosts,
+        },
+        readyToPublish: {
+          blogs: readyToPublishBlogs,
+          social: readyToPublishSocialPosts,
+        },
+        awaitingLiveLink: { blogs: 0, social: awaitingLiveLink },
+        publishedLastSevenDays: {
+          blogs: publishedLastSevenDaysBlogs,
+          social: publishedLastSevenDaysSocialPosts,
+        },
+      },
     };
-  }, [blogs]);
+  }, [blogs, socialPosts]);
 
-  const visibleBlogIds = useMemo(() => pagedBlogs.map((blog) => blog.id), [pagedBlogs]);
+  const visibleBlogIds = useMemo(
+    () =>
+      pagedRows
+        .filter((row) => row.content_type === "blog")
+        .map((row) => row.id),
+    [pagedRows]
+  );
+  const visibleSocialPostIds = useMemo(
+    () =>
+      pagedRows
+        .filter((row) => row.content_type === "social_post")
+        .map((row) => row.id),
+    [pagedRows]
+  );
+  const sortedBlogRows = useMemo(
+    () => sortedRows.filter((row) => row.content_type === "blog"),
+    [sortedRows]
+  );
   const activeBlogIndex = useMemo(
-    () => sortedBlogs.findIndex((blog) => blog.id === activeBlogId),
-    [activeBlogId, sortedBlogs]
+    () => sortedBlogRows.findIndex((blog) => blog.id === activeBlogId),
+    [activeBlogId, sortedBlogRows]
   );
   const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
   const visibleColumnOrder = useMemo(
@@ -1366,11 +1848,37 @@ export default function DashboardPage() {
     },
     [columnOrder, hiddenColumnSet]
   );
-  const selectedIdSet = useMemo(() => new Set(selectedBlogIds), [selectedBlogIds]);
-  const selectedBlogs = useMemo(
-    () => blogs.filter((blog) => selectedIdSet.has(blog.id)),
-    [blogs, selectedIdSet]
+  const selectedBlogIdSet = useMemo(() => new Set(selectedBlogIds), [selectedBlogIds]);
+  const selectedSocialPostIdSet = useMemo(
+    () => new Set(selectedSocialPostIds),
+    [selectedSocialPostIds]
   );
+  const selectedRowKeySet = useMemo(
+    () =>
+      new Set([
+        ...selectedBlogIds.map((id) => `blog:${id}`),
+        ...selectedSocialPostIds.map((id) => `social_post:${id}`),
+      ]),
+    [selectedBlogIds, selectedSocialPostIds]
+  );
+  const selectedExportRows = useMemo(
+    () =>
+      sortedRows.filter(
+        (row) =>
+          (row.content_type === "blog" && selectedBlogIdSet.has(row.id)) ||
+          (row.content_type === "social_post" && selectedSocialPostIdSet.has(row.id))
+      ),
+    [selectedBlogIdSet, selectedSocialPostIdSet, sortedRows]
+  );
+  const selectedBlogs = useMemo(
+    () => blogs.filter((blog) => selectedBlogIdSet.has(blog.id)),
+    [blogs, selectedBlogIdSet]
+  );
+  const selectedRowCount = selectedBlogIds.length + selectedSocialPostIds.length;
+  const hasSocialSelection = selectedSocialPostIds.length > 0;
+  const hasBlogSelection = selectedBlogIds.length > 0;
+  const hasOnlyBlogSelection = hasBlogSelection && !hasSocialSelection;
+  const hasOnlySocialSelection = !hasBlogSelection && hasSocialSelection;
   const hasPendingBulkChanges =
     Boolean(bulkWriterId) ||
     Boolean(bulkPublisherId) ||
@@ -1417,23 +1925,41 @@ export default function DashboardPage() {
       setSelectedBlogIds((previous) =>
         previous.filter((id) => !visibleBlogIds.includes(id))
       );
+      setSelectedSocialPostIds((previous) =>
+        previous.filter((id) => !visibleSocialPostIds.includes(id))
+      );
       return;
     }
 
     setSelectedBlogIds((previous) =>
       Array.from(new Set([...previous, ...visibleBlogIds]))
     );
+    setSelectedSocialPostIds((previous) =>
+      Array.from(new Set([...previous, ...visibleSocialPostIds]))
+    );
   };
 
-  const handleToggleSingle = (blogId: string, checked: boolean) => {
+  const handleToggleSingle = (row: DashboardContentRow, checked: boolean) => {
     if (!canSelectRows) {
       return;
     }
-    if (checked) {
-      setSelectedBlogIds((previous) => Array.from(new Set([...previous, blogId])));
+    if (row.content_type === "blog") {
+      if (checked) {
+        setSelectedBlogIds((previous) => Array.from(new Set([...previous, row.id])));
+        return;
+      }
+      setSelectedBlogIds((previous) => previous.filter((id) => id !== row.id));
       return;
     }
-    setSelectedBlogIds((previous) => previous.filter((id) => id !== blogId));
+    if (checked) {
+      setSelectedSocialPostIds((previous) =>
+        Array.from(new Set([...previous, row.id]))
+      );
+      return;
+    }
+    setSelectedSocialPostIds((previous) =>
+      previous.filter((id) => id !== row.id)
+    );
   };
   const handleSortByColumn = (column: DashboardColumnKey) => {
     if (sortField === column) {
@@ -1446,6 +1972,7 @@ export default function DashboardPage() {
 
   const clearBulkUiState = () => {
     setSelectedBlogIds([]);
+    setSelectedSocialPostIds([]);
     setBulkWriterId("");
     setBulkPublisherId("");
     setBulkWriterStatus("");
@@ -1520,10 +2047,19 @@ export default function DashboardPage() {
             setSiteFilters((previous) => previous.filter((value) => value !== site));
           },
         })),
+        ...contentTypeFilters.map((value) => ({
+          id: `content-type-${value}`,
+          label: `Type: ${value === "blog" ? "Blogs" : "Social Posts"}`,
+          onRemove: () => {
+            setContentTypeFilters((previous) =>
+              previous.filter((entry) => entry !== value)
+            );
+          },
+        })),
         ...writerFilters.map((writerId) => ({
           id: `writer-${writerId}`,
-          label: `Writer: ${
-            writerOptions.find((writer) => writer.id === writerId)?.full_name ?? writerId
+          label: `Blog Writer: ${
+            filterUserOptions.find((writer) => writer.value === writerId)?.label ?? writerId
           }`,
           onRemove: () => {
             setWriterFilters((previous) => previous.filter((value) => value !== writerId));
@@ -1531,8 +2067,8 @@ export default function DashboardPage() {
         })),
         ...publisherFilters.map((publisherId) => ({
           id: `publisher-${publisherId}`,
-          label: `Publisher: ${
-            publisherOptions.find((publisher) => publisher.id === publisherId)?.full_name ??
+          label: `Blog Publisher: ${
+            filterUserOptions.find((publisher) => publisher.value === publisherId)?.label ??
             publisherId
           }`,
           onRemove: () => {
@@ -1541,21 +2077,59 @@ export default function DashboardPage() {
         })),
         ...writerStatusFilters.map((status) => ({
           id: `writer-status-${status}`,
-          label: `Writer: ${WRITER_STATUS_LABELS[status]}`,
+          label: `Blog Writer Status: ${WRITER_STATUS_LABELS[status]}`,
           onRemove: () => {
             setWriterStatusFilters((previous) => previous.filter((value) => value !== status));
           },
         })),
         ...publisherStatusFilters.map((status) => ({
           id: `publisher-status-${status}`,
-          label: `Publisher: ${PUBLISHER_STATUS_LABELS[status]}`,
+          label: `Blog Publisher Status: ${PUBLISHER_STATUS_LABELS[status]}`,
           onRemove: () => {
             setPublisherStatusFilters((previous) => previous.filter((value) => value !== status));
           },
         })),
+        ...socialStatusFilters.map((status) => ({
+          id: `social-status-${status}`,
+          label: `Social Status: ${status
+            .replaceAll("_", " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase())}`,
+          onRemove: () => {
+            setSocialStatusFilters((previous) =>
+              previous.filter((value) => value !== status)
+            );
+          },
+        })),
+        ...socialProductFilters.map((product) => ({
+          id: `social-product-${product}`,
+          label: `Social Product: ${product}`,
+          onRemove: () => {
+            setSocialProductFilters((previous) =>
+              previous.filter((value) => value !== product)
+            );
+          },
+        })),
+        ...crossWorkflowFilters.map((filterValue) => ({
+          id: `cross-workflow-${filterValue}`,
+          label: `Workflow: ${CROSS_CONTENT_WORKFLOW_FILTER_LABELS[filterValue]}`,
+          onRemove: () => {
+            setCrossWorkflowFilters((previous) =>
+              previous.filter((value) => value !== filterValue)
+            );
+          },
+        })),
+        ...crossDeliveryFilters.map((filterValue) => ({
+          id: `cross-delivery-${filterValue}`,
+          label: `Delivery: ${CROSS_CONTENT_DELIVERY_FILTER_LABELS[filterValue]}`,
+          onRemove: () => {
+            setCrossDeliveryFilters((previous) =>
+              previous.filter((value) => value !== filterValue)
+            );
+          },
+        })),
         ...statusFilters.map((status) => ({
           id: `overall-status-${status}`,
-          label: `Stage: ${STATUS_LABELS[status]}`,
+          label: `Blog Stage: ${STATUS_LABELS[status]}`,
           onRemove: () => {
             setStatusFilters((previous) => previous.filter((value) => value !== status));
           },
@@ -1572,15 +2146,19 @@ export default function DashboardPage() {
       ].filter((pill) => pill !== null),
     [
       activeMetricFilter,
+      contentTypeFilters,
+      filterUserOptions,
       publisherFilters,
-      publisherOptions,
       publisherStatusFilters,
       search,
       siteFilters,
+      socialProductFilters,
+      socialStatusFilters,
       statusFilters,
       writerFilters,
-      writerOptions,
       writerStatusFilters,
+      crossDeliveryFilters,
+      crossWorkflowFilters,
     ]
   );
 
@@ -1621,53 +2199,50 @@ export default function DashboardPage() {
 
 
   const getExportCellValue = useCallback(
-    (blog: BlogRecord, column: DashboardColumnKey) => {
-      if (column === "title") {
-        return blog.title;
+    (row: DashboardContentRow, column: DashboardColumnKey) => {
+      if (column === "content_type") {
+        return row.content_type === "blog" ? "Blog" : "Social Post";
       }
-
       if (column === "site") {
-        return getSiteShortLabel(blog.site);
+        return row.site;
       }
-
-      if (column === "writer") {
-        return blog.writer?.full_name ?? "Unassigned";
+      if (column === "id") {
+        return row.id;
       }
-
-      if (column === "writer_status") {
-        return toTitleCase(blog.writer_status);
+      if (column === "title") {
+        return row.title;
       }
-
-      if (column === "publisher") {
-        return blog.publisher?.full_name ?? "Unassigned";
+      if (column === "status_display") {
+        return row.status_display;
       }
-
-      if (column === "publisher_status") {
-        return toTitleCase(blog.publisher_status);
+      if (column === "lifecycle_bucket") {
+        return row.lifecycle_bucket.replaceAll("_", " ");
       }
-
-      if (column === "overall_status") {
-        const workflowStage = getWorkflowStage({
-          writerStatus: blog.writer_status,
-          publisherStatus: blog.publisher_status,
-        });
-        return toTitleCase(workflowStage);
+      if (column === "scheduled_date") {
+        return formatDisplayDate(row.scheduled_date) || "—";
       }
-
-      const publishDate = getBlogPublishDate(blog);
-      return formatDisplayDate(publishDate) || "—";
+      if (column === "published_date") {
+        return formatDisplayDate(row.published_date) || "—";
+      }
+      if (column === "owner_display") {
+        return row.owner_display;
+      }
+      if (column === "updated_at") {
+        return formatDateInTimezone(row.updated_at, profile?.timezone);
+      }
+      return row.product ?? "—";
     },
-    []
+    [profile?.timezone]
   );
 
   const buildCsvContent = useCallback(
-    (rows: BlogRecord[]) => {
+    (rows: DashboardContentRow[]) => {
       const headers = visibleColumnOrder.map((column) =>
         escapeCsvValue(DASHBOARD_COLUMN_LABELS[column])
       );
-      const csvRows = rows.map((blog) =>
+      const csvRows = rows.map((row) =>
         visibleColumnOrder
-          .map((column) => escapeCsvValue(getExportCellValue(blog, column)))
+          .map((column) => escapeCsvValue(getExportCellValue(row, column)))
           .join(",")
       );
       return [headers.join(","), ...csvRows].join("\n");
@@ -1690,17 +2265,16 @@ export default function DashboardPage() {
   }, []);
 
   const getSmartExportScope = (): "selected" | "view" => {
-    if (selectedBlogIds.length === 0 || selectedBlogIds.length === sortedBlogs.length) {
-      return "view";
-    }
-    return "selected";
+    return selectedRowCount === 0 ? "view" : "selected";
   };
   const handleCopyValues = useCallback(async (field: "title" | "url") => {
     const values =
       field === "title"
-        ? sortedBlogs.map((blog) => blog.title)
-        : sortedBlogs
-            .map((blog) => blog.live_url ?? "")
+        ? sortedRows.map((row) => row.title)
+        : sortedRows
+            .map((row) =>
+              row.content_type === "blog" ? row.blog?.live_url ?? "" : ""
+            )
             .filter((value) => value.length > 0);
     if (values.length === 0) {
       setError(field === "title" ? "No titles to copy." : "No URLs to copy.");
@@ -1715,7 +2289,7 @@ export default function DashboardPage() {
       setError("Could not copy to clipboard.");
       setSuccessMessage(null);
     }
-  }, [sortedBlogs]);
+  }, [sortedRows]);
 
   const handleExportCsv = useCallback((scope: "selected" | "view") => {
     if (scope === "selected" && !canExportSelectedCsv) {
@@ -1728,12 +2302,12 @@ export default function DashboardPage() {
       setSuccessMessage(null);
       return;
     }
-    const rowsToExport = scope === "selected" ? selectedBlogs : sortedBlogs;
+    const rowsToExport = scope === "selected" ? selectedExportRows : sortedRows;
     if (rowsToExport.length === 0) {
       setError(
         scope === "selected"
-          ? "Select at least one blog before exporting CSV."
-          : "No blogs available in the current view to export."
+          ? "Select at least one row before exporting CSV."
+          : "No rows available in the current view to export."
       );
       setSuccessMessage(null);
       return;
@@ -1744,13 +2318,13 @@ export default function DashboardPage() {
     const filename = `dashboard-${scope}-${timestamp}.csv`;
     triggerCsvDownload(csvContent, filename);
     setError(null);
-    setSuccessMessage(`Exported ${rowsToExport.length} blog(s) as CSV.`);
+    setSuccessMessage(`Exported ${rowsToExport.length} row(s) as CSV.`);
   }, [
     buildCsvContent,
     canExportCsv,
     canExportSelectedCsv,
-    selectedBlogs,
-    sortedBlogs,
+    selectedExportRows,
+    sortedRows,
     triggerCsvDownload,
   ]);
 
@@ -1767,12 +2341,12 @@ export default function DashboardPage() {
         return;
       }
 
-      const rowsToExport = scope === "selected" ? selectedBlogs : sortedBlogs;
+      const rowsToExport = scope === "selected" ? selectedExportRows : sortedRows;
       if (rowsToExport.length === 0) {
         setError(
           scope === "selected"
-            ? "Select at least one blog before exporting PDF."
-            : "No blogs available in the current view to export."
+            ? "Select at least one row before exporting PDF."
+            : "No rows available in the current view to export."
         );
         setSuccessMessage(null);
         return;
@@ -1790,9 +2364,9 @@ export default function DashboardPage() {
         .map((column) => `<th>${escapeHtmlValue(DASHBOARD_COLUMN_LABELS[column])}</th>`)
         .join("");
       const rowsMarkup = rowsToExport
-        .map((blog) => {
+        .map((row) => {
           const cells = visibleColumnOrder
-            .map((column) => `<td>${escapeHtmlValue(getExportCellValue(blog, column))}</td>`)
+            .map((column) => `<td>${escapeHtmlValue(getExportCellValue(row, column))}</td>`)
             .join("");
           return `<tr>${cells}</tr>`;
         })
@@ -1841,7 +2415,7 @@ export default function DashboardPage() {
       window.setTimeout(triggerPrintWhenReady, 180);
       setError(null);
       setSuccessMessage(
-        `PDF ready for ${rowsToExport.length} blog(s). Use the print dialog to save.`
+        `PDF ready for ${rowsToExport.length} row(s). Use the print dialog to save.`
       );
     },
     [
@@ -1849,8 +2423,8 @@ export default function DashboardPage() {
       canExportSelectedCsv,
       getExportCellValue,
       profile?.timezone,
-      selectedBlogs,
-      sortedBlogs,
+      selectedExportRows,
+      sortedRows,
       visibleColumnOrder,
     ]
   );
@@ -1877,6 +2451,10 @@ export default function DashboardPage() {
   const ensureBulkSelection = () => {
     if (selectedBlogIds.length === 0) {
       setError("Select at least one blog for bulk actions.");
+      return false;
+    }
+    if (!hasOnlyBlogSelection) {
+      setError("Bulk blog mutations require blog-only selection. Deselect social rows first.");
       return false;
     }
     return true;
@@ -2356,7 +2934,7 @@ export default function DashboardPage() {
     return Object.fromEntries(entries);
   }, [activeBlog?.publisher, activeBlog?.writer, assignmentOptions]);
   useEffect(() => {
-    if (!activeBlogId || sortedBlogs.length === 0 || activeBlogIndex < 0) {
+    if (!activeBlogId || sortedBlogRows.length === 0 || activeBlogIndex < 0) {
       return;
     }
 
@@ -2384,8 +2962,9 @@ export default function DashboardPage() {
       event.preventDefault();
       const direction = event.key === "j" ? 1 : -1;
       const nextIndex =
-        (activeBlogIndex + direction + sortedBlogs.length) % sortedBlogs.length;
-      const nextBlog = sortedBlogs[nextIndex];
+        (activeBlogIndex + direction + sortedBlogRows.length) %
+        sortedBlogRows.length;
+      const nextBlog = sortedBlogRows[nextIndex];
       if (!nextBlog) {
         return;
       }
@@ -2396,7 +2975,7 @@ export default function DashboardPage() {
     return () => {
       window.removeEventListener("keydown", handlePanelKeyboardNavigation);
     };
-  }, [activeBlogId, activeBlogIndex, openPanel, sortedBlogs]);
+  }, [activeBlogId, activeBlogIndex, openPanel, sortedBlogRows]);
 
   const handlePanelAddComment = async () => {
     if (!activeBlog || !user?.id) {
@@ -2465,7 +3044,7 @@ export default function DashboardPage() {
         <div className={`${DATA_PAGE_STACK_CLASS} transition-opacity duration-200`}>
           <DataPageHeader
             title="Dashboard"
-            description="Track assignments, writing progress, and publishing readiness."
+            description="Track blog and social post pipeline health across draft, scheduled, and published work."
             primaryAction={
               <div className="flex flex-wrap items-center gap-2">
                 {canCreateBlog || canManageSocialPosts ? (
@@ -2537,81 +3116,73 @@ export default function DashboardPage() {
               <button
                 type="button"
                 className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "scheduled_this_week"
+                  activeMetricFilter === "open_work"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
                 onClick={() => {
                   setActiveMetricFilter((previous) =>
-                    previous === "scheduled_this_week" ? null : "scheduled_this_week"
+                    previous === "open_work" ? null : "open_work"
                   );
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
-                  Scheduled This Week
+                  Open Work
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Blogs: {focusStripMetrics.breakdown.openWork.blogs} · Social:{" "}
+                  {focusStripMetrics.breakdown.openWork.social}
                 </p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.scheduledThisWeek}
+                  {focusStripMetrics.openWork}
                 </p>
               </button>
               <button
                 type="button"
                 className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "currently_writing"
+                  activeMetricFilter === "scheduled_next_7_days"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
                 onClick={() => {
                   setActiveMetricFilter((previous) =>
-                    previous === "currently_writing" ? null : "currently_writing"
+                    previous === "scheduled_next_7_days" ? null : "scheduled_next_7_days"
                   );
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
-                  Writing in Progress
+                  Scheduled Next 7 Days
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Blogs: {focusStripMetrics.breakdown.scheduledNextSevenDays.blogs} · Social:{" "}
+                  {focusStripMetrics.breakdown.scheduledNextSevenDays.social}
                 </p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.currentlyWriting}
+                  {focusStripMetrics.scheduledNextSevenDays}
                 </p>
               </button>
               <button
                 type="button"
                 className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "under_review"
+                  activeMetricFilter === "awaiting_review"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
                 onClick={() => {
                   setActiveMetricFilter((previous) =>
-                    previous === "under_review" ? null : "under_review"
+                    previous === "awaiting_review" ? null : "awaiting_review"
                   );
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
-                  Under Review
+                  Awaiting Review
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Blogs: {focusStripMetrics.breakdown.awaitingReview.blogs} · Social:{" "}
+                  {focusStripMetrics.breakdown.awaitingReview.social}
                 </p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.underReview}
-                </p>
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "needs_revision"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) =>
-                    previous === "needs_revision" ? null : "needs_revision"
-                  );
-                }}
-              >
-                <p className="text-xs font-semibold text-slate-700">
-                  Needs Revision
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.needsRevision}
+                  {focusStripMetrics.awaitingReview}
                 </p>
               </button>
               <button
@@ -2630,6 +3201,10 @@ export default function DashboardPage() {
                 <p className="text-xs font-semibold text-slate-700">
                   Ready to Publish
                 </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Blogs: {focusStripMetrics.breakdown.readyToPublish.blogs} · Social:{" "}
+                  {focusStripMetrics.breakdown.readyToPublish.social}
+                </p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {focusStripMetrics.readyToPublish}
                 </p>
@@ -2637,21 +3212,49 @@ export default function DashboardPage() {
               <button
                 type="button"
                 className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "publishing_in_progress"
+                  activeMetricFilter === "awaiting_live_link"
                     ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
                 onClick={() => {
                   setActiveMetricFilter((previous) =>
-                    previous === "publishing_in_progress" ? null : "publishing_in_progress"
+                    previous === "awaiting_live_link" ? null : "awaiting_live_link"
                   );
                 }}
               >
                 <p className="text-xs font-semibold text-slate-700">
-                  Publishing in Progress
+                  Awaiting Live Link
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Blogs: {focusStripMetrics.breakdown.awaitingLiveLink.blogs} · Social:{" "}
+                  {focusStripMetrics.breakdown.awaitingLiveLink.social}
                 </p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.publishingInProgress}
+                  {focusStripMetrics.awaitingLiveLink}
+                </p>
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg border px-3 py-3 text-left transition ${
+                  activeMetricFilter === "published_last_7_days"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+                onClick={() => {
+                  setActiveMetricFilter((previous) =>
+                    previous === "published_last_7_days" ? null : "published_last_7_days"
+                  );
+                }}
+              >
+                <p className="text-xs font-semibold text-slate-700">
+                  Published Last 7 Days
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Blogs: {focusStripMetrics.breakdown.publishedLastSevenDays.blogs} · Social:{" "}
+                  {focusStripMetrics.breakdown.publishedLastSevenDays.social}
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
+                  {focusStripMetrics.publishedLastSevenDays}
                 </p>
               </button>
             </div>
@@ -2659,7 +3262,7 @@ export default function DashboardPage() {
           <DataPageToolbar
             searchValue={search}
             onSearchChange={setSearch}
-            searchPlaceholder="Search title, URL, writer, publisher, or site"
+            searchPlaceholder="Search title, ID, owner, product, status, or site"
             actions={
               <Button
                 type="button"
@@ -2673,52 +3276,117 @@ export default function DashboardPage() {
             filters={
               <div className="md:col-span-2 xl:col-span-4 grid gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">Filter by</p>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <CheckboxMultiSelect
-                      label="Sites"
-                      options={siteFilterOptions}
-                      selectedValues={siteFilters}
-                      onChange={(nextValues) => {
-                        setSiteFilters(nextValues as BlogSite[]);
-                      }}
-                    />
-                    <CheckboxMultiSelect
-                      label="Writers"
-                      options={writerFilterOptions}
-                      selectedValues={writerFilters}
-                      onChange={setWriterFilters}
-                    />
-                    <CheckboxMultiSelect
-                      label="Publishers"
-                      options={publisherFilterOptions}
-                      selectedValues={publisherFilters}
-                      onChange={setPublisherFilters}
-                    />
-                    <CheckboxMultiSelect
-                      label="Writer Status"
-                      options={writerStatusFilterOptions}
-                      selectedValues={writerStatusFilters}
-                      onChange={(nextValues) => {
-                        setWriterStatusFilters(nextValues as WriterStageStatus[]);
-                      }}
-                    />
-                    <CheckboxMultiSelect
-                      label="Publisher Status"
-                      options={publisherStatusFilterOptions}
-                      selectedValues={publisherStatusFilters}
-                      onChange={(nextValues) => {
-                        setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-                      }}
-                    />
-                    <CheckboxMultiSelect
-                      label="Stage"
-                      options={overallStatusFilterOptions}
-                      selectedValues={statusFilters}
-                      onChange={(nextValues) => {
-                        setStatusFilters(nextValues as OverallBlogStatus[]);
-                      }}
-                    />
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
+                    Grouped Filters
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Group 1 · Cross-Content Scope
+                      </p>
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <CheckboxMultiSelect
+                          label="Sites"
+                          options={siteFilterOptions}
+                          selectedValues={siteFilters}
+                          onChange={(nextValues) => {
+                            setSiteFilters(nextValues as BlogSite[]);
+                          }}
+                        />
+                        <CheckboxMultiSelect
+                          label="Content Type"
+                          options={contentTypeFilterOptions}
+                          selectedValues={contentTypeFilters}
+                          onChange={(nextValues) => {
+                            setContentTypeFilters(nextValues as DashboardContentTypeFilter[]);
+                          }}
+                        />
+                        <CheckboxMultiSelect
+                          label="Workflow (All Content)"
+                          options={crossWorkflowFilterOptions}
+                          selectedValues={crossWorkflowFilters}
+                          onChange={(nextValues) => {
+                            setCrossWorkflowFilters(
+                              nextValues as CrossContentWorkflowFilter[]
+                            );
+                          }}
+                        />
+                        <CheckboxMultiSelect
+                          label="Delivery (All Content)"
+                          options={crossDeliveryFilterOptions}
+                          selectedValues={crossDeliveryFilters}
+                          onChange={(nextValues) => {
+                            setCrossDeliveryFilters(
+                              nextValues as CrossContentDeliveryFilter[]
+                            );
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Group 2 · Blog Filters
+                      </p>
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                        <CheckboxMultiSelect
+                          label="Blog Stage"
+                          options={overallStatusFilterOptions}
+                          selectedValues={statusFilters}
+                          onChange={(nextValues) => {
+                            setStatusFilters(nextValues as OverallBlogStatus[]);
+                          }}
+                        />
+                        <CheckboxMultiSelect
+                          label="Blog Writers"
+                          options={writerFilterOptions}
+                          selectedValues={writerFilters}
+                          onChange={setWriterFilters}
+                        />
+                        <CheckboxMultiSelect
+                          label="Blog Publishers"
+                          options={publisherFilterOptions}
+                          selectedValues={publisherFilters}
+                          onChange={setPublisherFilters}
+                        />
+                        <CheckboxMultiSelect
+                          label="Blog Writer Status"
+                          options={writerStatusFilterOptions}
+                          selectedValues={writerStatusFilters}
+                          onChange={(nextValues) => {
+                            setWriterStatusFilters(nextValues as WriterStageStatus[]);
+                          }}
+                        />
+                        <CheckboxMultiSelect
+                          label="Blog Publisher Status"
+                          options={publisherStatusFilterOptions}
+                          selectedValues={publisherStatusFilters}
+                          onChange={(nextValues) => {
+                            setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Group 3 · Social Filters
+                      </p>
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <CheckboxMultiSelect
+                          label="Social Status"
+                          options={socialStatusFilterOptions}
+                          selectedValues={socialStatusFilters}
+                          onChange={(nextValues) => {
+                            setSocialStatusFilters(nextValues as SocialPostStatus[]);
+                          }}
+                        />
+                        <CheckboxMultiSelect
+                          label="Social Product"
+                          options={socialProductFilterOptions}
+                          selectedValues={socialProductFilters}
+                          onChange={setSocialProductFilters}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2726,89 +3394,16 @@ export default function DashboardPage() {
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
-          {(search || siteFilters.length > 0 || statusFilters.length > 0 || writerFilters.length > 0 || publisherFilters.length > 0 || writerStatusFilters.length > 0 || publisherStatusFilters.length > 0) && (
-            <FilterBar
-              filters={[
-                ...(search ? [{ id: "search", label: "Search", value: search }] : []),
-                ...siteFilters.map((site) => ({
-                  id: `site-${site}`,
-                  label: "Site",
-                  value: getSiteShortLabel(site),
-                })),
-                ...statusFilters.map((status) => ({
-                  id: `status-${status}`,
-                  label: "Status",
-                  value: STATUS_LABELS[status],
-                })),
-                ...writerFilters.map((writerId) => {
-                  const writer = assignableUsers.find((u) => u.id === writerId);
-                  return {
-                    id: `writer-${writerId}`,
-                    label: "Writer",
-                    value: writer?.full_name || writerId,
-                  };
-                }),
-                ...publisherFilters.map((publisherId) => {
-                  const publisher = assignableUsers.find((u) => u.id === publisherId);
-                  return {
-                    id: `publisher-${publisherId}`,
-                    label: "Publisher",
-                    value: publisher?.full_name || publisherId,
-                  };
-                }),
-                ...writerStatusFilters.map((writerStatus) => ({
-                  id: `writer-status-${writerStatus}`,
-                  label: "Writer Status",
-                  value: WRITER_STATUS_LABELS[writerStatus],
-                })),
-                ...publisherStatusFilters.map((publisherStatus) => ({
-                  id: `publisher-status-${publisherStatus}`,
-                  label: "Publisher Status",
-                  value: PUBLISHER_STATUS_LABELS[publisherStatus],
-                })),
-              ]}
-              onRemoveFilter={(filterId) => {
-                if (filterId === "search") {
-                  setSearch("");
-                } else if (filterId.startsWith("site-")) {
-                  const site = filterId.replace("site-", "") as BlogSite;
-                  setSiteFilters((prev) => prev.filter((s) => s !== site));
-                } else if (filterId.startsWith("status-")) {
-                  const status = filterId.replace("status-", "") as OverallBlogStatus;
-                  setStatusFilters((prev) => prev.filter((s) => s !== status));
-                } else if (filterId.startsWith("writer-") && !filterId.startsWith("writer-status-")) {
-                  const writerId = filterId.replace("writer-", "");
-                  setWriterFilters((prev) => prev.filter((id) => id !== writerId));
-                } else if (filterId.startsWith("publisher-") && !filterId.startsWith("publisher-status-")) {
-                  const publisherId = filterId.replace("publisher-", "");
-                  setPublisherFilters((prev) => prev.filter((id) => id !== publisherId));
-                } else if (filterId.startsWith("writer-status-")) {
-                  const status = filterId.replace("writer-status-", "") as WriterStageStatus;
-                  setWriterStatusFilters((prev) => prev.filter((s) => s !== status));
-                } else if (filterId.startsWith("publisher-status-")) {
-                  const status = filterId.replace("publisher-status-", "") as PublisherStageStatus;
-                  setPublisherStatusFilters((prev) => prev.filter((s) => s !== status));
-                }
-              }}
-              onClearAll={() => {
-                setSearch("");
-                setSiteFilters([]);
-                setStatusFilters([]);
-                setWriterFilters([]);
-                setPublisherFilters([]);
-                setWriterStatusFilters([]);
-                setPublisherStatusFilters([]);
-                setCurrentPage(1);
-              }}
-            />
-          )}
-
-          {canRunBulkActions && selectedBlogIds.length > 0 ? (
+          {selectedRowCount > 0 ? (
             <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium text-slate-700">
-                  {selectedBlogIds.length} selected
-                </p>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900">Bulk Actions</p>
+                  <p className="text-xs text-slate-600">
+                    {selectedRowCount} selected · Blogs: {selectedBlogIds.length} · Social:{" "}
+                    {selectedSocialPostIds.length}
+                  </p>
+                </div>
                 <button
                   type="button"
                   disabled={isBulkSaving}
@@ -2820,6 +3415,18 @@ export default function DashboardPage() {
                   Clear Selection
                 </button>
               </div>
+              {hasOnlySocialSelection ? (
+                <p className="text-xs text-slate-600">
+                  Social rows are selected. Social bulk mutations are not enabled yet in
+                  Phase A.
+                </p>
+              ) : null}
+              {hasSocialSelection && hasBlogSelection ? (
+                <p className="text-xs text-slate-600">
+                  Blog bulk mutations are temporarily gated while social rows are selected.
+                  Deselect social rows to apply blog changes.
+                </p>
+              ) : null}
 
               <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                 <select
@@ -2827,7 +3434,9 @@ export default function DashboardPage() {
                   onChange={(event) => {
                     setBulkWriterId(event.target.value);
                   }}
-                  disabled={!canChangeWriterAssignment || isBulkSaving}
+                  disabled={
+                    !canChangeWriterAssignment || isBulkSaving || !hasOnlyBlogSelection
+                  }
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">No writer change</option>
@@ -2843,7 +3452,9 @@ export default function DashboardPage() {
                   onChange={(event) => {
                     setBulkPublisherId(event.target.value);
                   }}
-                  disabled={!canChangePublisherAssignment || isBulkSaving}
+                  disabled={
+                    !canChangePublisherAssignment || isBulkSaving || !hasOnlyBlogSelection
+                  }
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">No publisher change</option>
@@ -2859,7 +3470,7 @@ export default function DashboardPage() {
                   onChange={(event) => {
                     setBulkWriterStatus(event.target.value as WriterStageStatus | "");
                   }}
-                  disabled={!canEditWritingStage || isBulkSaving}
+                  disabled={!canEditWritingStage || isBulkSaving || !hasOnlyBlogSelection}
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">No writer status change</option>
@@ -2875,7 +3486,7 @@ export default function DashboardPage() {
                   onChange={(event) => {
                     setBulkPublisherStatus(event.target.value as PublisherStageStatus | "");
                   }}
-                  disabled={!canEditPublishingStage || isBulkSaving}
+                  disabled={!canEditPublishingStage || isBulkSaving || !hasOnlyBlogSelection}
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">No publisher status change</option>
@@ -2886,11 +3497,22 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </div>
+              {!canRunBulkActions ? (
+                <p className="text-xs text-slate-500">
+                  Bulk mutations are disabled for your current permissions.
+                </p>
+              ) : null}
 
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  disabled={isBulkSaving || !hasPendingBulkChanges || Boolean(bulkValidationError)}
+                  disabled={
+                    !canRunBulkActions ||
+                    isBulkSaving ||
+                    !hasOnlyBlogSelection ||
+                    !hasPendingBulkChanges ||
+                    Boolean(bulkValidationError)
+                  }
                   className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     void handleBulkApplyChanges();
@@ -2904,7 +3526,7 @@ export default function DashboardPage() {
                 {canDeleteBlog ? (
                   <button
                     type="button"
-                    disabled={isBulkSaving}
+                    disabled={isBulkSaving || !hasOnlyBlogSelection}
                     className="rounded-md border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleBulkDelete();
@@ -2930,10 +3552,10 @@ export default function DashboardPage() {
                 <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
                   <div className="flex flex-wrap items-center gap-3">
                     <TableResultsSummary
-                      totalRows={sortedBlogs.length}
+                      totalRows={sortedRows.length}
                       currentPage={currentPage}
                       rowLimit={rowLimit}
-                      noun="blogs"
+                      noun="items"
                     />
                   </div>
                   <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
@@ -2946,7 +3568,7 @@ export default function DashboardPage() {
                       <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-md">
                         <button
                           type="button"
-                          disabled={sortedBlogs.length === 0}
+                          disabled={sortedRows.length === 0}
                           className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={() => {
                             closeOpenDashboardMenus();
@@ -2957,7 +3579,7 @@ export default function DashboardPage() {
                         </button>
                         <button
                           type="button"
-                          disabled={sortedBlogs.length === 0}
+                          disabled={sortedRows.length === 0}
                           className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={() => {
                             closeOpenDashboardMenus();
@@ -3001,7 +3623,7 @@ export default function DashboardPage() {
                         <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-md">
                           <button
                             type="button"
-                            disabled={sortedBlogs.length === 0}
+                            disabled={sortedRows.length === 0}
                             className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               handleExportCsv(getSmartExportScope());
@@ -3012,7 +3634,7 @@ export default function DashboardPage() {
                           </button>
                           <button
                             type="button"
-                            disabled={sortedBlogs.length === 0}
+                            disabled={sortedRows.length === 0}
                             className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               handleExportPdf(getSmartExportScope());
@@ -3129,10 +3751,10 @@ export default function DashboardPage() {
                   </div>
                 ) : null}
               </section>
-              {sortedBlogs.length === 0 && hasActiveDashboardFilters ? (
+              {sortedRows.length === 0 && hasActiveDashboardFilters ? (
                 <DataPageEmptyState
-                  title="No blogs match your filters."
-                  description="Clear filters to return to the full view, or import new records."
+                  title="No content matches your filters."
+                  description="Clear filters to return to the full view."
                   action={
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
@@ -3159,10 +3781,10 @@ export default function DashboardPage() {
                   }
                 />
               ) : null}
-              {sortedBlogs.length === 0 && !hasActiveDashboardFilters ? (
+              {sortedRows.length === 0 && !hasActiveDashboardFilters ? (
                 <DataPageEmptyState
-                  title="No blogs yet."
-                  description="Create your first blog or import existing content to get started."
+                  title="No content yet."
+                  description="Create your first content item or import existing records to get started."
                   action={
                     <div className="flex flex-wrap items-center gap-2">
                       {canCreateBlog ? (
@@ -3199,34 +3821,26 @@ export default function DashboardPage() {
                 className="overflow-hidden rounded-lg border border-slate-200"
               >
                 <DashboardTable
-                  blogs={pagedBlogs}
+                  rows={pagedRows}
                   visibleColumns={visibleColumnOrder}
-                  activeBlogId={activeBlogId}
-                  selectedIds={selectedIdSet}
+                  activeRowId={activeBlogId}
+                  selectedRowKeys={selectedRowKeySet}
                   rowDensity={rowDensity}
                   canSelectRows={canSelectRows}
-                  canEditWritingStage={canEditWritingStage}
-                  canEditPublishingStage={canEditPublishingStage}
                   sortField={sortField}
                   sortDirection={sortDirection}
-                  staleDraftDays={staleDraftDays}
-                  onRowClick={openPanel}
+                  timezone={profile?.timezone}
+                  onRowClick={(row) => {
+                    if (row.content_type === "blog") {
+                      openPanel(row.id);
+                      return;
+                    }
+                    router.push(`/social-posts/${row.id}`);
+                  }}
                   onSortChange={handleSortByColumn}
                   onToggleAll={handleToggleAllVisible}
-                  onToggleSingle={handleToggleSingle}
-                  onWriterStatusChange={(blog, status) => {
-                    void updateBlogInline(
-                      blog,
-                      { writer_status: status },
-                      `Writer stage updated for \"${blog.title}\".`
-                    );
-                  }}
-                  onPublisherStatusChange={(blog, status) => {
-                    void updateBlogInline(
-                      blog,
-                      { publisher_status: status },
-                      `Publisher stage updated for \"${blog.title}\".`
-                    );
+                  onToggleSingle={(row, checked) => {
+                    handleToggleSingle(row, checked);
                   }}
                 />
               </div>
@@ -3529,35 +4143,27 @@ export default function DashboardPage() {
                 <div className="space-y-3 text-sm text-slate-700">
                   <div className="space-y-1">
                     <p className="text-xs text-slate-500">Google Doc</p>
-                    {activeBlog.google_doc_url ? (
-                      <ExternalLink href={activeBlog.google_doc_url} className="block truncate text-blue-600" title={activeBlog.google_doc_url}>
-                        {activeBlog.google_doc_url}
-                      </ExternalLink>
-                    ) : (
-                      <p>—</p>
-                    )}
+                    <LinkQuickActions
+                      href={activeBlog.google_doc_url}
+                      label="Google Doc URL"
+                      size="xs"
+                    />
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-slate-500">Live URL</p>
-                    {activeBlog.live_url ? (
-                      <ExternalLink href={activeBlog.live_url} className="block truncate text-blue-600" title={activeBlog.live_url}>
-                        {activeBlog.live_url}
-                      </ExternalLink>
-                    ) : (
-                      <p>—</p>
-                    )}
+                    <LinkQuickActions
+                      href={activeBlog.live_url}
+                      label="Live URL"
+                      size="xs"
+                    />
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-slate-500">Blog Page</p>
-                    <Link
+                    <LinkQuickActions
                       href={`/blogs/${activeBlog.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="interactive-link block truncate text-blue-600"
-                      title={`/blogs/${activeBlog.id}`}
-                    >
-                      {`/blogs/${activeBlog.id}`}
-                    </Link>
+                      label="Blog page URL"
+                      size="xs"
+                    />
                   </div>
                 </div>
               ) : undefined

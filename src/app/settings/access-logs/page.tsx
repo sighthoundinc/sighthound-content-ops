@@ -245,7 +245,7 @@ export default function AccessLogsPage() {
   };
 
   return (
-    <ProtectedPage>
+    <ProtectedPage requiredPermissions={["manage_users"]}>
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader

@@ -279,6 +279,58 @@ Verify that user notification preferences are respected and block notifications 
 
 ---
 
+## Focused Regression Checklist: Associated Blog Persists Across Review Handoff
+
+### Objective
+
+Verify that when a non-admin writer links an associated blog and submits for review, the reviewer/admin still sees the same associated blog after stage transition.
+
+### Pre-conditions
+
+- Use two accounts:
+  - Writer (non-admin)
+  - Reviewer/Admin
+- Have at least one existing blog available to link.
+- Social post starts in `draft`.
+
+### Checklist
+
+1. **Writer links blog in Draft**
+   - Open `/social-posts/[id]` as Writer.
+   - In **Link Context**, search/select a blog.
+   - Confirm linked blog title is visible in the card/editor.
+
+2. **Writer submits for review**
+   - Ensure required draft-transition fields are present (`product`, `type`, `canva_url`).
+   - Click **Submit for Review**.
+   - Confirm status changes to `in_review`.
+
+3. **Reviewer verifies persistence**
+   - Open the same post as Reviewer/Admin.
+   - Check **Link Context** section.
+   - Confirm:
+     - associated blog is still linked
+     - title/site match what writer selected
+     - value is not blank/null
+
+4. **Round-trip persistence check**
+   - As Reviewer/Admin, move status to `creative_approved` (with required fields).
+   - Re-open post as Writer.
+   - Confirm associated blog is still present and unchanged.
+
+5. **Optional overwrite check**
+   - As Reviewer/Admin, change associated blog to another valid blog and save/transition.
+   - Re-open as Writer.
+   - Confirm latest linked blog persists correctly.
+
+### Pass Criteria
+
+- No stage transition clears `associated_blog_id`.
+- Reviewer/Admin always sees writer-selected associated blog after `draft -> in_review`.
+- Linked blog remains stable across subsequent transitions unless intentionally changed.
+
+---
+
 ## Scenario 5: Activity History Filtering
 
 ### Objective

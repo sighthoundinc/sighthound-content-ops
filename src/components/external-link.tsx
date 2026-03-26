@@ -1,7 +1,6 @@
 import Link, { type LinkProps } from "next/link";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-
-import { cn } from "@/lib/utils";
+import { cn, isExternalHref } from "@/lib/utils";
 
 type ExternalLinkProps = LinkProps &
   Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "target" | "rel"> & {
@@ -15,11 +14,12 @@ export function ExternalLink({
   children,
   ...props
 }: ExternalLinkProps) {
+  const isExternal = isExternalHref(href);
   return (
     <Link
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      target={isExternal ? "_blank" : undefined}
+      rel={isExternal ? "noopener noreferrer" : undefined}
       className={cn("interactive-link", className)}
       {...props}
     >

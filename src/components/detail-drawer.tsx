@@ -5,7 +5,7 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { buttonClass } from "@/components/button";
 import { AppIcon } from "@/lib/icons";
-import { cn } from "@/lib/utils";
+import { cn, isExternalHref } from "@/lib/utils";
 
 export const DETAIL_DRAWER_WIDTH_CLASS = "w-full max-w-[460px]";
 
@@ -193,6 +193,7 @@ export function DetailDrawerQuickAction({
   disabledReason?: string;
 }) {
   const [isCopied, setIsCopied] = useState(false);
+  const isExternal = href ? isExternalHref(href) : false;
 
   useEffect(() => {
     if (!isCopied) {
@@ -230,8 +231,8 @@ export function DetailDrawerQuickAction({
     <div className="flex items-center gap-1">
       <Link
         href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={isExternal ? "_blank" : undefined}
+        rel={isExternal ? "noopener noreferrer" : undefined}
         className={cn(DETAIL_DRAWER_QUICK_ACTION_CLASS, "flex-1")}
       >
         <span>{label}</span>

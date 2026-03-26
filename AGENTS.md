@@ -268,6 +268,29 @@ These rules apply to all table implementations (DataTable, DashboardTable, etc.)
 2. Results should update in near real-time with debounced input where appropriate.
 3. Show meaningful empty-state feedback when no results are found.
 
+## Filter Pills and Bulk Panel Pattern (MUST)
+
+1. Use a single canonical filter-pill surface per page (no duplicate chip bars for the same filter state).
+2. Filter pills must support one-click removal for each active filter and preserve stable ordering for scanability.
+3. Bulk panel must appear when row selection exists, with a clear selection count and `Clear Selection` control.
+4. Mutation actions inside bulk panel remain permission-gated, but unauthorized states must be visible with disabled controls and helper text (never silently hidden).
+5. Bulk panel control order should remain consistent: assignment/status inputs first, primary apply action next, destructive action last.
+## Dashboard Unified Content Row Contract (MUST)
+
+1. Dashboard list must use a unified row contract across blogs and social posts with core fields:
+   - `content_type`, `site`, `id`, `title`, `status_display`, `lifecycle_bucket`, `scheduled_date`, `published_date`, `owner_display`, `updated_at`
+2. Non-core fields (for example social `product`) must be optional/customizable columns, not required core columns.
+3. Row click behavior is content-aware:
+   - blog rows open blog detail drawer
+   - social rows navigate to `/social-posts/[id]`
+4. Dashboard supports mixed row selection (blogs + social), but mutation controls must remain safely gated.
+5. Blog mutation actions may run only when the current selection is blog-only; they must disable for mixed or social-only selections.
+6. Export and copy flows must use the unified visible-column model while preserving blog-only URL copy semantics.
+7. Dashboard filters are grouped and scoped by contract:
+   - Cross-Content Scope filters apply to both content types.
+   - Blog filters apply only to blog rows (social rows pass through).
+   - Social filters apply only to social rows (blog rows pass through).
+
 ## Ideas Page Interaction Invariants (MUST)
 
 To keep idea intake predictable and avoid split editing patterns:
@@ -605,19 +628,42 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 
 ### Field Ownership
 - **Worker**: Product, Type, Canva URL, Live Links
-- **Admin**: Title, Platforms, Caption, Scheduled Date
-- **Optional**: Associated Blog, Canva Page (either can edit anytime)
+- **Admin**: Platforms, Caption, Scheduled Date
+- **Optional**: Title, Associated Blog, Canva Page (either can edit anytime)
 
 ### Required Fields at Transitions
 1. `draft` → `in_review`: Product, Type, Canva URL
-2. `in_review` → `creative_approved`: + Title, Platforms
-3. `creative_approved` → `ready_to_publish`: + Caption, Scheduled Date
+2. `in_review` → `creative_approved`: + Platforms, Caption, Scheduled Date
+3. `creative_approved` → `ready_to_publish`: Product, Type, Canva URL, Platforms, Caption, Scheduled Date
 4. `awaiting_live_link` → `published`: + ≥1 Live Link
 
 ### Enforcement
 - API: `REQUIRED_FIELDS_FOR_STATUS` in `src/lib/social-post-workflow.ts`
 - DB: RLS trigger `enforce_social_post_workflow_transition`
 - UI: Checklist shows fields required for **next transition** only
-- Field locking: `LOCKED_BRIEF_FIELDS` locked during execution stages (`ready_to_publish`, `awaiting_live_link`)
+- Guardrails: non-admin writers can edit brief fields in `draft` and `changes_requested`; admins can edit brief fields in any stage
+- Awaiting live link: non-admin users can only submit live links in `awaiting_live_link`
 
 **Rationale**: Worker isn't blocked by Admin fields early. Admin can review at their own pace. Each transition has one clear responsibility.
+
+## Record-Level Visibility (MUST)
+
+1. For Blogs and Social Posts, assignment, comments, and record-level activity history must be visible to all authenticated users in both detail drawers and full record pages.
+2. This visibility is read-only for non-privileged actions and must not be gated behind `admin` or `manage_users`.
+3. Record-level activity history must use canonical columns (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `changed_at`) to keep formatting and UI rendering stable across surfaces.
+4. Global/system activity pages under Settings remain admin-only and are separate from record-level history visibility.
+5. In any page or detail drawer that includes record-level comments/activity, the `Comments` and `Activity` sections must be placed at the end of the layout (final sections) for consistent scan order.
+
+## Link Target Behavior (MUST)
+
+1. Internal app links (for example `/blogs/[id]`, `/tasks`, `/settings`) must open in the same tab.
+2. External links (for example `https://...`) must open in a new tab with safe rel attributes.
+3. Shared link primitives must enforce this rule consistently; avoid per-page target exceptions.
+
+## Link Quick Actions (MUST)
+
+1. Useful workflow URLs must expose both `Open` and `Copy` actions in-place (for example Google Doc URL, Live URL, and saved social live links).
+2. Use the shared `LinkQuickActions` component in `src/components/link-quick-actions.tsx` instead of page-level ad-hoc buttons/links.
+3. Copy actions must provide immediate feedback through the global alerts system.
+4. Disabled/empty URL states must remain visible (do not hide actions when a link is missing).
+5. Open behavior must continue to follow Link Target Behavior rules (internal same-tab, external new-tab).

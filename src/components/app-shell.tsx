@@ -63,6 +63,15 @@ type QuickCreateItem = {
   shortcut: string;
   isDirectShortcut: boolean;
 };
+type TaskShortcutItem = {
+  id: string;
+  title: string;
+  kind: "blog" | "social";
+  href: string;
+  statusLabel: string;
+  scheduledDate: string | null;
+  actionState: "action_required" | "waiting_on_others";
+};
 
 function formatNotificationAge(createdAt: number) {
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - createdAt) / 1000));
@@ -120,6 +129,9 @@ export function AppShell({
       changed_at: string;
     }>
   >([]);
+  const [requiredTaskShortcuts, setRequiredTaskShortcuts] = useState<TaskShortcutItem[]>(
+    []
+  );
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
@@ -130,6 +142,7 @@ export function AppShell({
     [hasPermission]
   );
   const canCreateBlogs = permissionContract.canCreateBlog;
+  const requiredByLabel = profile?.display_name || profile?.full_name || "You";
   const userRoles = getUserRoles(profile);
   const isAdmin = userRoles.includes("admin");
   const canManagePermissions = isAdmin;
@@ -427,6 +440,23 @@ export function AppShell({
     }
     const loadActivityFeed = async () => {
       try {
+        if (session?.access_token) {
+          const shortcutResponse = await fetch("/api/dashboard/tasks-snapshot", {
+            headers: {
+              authorization: `Bearer ${session.access_token}`,
+            },
+          });
+          const shortcutPayload = await parseApiResponseJson<{
+            requiredByMe?: TaskShortcutItem[];
+          }>(shortcutResponse);
+          if (!isApiFailure(shortcutResponse, shortcutPayload)) {
+            setRequiredTaskShortcuts(shortcutPayload.requiredByMe ?? []);
+          } else {
+            setRequiredTaskShortcuts([]);
+          }
+        } else {
+          setRequiredTaskShortcuts([]);
+        }
         if (isAdmin && session?.access_token) {
           const reminderResponse = await fetch("/api/social-posts/reminders", {
             method: "POST",
@@ -477,6 +507,7 @@ export function AppShell({
         setActivityFeed(payload.data?.activities || []);
       } catch (error) {
         console.error("Failed to load activity feed:", error);
+        setRequiredTaskShortcuts([]);
       }
     };
     void loadActivityFeed();
@@ -604,12 +635,43 @@ export function AppShell({
                       </Button>
                     </div>
                   </div>
-                  {notifications.length === 0 && activityFeed.length === 0 ? (
+                  {notifications.length === 0 &&
+                  activityFeed.length === 0 &&
+                  requiredTaskShortcuts.length === 0 ? (
                     <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
                       No updates or activity.
                     </p>
                   ) : (
                     <div className="mt-2 space-y-3 max-h-[400px] overflow-y-auto">
+                      {requiredTaskShortcuts.length > 0 ? (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold uppercase text-slate-500">
+                            Required by: {requiredByLabel}
+                          </p>
+                          <ul className="space-y-1">
+                            {requiredTaskShortcuts.slice(0, 5).map((task) => (
+                              <li key={task.id}>
+                                <button
+                                  type="button"
+                                  className="w-full rounded-md border border-emerald-200 bg-emerald-50 px-2 py-2 text-left text-xs transition hover:bg-emerald-100"
+                                  onClick={() => {
+                                    setIsNotificationPanelOpen(false);
+                                    router.push(task.href);
+                                  }}
+                                >
+                                  <p className="truncate font-medium text-slate-900">
+                                    {task.title}
+                                  </p>
+                                  <p className="mt-0.5 truncate text-slate-700">
+                                    {task.kind === "blog" ? "Blog" : "Social"} •{" "}
+                                    {task.statusLabel}
+                                  </p>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                       {/* Real-time notifications */}
                       {notifications.length > 0 && (
                         <div>

@@ -31,6 +31,7 @@ export interface SocialPostData {
 
 export interface UseTransitionOptions {
   currentUserId?: string;
+  isAdmin?: boolean;
   onSuccess?: (result: {
     success: true;
     post: {
@@ -51,7 +52,16 @@ export function useSocialPostTransition(
   const [error, setError] = useState<string | null>(null);
 
   const isAssignedToCurrentUser = () => {
-    return options.currentUserId && socialPost?.assigned_to_user_id === options.currentUserId;
+    if (!socialPost) {
+      return false;
+    }
+    if (options.isAdmin) {
+      return true;
+    }
+    return Boolean(
+      options.currentUserId &&
+      socialPost.assigned_to_user_id === options.currentUserId
+    );
   };
 
   const canTransition = () => {

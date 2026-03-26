@@ -6,7 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { ConfirmationModal } from "@/components/confirmation-modal";
-import { ExternalLink } from "@/components/external-link";
+import { LinkQuickActions } from "@/components/link-quick-actions";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import { validateAuthor } from "@/lib/shape-validation";
@@ -1293,6 +1293,7 @@ export default function BlogDetailPage() {
                     placeholder="https://docs.google.com/..."
                   />
                 </label>
+                <LinkQuickActions href={form.google_doc_url} label="Google Doc URL" />
 
                 <div className="flex gap-2">
                   <button
@@ -1386,6 +1387,7 @@ export default function BlogDetailPage() {
                     placeholder="https://..."
                   />
                 </label>
+                <LinkQuickActions href={form.live_url} label="Live URL" />
 
                 <div className="flex gap-2">
                   <button
@@ -1416,6 +1418,29 @@ export default function BlogDetailPage() {
           </section>
 
 
+          {blog.google_doc_url ? (
+            <section className="rounded-lg border border-slate-200 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Links
+              </h3>
+              <div className="mt-2 space-y-3 text-sm">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Draft</p>
+                  <LinkQuickActions href={blog.google_doc_url} label="Draft URL" />
+                </div>
+                {blog.live_url ? (
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">Live URL</p>
+                    <LinkQuickActions href={blog.live_url} label="Live URL" />
+                  </div>
+                ) : null}
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Blog Page</p>
+                  <LinkQuickActions href={`/blogs/${blog.id}`} label="Blog page URL" />
+                </div>
+              </div>
+            </section>
+          ) : null}
           <section className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Assignment & Changes
@@ -1513,35 +1538,6 @@ export default function BlogDetailPage() {
             )}
           </section>
 
-          {blog.google_doc_url ? (
-            <section className="rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Links
-              </h3>
-              <div className="mt-2 space-y-2 text-sm">
-                <p>
-                  Draft:{" "}
-                  <ExternalLink
-                    href={blog.google_doc_url}
-                    className="text-blue-600 underline"
-                  >
-                    {blog.google_doc_url}
-                  </ExternalLink>
-                </p>
-                {blog.live_url ? (
-                  <p>
-                    Live URL:{" "}
-                    <ExternalLink
-                      href={blog.live_url}
-                      className="text-blue-600 underline"
-                    >
-                      {blog.live_url}
-                    </ExternalLink>
-                  </p>
-                ) : null}
-              </div>
-            </section>
-          ) : null}
         </div>
         <ConfirmationModal
           isOpen={pendingCompletionAction !== null}

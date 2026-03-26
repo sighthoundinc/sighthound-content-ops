@@ -3,6 +3,7 @@
 import { formatDateInTimezone } from "@/lib/format-date";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 
@@ -48,6 +49,7 @@ import {
   WRITER_STATUS_LABELS,
   getNextActor,
 } from "@/lib/status";
+import { getSocialTaskActionState, type TaskActionState } from "@/lib/task-action-state";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getUserRoles } from "@/lib/roles";
 import {
@@ -70,7 +72,6 @@ import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
 type TaskKind = "writer" | "publisher";
-type TaskActionState = "action_required" | "waiting_on_others";
 
 type TaskItem = {
   id: string;
@@ -106,6 +107,16 @@ type SocialTaskItem = {
   nextAction: string;
   actionState: TaskActionState;
 };
+type TaskPreviewItem = {
+  id: string;
+  title: string;
+  href: string;
+  statusLabel: string;
+  scheduledDate: string | null;
+  createdAt: string;
+  actionState: TaskActionState;
+};
+
 type TaskTableColumnKey =
   | "site"
   | "task"
@@ -296,7 +307,9 @@ function getAdminAssignmentTaskActionState(
 }
 
 export default function MyTasksPage() {
+  const searchParams = useSearchParams();
   const { user, hasPermission, profile } = useAuth();
+  const requiredByLabel = profile?.display_name || profile?.full_name || "You";
   const { showSaving, showSuccess, showError, updateAlert } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
@@ -492,14 +505,17 @@ export default function MyTasksPage() {
           typeof row.editor_user_id === "string" ? row.editor_user_id : createdBy;
         const adminOwnerId =
           typeof row.admin_owner_id === "string" ? row.admin_owner_id : null;
-        const isActionRequired =
-          assignedToUserId !== null
-            ? assignedToUserId === user.id
-            : nextActor === "editor"
-              ? workerUserId === user.id || editorUserId === user.id || createdBy === user.id
-              : nextActor === "admin"
-                ? reviewerUserId === user.id || adminOwnerId === user.id || isAdmin
-                : false;
+        const actionState = getSocialTaskActionState({
+          status,
+          userId: user.id,
+          isAdmin,
+          createdBy,
+          workerUserId,
+          reviewerUserId,
+          assignedToUserId,
+          editorUserId,
+          adminOwnerId,
+        });
         return {
           id: String(row.id ?? ""),
           title: String(row.title ?? "Untitled social post"),
@@ -509,7 +525,7 @@ export default function MyTasksPage() {
           createdAt: String(row.created_at ?? ""),
           nextActor,
           nextAction: SOCIAL_POST_NEXT_ACTION_LABELS[status],
-          actionState: isActionRequired ? "action_required" : "waiting_on_others",
+          actionState,
         } satisfies SocialTaskItem;
       })
       .filter((item): item is SocialTaskItem => item !== null)
@@ -558,6 +574,13 @@ export default function MyTasksPage() {
       setCurrentPage(1);
     }
   }, []);
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (action === "action_required" || action === "waiting_on_others") {
+      setActionFilter(action);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
 
 
   useEffect(() => {
@@ -891,11 +914,41 @@ export default function MyTasksPage() {
     });
   }, [actionFilter, searchQuery, socialStatusFilter, socialTasks]);
 
-  const nextTasks = useMemo(() => sortedTaskItems.slice(0, 3), [sortedTaskItems]);
-  const nextSocialTasks = useMemo(
-    () => filteredSocialTasks.slice(0, 5),
-    [filteredSocialTasks]
-  );
+  const nextTasks = useMemo(() => {
+    const blogPreviews: TaskPreviewItem[] = sortedTaskItems.map((task) => ({
+      id: task.id,
+      title: task.title,
+      href: `/blogs/${task.blogId}`,
+      statusLabel: task.statusLabel,
+      scheduledDate: task.scheduledDate,
+      createdAt: task.createdAt,
+      actionState: task.actionState,
+    }));
+    const socialPreviews: TaskPreviewItem[] = filteredSocialTasks.map((task) => ({
+      id: `social:${task.id}`,
+      title: task.title,
+      href: `/social-posts/${task.id}`,
+      statusLabel: SOCIAL_POST_STATUS_LABELS[task.status],
+      scheduledDate: task.scheduledDate,
+      createdAt: task.createdAt,
+      actionState: task.actionState,
+    }));
+    return [...blogPreviews, ...socialPreviews]
+      .sort((left, right) => {
+        if (left.actionState !== right.actionState) {
+          return left.actionState === "action_required" ? -1 : 1;
+        }
+        const publishDateCompare = comparePublishDatesAsc(
+          left.scheduledDate,
+          right.scheduledDate
+        );
+        if (publishDateCompare !== 0) {
+          return publishDateCompare;
+        }
+        return left.createdAt.localeCompare(right.createdAt);
+      })
+      .slice(0, 3);
+  }, [filteredSocialTasks, sortedTaskItems]);
 
   const pageCount = useMemo(
     () => getTablePageCount(sortedTaskItems.length, FULL_LIST_PAGE_SIZE),
@@ -1172,7 +1225,7 @@ export default function MyTasksPage() {
               id: "action",
               label:
                 actionFilter === "action_required"
-                  ? "Action: Required by Me"
+                  ? `Action: Required by: ${requiredByLabel}`
                   : "Action: Waiting on Others",
               onRemove: () => {
                 setActionFilter("all");
@@ -1216,7 +1269,7 @@ export default function MyTasksPage() {
             }
           : null,
       ].filter((pill) => pill !== null),
-    [actionFilter, assignmentFilter, kindFilter, searchQuery, siteFilter, socialStatusFilter, statusFilter]
+    [actionFilter, assignmentFilter, kindFilter, requiredByLabel, searchQuery, siteFilter, socialStatusFilter, statusFilter]
   );
 
 
@@ -1439,7 +1492,7 @@ export default function MyTasksPage() {
                   className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
                   <option value="all">All Action States</option>
-                  <option value="action_required">Required by Me</option>
+                  <option value="action_required">Required by: {requiredByLabel}</option>
                   <option value="waiting_on_others">Waiting on Others</option>
                 </select>
                 <select
@@ -1539,29 +1592,20 @@ export default function MyTasksPage() {
                   <ol className="space-y-2">
                     {nextTasks.map((task, index) => (
                       <li key={task.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            focusTaskRow(task.id);
-                          }}
-                          className="pressable w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-100"
+                        <Link
+                          href={task.href}
+                          className="pressable block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-100"
                         >
                           <p className="font-medium text-slate-900">
                             {index + 1}. {task.title}
                           </p>
                           <p className="mt-1 text-xs text-slate-600">
-                            Status: {task.kind === "writer" ? "Writing" : "Publishing"} ·{" "}
-                            {task.statusLabel}
+                            Status: {task.statusLabel}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">
                             Publish Date: {formatDisplayDate(task.scheduledDate) || "Not scheduled"}
                           </p>
-                          {task.reason ? (
-                            <p className="mt-1 text-xs font-medium text-slate-700">
-                              Reason: {task.reason}
-                            </p>
-                          ) : null}
-                        </button>
+                        </Link>
                       </li>
                     ))}
                   </ol>
@@ -1569,13 +1613,13 @@ export default function MyTasksPage() {
               </section>
               <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
-                  Social Tasks
+                  Social Tasks ({filteredSocialTasks.length})
                 </h3>
-                {nextSocialTasks.length === 0 ? (
+                {filteredSocialTasks.length === 0 ? (
                   <p className="text-sm text-slate-500">No social tasks assigned right now.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {nextSocialTasks.map((task) => (
+                    {filteredSocialTasks.map((task) => (
                       <li key={task.id}>
                         <Link
                           href={`/social-posts/${task.id}`}
@@ -1603,7 +1647,7 @@ export default function MyTasksPage() {
                       totalRows={filteredTaskItems.length}
                       currentPage={currentPage}
                       rowLimit={FULL_LIST_PAGE_SIZE}
-                      noun="tasks"
+                      noun="blog tasks"
                     />
                     <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
                       <details className="relative">
@@ -1770,7 +1814,7 @@ export default function MyTasksPage() {
                     (t) => t.id === highlightedTaskId
                   )}
                   density={rowDensity}
-                  emptyMessage="You have no assigned tasks. You're all caught up."
+                  emptyMessage="No blog tasks match your current filters."
                 />
                 <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} justify-end`}>
                   <TablePaginationControls

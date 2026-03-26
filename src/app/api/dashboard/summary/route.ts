@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/server-permissions";
 import { getUserRoles } from "@/lib/roles";
 import { withApiContract } from "@/lib/api-contract";
+import { getSocialTaskActionState } from "@/lib/task-action-state";
+import type { SocialPostStatus } from "@/lib/types";
 
 interface DashboardSummary {
   writerCounts: Record<string, number>;
@@ -49,6 +51,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       socialPostCounts: {
         awaiting_live_link: 0,
         in_review: 0,
+        ready_to_publish: 0,
       },
       userRoles,
     };
@@ -100,7 +103,8 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     if (
       userRoles.includes("admin") ||
       userRoles.includes("publisher") ||
-      userRoles.includes("editor")
+      userRoles.includes("editor") ||
+      userRoles.includes("writer")
     ) {
       let socialRows: Array<Record<string, unknown>> | null = null;
       let socialError: { message: string } | null = null;
@@ -108,7 +112,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       const scopedSocial = await adminClient
         .from("social_posts")
         .select("status,created_by,assigned_to_user_id,worker_user_id,reviewer_user_id,editor_user_id,admin_owner_id")
-        .in("status", ["awaiting_live_link", "in_review"])
+        .in("status", ["awaiting_live_link", "in_review", "ready_to_publish"])
         .or(
           `assigned_to_user_id.eq.${profile.id},worker_user_id.eq.${profile.id},reviewer_user_id.eq.${profile.id},created_by.eq.${profile.id},editor_user_id.eq.${profile.id},admin_owner_id.eq.${profile.id}`
         );
@@ -120,7 +124,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         const fallbackWithLegacyOwners = await adminClient
           .from("social_posts")
           .select("status,created_by,editor_user_id,admin_owner_id")
-          .in("status", ["awaiting_live_link", "in_review"])
+          .in("status", ["awaiting_live_link", "in_review", "ready_to_publish"])
           .or(`created_by.eq.${profile.id},editor_user_id.eq.${profile.id},admin_owner_id.eq.${profile.id}`);
         socialRows = fallbackWithLegacyOwners.data as Array<Record<string, unknown>> | null;
         socialError = fallbackWithLegacyOwners.error as { message: string } | null;
@@ -134,7 +138,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         const fallbackCreatedByOnly = await adminClient
           .from("social_posts")
           .select("status,created_by")
-          .in("status", ["awaiting_live_link", "in_review"])
+          .in("status", ["awaiting_live_link", "in_review", "ready_to_publish"])
           .eq("created_by", profile.id);
         socialRows = fallbackCreatedByOnly.data as Array<Record<string, unknown>> | null;
         socialError = fallbackCreatedByOnly.error as { message: string } | null;
@@ -144,8 +148,34 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         console.error("Error fetching social post counts:", socialError);
       } else if (socialRows && Array.isArray(socialRows)) {
         socialRows.forEach((row: Record<string, unknown>) => {
-          const status = row.status as string | undefined;
-          if (status && status in summary.socialPostCounts) {
+          const status = row.status as SocialPostStatus | undefined;
+          if (!status) {
+            return;
+          }
+          const actionState = getSocialTaskActionState({
+            status,
+            userId: profile.id,
+            isAdmin: userRoles.includes("admin"),
+            createdBy: typeof row.created_by === "string" ? row.created_by : null,
+            workerUserId:
+              typeof row.worker_user_id === "string" ? row.worker_user_id : null,
+            reviewerUserId:
+              typeof row.reviewer_user_id === "string"
+                ? row.reviewer_user_id
+                : null,
+            assignedToUserId:
+              typeof row.assigned_to_user_id === "string"
+                ? row.assigned_to_user_id
+                : null,
+            editorUserId:
+              typeof row.editor_user_id === "string" ? row.editor_user_id : null,
+            adminOwnerId:
+              typeof row.admin_owner_id === "string" ? row.admin_owner_id : null,
+          });
+          if (actionState !== "action_required") {
+            return;
+          }
+          if (status in summary.socialPostCounts) {
             (summary.socialPostCounts[status] as number)++;
           }
         });

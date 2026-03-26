@@ -8,7 +8,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Tasks and Calendar execution/scheduling workflows
 - Ideas + Social Posts modules
 - Workspace home (`/`) with premium quick-action navigation
-- Workspace home (`/`) My Tasks Snapshot (mixed blog + social, grouped as Required by Me / Waiting on Others)
+- Workspace home (`/`) My Tasks Snapshot (mixed blog + social, grouped as Required by: <username> / Waiting on Others)
 - Dedicated premium login (`/login`) with OAuth support (Google + Slack OIDC) and email/password fallback
   - Google login requires @sighthound.com email
   - Slack login requires Sighthound Slack workspace
@@ -65,15 +65,28 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Collapsed nav rows keep a ~44px minimum hit target with centered icons and full-row click area (no dead zones)
 - Active nav page has stronger visual state (left border + highlighted row)
 - Left sidebar is intentionally clean (no quick-filter groups and no recently-published card)
-- Clickable Today metrics
+- Clickable cross-content overview metrics (`Open Work`, `Scheduled Next 7 Days`, `Awaiting Review`, `Ready to Publish`, `Awaiting Live Link`, `Published Last 7 Days`)
 - Delayed metric: scheduled publish date is in the past and overall status is not `Published`
 - Active filter chips + clear-all behavior
+- Role-agnostic dashboard filter controls (same filter set for all users)
+- Filter panel scales to 4 columns on wide screens for faster filtering workflows
+- Explicit grouped filtering:
+  - Cross-Content Scope: `Sites`, `Content Type`, `Workflow (All Content)`, `Delivery (All Content)`
+  - Blog Filters: `Blog Stage`, `Blog Writers`, `Blog Publishers`, `Blog Writer Status`, `Blog Publisher Status`
+  - Social Filters: `Social Status`, `Social Product`
+- Scope-safe filtering ensures blog filters only constrain blog rows and social filters only constrain social rows.
+- Single canonical active-filter pills row (no duplicate chip bars)
+- Selection-driven bulk panel with visible permission-disabled mutation states
 - Home standup social counts are assignment-scoped to current user relevance (not global social totals)
-- Scan-friendly table:
-  - clamped title rendering
-  - SH/RED site badges
-  - urgency row tones
-  - inline writer/publisher stage controls (permission-gated)
+- Home standup includes writer-facing social handoff visibility for `ready_to_publish`
+- Notification bell includes `Required by: <username>` task shortcuts using the same task snapshot contract
+- Unified content dashboard table (blogs + social posts) with core contract columns:
+  - `Type`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated`
+  - optional `Product` column via column customization
+  - row click routing: blogs open drawer, social rows navigate to `/social-posts/[id]`
+  - Phase A selection: mixed row selection enabled (blogs + social)
+  - safety gate: blog mutation controls disable when any social row is selected
+  - selected export supports mixed selected rows
 - Export View / Export Selected CSV (permission-gated)
 - Edit Columns popover and bottom pagination controls
 
@@ -103,11 +116,13 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 
 ### Tasks
 - Top-3 priority summary + expandable full list
+- Top-3 priority summary is mixed across blogs and social posts
 - `Overdue` / `Due Soon` / `Upcoming` indicators
 - Priority sorting by schedule urgency and status state
-- Social task queue with next-action labels and social status filtering
+- Social task queue with next-action labels, social status filtering, and full filtered-row visibility
 - Assignment-based visibility for non-published work tied to current user
-- Action-state filtering for `Required by Me` vs `Waiting on Others`
+- Social action-state classification is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` worker-owned; `in_review/creative_approved` reviewer-owned) so handoff items appear in the correct bucket
+- Action-state filtering for `Required by: <username>` vs `Waiting on Others`
 
 ## Icon system standard
 - Emoji-based icons are banned from UI iconography.
@@ -141,15 +156,21 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Admin-only activity history cleanup (global or user-scoped)
 - Optional comments cleanup during history purge
 - Admin quick-view as non-admin user with return-to-admin workflow
+- Admin quick-view opens impersonated sessions on `My Tasks` (`/tasks?action=action_required`) for immediate actionable-work validation
 - Admin-only `Danger Zone: Wipe App Clean` reset that removes all other users and app data while preserving only the signed-in admin account
 - Activity and timeline entries are rendered with plain-language labels and UUID-safe wording for operator readability
+- Link behavior is globally consistent: internal app links stay in the same tab; external links open in a new tab
 
 ### Social Post Editor (`/social-posts/[id]`)
 - Guided 4-step single-post workflow:
-  1. Setup (title, platforms, publish date, Canva link/page, product, type)
+  1. Setup (product, type, Canva link/page, optional title)
   2. Link Context (optional blog lookup + linked blog actions)
   3. Write Caption (UTF-8 editor + formatting + grouped Copy menu + platform guidance)
   4. Review & Publish (checklist validation, status transitions, stage-based final CTA)
+- Transition requirements:
+  - `draft` → `in_review`: product + type + Canva link
+  - `in_review` → `creative_approved`: product + type + Canva link + platforms + caption + scheduled date
+  - `awaiting_live_link` → `published`: at least one saved live link
 - Stage-based final CTA behavior:
   - Draft incomplete → `Save Draft`
   - Draft complete → `Submit for Review`
@@ -159,10 +180,17 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - Awaiting Live Link with at least one saved link → `Submit Link` (marks `Published`)
 - Step 4 includes a `Live Links` section for per-platform URL entry and save
 - Execution-stage authority:
-  - `ready_to_publish` and `awaiting_live_link` brief fields are read-only
+  - non-admin writers can edit brief fields in `draft` and `changes_requested` only
+  - admins can edit brief fields at any stage when operationally needed
+  - in `awaiting_live_link`, non-admin users can submit live links only
   - admin-only `Edit Brief` reopens status to `creative_approved`
   - rollback from execution stages to `changes_requested` requires a reason
   - `published` requires at least one valid live link
+- Stage transition saves include `associated_blog_id`, so linked blog context persists when moving stages.
+- Record-level visibility:
+  - full editor shows assignment, comments, and activity history to all authenticated users
+  - social detail drawer shows explicit assignment fields (`Assigned to`, `Reviewer`) and latest activity entries
+  - blog library/detail drawers show latest comments and activity history for each record
 
 ## Tech stack
 - Next.js (App Router) + TypeScript + Tailwind
@@ -231,6 +259,7 @@ npm run dev
   - `parseApiResponseJson()` safely returns an empty object for non-JSON/no-body responses to avoid runtime parsing failures
 - Request payloads are schema-validated at route boundaries.
 - Reusable UI components are treated as contracts (not per-page variants).
+- URL interaction contract uses shared `LinkQuickActions` (`src/components/link-quick-actions.tsx`) for consistent in-place `Open` + `Copy` controls across workflow surfaces.
 - `DataTable` keeps fixed row-height and forced single-line text truncation invariants.
 - Workflow state mutations must follow: client action → API contract → DB mutation (no bypass).
 - Public-schema tables exposed to PostgREST must keep RLS enabled; admin maintenance endpoints use `service_role` server clients instead of disabling RLS.

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -239,6 +240,20 @@ export default function PermissionsSettingsPage() {
     <ProtectedPage requiredPermissions={["manage_permissions"]}>
       <AppShell>
         <div className="space-y-6">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+          >
+            <Link href="/dashboard" className="hover:text-slate-700">
+              Dashboard
+            </Link>
+            <span>/</span>
+            <Link href="/settings" className="hover:text-slate-700">
+              Settings
+            </Link>
+            <span>/</span>
+            <span className="text-slate-700">Permissions</span>
+          </nav>
           <header className="space-y-2">
             <h2 className="text-xl font-semibold text-slate-900">Permissions</h2>
             <p className="text-sm text-slate-600">

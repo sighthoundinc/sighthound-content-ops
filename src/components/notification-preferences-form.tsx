@@ -230,7 +230,7 @@ export function NotificationPreferencesForm({
       }
 
       setHasChanges(false);
-      showSuccess("Notification preferences saved successfully.");
+      showSuccess("Notification preferences saved.");
       onSaveSuccess?.();
     } catch (error) {
       console.error("Error saving notification preferences:", error);

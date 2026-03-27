@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -251,6 +252,20 @@ export default function AccessLogsPage() {
     <ProtectedPage requiredPermissions={["manage_users"]}>
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
+          <nav
+            aria-label="Breadcrumb"
+            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+          >
+            <Link href="/dashboard" className="hover:text-slate-700">
+              Dashboard
+            </Link>
+            <span>/</span>
+            <Link href="/settings" className="hover:text-slate-700">
+              Settings
+            </Link>
+            <span>/</span>
+            <span className="text-slate-700">Activity History</span>
+          </nav>
           <DataPageHeader
             title="Activity History"
             description="View access and workflow activity in plain language"

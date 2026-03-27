@@ -194,7 +194,7 @@ export default function IdeasPage() {
 
     if (data) {
       setIdeas((previous) => [data as BlogIdeaRecord, ...previous]);
-      showSuccess("Idea created");
+      showSuccess("Idea created.");
     }
     setIsSubmitting(false);
     return true;
@@ -319,7 +319,7 @@ export default function IdeasPage() {
     }
 
     setIdeas((previous) => previous.filter((existingIdea) => existingIdea.id !== idea.id));
-    showSuccess("Idea deleted successfully");
+    showSuccess("Idea deleted.");
     setDeletingIdeaId(null);
   };
 

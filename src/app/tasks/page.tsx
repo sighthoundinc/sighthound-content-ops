@@ -1088,7 +1088,7 @@ function MyTasksPageContent() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(downloadUrl);
-    showSuccess("Task export complete");
+    showSuccess("Task export completed.");
   }, [
     canExportCsv,
     filteredTaskItems,
@@ -1177,7 +1177,7 @@ function MyTasksPageContent() {
     };
 
     window.setTimeout(triggerPrintWhenReady, 180);
-    showSuccess("PDF ready. Use print dialog to save");
+    showSuccess("PDF prepared.");
   };
   useEffect(() => {
     const handlePaletteAction = (event: Event) => {
@@ -1406,7 +1406,7 @@ function MyTasksPageContent() {
                 event.target.value as WriterStageStatus
               );
             }}
-            className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+            className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
           >
             {WRITER_STATUSES.map((status) => (
               <option key={status} value={status}>
@@ -1433,7 +1433,7 @@ function MyTasksPageContent() {
                 event.target.value as PublisherStageStatus
               );
             }}
-            className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+            className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
           >
             {PUBLISHER_STATUSES.map((status) => (
               <option key={status} value={status}>

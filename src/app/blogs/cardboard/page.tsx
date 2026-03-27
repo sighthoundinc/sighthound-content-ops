@@ -644,6 +644,20 @@ export default function BlogCardBoardPage() {
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
+          <nav
+            aria-label="Breadcrumb"
+            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+          >
+            <Link href="/dashboard" className="hover:text-slate-700">
+              Dashboard
+            </Link>
+            <span>/</span>
+            <Link href="/blogs" className="hover:text-slate-700">
+              Blogs
+            </Link>
+            <span>/</span>
+            <span className="text-slate-700">CardBoard</span>
+          </nav>
           <DataPageHeader
             title="CardBoard"
             description="Pipeline board for team-wide blog stage visibility and movement."
@@ -835,7 +849,7 @@ export default function BlogCardBoardPage() {
                                   onChange={(event) => {
                                     setQuickAddAuthorId(event.target.value);
                                   }}
-                                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-slate-700 disabled:bg-slate-100"
+                                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                                 >
                                   <option value="">Unassigned</option>
                                   {authors.map((author) => (

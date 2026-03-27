@@ -304,6 +304,20 @@ function NewBlogPageContent() {
     <ProtectedPage requiredPermissions={["create_blog"]}>
       <AppShell>
         <div className="max-w-3xl space-y-6">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+          >
+            <Link href="/dashboard" className="hover:text-slate-700">
+              Dashboard
+            </Link>
+            <span>/</span>
+            <Link href="/blogs" className="hover:text-slate-700">
+              Blogs
+            </Link>
+            <span>/</span>
+            <span className="text-slate-700">New</span>
+          </nav>
           <header>
             <h2 className="text-xl font-semibold text-slate-900">Add Blog</h2>
             <p className="text-sm text-slate-600">
@@ -407,7 +421,7 @@ function NewBlogPageContent() {
                     onChange={(event) => {
                       setWriterId(event.target.value);
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     <option value="">Select writer</option>
                     {users.map((nextUser) => (
@@ -428,7 +442,7 @@ function NewBlogPageContent() {
                     onChange={(event) => {
                       setPublisherId(event.target.value);
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     <option value="">Unassigned</option>
                     {users.map((nextUser) => (
@@ -473,7 +487,7 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setInitialComment(event.target.value);
                 }}
-                className="mt-3 min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                className="mt-3 min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 placeholder="Add an initial comment..."
                 maxLength={2000}
               />
@@ -489,7 +503,7 @@ function NewBlogPageContent() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Creating..." : "Create Blog"}
               </button>

@@ -3409,7 +3409,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   disabled={isBulkSaving}
-                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     clearBulkUiState();
                   }}
@@ -3439,7 +3439,7 @@ export default function DashboardPage() {
                   disabled={
                     !canChangeWriterAssignment || isBulkSaving || !hasOnlyBlogSelection
                   }
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 >
                   <option value="">No writer change</option>
                   {assignmentOptions.map((user) => (
@@ -3457,7 +3457,7 @@ export default function DashboardPage() {
                   disabled={
                     !canChangePublisherAssignment || isBulkSaving || !hasOnlyBlogSelection
                   }
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 >
                   <option value="">No publisher change</option>
                   {assignmentOptions.map((user) => (
@@ -3473,7 +3473,7 @@ export default function DashboardPage() {
                     setBulkWriterStatus(event.target.value as WriterStageStatus | "");
                   }}
                   disabled={!canEditWritingStage || isBulkSaving || !hasOnlyBlogSelection}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 >
                   <option value="">No writer status change</option>
                   {WRITER_STATUSES.map((status) => (
@@ -3489,7 +3489,7 @@ export default function DashboardPage() {
                     setBulkPublisherStatus(event.target.value as PublisherStageStatus | "");
                   }}
                   disabled={!canEditPublishingStage || isBulkSaving || !hasOnlyBlogSelection}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 >
                   <option value="">No publisher status change</option>
                   {PUBLISHER_STATUSES.map((status) => (
@@ -3515,7 +3515,7 @@ export default function DashboardPage() {
                     !hasPendingBulkChanges ||
                     Boolean(bulkValidationError)
                   }
-                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     void handleBulkApplyChanges();
                   }}
@@ -3529,7 +3529,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     disabled={isBulkSaving || !hasOnlyBlogSelection}
-                    className="rounded-md border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleBulkDelete();
                     }}
@@ -4188,7 +4188,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           disabled={isPanelCommentSaving}
-                          className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => {
                             void handlePanelAddComment();
                           }}

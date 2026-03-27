@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
@@ -122,8 +123,8 @@ const VALIDATION_MESSAGES = {
   copiedToClipboard: "Copied to clipboard",
   copyFailed: "Copy failed. Try again",
   postReopened: "Post reopened to Creative Approved for brief edits.",
-  linksSaved: "Live links saved",
-  postSaved: "Post saved",
+  linksSaved: "Live links saved.",
+  postSaved: "Post saved.",
   platformRequired: "Select at least one platform.",
   canvaUrlInvalid: "Canva link must start with https:// or http://",
 } as const;
@@ -721,7 +722,7 @@ export default function SocialPostEditorPage() {
           post.id
         )
       );
-      showSuccess(`Moved to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`);
+    showSuccess(`Status moved to ${SOCIAL_POST_STATUS_LABELS[toStatus]}.`);
       setIsSaving(false);
       void loadPost();
       return true;
@@ -797,7 +798,7 @@ export default function SocialPostEditorPage() {
     setPost(normalized);
     setEditingAssignment(false);
     await loadPost();
-    showSuccess("Assignments saved");
+    showSuccess("Assignments saved.");
     setIsAssignmentSaving(false);
   }, [post, editWorkerUserId, editReviewerUserId, showError, showSuccess, loadPost, user?.id, profile?.full_name]);
 
@@ -1029,7 +1030,7 @@ export default function SocialPostEditorPage() {
     const transformed = toBoldFormat(selected);
     const next = `${form.caption.slice(0, start)}${transformed}${form.caption.slice(end)}`;
     applyCaptionEdit(next, start, start + transformed.length);
-    showSuccess("Bold format applied");
+    showSuccess("Bold format applied.");
   };
 
   const handleInsertBullet = () => {
@@ -1111,7 +1112,7 @@ export default function SocialPostEditorPage() {
     }
     setCommentDraft("");
     await loadPost();
-    showSuccess("Comment added");
+    showSuccess("Comment added.");
     setIsCommentSaving(false);
   };
 
@@ -1298,7 +1299,7 @@ export default function SocialPostEditorPage() {
       return;
     }
 
-    showSuccess("Post deleted successfully");
+    showSuccess("Post deleted.");
     router.push("/social-posts");
   };
 
@@ -1331,6 +1332,20 @@ export default function SocialPostEditorPage() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-5">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+          >
+            <Link href="/dashboard" className="hover:text-slate-700">
+              Dashboard
+            </Link>
+            <span>/</span>
+            <Link href="/social-posts" className="hover:text-slate-700">
+              Social Posts
+            </Link>
+            <span>/</span>
+            <span className="text-slate-700">Details</span>
+          </nav>
           <DataPageHeader
             title={form.title || "Social Post"}
             description="Build and refine your social post from concept to publication."

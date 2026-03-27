@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
@@ -167,7 +168,7 @@ export default function BlogDetailPage() {
     if (!successMessage) {
       return;
     }
-    showSuccess(successMessage.replace(/\.$/, ""));
+    showSuccess(successMessage);
   }, [showSuccess, successMessage]);
 
   useEffect(() => {
@@ -953,6 +954,20 @@ export default function BlogDetailPage() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-6">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+          >
+            <Link href="/dashboard" className="hover:text-slate-700">
+              Dashboard
+            </Link>
+            <span>/</span>
+            <Link href="/blogs" className="hover:text-slate-700">
+              Blogs
+            </Link>
+            <span>/</span>
+            <span className="text-slate-700">Details</span>
+          </nav>
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-2xl font-semibold text-slate-900">{blog.title}</h2>
@@ -998,7 +1013,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ title: nextTitle }, "Saved");
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   />
                 </label>
 
@@ -1020,7 +1035,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ site: form.site }, "Saved");
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     {SITES.map((siteValue) => (
                       <option key={siteValue} value={siteValue}>
@@ -1053,7 +1068,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ writer_id: form.writer_id || null }, "Saved");
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     <option value="">Unassigned</option>
                     {users.map((nextUser) => (
@@ -1085,7 +1100,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ publisher_id: form.publisher_id || null }, "Saved");
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     <option value="">Unassigned</option>
                     {users.map((nextUser) => (
@@ -1127,7 +1142,7 @@ export default function BlogDetailPage() {
                         "Saved"
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   />
                 </label>
 
@@ -1159,7 +1174,7 @@ export default function BlogDetailPage() {
                         "Saved"
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   />
                 </label>
               </div>
@@ -1188,7 +1203,7 @@ export default function BlogDetailPage() {
                     }
                     void updateBlog({ actual_published_at: nextIso }, "Saved");
                   }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </label>
 
@@ -1215,7 +1230,7 @@ export default function BlogDetailPage() {
                 <button
                   type="submit"
                   disabled={!canSaveDetails || isSaving}
-                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Save Metadata
                 </button>
@@ -1259,7 +1274,7 @@ export default function BlogDetailPage() {
                           : prev
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     {WRITER_STATUSES.map((status) => (
                       <option
@@ -1294,7 +1309,7 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, google_doc_url: event.target.value } : prev
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                     placeholder="https://docs.google.com/..."
                   />
                 </label>
@@ -1304,7 +1319,7 @@ export default function BlogDetailPage() {
                   <button
                     type="button"
                     disabled={!canWriterEdit || isSaving}
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleWriterSave();
                     }}
@@ -1315,7 +1330,7 @@ export default function BlogDetailPage() {
                     <button
                       type="button"
                       disabled={!canWriterEdit || !canMarkWritingComplete || isSaving}
-                      className="rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         setPendingCompletionAction("writer");
                       }}
@@ -1353,7 +1368,7 @@ export default function BlogDetailPage() {
                           : prev
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     {PUBLISHER_STATUSES.map((status) => (
                       <option
@@ -1388,7 +1403,7 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, live_url: event.target.value } : prev
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                     placeholder="https://..."
                   />
                 </label>
@@ -1398,7 +1413,7 @@ export default function BlogDetailPage() {
                   <button
                     type="button"
                     disabled={!canPublisherEdit || isSaving}
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handlePublisherSave();
                     }}
@@ -1409,7 +1424,7 @@ export default function BlogDetailPage() {
                     <button
                       type="button"
                       disabled={!canPublisherEdit || !canMarkPublishingComplete || isSaving}
-                      className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         setPendingCompletionAction("publisher");
                       }}
@@ -1495,7 +1510,7 @@ export default function BlogDetailPage() {
                 onChange={(event) => {
                   setNewComment(event.target.value);
                 }}
-                className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 placeholder="Add remarks or feedback…"
                 maxLength={2000}
               />
@@ -1507,7 +1522,7 @@ export default function BlogDetailPage() {
                     Boolean(commentsUnavailableMessage) ||
                     !canCreateComments
                   }
-                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isCommentSaving ? "Adding..." : "Add Comment"}
                 </button>

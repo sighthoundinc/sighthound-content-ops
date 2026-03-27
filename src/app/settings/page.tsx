@@ -485,7 +485,7 @@ function SettingsPageContent() {
     if (targetUserId === profile?.id) {
       await refreshProfile();
     }
-    setSuccess("Profile updated");
+    setSuccess("Profile updated.");
     return true;
   };
 
@@ -525,7 +525,7 @@ function SettingsPageContent() {
       return;
     }
 
-    setSuccess("User created");
+    setSuccess("User created.");
     setNewEmail("");
     setNewPassword("");
     setNewFullName("");

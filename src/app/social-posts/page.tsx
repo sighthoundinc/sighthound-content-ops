@@ -1058,7 +1058,7 @@ function SocialPostsPageContent() {
     setNewWorkerUserId(isAdmin ? null : user.id);
     setNewReviewerUserId(null);
     setIsCreateModalOpen(false);
-    showSuccess("Social post created");
+    showSuccess("Social post created.");
     setIsCreating(false);
   };
 
@@ -1175,7 +1175,7 @@ function SocialPostsPageContent() {
     setPanelForm((previous) =>
       previous ? { ...previous, status: nextStatus } : previous
     );
-    showSuccess(`Moved to ${SOCIAL_POST_STATUS_LABELS[nextStatus]}`);
+    showSuccess(`Status moved to ${SOCIAL_POST_STATUS_LABELS[nextStatus]}.`);
     if (activePostId === post.id) {
       void loadPanelDetails(post.id);
     }
@@ -1277,7 +1277,7 @@ function SocialPostsPageContent() {
         )
       );
     }
-    showSuccess("Post saved");
+    showSuccess("Post saved.");
     await loadPanelDetails(activePost.id);
     setIsPanelSaving(false);
   };
@@ -1405,7 +1405,7 @@ function SocialPostsPageContent() {
         ...normalizedLinks,
       ]);
       await loadPanelDetails(activePost.id);
-      showSuccess("Links saved");
+      showSuccess("Links saved.");
     } catch (saveError) {
       setPanelError(
         saveError instanceof Error ? `Couldn't save links. ${saveError.message}` : "Couldn't save links. Try again."
@@ -1446,7 +1446,7 @@ function SocialPostsPageContent() {
     setPanelCommentDraft("");
     setReplyToComment(null);
     await loadPanelDetails(activePost.id);
-    showSuccess("Comment added");
+    showSuccess("Comment added.");
     setIsCommentSaving(false);
   };
 
@@ -1574,7 +1574,7 @@ function SocialPostsPageContent() {
         setActivePostId(null);
       }
       setActivePostId(null);
-      showSuccess("Post deleted successfully");
+      showSuccess("Post deleted.");
       setIsDeletingPost(false);
     },
     [activePost, posts, session?.access_token, showError, showSuccess]
@@ -2309,7 +2309,7 @@ function SocialPostsPageContent() {
                         <span>Linked blog ID: {panelForm.associated_blog_id}</span>
                         <button
                           type="button"
-                          className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                          className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => {
                             setPanelForm((previous) =>
                               previous ? { ...previous, associated_blog_id: null } : previous
@@ -2435,7 +2435,7 @@ function SocialPostsPageContent() {
                   <button
                     type="button"
                     disabled={isPanelSaving || !panelCanEditBrief}
-                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleSavePostDetails();
                     }}
@@ -2514,7 +2514,7 @@ function SocialPostsPageContent() {
                     <button
                       type="button"
                       disabled={isLinksSaving}
-                      className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         void handleSaveLinks();
                       }}
@@ -2558,7 +2558,7 @@ function SocialPostsPageContent() {
                     <button
                       type="submit"
                       disabled={isCommentSaving}
-                      className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isCommentSaving ? "Adding..." : "Add Comment"}
                     </button>
@@ -2753,7 +2753,7 @@ function SocialPostsPageContent() {
                   <button
                     type="submit"
                     disabled={isCreating}
-                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isCreating ? "Creating..." : "Create Post"}
                   </button>

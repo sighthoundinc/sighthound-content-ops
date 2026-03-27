@@ -73,7 +73,7 @@ export function LinkQuickActions({
               window.setTimeout(() => {
                 setIsCopied(false);
               }, 1200);
-              showSuccess(`${label} copied`);
+              showSuccess(`${label} copied.`);
             } catch {
               showError("Copy failed. Try again");
             }

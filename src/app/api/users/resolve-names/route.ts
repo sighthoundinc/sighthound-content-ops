@@ -34,7 +34,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       .eq("is_active", true);
 
     if (usersError) {
-      return NextResponse.json({ error: usersError.message }, { status: 400 });
+      console.error("Failed to load users for name resolution:", usersError);
+      return NextResponse.json({ error: "Failed to load users. Please try again." }, { status: 400 });
     }
 
     // Resolve names using matching library

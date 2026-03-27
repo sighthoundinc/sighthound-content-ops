@@ -52,7 +52,7 @@ export const PATCH = withApiContract(async function PATCH(
     if (error) {
       console.error("Password reset error:", error);
       return NextResponse.json(
-        { error: error.message ?? "Failed to reset password" },
+        { error: "Failed to reset password. Please try again." },
         { status: 400 }
       );
     }

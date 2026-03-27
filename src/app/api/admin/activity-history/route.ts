@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getUserRoles } from "@/lib/roles";
-import { authenticateRequest, requirePermission } from "@/lib/server-permissions";
+import { requirePermission } from "@/lib/server-permissions";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   getActivityTypeCategory,
@@ -277,12 +276,14 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     const paginatedActivities = sortedActivities.slice(offset, offset + limit);
 
     return NextResponse.json({
-      activities: paginatedActivities,
-      total: sortedActivities.length,
-      limit,
-      offset,
-      activityTypeLabels: ACTIVITY_TYPE_LABELS,
-      activityTypeCategories: ACTIVITY_TYPE_CATEGORIES,
+      data: {
+        activities: paginatedActivities,
+        total: sortedActivities.length,
+        limit,
+        offset,
+        activityTypeLabels: ACTIVITY_TYPE_LABELS,
+        activityTypeCategories: ACTIVITY_TYPE_CATEGORIES,
+      },
     });
   } catch (error) {
     console.error("Error in activity history GET endpoint:", error);
@@ -308,19 +309,10 @@ type CommentActivityTable = "blog_comments" | "social_post_comments";
 export const DELETE = withApiContract(async function DELETE(request: NextRequest) {
   try {
     console.log("[Activity History] DELETE request received");
-    const auth = await authenticateRequest(request);
+    const auth = await requirePermission(request, "manage_users");
     if ("error" in auth) {
       console.error("[Activity History] Auth failed:", auth.error);
       return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
-
-    const roles = getUserRoles(auth.context.profile);
-    if (!roles.includes("admin")) {
-      console.error("[Activity History] Non-admin attempted cleanup");
-      return NextResponse.json(
-        { error: "Only admins can delete activity history." },
-        { status: 403 }
-      );
     }
 
     let body: unknown = {};
@@ -446,21 +438,22 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
     });
 
     return NextResponse.json({
-      scope: parsed.data.scope,
-      targetedUserIds: targetUserIds,
-      includeCommentsActivity: parsed.data.includeCommentsActivity,
-      blogAssignmentHistoryDeleted,
-      socialPostActivityHistoryDeleted,
-      permissionAuditLogsDeleted,
-      blogCommentsDeleted,
-      socialPostCommentsDeleted,
-      totalDeleted,
+      data: {
+        scope: parsed.data.scope,
+        targetedUserIds: targetUserIds,
+        includeCommentsActivity: parsed.data.includeCommentsActivity,
+        blogAssignmentHistoryDeleted,
+        socialPostActivityHistoryDeleted,
+        permissionAuditLogsDeleted,
+        blogCommentsDeleted,
+        socialPostCommentsDeleted,
+        totalDeleted,
+      },
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Activity history deletion error:", errorMessage, error);
+    console.error("Activity history deletion error:", error);
     return NextResponse.json(
-      { error: `Unexpected server error: ${errorMessage}` },
+      { error: "Unexpected server error" },
       { status: 500 }
     );
   }

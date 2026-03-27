@@ -561,12 +561,14 @@ function SocialPostsPageContent() {
         ]);
 
       if (postsError) {
-        setError(`Couldn't load posts. ${postsError.message}`);
+        console.error("Social posts load failed:", postsError);
+        setError("Couldn't load posts. Please try again.");
         setIsLoading(false);
         return;
       }
       if (linksError) {
-        setError(`Couldn't load links. ${linksError.message}`);
+        console.error("Social post links load failed:", linksError);
+        setError("Couldn't load post links. Please try again.");
         setIsLoading(false);
         return;
       }
@@ -1036,7 +1038,8 @@ function SocialPostsPageContent() {
       .single();
 
     if (insertError) {
-      setError(`Couldn't create post. ${insertError.message}`);
+      console.error("Social post insert failed:", insertError);
+      setError("Couldn't create post. Please try again.");
       setIsCreating(false);
       return;
     }

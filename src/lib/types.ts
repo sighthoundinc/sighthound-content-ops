@@ -6,6 +6,8 @@ export type CanonicalAppPermissionKey =
   | "archive_blog"
   | "restore_archived_blog"
   | "delete_blog"
+  | "delete_idea"
+  | "delete_social_post"
   | "duplicate_blog"
   | "view_archived_blogs"
   | "start_writing"

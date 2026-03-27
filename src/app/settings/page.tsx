@@ -352,9 +352,10 @@ function SettingsPageContent() {
       token_hash: payload.tokenHash,
     });
     if (verifyError) {
+      console.error("Quick-view verification failed:", verifyError);
       clearQuickViewSnapshot();
       setQuickViewSnapshot(null);
-      setError(verifyError.message);
+      setError("Session verification failed. Please try again.");
       setIsSwitchingQuickViewUser(false);
       return;
     }
@@ -385,7 +386,8 @@ function SettingsPageContent() {
       refresh_token: snapshot.adminRefreshToken,
     });
     if (restoreError) {
-      setError(restoreError.message);
+      console.error("Admin session restore failed:", restoreError);
+      setError("Couldn't restore admin session. Please try again.");
       setIsRestoringAdminFromQuickView(false);
       return;
     }
@@ -414,7 +416,8 @@ function SettingsPageContent() {
         setSettings((settingsData as AppSettingsRecord) ?? null);
         await loadUsers();
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Failed to load settings.");
+        console.error("Settings load failed:", loadError);
+        setError("Failed to load settings. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -771,12 +774,14 @@ function SettingsPageContent() {
 
     const payload = await parseApiResponseJson<{
       error?: string;
-      totalDeleted?: number;
-      blogAssignmentHistoryDeleted?: number;
-      socialPostActivityHistoryDeleted?: number;
-      permissionAuditLogsDeleted?: number;
-      blogCommentsDeleted?: number;
-      socialPostCommentsDeleted?: number;
+      data?: {
+        totalDeleted?: number;
+        blogAssignmentHistoryDeleted?: number;
+        socialPostActivityHistoryDeleted?: number;
+        permissionAuditLogsDeleted?: number;
+        blogCommentsDeleted?: number;
+        socialPostCommentsDeleted?: number;
+      };
     }>(response);
     if (isApiFailure(response, payload)) {
       setError(getApiErrorMessage(payload, "Failed to delete activity history."));
@@ -784,19 +789,20 @@ function SettingsPageContent() {
       return;
     }
 
+    const result = payload.data ?? {};
     setIsDeleteHistoryModalOpen(false);
     setIsDeletingActivityHistory(false);
     setActivityHistoryDeleteUserIds([]);
     const commentsSummary = activityCleanupIncludeComments
-      ? `, blog comments: ${payload.blogCommentsDeleted ?? 0}, social comments: ${
-          payload.socialPostCommentsDeleted ?? 0
+      ? `, blog comments: ${result.blogCommentsDeleted ?? 0}, social comments: ${
+          result.socialPostCommentsDeleted ?? 0
         }`
       : "";
     setSuccess(
-      `Deleted ${payload.totalDeleted ?? 0} activity records (blog: ${
-        payload.blogAssignmentHistoryDeleted ?? 0
-      }, social: ${payload.socialPostActivityHistoryDeleted ?? 0}, permission: ${
-        payload.permissionAuditLogsDeleted ?? 0
+      `Deleted ${result.totalDeleted ?? 0} activity records (blog: ${
+        result.blogAssignmentHistoryDeleted ?? 0
+      }, social: ${result.socialPostActivityHistoryDeleted ?? 0}, permission: ${
+        result.permissionAuditLogsDeleted ?? 0
       }${commentsSummary}).`
     );
   };
@@ -823,12 +829,14 @@ function SettingsPageContent() {
     });
     const payload = await parseApiResponseJson<{
       error?: string;
-      deletedAuthUsers?: number;
-      preservedAuthUsers?: number;
-      preservedAdminUserId?: string;
-      failedUserDeletes?: Array<{ userId: string; error: string }>;
-      wipeSummary?: {
-        truncated_table_count?: number;
+      data?: {
+        deletedAuthUsers?: number;
+        preservedAuthUsers?: number;
+        preservedAdminUserId?: string;
+        failedUserDeletes?: Array<{ userId: string; error: string }>;
+        wipeSummary?: {
+          truncated_table_count?: number;
+        };
       };
     }>(response);
     if (isApiFailure(response, payload)) {
@@ -836,9 +844,10 @@ function SettingsPageContent() {
       setIsWipingAppClean(false);
       return;
     }
-    if ((payload.failedUserDeletes?.length ?? 0) > 0) {
+    const wipeResult = payload.data ?? {};
+    if ((wipeResult.failedUserDeletes?.length ?? 0) > 0) {
       setError(
-        `App data was wiped, but ${payload.failedUserDeletes?.length ?? 0} auth user deletion(s) failed.`
+        `App data was wiped, but ${wipeResult.failedUserDeletes?.length ?? 0} auth user deletion(s) failed.`
       );
       setIsWipingAppClean(false);
       return;
@@ -867,8 +876,8 @@ function SettingsPageContent() {
     await refreshProfile();
     setSuccess(
       `WIPE APP CLEAN complete. Cleared ${
-        payload.wipeSummary?.truncated_table_count ?? 0
-      } table(s), deleted ${payload.deletedAuthUsers ?? 0} other user account(s), and preserved only your signed-in admin account.`
+        wipeResult.wipeSummary?.truncated_table_count ?? 0
+      } table(s), deleted ${wipeResult.deletedAuthUsers ?? 0} other user account(s), and preserved only your signed-in admin account.`
     );
   };
   const deleteInactiveUsers = async () => {

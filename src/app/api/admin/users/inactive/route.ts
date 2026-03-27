@@ -63,8 +63,9 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
       .eq("is_active", false)
       .order("created_at", { ascending: true });
     if (profilesError) {
+      console.error("Failed to load inactive profiles:", profilesError);
       return NextResponse.json(
-        { error: profilesError.message },
+        { error: "Failed to load inactive users. Please try again." },
         { status: 400 }
       );
     }
@@ -126,7 +127,8 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
           continue;
         }
 
-        return `${table}: ${error.message}`;
+        console.error(`Content reassignment failed for ${table}:`, error);
+        return `Failed to reassign content in ${table}`;
       }
 
       return null;
@@ -183,7 +185,8 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
       }
 
       if (deleteAuthError) {
-        failed.push({ userId, error: deleteAuthError.message });
+        console.error(`Failed to delete auth user ${userId}:`, deleteAuthError);
+        failed.push({ userId, error: "Failed to delete user account" });
         continue;
       }
 
@@ -192,7 +195,8 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
         .delete()
         .eq("id", userId);
       if (deleteProfileError) {
-        failed.push({ userId, error: deleteProfileError.message });
+        console.error(`Failed to delete profile ${userId}:`, deleteProfileError);
+        failed.push({ userId, error: "Failed to delete user profile" });
         continue;
       }
 

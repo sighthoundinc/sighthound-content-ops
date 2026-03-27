@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserRoles } from "@/lib/roles";
-import { authenticateRequest } from "@/lib/server-permissions";
+import { requirePermission } from "@/lib/server-permissions";
 import { withApiContract } from "@/lib/api-contract";
 
 export const DELETE = withApiContract(async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await authenticateRequest(request);
+  const auth = await requirePermission(request, "delete_blog");
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -23,19 +23,20 @@ export const DELETE = withApiContract(async function DELETE(
     .maybeSingle();
 
   if (blogError) {
-    return NextResponse.json({ error: blogError.message }, { status: 500 });
+    console.error("Failed to load blog for deletion:", blogError);
+    return NextResponse.json({ error: "Failed to load blog. Please try again." }, { status: 500 });
   }
 
   // Idempotent: Already deleted
   if (!blog) {
     return NextResponse.json(
-      { success: true, message: "Blog already deleted" },
+      { message: "Blog already deleted" },
       { status: 200 }
     );
   }
 
-  // Check if user is creator or admin
-  // Note: Assignees (writers/publishers) cannot delete blogs
+  // Defense-in-depth: verify creator or admin (delete_blog is admin-locked,
+  // so only admins reach here, but keep this check as a safety net)
   const roles = getUserRoles(auth.context.profile);
   const isAdmin = roles.includes("admin");
   const isCreator = blog.created_by === auth.context.userId;
@@ -63,7 +64,7 @@ export const DELETE = withApiContract(async function DELETE(
 
   if (linkedError) {
     return NextResponse.json(
-      { error: `Failed to check linked content: ${linkedError.message}` },
+      { error: "Failed to check linked content. Please try again." },
       { status: 500 }
     );
   }
@@ -86,18 +87,17 @@ export const DELETE = withApiContract(async function DELETE(
     .eq("id", id);
 
   if (deleteError) {
+    console.error("Failed to delete blog:", deleteError);
     return NextResponse.json(
-      { error: `Failed to delete blog: ${deleteError.message}` },
+      { error: "Failed to delete blog. Please try again." },
       { status: 500 }
     );
   }
 
   return NextResponse.json(
     {
-      success: true,
+      data: { deletedBlogId: id, deletedBlogTitle: blog.title },
       message: "Blog deleted successfully",
-      deletedBlogId: id,
-      deletedBlogTitle: blog.title,
     },
     { status: 200 }
   );

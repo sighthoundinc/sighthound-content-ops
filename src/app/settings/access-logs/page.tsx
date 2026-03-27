@@ -133,10 +133,12 @@ export default function AccessLogsPage() {
 
     const payload = await parseApiResponseJson<{
       error?: string;
-      activities?: UnifiedActivity[];
-      total?: number;
-      activityTypeLabels?: Record<ActivityType, string>;
-      activityTypeCategories?: Record<ActivityType, string>;
+      data?: {
+        activities?: UnifiedActivity[];
+        total?: number;
+        activityTypeLabels?: Record<ActivityType, string>;
+        activityTypeCategories?: Record<ActivityType, string>;
+      };
     }>(response);
 
     if (isApiFailure(response, payload)) {
@@ -147,13 +149,14 @@ export default function AccessLogsPage() {
       return;
     }
 
-    setActivities(payload.activities ?? []);
-    setTotalCount(payload.total ?? 0);
-    if (payload.activityTypeLabels) {
-      setActivityTypeLabels(payload.activityTypeLabels);
+    const result = payload.data ?? {};
+    setActivities(result.activities ?? []);
+    setTotalCount(result.total ?? 0);
+    if (result.activityTypeLabels) {
+      setActivityTypeLabels(result.activityTypeLabels);
     }
-    if (payload.activityTypeCategories) {
-      setActivityTypeCategories(payload.activityTypeCategories);
+    if (result.activityTypeCategories) {
+      setActivityTypeCategories(result.activityTypeCategories);
     }
     setIsLoading(false);
   }, [session?.access_token, currentPage, rowLimit, showError, isAdmin, selectedActivityTypes, selectedUserIds]);

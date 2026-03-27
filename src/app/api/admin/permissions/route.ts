@@ -55,7 +55,8 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     .order("permission_key", { ascending: true });
 
   if (rolePermissionsError) {
-    return NextResponse.json({ error: rolePermissionsError.message }, { status: 400 });
+    console.error("Failed to load role permissions:", rolePermissionsError);
+    return NextResponse.json({ error: "Failed to load permissions. Please try again." }, { status: 400 });
   }
 
   const { data: auditRows, error: auditError } = await adminClient
@@ -65,7 +66,8 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     .limit(100);
 
   if (auditError) {
-    return NextResponse.json({ error: auditError.message }, { status: 400 });
+    console.error("Failed to load audit logs:", auditError);
+    return NextResponse.json({ error: "Failed to load audit logs. Please try again." }, { status: 400 });
   }
 
   const actorIds = Array.from(
@@ -83,7 +85,8 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       .in("id", actorIds);
 
     if (actorsError) {
-      return NextResponse.json({ error: actorsError.message }, { status: 400 });
+      console.error("Failed to load actor profiles:", actorsError);
+      return NextResponse.json({ error: "Failed to load audit actor names. Please try again." }, { status: 400 });
     }
 
     for (const actor of actorsData ?? []) {
@@ -145,7 +148,8 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
     { onConflict: "role,permission_key" }
   );
   if (upsertError) {
-    return NextResponse.json({ error: upsertError.message }, { status: 400 });
+    console.error("Failed to update permission:", upsertError);
+    return NextResponse.json({ error: "Failed to update permission. Please try again." }, { status: 400 });
   }
 
   if (oldValue !== enabled) {
@@ -159,7 +163,8 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
         changed_by: auth.context.userId,
       });
     if (auditInsertError) {
-      return NextResponse.json({ error: auditInsertError.message }, { status: 400 });
+      console.error("Failed to record permission audit log:", auditInsertError);
+      return NextResponse.json({ error: "Failed to record audit log. Please try again." }, { status: 400 });
     }
   }
 
@@ -195,7 +200,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     .from("role_permissions")
     .upsert(defaults, { onConflict: "role,permission_key" });
   if (upsertError) {
-    return NextResponse.json({ error: upsertError.message }, { status: 400 });
+    console.error("Failed to reset role permissions:", upsertError);
+    return NextResponse.json({ error: "Failed to reset permissions. Please try again." }, { status: 400 });
   }
 
   const auditRows: Array<{
@@ -225,7 +231,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       .from("permission_audit_logs")
       .insert(auditRows);
     if (auditError) {
-      return NextResponse.json({ error: auditError.message }, { status: 400 });
+      console.error("Failed to record reset audit logs:", auditError);
+      return NextResponse.json({ error: "Failed to record audit logs. Please try again." }, { status: 400 });
     }
   }
 

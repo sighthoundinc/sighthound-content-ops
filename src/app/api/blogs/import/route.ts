@@ -458,7 +458,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       .select("id,live_url")
       .not("live_url", "is", null);
     if (existingBlogsError) {
-      return NextResponse.json({ error: existingBlogsError.message }, { status: 400 });
+      console.error("Failed to load existing blogs for import:", existingBlogsError);
+      return NextResponse.json({ error: "Failed to load existing blogs. Please try again." }, { status: 400 });
     }
 
     const existingByLiveUrl = new Map<string, { id: string }>();
@@ -515,10 +516,11 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
             .update(updateData)
             .eq("id", existing.id);
           if (updateError) {
-            failures.push({ rowNumber: row.rowNumber, message: updateError.message });
+            console.error(`Import row ${row.rowNumber} update failed:`, updateError);
+            failures.push({ rowNumber: row.rowNumber, message: "Failed to update existing blog" });
             const raw = rawRowsByNumber.get(row.rowNumber);
             if (raw) {
-              failedRows.push({ ...raw, error: updateError.message });
+              failedRows.push({ ...raw, error: "Failed to update existing blog" });
             }
             continue;
           }
@@ -553,7 +555,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
           .select("id,live_url")
           .single();
         if (insertError || !inserted) {
-          const message = insertError?.message ?? "Failed to insert row";
+          console.error(`Import row ${row.rowNumber} insert failed:`, insertError);
+          const message = "Failed to insert blog";
           failures.push({ rowNumber: row.rowNumber, message });
           const raw = rawRowsByNumber.get(row.rowNumber);
           if (raw) {
@@ -564,7 +567,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         existingByLiveUrl.set(row.liveUrl, { id: inserted.id });
         created += 1;
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unexpected import error";
+        console.error(`Import row ${row.rowNumber} unexpected error:`, error);
+        const message = "Unexpected import error";
         failures.push({ rowNumber: row.rowNumber, message });
         const raw = rawRowsByNumber.get(row.rowNumber);
         if (raw) {

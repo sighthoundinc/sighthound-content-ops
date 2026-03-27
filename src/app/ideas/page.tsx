@@ -62,7 +62,8 @@ export default function IdeasPage() {
       .order("created_at", { ascending: false });
 
     if (loadError) {
-      setError(`Couldn't load ideas. ${loadError.message}`);
+      console.error("Ideas load failed:", loadError);
+      setError("Couldn't load ideas. Please try again.");
       setIsLoading(false);
       return;
     }
@@ -105,7 +106,8 @@ export default function IdeasPage() {
         .order("created_at", { ascending: true });
 
       if (loadError) {
-        setError(`Couldn't load idea comments. ${loadError.message}`);
+        console.error("Idea comments load failed:", loadError);
+        setError("Couldn't load idea comments. Please try again.");
         return;
       }
 
@@ -184,7 +186,8 @@ export default function IdeasPage() {
       .single();
 
     if (insertError) {
-      setError(`Couldn't create idea. ${insertError.message}`);
+      console.error("Idea insert failed:", insertError);
+      setError("Couldn't create idea. Please try again.");
       setIsSubmitting(false);
       return false;
     }
@@ -264,7 +267,8 @@ export default function IdeasPage() {
       .single();
 
     if (updateError) {
-      setError(updateError.message);
+      console.error("Idea update failed:", updateError);
+      setError("Couldn't update idea. Please try again.");
       setIsSubmitting(false);
       return false;
     }

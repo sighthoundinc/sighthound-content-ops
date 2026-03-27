@@ -445,12 +445,14 @@ export default function CalendarPage() {
       ]);
 
     if (blogsError) {
-      setError(`Couldn't load calendar. ${blogsError.message}`);
+      console.error("Calendar blogs load failed:", blogsError);
+      setError("Couldn't load calendar. Please try again.");
       setIsLoading(false);
       return;
     }
     if (socialPostsError) {
-      setError(`Couldn't load posts. ${socialPostsError.message}`);
+      console.error("Calendar social posts load failed:", socialPostsError);
+      setError("Couldn't load posts. Please try again.");
       setIsLoading(false);
       return;
     }

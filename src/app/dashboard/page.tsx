@@ -968,7 +968,8 @@ export default function DashboardPage() {
         .order("full_name", { ascending: true });
 
       if (usersError) {
-        setError(usersError.message);
+        console.error("Load users failed:", usersError);
+        setError("Couldn't load team members. Please try again.");
         return;
       }
       setAssignableUsers((data ?? []) as Array<Pick<ProfileRecord, "id" | "full_name" | "email">>);
@@ -2800,7 +2801,8 @@ export default function DashboardPage() {
       }
 
       if (updateError) {
-        setError(updateError.message);
+        console.error("Blog update failed:", updateError);
+        setError("Couldn't save changes. Please try again.");
         setSuccessMessage(null);
         return;
       }

@@ -141,7 +141,8 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
       .single();
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 400 });
+      console.error("Failed to update profile:", updateError);
+      return NextResponse.json({ error: "Failed to update profile. Please try again." }, { status: 400 });
     }
 
     return NextResponse.json({ profile: updatedProfile });

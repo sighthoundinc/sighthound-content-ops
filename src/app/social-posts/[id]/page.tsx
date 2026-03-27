@@ -398,7 +398,8 @@ export default function SocialPostEditorPage() {
           .limit(50),
       ]);
     if (loadError) {
-      setError(`${VALIDATION_MESSAGES.couldNotLoad} ${loadError.message}`);
+      console.error("Social post load failed:", loadError);
+      setError(`${VALIDATION_MESSAGES.couldNotLoad} Please try again.`);
       setIsLoading(false);
       return;
     }

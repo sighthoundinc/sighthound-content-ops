@@ -26,7 +26,7 @@ for insert
 to authenticated
 with check (
   created_by = auth.uid()
-  and public.has_permission('create_blogs')
+  and public.has_permission('create_blog')
 );
 
 drop policy if exists "Blogs updatable by authorized users" on public.blogs;
@@ -80,7 +80,6 @@ for insert
 to authenticated
 with check (
   created_by = auth.uid()
-  and public.has_permission('create_social_posts')
 );
 
 drop policy if exists "Social posts updatable by authorized users" on public.social_posts;
@@ -115,79 +114,96 @@ using (
 -- COMMENTS: RLS POLICIES
 -- ============================================================================
 
+-- blog_comments: definitive policies set by 20260327101000; only drop stale names here
 drop policy if exists "Blog comments readable by authenticated users" on public.blog_comments;
-create policy "Blog comments readable by authenticated users"
-on public.blog_comments
-for select
-to authenticated
-using (true);
-
 drop policy if exists "Blog comments insertable by authenticated users" on public.blog_comments;
-create policy "Blog comments insertable by authenticated users"
-on public.blog_comments
-for insert
-to authenticated
-with check (created_by = auth.uid());
-
 drop policy if exists "Blog comments updatable by author" on public.blog_comments;
-create policy "Blog comments updatable by author"
-on public.blog_comments
-for update
-to authenticated
-using (created_by = auth.uid())
-with check (created_by = auth.uid());
-
 drop policy if exists "Blog comments deletable by author or admin" on public.blog_comments;
-create policy "Blog comments deletable by author or admin"
-on public.blog_comments
-for delete
-to authenticated
-using (created_by = auth.uid() or public.is_admin());
 
+-- social_post_comments: drop old names from 20260313143000 then create definitive policies
 drop policy if exists "Social post comments readable by authenticated users" on public.social_post_comments;
 create policy "Social post comments readable by authenticated users"
 on public.social_post_comments
 for select
 to authenticated
-using (true);
+using (
+  exists (
+    select 1 from public.social_posts sp
+    where sp.id = social_post_comments.social_post_id
+  )
+);
 
 drop policy if exists "Social post comments insertable by authenticated users" on public.social_post_comments;
 create policy "Social post comments insertable by authenticated users"
 on public.social_post_comments
 for insert
 to authenticated
-with check (created_by = auth.uid());
+with check (
+  coalesce(user_id, created_by) = auth.uid()
+  and exists (
+    select 1 from public.social_posts sp
+    where sp.id = social_post_comments.social_post_id
+  )
+);
 
-drop policy if exists "Social post comments updatable by author" on public.social_post_comments;
-create policy "Social post comments updatable by author"
+drop policy if exists "Social post comments updatable by comment author" on public.social_post_comments;
+create policy "Social post comments updatable by comment author"
 on public.social_post_comments
 for update
 to authenticated
-using (created_by = auth.uid())
-with check (created_by = auth.uid());
+using (
+  coalesce(user_id, created_by) = auth.uid()
+  and exists (
+    select 1 from public.social_posts sp
+    where sp.id = social_post_comments.social_post_id
+  )
+)
+with check (
+  coalesce(user_id, created_by) = auth.uid()
+  and exists (
+    select 1 from public.social_posts sp
+    where sp.id = social_post_comments.social_post_id
+  )
+);
 
 drop policy if exists "Social post comments deletable by author or admin" on public.social_post_comments;
 create policy "Social post comments deletable by author or admin"
 on public.social_post_comments
 for delete
 to authenticated
-using (created_by = auth.uid() or public.is_admin());
+using (
+  (
+    coalesce(user_id, created_by) = auth.uid()
+    or public.is_admin()
+  )
+  and exists (
+    select 1 from public.social_posts sp
+    where sp.id = social_post_comments.social_post_id
+  )
+);
 
+-- blog_idea_comments: drop old generic names from 20260317141728 then create definitive policies
+drop policy if exists "Comments readable by authenticated users" on public.blog_idea_comments;
+drop policy if exists "Comments insertable by authenticated users" on public.blog_idea_comments;
+drop policy if exists "Comments updatable by creator only" on public.blog_idea_comments;
+drop policy if exists "Comments deletable by creator or admin" on public.blog_idea_comments;
 drop policy if exists "Blog idea comments readable by authenticated users" on public.blog_idea_comments;
+drop policy if exists "Blog idea comments insertable by authenticated users" on public.blog_idea_comments;
+drop policy if exists "Blog idea comments updatable by creator" on public.blog_idea_comments;
+drop policy if exists "Blog idea comments deletable by creator or admin" on public.blog_idea_comments;
+
 create policy "Blog idea comments readable by authenticated users"
 on public.blog_idea_comments
 for select
 to authenticated
 using (true);
 
-drop policy if exists "Blog idea comments insertable by authenticated users" on public.blog_idea_comments;
 create policy "Blog idea comments insertable by authenticated users"
 on public.blog_idea_comments
 for insert
 to authenticated
 with check (created_by = auth.uid());
 
-drop policy if exists "Blog idea comments updatable by creator" on public.blog_idea_comments;
 create policy "Blog idea comments updatable by creator"
 on public.blog_idea_comments
 for update
@@ -195,7 +211,6 @@ to authenticated
 using (created_by = auth.uid())
 with check (created_by = auth.uid());
 
-drop policy if exists "Blog idea comments deletable by creator or admin" on public.blog_idea_comments;
 create policy "Blog idea comments deletable by creator or admin"
 on public.blog_idea_comments
 for delete

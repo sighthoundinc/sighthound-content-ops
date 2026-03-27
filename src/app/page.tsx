@@ -117,7 +117,8 @@ export default function HomePage() {
         }
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error loading summary");
+        console.error("Dashboard summary load failed:", err);
+        setError("Couldn't load dashboard summary. Please try again.");
         setSummary(null);
         setTasksSnapshot({ requiredByMe: [], waitingOnOthers: [] });
       } finally {

@@ -48,7 +48,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       .eq("id", targetUserId)
       .maybeSingle();
     if (targetProfileError) {
-      return NextResponse.json({ error: targetProfileError.message }, { status: 400 });
+      console.error("Failed to load target profile for quick-view:", targetProfileError);
+      return NextResponse.json({ error: "Failed to load target user. Please try again." }, { status: 400 });
     }
     if (!targetProfile || !targetProfile.is_active) {
       return NextResponse.json(
@@ -75,7 +76,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       });
 
     if (generateLinkError) {
-      return NextResponse.json({ error: generateLinkError.message }, { status: 400 });
+      console.error("Failed to generate quick-view link:", generateLinkError);
+      return NextResponse.json({ error: "Failed to generate quick-view session. Please try again." }, { status: 400 });
     }
 
     const tokenHash = generatedLinkData.properties?.hashed_token;

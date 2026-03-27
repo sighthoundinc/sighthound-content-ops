@@ -126,7 +126,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         .eq("writer_id", fromUserId)
         .select("id");
       if (writerTransferError) {
-        return NextResponse.json({ error: writerTransferError.message }, { status: 400 });
+        console.error("Failed to transfer writer assignments:", writerTransferError);
+        return NextResponse.json({ error: "Failed to transfer writer assignments. Please try again." }, { status: 400 });
       }
       transferredWriterAssignments = writerTransferData?.length ?? 0;
     }
@@ -138,7 +139,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         .eq("publisher_id", fromUserId)
         .select("id");
       if (publisherTransferError) {
-        return NextResponse.json({ error: publisherTransferError.message }, { status: 400 });
+        console.error("Failed to transfer publisher assignments:", publisherTransferError);
+        return NextResponse.json({ error: "Failed to transfer publisher assignments. Please try again." }, { status: 400 });
       }
       transferredPublisherAssignments = publisherTransferData?.length ?? 0;
     }

@@ -565,7 +565,8 @@ export function BlogImportModal({
       setSelectedColumns(nextSelectedColumns);
       setParseErrors(validateRows(parseResult.rows, nextSelectedColumns));
     } catch (parseError) {
-      setError(parseError instanceof Error ? parseError.message : "Failed to parse file");
+      console.error("File parse failed:", parseError);
+      setError("Failed to parse file. Please check the format and try again.");
     } finally {
       setIsParsing(false);
     }
@@ -621,7 +622,8 @@ export function BlogImportModal({
         failed: payload.failed,
       });
     } catch (importError) {
-      setError(importError instanceof Error ? importError.message : "Import failed");
+      console.error("Blog import failed:", importError);
+      setError("Import failed. Please try again.");
     } finally {
       setIsImporting(false);
     }
@@ -676,7 +678,8 @@ export function BlogImportModal({
       setSelectedNameResolutions(autoResolved);
       setShowNameResolutionModal(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to resolve names");
+      console.error("Name resolution failed:", err);
+      setError("Failed to resolve names. Please try again.");
     } finally {
       setIsResolvingNames(false);
     }

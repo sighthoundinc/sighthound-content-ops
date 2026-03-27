@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserRoles } from "@/lib/roles";
-import { authenticateRequest } from "@/lib/server-permissions";
+import { requirePermission } from "@/lib/server-permissions";
 import { withApiContract } from "@/lib/api-contract";
 
 export const DELETE = withApiContract(async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await authenticateRequest(request);
+  const auth = await requirePermission(request, "delete_idea");
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -23,18 +23,19 @@ export const DELETE = withApiContract(async function DELETE(
     .maybeSingle();
 
   if (ideaError) {
-    return NextResponse.json({ error: ideaError.message }, { status: 500 });
+    console.error("Failed to load idea for deletion:", ideaError);
+    return NextResponse.json({ error: "Failed to load idea. Please try again." }, { status: 500 });
   }
 
   // Idempotent: Already deleted
   if (!idea) {
     return NextResponse.json(
-      { success: true, message: "Idea already deleted" },
+      { message: "Idea already deleted" },
       { status: 200 }
     );
   }
 
-  // Check if user is creator or admin
+  // Defense-in-depth: only creator or admin can delete
   const roles = getUserRoles(auth.context.profile);
   const isAdmin = roles.includes("admin");
   const isCreator = idea.created_by === auth.context.userId;
@@ -54,17 +55,15 @@ export const DELETE = withApiContract(async function DELETE(
 
   if (deleteError) {
     return NextResponse.json(
-      { error: `Failed to delete idea: ${deleteError.message}` },
+      { error: "Failed to delete idea. Please try again." },
       { status: 500 }
     );
   }
 
   return NextResponse.json(
     {
-      success: true,
+      data: { deletedIdeaId: id, deletedIdeaTitle: idea.title },
       message: "Idea deleted successfully",
-      deletedIdeaId: id,
-      deletedIdeaTitle: idea.title,
     },
     { status: 200 }
   );

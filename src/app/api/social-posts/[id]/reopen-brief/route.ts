@@ -39,7 +39,8 @@ export const POST = withApiContract(async function POST(
   );
 
   if (reopenError) {
-    return NextResponse.json({ error: reopenError.message }, { status: 400 });
+    console.error("Failed to reopen post for brief edit:", reopenError);
+    return NextResponse.json({ error: "Failed to reopen post for editing. Please try again." }, { status: 400 });
   }
   if (reopenedPost) {
     // Note: Skipping Slack notification on reopen for brief edits

@@ -66,7 +66,8 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     .limit(50);
 
   if (blogActivityError) {
-    return NextResponse.json({ error: blogActivityError.message }, { status: 500 });
+    console.error("Failed to load blog activity:", blogActivityError);
+    return NextResponse.json({ error: "Failed to load activity feed. Please try again." }, { status: 500 });
   }
 
   // Fetch social post activity history
@@ -89,7 +90,8 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     .limit(50);
 
   if (socialActivityError) {
-    return NextResponse.json({ error: socialActivityError.message }, { status: 500 });
+    console.error("Failed to load social post activity:", socialActivityError);
+    return NextResponse.json({ error: "Failed to load activity feed. Please try again." }, { status: 500 });
   }
 
   // Transform blog activity records

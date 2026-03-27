@@ -239,7 +239,8 @@ export default function BlogCardBoardPage() {
     ]);
 
     if (usersError) {
-      setError(usersError.message);
+      console.error("Load users failed:", usersError);
+      setError("Couldn't load team members. Please try again.");
       setIsLoading(false);
       return;
     }
@@ -258,7 +259,8 @@ export default function BlogCardBoardPage() {
     }
 
     if (blogsError) {
-      setError(blogsError.message);
+      console.error("Blogs load failed:", blogsError);
+      setError("Couldn't load blogs. Please try again.");
       setIsLoading(false);
       return;
     }

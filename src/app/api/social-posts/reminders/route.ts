@@ -29,7 +29,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     .eq("status", "awaiting_live_link");
 
   if (postsError) {
-    return NextResponse.json({ error: postsError.message }, { status: 500 });
+    console.error("Failed to load posts for reminders:", postsError);
+    return NextResponse.json({ error: "Failed to load posts. Please try again." }, { status: 500 });
   }
 
   const duePosts = (awaitingPosts ?? []).filter((post) => {
@@ -74,7 +75,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     .in("id", dueIds);
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    console.error("Failed to update reminder timestamps:", updateError);
+    return NextResponse.json({ error: "Failed to update reminder timestamps. Please try again." }, { status: 500 });
   }
 
   return NextResponse.json({

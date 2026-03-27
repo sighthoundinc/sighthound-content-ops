@@ -1,0 +1,9 @@
+-- DEPRECATED: This migration is a no-op.
+--
+-- The fixes it originally applied have been folded directly into the base
+-- migration 20260326100000_enforce_comprehensive_rls_policies.sql:
+--   - 'create_blogs'        corrected to 'create_blog'
+--   - 'create_social_posts' removed (no such permission key exists)
+--
+-- This file is retained to preserve the migration sequence and avoid
+-- checksum errors on already-applied databases. It performs no changes.

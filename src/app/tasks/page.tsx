@@ -381,7 +381,8 @@ function MyTasksPageContent() {
     
     // If task_assignments table doesn't exist yet (schema cache delay), continue without assignments
     if (assignmentError && !assignmentError.message.includes('task_assignments')) {
-      setError(assignmentError.message);
+      console.error("Task assignments load failed:", assignmentError);
+      setError("Couldn't load assignments. Please try again.");
       setIsLoading(false);
       return;
     }
@@ -437,7 +438,8 @@ function MyTasksPageContent() {
     }
 
     if (tasksError) {
-      setError(tasksError.message);
+      console.error("Tasks load failed:", tasksError);
+      setError("Couldn't load tasks. Please try again.");
       setIsLoading(false);
       return;
     }
@@ -490,7 +492,8 @@ function MyTasksPageContent() {
     }
 
     if (socialError) {
-      setError(socialError.message);
+      console.error("Social posts load failed:", socialError);
+      setError("Couldn't load social posts. Please try again.");
       setIsLoading(false);
       return;
     }

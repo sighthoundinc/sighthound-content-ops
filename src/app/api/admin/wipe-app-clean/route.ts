@@ -211,26 +211,29 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
       return NextResponse.json(
         {
           error: "App data was wiped, but some auth users could not be deleted.",
-          deletedAuthUsers,
-          preservedAuthUsers,
-          preservedAdminUserId: auth.context.userId,
-          failedUserDeletes,
-          wipeSummary: normalizedWipeData,
+          data: {
+            deletedAuthUsers,
+            preservedAuthUsers,
+            preservedAdminUserId: auth.context.userId,
+            failedUserDeletes,
+            wipeSummary: normalizedWipeData,
+          },
         },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
-      deletedAuthUsers,
-      preservedAuthUsers,
-      preservedAdminUserId: auth.context.userId,
-      failedUserDeletes,
-      wipeSummary: normalizedWipeData,
+      data: {
+        deletedAuthUsers,
+        preservedAuthUsers,
+        preservedAdminUserId: auth.context.userId,
+        failedUserDeletes,
+        wipeSummary: normalizedWipeData,
+      },
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unexpected server error";
     console.error(error);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
   }
 });

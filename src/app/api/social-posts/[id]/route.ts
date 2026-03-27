@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserRoles } from "@/lib/roles";
-import { authenticateRequest } from "@/lib/server-permissions";
+import { requirePermission } from "@/lib/server-permissions";
 import { withApiContract } from "@/lib/api-contract";
 
 export const DELETE = withApiContract(async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await authenticateRequest(request);
+  const auth = await requirePermission(request, "delete_social_post");
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -23,18 +23,19 @@ export const DELETE = withApiContract(async function DELETE(
     .maybeSingle();
 
   if (postError) {
-    return NextResponse.json({ error: postError.message }, { status: 500 });
+    console.error("Failed to load post for deletion:", postError);
+    return NextResponse.json({ error: "Failed to load post. Please try again." }, { status: 500 });
   }
 
   // Idempotent: Already deleted
   if (!post) {
     return NextResponse.json(
-      { success: true, message: "Post already deleted" },
+      { message: "Post already deleted" },
       { status: 200 }
     );
   }
 
-  // Check if user is owner or admin
+  // Defense-in-depth: only creator or admin can delete
   const roles = getUserRoles(auth.context.profile);
   const isAdmin = roles.includes("admin");
   const isOwner = post.created_by === auth.context.userId;
@@ -62,17 +63,15 @@ export const DELETE = withApiContract(async function DELETE(
 
   if (deleteError) {
     return NextResponse.json(
-      { error: `Failed to delete post: ${deleteError.message}` },
+      { error: "Failed to delete post. Please try again." },
       { status: 500 }
     );
   }
 
   return NextResponse.json(
     {
-      success: true,
+      data: { deletedPostId: id, deletedPostTitle: post.title },
       message: "Post deleted successfully",
-      deletedPostId: id,
-      deletedPostTitle: post.title,
     },
     { status: 200 }
   );

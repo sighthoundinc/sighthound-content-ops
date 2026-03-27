@@ -242,7 +242,8 @@ export default function BlogDetailPage() {
         ]);
 
       if (blogError) {
-        setError(blogError.message);
+        console.error("Blog load failed:", blogError);
+        setError("Couldn't load blog. Please try again.");
         setIsLoading(false);
         return;
       }
@@ -278,7 +279,8 @@ export default function BlogDetailPage() {
             "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
           );
         } else {
-          setError(commentsError.message);
+          console.error("Comments load failed:", commentsError);
+          setError("Couldn't load comments. Please try again.");
         }
       } else {
         setComments(normalizeCommentRows((commentsData ?? []) as Array<Record<string, unknown>>));
@@ -392,7 +394,8 @@ export default function BlogDetailPage() {
     }
 
     if (updateError) {
-      setError(updateError.message);
+      console.error("Blog update failed:", updateError);
+      setError("Couldn't save changes. Please try again.");
       setIsSaving(false);
       return;
     }
@@ -623,7 +626,8 @@ export default function BlogDetailPage() {
           "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
         );
       } else {
-        setError(insertError.message);
+        console.error("Comment insert failed:", insertError);
+        setError("Couldn't add comment. Please try again.");
       }
       setIsCommentSaving(false);
       return;
@@ -653,7 +657,8 @@ export default function BlogDetailPage() {
           "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
         );
       } else {
-        setError(commentsError.message);
+        console.error("Comments refresh failed:", commentsError);
+        setError("Couldn't refresh comments. Please try again.");
       }
     } else {
       setComments(normalizeCommentRows((commentsData ?? []) as Array<Record<string, unknown>>));

@@ -102,7 +102,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
           error: result.error.message,
         });
         return NextResponse.json(
-          { success: true, warning: "Activity history table not yet created" },
+          { message: "Activity history table not yet created" },
           { status: 200 }
         );
       }
@@ -110,7 +110,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       throw result.error;
     }
 
-    return NextResponse.json(result.data, { status: 201 });
+    return NextResponse.json({ data: result.data }, { status: 201 });
   } catch (error) {
     console.error("Error recording activity history", { error });
     return NextResponse.json(

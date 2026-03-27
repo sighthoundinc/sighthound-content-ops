@@ -53,7 +53,8 @@ function LoginPageContent() {
     });
 
     if (signInError) {
-      setError(signInError.message);
+      console.error("Sign-in failed:", signInError);
+      setError("Sign-in failed. Please check your credentials and try again.");
       setIsSubmitting(false);
       return;
     }
@@ -77,7 +78,8 @@ function LoginPageContent() {
       },
     });
     if (oauthError) {
-      setError(oauthError.message);
+      console.error("Google sign-in failed:", oauthError);
+      setError("Google sign-in failed. Please try again.");
     }
   };
 
@@ -96,7 +98,8 @@ function LoginPageContent() {
       },
     });
     if (oauthError) {
-      setError(oauthError.message);
+      console.error("Slack sign-in failed:", oauthError);
+      setError("Slack sign-in failed. Please try again.");
     }
   };
 

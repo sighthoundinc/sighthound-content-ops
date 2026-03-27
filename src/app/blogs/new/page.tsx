@@ -81,7 +81,8 @@ function NewBlogPageContent() {
         .eq("is_active", true)
         .order("full_name", { ascending: true });
       if (usersError) {
-        setError(usersError.message);
+        console.error("Load users failed:", usersError);
+        setError("Couldn't load team members. Please try again.");
         return;
       }
       setUsers((data ?? []) as ProfileRecord[]);
@@ -107,7 +108,8 @@ function NewBlogPageContent() {
         .maybeSingle();
 
       if (ideaError) {
-        setError(ideaError.message);
+        console.error("Idea prefill load failed:", ideaError);
+        setError("Couldn't load idea details. Please try again.");
         return;
       }
       if (!ideaData) {
@@ -215,7 +217,8 @@ function NewBlogPageContent() {
     }
 
     if (insertError) {
-      setError(insertError.message);
+      console.error("Blog insert failed:", insertError);
+      setError("Couldn't create blog. Please try again.");
       setIsSubmitting(false);
       return;
     }
@@ -259,7 +262,8 @@ function NewBlogPageContent() {
             commentInsertError
           );
         } else {
-          setError(commentInsertError.message);
+          console.error("Comment insert failed:", commentInsertError);
+          setError("Blog created, but the initial comment couldn't be saved.");
           setIsSubmitting(false);
           return;
         }

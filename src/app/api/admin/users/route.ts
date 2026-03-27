@@ -73,7 +73,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         );
       }
       return NextResponse.json(
-        { error: `Database error creating new user: ${errorMsg}` },
+        { error: "Failed to create user. Please try again." },
         { status: 400 }
       );
     }
@@ -95,7 +95,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       .upsert(profilePayload, { onConflict: "id" });
 
     if (upsertError) {
-      return NextResponse.json({ error: upsertError.message }, { status: 400 });
+      console.error("Failed to upsert user profile:", upsertError);
+      return NextResponse.json({ error: "Failed to save user profile. Please try again." }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -175,7 +176,8 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
           (normalizedMessage.includes("could not find")
             && normalizedMessage.includes("schema cache"));
         if (!isMissingSchemaResource) {
-          return `${table}: ${error.message}`;
+          console.error(`Content reassignment failed for ${table}:`, error);
+          return `Failed to reassign content in ${table}`;
         }
       }
 
@@ -224,7 +226,8 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
         deleteAuthError = softDeleteResult.error;
       }
       if (deleteAuthError) {
-        failed.push({ userId, error: deleteAuthError.message });
+        console.error(`Failed to delete auth user ${userId}:`, deleteAuthError);
+        failed.push({ userId, error: "Failed to delete user account" });
         continue;
       }
 
@@ -234,7 +237,8 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
         .eq("id", userId);
 
       if (deactivateProfileError) {
-        failed.push({ userId, error: deactivateProfileError.message });
+        console.error(`Failed to deactivate profile ${userId}:`, deactivateProfileError);
+        failed.push({ userId, error: "Failed to deactivate user profile" });
         continue;
       }
 

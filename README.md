@@ -124,6 +124,18 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Social action-state classification is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` worker-owned; `in_review/creative_approved` reviewer-owned) so handoff items appear in the correct bucket
 - Action-state filtering for `Required by: <username>` vs `Waiting on Others`
 
+## Typography system
+- Primary font: **Inter** (modern, minimalist, neutral sans-serif)
+- Monospace font: **JetBrains Mono** (technical values, code snippets)
+- Both fonts loaded via Google Fonts with `display: swap` to prevent layout shift
+- Type scale: 12–24px range for optimal readability and hierarchy
+- Font weights: Normal (400) for body, Medium (500) for labels, Semibold (600) for headings
+- Line heights: snug (1.2) for headings, 1.5 for body, 1 for meta text
+- Letter spacing: tight (-0.015em) for headings, normal for body text
+- Core utility classes in `src/app/globals.css` (`.page-title`, `.section-title`, `.body-text`, etc.)
+- Reusable constants in `src/lib/typography.ts` (`TYPOGRAPHY.PAGE_TITLE`, `TYPOGRAPHY.BODY`, etc.)
+- Detailed typography guide: `docs/TYPOGRAPHY_SYSTEM.md`
+
 ## Icon system standard
 - Emoji-based icons are banned from UI iconography.
 - The app uses `lucide-react` (open-source) for all operational icons.

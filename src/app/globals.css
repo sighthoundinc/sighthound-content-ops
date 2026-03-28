@@ -8,39 +8,39 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter-sans);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
-/* Typography Scale */
-/* Page titles (h1): text-xl, font-medium, leading-tight, text-slate-900 */
+/* Typography Scale - Modern Minimalist */
+/* Page titles (h1): text-2xl, font-semibold, leading-snug, text-slate-900, letter-spacing tighter */
 .page-title {
-  @apply text-xl font-medium leading-tight text-slate-900;
+  @apply text-2xl font-semibold leading-snug text-slate-900 tracking-tight;
 }
 
-/* Section titles (h2): text-lg, font-medium, leading-snug, text-slate-900 */
+/* Section titles (h2): text-lg, font-semibold, leading-snug, text-slate-900 */
 .section-title {
-  @apply text-lg font-medium leading-snug text-slate-900;
+  @apply text-lg font-semibold leading-snug text-slate-900 tracking-tight;
 }
 
-/* Subsection labels (h3): text-sm, font-medium, leading-5, text-slate-900 */
+/* Subsection labels (h3): text-base, font-semibold, leading-6, text-slate-900 */
 .subsection-label {
-  @apply text-sm font-medium leading-5 text-slate-900;
+  @apply text-base font-semibold leading-6 text-slate-900;
 }
 
-/* Table column headers: text-xs, font-semibold, leading-4, tracking-wide, text-slate-600 */
+/* Table column headers: text-xs, font-semibold, leading-4, tracking-normal, text-slate-600 */
 .table-header-text {
-  @apply text-xs font-semibold leading-4 tracking-wide text-slate-600;
+  @apply text-xs font-semibold leading-4 tracking-normal text-slate-600;
 }
 
-/* Body text (default): text-sm, font-normal, leading-5, text-slate-800 */
+/* Body text (default): text-sm, font-normal, leading-6, text-slate-800 */
 .body-text {
-  @apply text-sm font-normal leading-5 tracking-normal text-slate-800;
+  @apply text-sm font-normal leading-6 text-slate-800;
 }
 
-/* Meta text: text-xs, font-normal, leading-4, text-slate-500 */
+/* Meta text: text-xs, font-normal, leading-4, text-slate-600 */
 .meta-text {
-  @apply text-xs font-normal leading-4 text-slate-500;
+  @apply text-xs font-normal leading-4 text-slate-600;
 }
 
 /* Disabled/muted text: text-xs, font-normal, leading-4, text-slate-400 */
@@ -65,7 +65,8 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .interactive-link {

@@ -41,6 +41,28 @@ For every non-trivial UI or workflow change:
 4. Keep icons inside explicit bounding boxes to preserve vertical rhythm and cross-table alignment.
 5. Maintain consistent stroke weight and sizing patterns unless a component has a documented exception.
 
+## Typography System (MUST)
+
+1. **Font Loading**: Inter (primary sans-serif) and JetBrains Mono (technical text) are loaded via Google Fonts with `display: swap` in `src/app/layout.tsx`.
+2. **Core Typography Classes**: Use utility classes from `globals.css` for standard roles:
+   - `.page-title`, `.section-title`, `.subsection-label` for headings
+   - `.table-header-text`, `.body-text`, `.meta-text`, `.disabled-text` for content
+   - `.monospace-technical` for technical values and IDs
+3. **Typography Constants**: Import `TYPOGRAPHY` from `src/lib/typography.ts` for component-level styling:
+   - Use predefined constants (e.g., `TYPOGRAPHY.PAGE_TITLE`, `TYPOGRAPHY.BODY`, `TYPOGRAPHY.META`)
+   - Covers all common UI roles (headings, form labels, buttons, badges, links, notifications)
+4. **Type Scale Rules**:
+   - Headings use `font-semibold` with `tracking-tight` for modern, confident appearance
+   - Body text is `text-sm` with `leading-6` for comfortable readability
+   - Meta text is `text-xs` with `leading-4` for compact secondary information
+   - Never use arbitrary font sizes; stay within the 12–24px range
+5. **Weight Hierarchy**: Normal (400) for body, Medium (500) for labels, Semibold (600) for headings, Bold (700) reserved for rare exceptions
+6. **Line Height Optimization**: Snug (1.2) for headings, 1.5 (leading-6) for body, 1 (leading-4) for meta and table headers
+7. **Letter Spacing**: Headings use `tracking-tight` (-0.015em), body uses natural Inter spacing (0). Global body applies -0.01em for subtle optical refinement.
+8. **Color Consistency**: Use slate-900 for headings, slate-800 for body, slate-600 for meta, slate-400 for disabled text
+9. **No Manual Overrides**: Do not apply arbitrary `text-*`, `font-*`, or `leading-*` classes to text content; use the predefined system instead.
+10. **Design Documentation**: Refer to `docs/TYPOGRAPHY_SYSTEM.md` for detailed specifications, examples, and component patterns.
+
 ## Timezone and Date Display (MUST)
 
 1. All date/time/timestamp UI in the app must display using the logged-in user's `profiles.timezone`.

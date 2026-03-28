@@ -93,6 +93,23 @@ For social execution-stage completion, live links are entered from `/social-post
 - `/dashboard` uses a single active-filter pill surface and avoids duplicated chip bars
 - `/dashboard` bulk panel is selection-driven; permission-restricted mutation controls remain visible but disabled with helper text
 
+### Typography system operations standard
+- Primary font: **Inter** (modern, minimalist sans-serif) via Google Fonts
+- Monospace font: **JetBrains Mono** (technical text) via Google Fonts
+- Both fonts loaded with `display: swap` to prevent layout shift
+- Type scale: 12–24px range, intentionally compact and modern
+- Font loading: `src/app/layout.tsx` imports and applies via CSS variables
+- Core utility classes: `src/app/globals.css` (`.page-title`, `.section-title`, `.body-text`, etc.)
+- Reusable constants: `src/lib/typography.ts` (`TYPOGRAPHY.*` constants)
+- Weight hierarchy: Normal (400) for body, Medium (500) for labels, Semibold (600) for headings
+- Line height optimization: snug (1.2) for headings, 1.5 (leading-6) for body, 1 (leading-4) for meta text
+- Letter spacing: tight (-0.015em) for headings, normal for body
+- Global body letter-spacing: -0.01em for subtle optical tightening
+- Color palette: slate-900 (headings), slate-800 (body), slate-600 (meta), slate-400 (disabled)
+- Documentation: `docs/TYPOGRAPHY_SYSTEM.md` (complete guide + examples + testing checklist)
+- Build validation: `npm run check` (lint + typecheck) catches any font or class issues
+- No manual font overrides: all text should use predefined utility classes or `TYPOGRAPHY.*` constants
+
 ### Icon system operations standard
 - Icon provider: `lucide-react` (open-source SVG icon set)
 - Shared app abstraction: `src/lib/icons.tsx` (`AppIcon`, `AppIconName`)

@@ -304,7 +304,7 @@ export default function IdeasPage() {
     }
 
     setDeletingIdeaId(idea.id);
-    const response = await fetch(`/api/ideas/${idea.id}/delete`, {
+    const response = await fetch(`/api/ideas/${idea.id}`, {
       method: "DELETE",
       headers: {
         authorization: `Bearer ${session.access_token}`,

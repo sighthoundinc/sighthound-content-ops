@@ -3,6 +3,13 @@ import { requirePermission } from "@/lib/server-permissions";
 import { getUserRoles } from "@/lib/roles";
 import { withApiContract } from "@/lib/api-contract";
 import { getSocialTaskActionState } from "@/lib/task-action-state";
+import {
+  ACTIVE_SOCIAL_STATUSES,
+  assertValidStatus,
+  initialPublisherCounts,
+  initialSocialPostCounts,
+  initialWriterCounts,
+} from "@/lib/task-logic";
 import type { SocialPostStatus } from "@/lib/types";
 
 interface DashboardSummary {
@@ -37,22 +44,9 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
 
     const userRoles = getUserRoles(profile);
     const summary: DashboardSummary = {
-      writerCounts: {
-        not_started: 0,
-        in_progress: 0,
-        needs_revision: 0,
-        completed: 0,
-      },
-      publisherCounts: {
-        not_started: 0,
-        in_progress: 0,
-        completed: 0,
-      },
-      socialPostCounts: {
-        awaiting_live_link: 0,
-        in_review: 0,
-        ready_to_publish: 0,
-      },
+      writerCounts: initialWriterCounts(),
+      publisherCounts: initialPublisherCounts(),
+      socialPostCounts: initialSocialPostCounts(),
       userRoles,
     };
 
@@ -70,6 +64,9 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       } else if (blogWriterCounts && Array.isArray(blogWriterCounts)) {
         blogWriterCounts.forEach((row: Record<string, unknown>) => {
           const status = row.writer_status as string | undefined;
+          if (status) {
+            assertValidStatus(status, "writer");
+          }
           if (status && status in summary.writerCounts) {
             (summary.writerCounts[status] as number)++;
           }
@@ -92,6 +89,9 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       } else if (blogPublisherCounts && Array.isArray(blogPublisherCounts)) {
         blogPublisherCounts.forEach((row: Record<string, unknown>) => {
           const status = row.publisher_status as string | undefined;
+          if (status) {
+            assertValidStatus(status, "publisher");
+          }
           if (status && status in summary.publisherCounts) {
             (summary.publisherCounts[status] as number)++;
           }
@@ -99,7 +99,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch social post status counts (assignment-scoped + specific statuses only)
+    // Fetch social post status counts (assignment-scoped, active statuses only)
     if (
       userRoles.includes("admin") ||
       userRoles.includes("publisher") ||
@@ -112,7 +112,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       const scopedSocial = await adminClient
         .from("social_posts")
         .select("status,created_by,assigned_to_user_id,worker_user_id,reviewer_user_id,editor_user_id,admin_owner_id")
-        .in("status", ["awaiting_live_link", "in_review", "ready_to_publish"])
+        .in("status", ACTIVE_SOCIAL_STATUSES)
         .or(
           `assigned_to_user_id.eq.${profile.id},worker_user_id.eq.${profile.id},reviewer_user_id.eq.${profile.id},created_by.eq.${profile.id},editor_user_id.eq.${profile.id},admin_owner_id.eq.${profile.id}`
         );
@@ -124,7 +124,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         const fallbackWithLegacyOwners = await adminClient
           .from("social_posts")
           .select("status,created_by,editor_user_id,admin_owner_id")
-          .in("status", ["awaiting_live_link", "in_review", "ready_to_publish"])
+          .in("status", ACTIVE_SOCIAL_STATUSES)
           .or(`created_by.eq.${profile.id},editor_user_id.eq.${profile.id},admin_owner_id.eq.${profile.id}`);
         socialRows = fallbackWithLegacyOwners.data as Array<Record<string, unknown>> | null;
         socialError = fallbackWithLegacyOwners.error as { message: string } | null;
@@ -138,7 +138,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         const fallbackCreatedByOnly = await adminClient
           .from("social_posts")
           .select("status,created_by")
-          .in("status", ["awaiting_live_link", "in_review", "ready_to_publish"])
+          .in("status", ACTIVE_SOCIAL_STATUSES)
           .eq("created_by", profile.id);
         socialRows = fallbackCreatedByOnly.data as Array<Record<string, unknown>> | null;
         socialError = fallbackCreatedByOnly.error as { message: string } | null;
@@ -152,6 +152,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           if (!status) {
             return;
           }
+          assertValidStatus(status, "social");
           const actionState = getSocialTaskActionState({
             status,
             userId: profile.id,

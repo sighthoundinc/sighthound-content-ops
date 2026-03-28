@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppIcon, type AppIconName } from "@/lib/icons";
 import { setDashboardFilterIntent } from "@/lib/dashboard-filter-state";
+import {
+  ACTIVE_PUBLISHER_STATUSES,
+  ACTIVE_SOCIAL_STATUSES,
+  ACTIVE_WRITER_STATUSES,
+  validateTaskLogicConsistency,
+} from "@/lib/task-logic";
 import { useAuth } from "@/providers/auth-provider";
 import {
   getApiErrorMessage,
@@ -135,6 +141,7 @@ export default function HomePage() {
     if (data.userRoles.includes("writer") || data.userRoles.includes("admin")) {
       const needsRevision = data.writerCounts.needs_revision ?? 0;
       const inProgress = data.writerCounts.in_progress ?? 0;
+      const pendingReview = data.writerCounts.pending_review ?? 0;
       const completed = data.writerCounts.completed ?? 0;
       const notStarted = data.writerCounts.not_started ?? 0;
 
@@ -154,6 +161,17 @@ export default function HomePage() {
           id: "writer-in-progress",
           title: "Writing in Progress",
           count: inProgress,
+          href: "/dashboard",
+          icon: "writing",
+          priority: "normal",
+        });
+      }
+
+      if (pendingReview > 0) {
+        buckets.push({
+          id: "writer-pending-review",
+          title: "Submitted for Editorial Review",
+          count: pendingReview,
           href: "/dashboard",
           icon: "writing",
           priority: "normal",
@@ -185,6 +203,8 @@ export default function HomePage() {
 
     if (data.userRoles.includes("publisher") || data.userRoles.includes("admin")) {
       const inProgress = data.publisherCounts.in_progress ?? 0;
+      const pendingReview = data.publisherCounts.pending_review ?? 0;
+      const publisherApproved = data.publisherCounts.publisher_approved ?? 0;
       const completed = data.publisherCounts.completed ?? 0;
       const notStarted = data.publisherCounts.not_started ?? 0;
 
@@ -195,6 +215,28 @@ export default function HomePage() {
           count: inProgress,
           href: "/dashboard",
           icon: "warning",
+          priority: "high",
+        });
+      }
+
+      if (pendingReview > 0) {
+        buckets.push({
+          id: "publisher-pending-review",
+          title: "Awaiting Publishing Review",
+          count: pendingReview,
+          href: "/dashboard",
+          icon: "warning",
+          priority: "high",
+        });
+      }
+
+      if (publisherApproved > 0) {
+        buckets.push({
+          id: "publisher-approved",
+          title: "Publishing Approved — Ready to Publish",
+          count: publisherApproved,
+          href: "/dashboard",
+          icon: "check",
           priority: "high",
         });
       }
@@ -228,9 +270,34 @@ export default function HomePage() {
       data.userRoles.includes("editor") ||
       data.userRoles.includes("writer")
     ) {
-      const awaitingLink = data.socialPostCounts.awaiting_live_link ?? 0;
+      const draft = data.socialPostCounts.draft ?? 0;
+      const changesRequested = data.socialPostCounts.changes_requested ?? 0;
       const inReview = data.socialPostCounts.in_review ?? 0;
+      const creativeApproved = data.socialPostCounts.creative_approved ?? 0;
       const readyToPublish = data.socialPostCounts.ready_to_publish ?? 0;
+      const awaitingLink = data.socialPostCounts.awaiting_live_link ?? 0;
+
+      if (draft > 0) {
+        buckets.push({
+          id: "social-draft",
+          title: "Social Posts in Draft",
+          count: draft,
+          href: "/social-posts",
+          icon: "writing",
+          priority: "normal",
+        });
+      }
+
+      if (changesRequested > 0) {
+        buckets.push({
+          id: "social-changes-requested",
+          title: "Social Posts Need Changes",
+          count: changesRequested,
+          href: "/social-posts",
+          icon: "warning",
+          priority: "high",
+        });
+      }
 
       if (readyToPublish > 0) {
         buckets.push({
@@ -245,7 +312,7 @@ export default function HomePage() {
 
       if (awaitingLink > 0) {
         buckets.push({
-          id: "social-awaiting-link",
+          id: "social-awaiting-live-link",
           title: "Social Posts Awaiting Live Link",
           count: awaitingLink,
           href: "/social-posts",
@@ -264,13 +331,35 @@ export default function HomePage() {
           priority: "normal",
         });
       }
+
+      if (creativeApproved > 0) {
+        buckets.push({
+          id: "social-creative-approved",
+          title: "Social Posts Creative Approved",
+          count: creativeApproved,
+          href: "/social-posts",
+          icon: "check",
+          priority: "normal",
+        });
+      }
     }
 
-    return buckets.sort((a, b) => {
+    const sorted = buckets.sort((a, b) => {
       if (a.priority === "high" && b.priority !== "high") return -1;
       if (a.priority !== "high" && b.priority === "high") return 1;
       return b.count - a.count;
     });
+
+    validateTaskLogicConsistency(
+      {
+        writerCounts: Object.keys(data.writerCounts),
+        publisherCounts: Object.keys(data.publisherCounts),
+        socialPostCounts: Object.keys(data.socialPostCounts),
+      },
+      sorted.map((b) => b.id)
+    );
+
+    return sorted;
   };
 
   const workBuckets = summary ? buildWorkBuckets(summary) : [];
@@ -282,12 +371,10 @@ export default function HomePage() {
   const handleBucketClick = (bucket: WorkBucket) => {
     // Determine filter type and value based on bucket ID
     if (bucket.id.startsWith("writer-")) {
-      const statusMap: Record<string, string> = {
-        "writer-needs-revision": "needs_revision",
-        "writer-in-progress": "in_progress",
-        "writer-completed": "completed",
-        "writer-not-started": "not_started",
-      };
+      // Derived from ACTIVE_WRITER_STATUSES — stays in sync automatically
+      const statusMap: Record<string, string> = Object.fromEntries(
+        ACTIVE_WRITER_STATUSES.map((s) => [`writer-${s.replace(/_/g, "-")}`, s])
+      );
       const value = statusMap[bucket.id];
       if (value) {
         setDashboardFilterIntent({ type: "writer_status", value });
@@ -295,6 +382,8 @@ export default function HomePage() {
     } else if (bucket.id.startsWith("publisher-")) {
       const statusMap: Record<string, string> = {
         "publisher-in-progress": "in_progress",
+        "publisher-pending-review": "pending_review",
+        "publisher-approved": "publisher_approved",
         "publisher-completed": "completed",
         "publisher-not-started": "not_started",
       };
@@ -303,11 +392,10 @@ export default function HomePage() {
         setDashboardFilterIntent({ type: "publisher_status", value });
       }
     } else if (bucket.id.startsWith("social-")) {
-      const statusMap: Record<string, string> = {
-        "social-ready-to-publish": "ready_to_publish",
-        "social-awaiting-link": "awaiting_live_link",
-        "social-in-review": "in_review",
-      };
+      // Derived from ACTIVE_SOCIAL_STATUSES — stays in sync automatically
+      const statusMap: Record<string, string> = Object.fromEntries(
+        ACTIVE_SOCIAL_STATUSES.map((s) => [`social-${s.replace(/_/g, "-")}`, s])
+      );
       const value = statusMap[bucket.id];
       if (value) {
         setDashboardFilterIntent({ type: "social_status", value });

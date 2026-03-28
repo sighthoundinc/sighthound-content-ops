@@ -50,6 +50,7 @@ import {
   getNextActor,
 } from "@/lib/status";
 import { getSocialTaskActionState, type TaskActionState } from "@/lib/task-action-state";
+import { ACTIVE_SOCIAL_STATUSES } from "@/lib/task-logic";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getUserRoles } from "@/lib/roles";
 import {
@@ -451,7 +452,7 @@ function MyTasksPageContent() {
       .select(
         "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,editor_user_id,admin_owner_id"
       )
-      .neq("status", "published");
+      .in("status", ACTIVE_SOCIAL_STATUSES);
     socialQuery = socialQuery.or(
       `assigned_to_user_id.eq.${user.id},worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id},editor_user_id.eq.${user.id},admin_owner_id.eq.${user.id}`
     );
@@ -464,7 +465,7 @@ function MyTasksPageContent() {
       const fallbackWithLegacyOwners = await supabase
         .from("social_posts")
         .select("id,title,status,scheduled_date,created_at,created_by,editor_user_id,admin_owner_id")
-        .neq("status", "published")
+        .in("status", ACTIVE_SOCIAL_STATUSES)
         .or(`created_by.eq.${user.id},editor_user_id.eq.${user.id},admin_owner_id.eq.${user.id}`)
         .order("scheduled_date", { ascending: true, nullsFirst: false });
 
@@ -480,7 +481,7 @@ function MyTasksPageContent() {
       const fallback = await supabase
         .from("social_posts")
         .select("id,title,status,scheduled_date,created_at,created_by")
-        .neq("status", "published")
+        .in("status", ACTIVE_SOCIAL_STATUSES)
         .eq("created_by", user.id)
         .order("scheduled_date", { ascending: true, nullsFirst: false });
       socialRows = fallback.data?.map((row) => ({

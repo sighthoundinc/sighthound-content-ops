@@ -13,6 +13,7 @@ import {
   WRITER_STATUS_LABELS,
 } from "@/lib/status";
 import { getSocialTaskActionState, type TaskActionState } from "@/lib/task-action-state";
+import { ACTIVE_SOCIAL_STATUSES, assertValidStatus } from "@/lib/task-logic";
 import { requirePermission } from "@/lib/server-permissions";
 import type {
   BlogRecord,
@@ -204,7 +205,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       .select(
         "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,editor_user_id,admin_owner_id"
       )
-      .neq("status", "published")
+      .in("status", ACTIVE_SOCIAL_STATUSES)
       .or(
         `assigned_to_user_id.eq.${userId},worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId},editor_user_id.eq.${userId},admin_owner_id.eq.${userId}`
       )
@@ -216,7 +217,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       const fallbackWithLegacyOwners = await adminClient
         .from("social_posts")
         .select("id,title,status,scheduled_date,created_at,created_by,editor_user_id,admin_owner_id")
-        .neq("status", "published")
+        .in("status", ACTIVE_SOCIAL_STATUSES)
         .or(`created_by.eq.${userId},editor_user_id.eq.${userId},admin_owner_id.eq.${userId}`)
         .order("scheduled_date", { ascending: true, nullsFirst: false });
       socialRows = fallbackWithLegacyOwners.data as Array<Record<string, unknown>> | null;
@@ -231,7 +232,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       const fallbackCreatedByOnly = await adminClient
         .from("social_posts")
         .select("id,title,status,scheduled_date,created_at,created_by")
-        .neq("status", "published")
+        .in("status", ACTIVE_SOCIAL_STATUSES)
         .eq("created_by", userId)
         .order("scheduled_date", { ascending: true, nullsFirst: false });
       socialRows = fallbackCreatedByOnly.data as Array<Record<string, unknown>> | null;
@@ -248,6 +249,9 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       const scheduledDate = getBlogPublishDate(blog);
       const assignment = assignmentMap.get(blog.id);
       const isAdminAssignment = assignment !== undefined;
+
+      assertValidStatus(blog.writer_status, "writer");
+      assertValidStatus(blog.publisher_status, "publisher");
 
       if (blog.writer_id === userId) {
         const actionState = getWriterTaskActionState(blog.writer_status);
@@ -316,6 +320,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         if (!(status in SOCIAL_POST_STATUS_LABELS)) {
           return [];
         }
+        assertValidStatus(status, "social");
         const createdBy = typeof row.created_by === "string" ? row.created_by : null;
         const workerUserId =
           typeof row.worker_user_id === "string" ? row.worker_user_id : null;

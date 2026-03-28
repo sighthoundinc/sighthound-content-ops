@@ -3542,11 +3542,10 @@ export default function DashboardPage() {
           ) : null}
 
           {isLoading ? (
-            <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-5">
-              <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
-              <div className="h-10 w-full animate-pulse rounded bg-slate-200" />
-              <div className="h-10 w-full animate-pulse rounded bg-slate-200" />
-              <div className="h-10 w-3/4 animate-pulse rounded bg-slate-200" />
+            <div className="space-y-3 rounded-lg border border-slate-200 p-4 sm:p-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
+              ))}
             </div>
           ) : (
             <div className="space-y-4">

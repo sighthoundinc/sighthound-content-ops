@@ -379,9 +379,11 @@ export default function IdeasPage() {
             </h3>
 
             {isLoading ? (
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
-                Loading ideas…
-              </p>
+              <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={`skeleton-idea-${i}`} className="skeleton h-20 w-full" />
+                ))}
+              </div>
             ) : activeIdeas.length === 0 ? (
               <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
                 No ideas yet. Add one in under 5 seconds.

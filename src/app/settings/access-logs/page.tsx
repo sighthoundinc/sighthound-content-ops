@@ -456,8 +456,10 @@ export default function AccessLogsPage() {
           )}
 
           {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-gray-500">Loading activity...</div>
+            <div className="space-y-3 rounded-lg border border-slate-200 p-4 sm:p-5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
+              ))}
             </div>
           )}
         </div>

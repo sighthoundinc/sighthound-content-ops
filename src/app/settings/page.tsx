@@ -40,7 +40,7 @@ import {
   type SortDirection,
   type TableRowLimit,
 } from "@/lib/table";
-import type { AppRole, AppSettingsRecord, ProfileRecord } from "@/lib/types";
+import type { AppRole, ProfileRecord } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
@@ -99,9 +99,11 @@ export default function SettingsPage() {
       fallback={
         <ProtectedPage>
           <AppShell>
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-              Loading settings…
-            </p>
+            <div className="space-y-4">
+              <div className="skeleton h-32 w-full rounded-lg" />
+              <div className="skeleton h-32 w-full rounded-lg" />
+              <div className="skeleton h-24 w-full rounded-lg" />
+            </div>
           </AppShell>
         </ProtectedPage>
       }
@@ -130,7 +132,6 @@ function SettingsPageContent() {
   const canEditUsersInDirectory = canManageUsers || canManageRoles;
   const canReassignAssignments =
     canReassignWriterAssignments || canReassignPublisherAssignments;
-  const [settings, setSettings] = useState<AppSettingsRecord | null>(null);
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [editableUsers, setEditableUsers] = useState<Record<string, EditableUserState>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -400,20 +401,10 @@ function SettingsPageContent() {
 
   useEffect(() => {
     const loadData = async () => {
-      const supabase = getSupabaseBrowserClient();
       setIsLoading(true);
       setError(null);
 
       try {
-        const { data: settingsData, error: settingsError } = await supabase
-          .from("app_settings")
-          .select("*")
-          .eq("id", 1)
-          .maybeSingle();
-        if (settingsError) {
-          throw new Error(settingsError.message);
-        }
-        setSettings((settingsData as AppSettingsRecord) ?? null);
         await loadUsers();
       } catch (loadError) {
         console.error("Settings load failed:", loadError);
@@ -1077,10 +1068,12 @@ function SettingsPageContent() {
           </header>
 
 
-          {isLoading || !settings ? (
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-              Loading settings…
-            </p>
+          {isLoading ? (
+            <div className="space-y-4">
+              <div className="skeleton h-32 w-full rounded-lg" />
+              <div className="skeleton h-32 w-full rounded-lg" />
+              <div className="skeleton h-24 w-full rounded-lg" />
+            </div>
           ) : (
             <>
               {profile ? (

@@ -1829,9 +1829,11 @@ function SocialPostsPageContent() {
 
 
           {isLoading ? (
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-              Loading social posts…
-            </p>
+            <div className="space-y-3 rounded-lg border border-slate-200 p-4 sm:p-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
+              ))}
+            </div>
           ) : view === "board" ? (
             <DndContext sensors={sensors} onDragEnd={(event) => void handleDragEnd(event)}>
               <section className="grid gap-3 xl:grid-cols-3">

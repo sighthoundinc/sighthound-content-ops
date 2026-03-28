@@ -314,7 +314,16 @@ export default function PermissionsSettingsPage() {
             </div>
 
             {isLoading ? (
-              <p className="mt-4 text-sm text-slate-500">Loading permissions…</p>
+              <div className="mt-4 space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={`skeleton-group-${i}`} className="space-y-2 rounded-md border border-slate-200 p-4">
+                    <div className="skeleton h-4 w-32" />
+                    {Array.from({ length: 4 }).map((_, j) => (
+                      <div key={`skeleton-row-${i}-${j}`} className="skeleton h-10 w-full" />
+                    ))}
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="mt-4 space-y-4">
                 {Object.entries(groupedDefinitions).map(([group, definitions]) => (

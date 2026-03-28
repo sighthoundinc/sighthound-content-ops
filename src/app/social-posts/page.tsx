@@ -587,7 +587,8 @@ function SocialPostsPageContent() {
         .select("id,full_name,email")
         .order("full_name", { ascending: true });
       if (usersError) {
-        showError(`Couldn't load users. ${usersError.message}`);
+        console.error("Failed to load users:", usersError);
+        showError("Couldn't load users. Please try again.");
         return;
       }
       setAvailableUsers(
@@ -809,14 +810,16 @@ function SocialPostsPageContent() {
       ]);
 
     if (commentsError) {
-      setPanelError(commentsError.message);
+      console.error("Failed to load comments:", commentsError);
+      setPanelError("Couldn't load comments. Please try again.");
       setPanelComments([]);
       setPanelActivity([]);
       setIsPanelLoading(false);
       return;
     }
     if (activityError) {
-      setPanelError(activityError.message);
+      console.error("Failed to load activity:", activityError);
+      setPanelError("Couldn't load activity history. Please try again.");
       setPanelComments([]);
       setPanelActivity([]);
       setIsPanelLoading(false);
@@ -900,7 +903,8 @@ function SocialPostsPageContent() {
           p_limit: 8,
         });
         if (searchError) {
-          setPanelError(searchError.message);
+          console.error("Failed to search blogs:", searchError);
+          setPanelError("Couldn't search blogs. Please try again.");
           setBlogSearchResults([]);
           setIsBlogSearchLoading(false);
           return;
@@ -1247,7 +1251,8 @@ function SocialPostsPageContent() {
         .single();
 
       if (updateError) {
-        setPanelError(`Couldn't save post. ${updateError.message}`);
+        console.error("Failed to save post:", updateError);
+        setPanelError("Couldn't save post. Please try again.");
         setIsPanelSaving(false);
         return;
       }
@@ -1363,7 +1368,8 @@ function SocialPostsPageContent() {
             .delete()
             .eq("id", existing.id);
           if (deleteError) {
-            throw new Error(deleteError.message);
+            console.error("Failed to delete link:", deleteError);
+            throw new Error("Failed to delete link");
           }
           continue;
         }
@@ -1384,7 +1390,8 @@ function SocialPostsPageContent() {
             { onConflict: "social_post_id,platform" }
           );
         if (upsertError) {
-          throw new Error(upsertError.message);
+          console.error("Failed to save link:", upsertError);
+          throw new Error("Failed to save link");
         }
       }
 
@@ -1394,7 +1401,8 @@ function SocialPostsPageContent() {
         .eq("social_post_id", activePost.id)
         .order("created_at", { ascending: true });
       if (linksError) {
-        throw new Error(linksError.message);
+        console.error("Failed to fetch links:", linksError);
+        throw new Error("Failed to fetch links");
       }
 
       const normalizedLinks = normalizeSocialPostLinkRows(
@@ -1407,9 +1415,8 @@ function SocialPostsPageContent() {
       await loadPanelDetails(activePost.id);
       showSuccess("Links saved.");
     } catch (saveError) {
-      setPanelError(
-        saveError instanceof Error ? `Couldn't save links. ${saveError.message}` : "Couldn't save links. Try again."
-      );
+      console.error("Error saving links:", saveError);
+      setPanelError("Couldn't save links. Please try again.");
     } finally {
       setIsLinksSaving(false);
     }
@@ -1438,7 +1445,8 @@ function SocialPostsPageContent() {
     });
 
     if (insertError) {
-      setPanelError(`Couldn't add comment. ${insertError.message}`);
+      console.error("Failed to add comment:", insertError);
+      setPanelError("Couldn't add comment. Please try again.");
       setIsCommentSaving(false);
       return;
     }

@@ -72,7 +72,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         userId
       );
       if (deleteError) {
-        failedDeletes.push({ userId, error: deleteError.message });
+        failedDeletes.push({ userId, error: "Failed to delete auth user" });
+        console.error(`Failed to delete orphaned user ${userId}:`, deleteError);
         continue;
       }
       deletedCount += 1;
@@ -95,8 +96,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       failedDeletes: [],
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unexpected server error";
     console.error(error);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json({ error: "Failed to clean up orphaned auth users. Please try again." }, { status: 500 });
   }
 });

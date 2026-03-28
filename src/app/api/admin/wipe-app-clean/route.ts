@@ -200,7 +200,8 @@ export const DELETE = withApiContract(async function DELETE(request: NextRequest
       }
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
       if (deleteError) {
-        failedUserDeletes.push({ userId, error: deleteError.message });
+        failedUserDeletes.push({ userId, error: "Failed to delete user" });
+        console.error(`Failed to delete auth user ${userId} during wipe:`, deleteError);
         continue;
       }
       deletedAuthUsers += 1;

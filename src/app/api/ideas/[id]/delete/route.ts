@@ -8,6 +8,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+// Type augmentation for globalThis counter
+declare global {
+  var __deprecatedIdeasDeleteHits: number | undefined;
+}
+
 /**
  * @deprecated - Temporary proxy to new endpoint.
  * Call DELETE /api/ideas/[id] instead.
@@ -32,12 +37,12 @@ export const DELETE = async (
 
   // Increment usage counter for monitoring
   if (typeof globalThis !== "undefined") {
-    (globalThis as any).__deprecatedIdeasDeleteHits =
-      ((globalThis as any).__deprecatedIdeasDeleteHits || 0) + 1;
+    globalThis.__deprecatedIdeasDeleteHits =
+      (globalThis.__deprecatedIdeasDeleteHits || 0) + 1;
   }
 
   // Log deprecation usage for monitoring
-  const hitCount = (globalThis as any).__deprecatedIdeasDeleteHits || 1;
+  const hitCount = globalThis.__deprecatedIdeasDeleteHits || 1;
   console.warn(
     `[DEPRECATED API] DELETE /api/ideas/${id}/delete called (hit count: ${hitCount}). Please migrate to DELETE /api/ideas/${id}`
   );

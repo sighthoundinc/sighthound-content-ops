@@ -50,20 +50,17 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
   let remindersSent = 0;
   for (const post of duePosts) {
-    const { error: slackError } = await auth.context.adminClient.functions.invoke(
-      "slack-notify",
-      {
-        body: {
-          eventType: "social_live_link_reminder",
-          socialPostId: post.id,
-          title: post.title,
-          site: "social",
-          actorName: "System",
-          appUrl: process.env.NEXT_PUBLIC_APP_URL,
-        },
-      }
-    );
-    if (!slackError) {
+    const { emitEvent } = await import("@/lib/emit-event");
+    const { success: emitSuccess } = await emitEvent({
+      type: "social_post_live_link_reminder",
+      contentType: "social_post",
+      contentId: post.id,
+      actor: "system",
+      actorName: "System",
+      contentTitle: post.title,
+      timestamp: Date.now(),
+    });
+    if (emitSuccess) {
       remindersSent += 1;
     }
   }

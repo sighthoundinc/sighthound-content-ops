@@ -19,10 +19,15 @@ export type UnifiedEventType =
   | "blog_publisher_assigned"
   | "blog_awaiting_writer_action"
   | "blog_awaiting_publisher_action"
+  | "blog_publish_overdue"
   | "social_post_status_changed"
   | "social_post_assigned"
+  | "social_post_reassigned"
   | "social_post_awaiting_action"
-  | "social_post_editor_assigned";
+  | "social_post_editor_assigned"
+  | "social_review_overdue"
+  | "social_publish_overdue"
+  | "social_post_live_link_reminder";
 
 /**
  * Maps unified event types to notification types.
@@ -38,10 +43,15 @@ export const UNIFIED_EVENT_TO_NOTIFICATION_TYPE: Record<
   blog_publisher_assigned: "task_assigned",
   blog_awaiting_writer_action: "awaiting_action",
   blog_awaiting_publisher_action: "awaiting_action",
+  blog_publish_overdue: "awaiting_action",
   social_post_status_changed: "stage_changed",
   social_post_assigned: "task_assigned",
+  social_post_reassigned: "assignment_changed",
   social_post_awaiting_action: "awaiting_action",
   social_post_editor_assigned: "task_assigned",
+  social_review_overdue: "awaiting_action",
+  social_publish_overdue: "awaiting_action",
+  social_post_live_link_reminder: "awaiting_action",
 };
 
 /**

@@ -218,9 +218,15 @@ function buildNotificationTitle(event: UnifiedEvent): string {
     blog_publisher_assigned: `${contentLabel} Assignment`,
     blog_awaiting_writer_action: "Action Needed",
     blog_awaiting_publisher_action: "Action Needed",
+    blog_publish_overdue: "Publish Overdue",
     social_post_status_changed: `${contentLabel} Update`,
     social_post_assigned: `${contentLabel} Assignment`,
+    social_post_reassigned: `${contentLabel} Reassigned`,
     social_post_awaiting_action: "Action Needed",
+    social_post_editor_assigned: `${contentLabel} Assigned to Editor`,
+    social_review_overdue: "Review Overdue",
+    social_publish_overdue: "Publish Overdue",
+    social_post_live_link_reminder: "Live Link Needed",
   };
   return titleMap[event.type] || `${contentLabel} Event`;
 }
@@ -238,9 +244,15 @@ function buildNotificationMessage(event: UnifiedEvent): string {
     blog_publisher_assigned: `${title} assigned to ${event.actorName || "..."}`,
     blog_awaiting_writer_action: `${title} needs writer attention`,
     blog_awaiting_publisher_action: `${title} needs publisher attention`,
+    blog_publish_overdue: `${title} is overdue for publishing`,
     social_post_status_changed: `${title} stage changed to ${event.newValue || "..."}`,
     social_post_assigned: `${title} assigned to ${event.actorName || "..."}`,
+    social_post_reassigned: `${title} reassigned to ${event.newValue || "..."}`,
     social_post_awaiting_action: `${title} needs your attention`,
+    social_post_editor_assigned: `${title} assigned to editor`,
+    social_review_overdue: `${title} review is overdue`,
+    social_publish_overdue: `${title} is overdue for publishing`,
+    social_post_live_link_reminder: `${title} is waiting for a live link`,
   };
 
   return messageMap[event.type] || `Event on ${title}`;

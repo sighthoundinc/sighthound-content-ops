@@ -5,7 +5,6 @@ import Link from "next/link";
 import { AppIcon, type AppIconName } from "@/lib/icons";
 import { setDashboardFilterIntent } from "@/lib/dashboard-filter-state";
 import {
-  ACTIVE_PUBLISHER_STATUSES,
   ACTIVE_SOCIAL_STATUSES,
   ACTIVE_WRITER_STATUSES,
   validateTaskLogicConsistency,

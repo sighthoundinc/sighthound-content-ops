@@ -2,46 +2,20 @@
 Content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
 
 ## Product snapshot
-- Blog lifecycle operations from planning through publishing
-- Role + permission based authorization (DB-authoritative, UI-aware)
-- Queue-first dashboard for writing/publishing pipelines
-- Tasks and Calendar execution/scheduling workflows
-- Ideas + Social Posts modules
-- Workspace home (`/`) with premium quick-action navigation
-- Workspace home (`/`) My Tasks Snapshot (mixed blog + social, grouped as Required by: <username> / Waiting on Others)
-- Dedicated premium login (`/login`) with OAuth support (Google + Slack OIDC) and email/password fallback
-  - Google login requires @sighthound.com email
-  - Slack login requires Sighthound Slack workspace
-  - First-time OAuth users auto-provisioned with `writer` role
-- Settings + Permissions admin control plane
-- Slack workflow notifications via Supabase Edge Function
+- Blog and social-post workflow operations
+- DB-authoritative permissions and workflow enforcement
+- Queue-first dashboard, tasks, and calendar execution views
+- Ideas intake and conversion into blogs or social posts
+- Workspace home with mixed task snapshot (`Required by: <username>` / `Waiting on Others`)
+- OAuth login and connected-service management for Google and Slack
+- Unified notifications across activity history, in-app notifications, and Slack
 
 ## Documentation map
 - Product behavior: `SPECIFICATION.md`
 - End-user manual: `HOW_TO_USE_APP.md`
 - Operations runbook: `OPERATIONS.md`
 
-## UX implementation status
-### Phase 4A: UI Foundation ✅ COMPLETE
-- AppShell layout and navigation
-- DataPageHeader, DataPageToolbar, DataPageFilterPills components
-- FilterBar system
-- StatusBadgeSystem (WriterStatusBadge, PublisherStatusBadge, StageBadges)
-
-### Phase 4B: Command Palette & Global Quick Create ✅ COMPLETE
-- Global command palette (⌘K shortcut)
-- Quick create modal for workflows
-- Navigation and context integration
-
-### Phase 4C: DataTable Migrations ✅ COMPLETE
-- Dashboard: DataTable + FilterBar system
-- Social Posts: DataTable with sorting, filtering, pagination, inline editing
-- Tasks: DataTable with inline status updates, row highlighting
-- Blogs: DataTable with row selection, copy utilities, export controls
-- All pages unified on DataTable component + consistent column definitions
-- Zero dead code, production-ready quality
-
-## Current UX highlights
+## Core product areas
 ### Dashboard
 - Sidebar navigation split:
   - workflow pages first (`Dashboard`, `My Tasks`, `Calendar`, `Blogs`, `Ideas`, `Social Posts`)
@@ -123,27 +97,6 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Assignment-based visibility for non-published work tied to current user
 - Social action-state classification is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` worker-owned; `in_review/creative_approved` reviewer-owned) so handoff items appear in the correct bucket
 - Action-state filtering for `Required by: <username>` vs `Waiting on Others`
-
-## Typography system
-- Primary font: **Inter** (modern, minimalist, neutral sans-serif)
-- Monospace font: **JetBrains Mono** (technical values, code snippets)
-- Both fonts loaded via Google Fonts with `display: swap` to prevent layout shift
-- Type scale: 12–24px range for optimal readability and hierarchy
-- Font weights: Normal (400) for body, Medium (500) for labels, Semibold (600) for headings
-- Line heights: snug (1.2) for headings, 1.5 for body, 1 for meta text
-- Letter spacing: tight (-0.015em) for headings, normal for body text
-- Core utility classes in `src/app/globals.css` (`.page-title`, `.section-title`, `.body-text`, etc.)
-- Reusable constants in `src/lib/typography.ts` (`TYPOGRAPHY.PAGE_TITLE`, `TYPOGRAPHY.BODY`, etc.)
-- Detailed typography guide: `docs/TYPOGRAPHY_SYSTEM.md`
-
-## Icon system standard
-- Emoji-based icons are banned from UI iconography.
-- The app uses `lucide-react` (open-source) for all operational icons.
-- Icon rendering is centralized through `src/lib/icons.tsx` (`AppIcon` + `AppIconName`) to keep:
-  - consistent line width and visual roundness
-  - fixed bounding-box usage for alignment
-  - scalable SVG behavior across densities and font weights
-- New icon usage should be added to the shared icon map first, then consumed via `AppIcon`.
 
 ### Calendar
 - Month/week views
@@ -256,6 +209,9 @@ npm run dev
 - `/api/ideas/[id]/delete` — creator/admin idea deletion
 - `/api/users/profile` — current user profile operations
 - `/api/users/notification-preferences` — normalized preference keys (`task_assigned` etc.) with legacy `notify_on_*` column compatibility
+- `/api/events/record-activity` — unified activity history recording
+- `/api/social-posts/overdue-checks` — social review/publish overdue sweep
+- `/api/blogs/overdue-checks` — blog publish overdue sweep
 
 ## Contract-driven engineering baseline
 - API routes are normalized via `src/lib/api-contract.ts` to prevent drift:
@@ -311,21 +267,34 @@ Current set:
 Auth provisioning hardening note:
 - `20260326103000_harden_auth_user_integrations_trigger.sql` fixes auth user creation failures caused by unqualified trigger writes (`INSERT INTO user_integrations`) by enforcing `public.user_integrations`, `SECURITY DEFINER`, and exception-safe trigger behavior.
 
-## Slack edge function
-Path:
-- `supabase/functions/slack-notify/index.ts`
+## Unified notification system
+Notifications no longer rely on ad-hoc Slack-only calls. The app uses a centralized event pipeline so activity history, in-app notifications, and Slack delivery stay in sync.
 
-Secrets:
-- `SLACK_BOT_TOKEN` (preferred)
-- `SLACK_MARKETING_CHANNEL` (optional)
-- `SLACK_WEBHOOK_URL` (fallback)
+Core flow:
+1. A workflow action emits a unified event.
+2. The event is recorded through `/api/events/record-activity`.
+3. In-app notifications are generated using the mapped notification type and user preferences.
+4. Slack delivery is attempted through `supabase/functions/slack-notify/index.ts`.
 
-Event coverage includes blog workflow events and social workflow events (`social_submitted_for_review`, `social_changes_requested`, `social_creative_approved`, `social_ready_to_publish`, `social_awaiting_live_link`, `social_published`, `social_live_link_reminder`).
+Unified event coverage includes:
+- blog assignments and status changes
+- social assignments and reassignments
+- overdue review/publish reminders
+- awaiting-live-link reminders
 
-Delivery behavior:
-- default channel: `#content-ops-alerts` (or override with `SLACK_MARKETING_CHANNEL`)
-- resilient delivery: channel post failure no longer aborts DM/webhook attempts
-- returns success when at least one configured delivery path succeeds
+Key implementation files:
+- `src/lib/unified-events.ts`
+- `src/lib/emit-event.ts`
+- `src/lib/notifications.ts`
+- `src/app/api/social-posts/overdue-checks/route.ts`
+- `src/app/api/blogs/overdue-checks/route.ts`
+- `src/app/api/social-posts/reminders/route.ts`
+
+Slack delivery:
+- default channel: `#content-ops-alerts`
+- override channel: `SLACK_MARKETING_CHANNEL`
+- secrets: `SLACK_BOT_TOKEN` and optional `SLACK_WEBHOOK_URL`
+- channel failure should not block fallback delivery attempts
 
 ## Quality checks
 ```bash

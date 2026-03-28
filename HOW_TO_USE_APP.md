@@ -165,9 +165,14 @@ Name resolution behavior:
 - **Global toggle**: Master switch to enable or disable all notifications.
 - **Per-type toggles**: Enable/disable specific notification types (task assignments, stage changes, submissions, etc.).
 - **In-app**: Always available when enabled.
-- **Slack**: Only sends if Slack is connected AND notification type is enabled.
+- **Slack**: Only sends if Slack is connected and that notification type is enabled.
 - **Slack delivery method**: Choose between direct messages (coming soon, pending approval) or #content-ops-alerts channel.
 - **Slack delivery fallback**: If channel delivery fails, the system still attempts DM/webhook paths when configured.
+
+### Unified notification behavior
+- Workflow actions use a shared event system so the same action can update activity history, in-app notifications, and Slack together.
+- Overdue review, overdue publish, and live-link reminder events use the same pipeline as assignments and stage changes.
+- If a notification preference is disabled, the related in-app and Slack delivery should be skipped consistently.
 
 ### Slack notification format
 Slack notifications follow a clear, actionable format:

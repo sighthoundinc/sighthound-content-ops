@@ -8,7 +8,7 @@ For end-user manual instructions, see `HOW_TO_USE_APP.md`.
 ## 1) System overview
 - Frontend: Next.js + TypeScript + Tailwind (Phase 4A-4C UI complete)
 - Backend: Supabase (Postgres, Auth, RLS, triggers/functions)
-- Integration: Slack via `supabase/functions/slack-notify`
+- Integration: unified event pipeline with Slack delivery via `supabase/functions/slack-notify`
 - Authorization: permission matrix + role templates + DB checks
 - Entry routing:
   - signed-out traffic to protected routes is redirected to `/login` by middleware
@@ -20,6 +20,21 @@ Content mutations (blogs, stages, comments, derived status) are DB-authoritative
 For social execution-stage completion, live links are entered from `/social-posts/[id]` Step 4 (`Review & Publish` → `Live Links`) and persisted in `social_post_links`.
 - Social status transition API writes record-level activity using canonical fields (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `metadata`) to avoid schema drift between activity writers and readers.
 - Record-level assignment/comments/activity visibility in drawers and full pages is available to all authenticated users; admin-only restrictions apply only to global Settings activity pages.
+
+### Unified notification operations
+- Notification emission is centralized through `src/lib/emit-event.ts`.
+- Event definitions and notification-type mappings live in `src/lib/unified-events.ts`.
+- Slack delivery remains in `src/lib/notifications.ts` and `supabase/functions/slack-notify/index.ts`, but callers should route through unified events instead of direct Slack invokes.
+- Current non-status reminder/sweep routes using the unified pipeline:
+  - `src/app/api/social-posts/overdue-checks/route.ts`
+  - `src/app/api/blogs/overdue-checks/route.ts`
+  - `src/app/api/social-posts/reminders/route.ts`
+- Current reminder event coverage includes:
+  - `social_review_overdue`
+  - `social_publish_overdue`
+  - `blog_publish_overdue`
+  - `social_post_live_link_reminder`
+- Operational expectation: one event should drive activity history, in-app notification eligibility, and Slack delivery. Do not add new direct Slack-only branches for workflow events.
 
 ### Contract enforcement model
 - API contract normalization is centralized in `src/lib/api-contract.ts` and applied to all route handlers in `src/app/api/**/route.ts`.

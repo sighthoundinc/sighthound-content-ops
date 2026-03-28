@@ -367,6 +367,24 @@ Key behavior:
   - `blog_assignment_history` table (blog writer/publisher status transitions and assignment changes)
   - `social_post_activity_history` table (social post status transitions and assignment changes)
 
+## Notification architecture
+- Notification generation is event-driven and centralized.
+- Workflow events are defined in `src/lib/unified-events.ts`.
+- `emitEvent()` is the shared entry point for recording activity history and validating downstream notification generation.
+- Slack is a delivery channel, not a separate workflow source of truth.
+- Reminder and overdue APIs emit unified events rather than sending direct Slack-only notifications.
+
+Covered reminder/overdue events:
+- `social_review_overdue`
+- `social_publish_overdue`
+- `blog_publish_overdue`
+- `social_post_live_link_reminder`
+
+Expected behavior:
+- activity history and notification delivery stay aligned for the same workflow event
+- user notification preferences apply consistently to in-app and Slack notifications
+- new workflow notifications should extend the unified event system instead of adding route-level Slack-specific logic
+
 ### Password Reset (Test-Only)
 Admin-only feature at Settings → User Directory → Edit User → Reset Password section.
 

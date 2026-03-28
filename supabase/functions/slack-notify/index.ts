@@ -58,32 +58,18 @@ const EVENT_CONTENT_TYPE: Record<EventType, string> = {
   social_live_link_reminder: "Social",
 };
 
-const EVENT_ACTION: Record<EventType, string> = {
-  writer_assigned: "Writer assigned — awaiting writing",
-  writer_completed: "Writing complete — ready for publisher review",
-  ready_to_publish: "Ready to publish — awaiting publisher action",
-  published: "Published",
-  social_submitted_for_review: "Submitted for review — awaiting editorial approval",
-  social_changes_requested: "Changes requested — awaiting creator revisions",
-  social_creative_approved: "Creative approved",
-  social_ready_to_publish: "Ready to publish — awaiting creator action",
-  social_awaiting_live_link: "Awaiting live link — awaiting creator submission",
-  social_published: "Published",
-  social_live_link_reminder: "Reminder: awaiting live link submission",
-};
-
-const EVENT_OWNER: Record<EventType, string | null> = {
-  writer_assigned: "Writer",
-  writer_completed: "Publisher",
-  ready_to_publish: "Publisher",
+const EVENT_NEXT: Record<EventType, string | null> = {
+  writer_assigned: "Writing",
+  writer_completed: "Publisher review",
+  ready_to_publish: "Publishing",
   published: null,
-  social_submitted_for_review: "Editor",
-  social_changes_requested: "Creator",
+  social_submitted_for_review: "Editorial review",
+  social_changes_requested: "Creator revisions",
   social_creative_approved: null,
-  social_ready_to_publish: "Creator",
-  social_awaiting_live_link: "Creator",
+  social_ready_to_publish: "Creator action",
+  social_awaiting_live_link: "Live link submission",
   social_published: null,
-  social_live_link_reminder: "Creator",
+  social_live_link_reminder: "Live link submission",
 };
 
 function buildMessage(payload: NotifyPayload) {
@@ -94,28 +80,27 @@ function buildMessage(payload: NotifyPayload) {
         ? `${payload.appUrl}/blogs/${payload.blogId}`
         : null
     : null;
-  
+
   const contentType = EVENT_CONTENT_TYPE[payload.eventType];
   const label = EVENT_LABELS[payload.eventType];
-  const action = EVENT_ACTION[payload.eventType];
-  const owner = EVENT_OWNER[payload.eventType];
-  
-  // Header: [Content Type] Label • Title (Site)
-  const header = `*[${contentType}]* ${label} • ${payload.title} (${payload.site})`;
-  
-  // Action line (always included)
-  const actionLine = `Action: ${action}`;
-  
-  // Owner line (only if relevant)
-  const ownerLine = owner ? `Owner: ${owner}` : null;
-  
-  // Open link (always included if available)
+  const next = EVENT_NEXT[payload.eventType];
+
+  // Line 1: [ContentType] Event label
+  const headerLine = `*[${contentType}]* ${label}`;
+
+  // Line 2: "Title" (site)
+  const titleLine = `"${payload.title}" (${payload.site})`;
+
+  // Line 3 (optional): Next: what happens next
+  const nextLine = next ? `Next: ${next}` : null;
+
+  // Line 4 (optional): Open: deep link
   const openLine = deepLink ? `Open: ${deepLink}` : null;
-  
-  const parts = [header, actionLine];
-  if (ownerLine) parts.push(ownerLine);
+
+  const parts = [headerLine, titleLine];
+  if (nextLine) parts.push(nextLine);
   if (openLine) parts.push(openLine);
-  
+
   return parts.join("\n");
 }
 

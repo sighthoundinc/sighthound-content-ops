@@ -495,6 +495,20 @@ export default function BlogDetailPage() {
       });
     }
 
+    // Slack notification for publisher assignment
+    if (publisherChanged && form.publisher_id && selectedPublisher) {
+      notifyCallbacks.push(async () => {
+        await notifySlack({
+          eventType: "writer_assigned",
+          blogId: blog.id,
+          title: form.title,
+          site: form.site,
+          actorName: profile?.full_name ?? "Admin",
+          targetEmail: selectedPublisher.email,
+        });
+      });
+    }
+
     // Push in-app notifications for assignments (using unified events)
     if (writerChanged) {
       notifyCallbacks.push(async () => {

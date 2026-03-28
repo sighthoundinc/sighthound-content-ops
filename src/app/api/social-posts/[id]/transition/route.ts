@@ -350,6 +350,34 @@ export const POST = withApiContract(async function POST(
       timestamp: Date.now(),
     });
 
+    // 15. Send Slack notification (non-blocking)
+    const TRANSITION_TO_SLACK_EVENT: Partial<Record<string, string>> = {
+      in_review: "social_submitted_for_review",
+      changes_requested: "social_changes_requested",
+      creative_approved: "social_creative_approved",
+      ready_to_publish: "social_ready_to_publish",
+      awaiting_live_link: "social_awaiting_live_link",
+      published: "social_published",
+    };
+
+    const slackEventType = TRANSITION_TO_SLACK_EVENT[nextStatus];
+    if (slackEventType) {
+      auth.context.adminClient.functions
+        .invoke("slack-notify", {
+          body: {
+            eventType: slackEventType,
+            socialPostId: id,
+            title: socialPost.title,
+            site: socialPost.product ?? "general_company",
+            actorName: actorProfile?.full_name ?? "Team",
+            appUrl: process.env.NEXT_PUBLIC_APP_URL,
+          },
+        })
+        .catch((err) => {
+          console.warn("[social-post transition] Slack notify failed (non-critical)", err);
+        });
+    }
+
     return NextResponse.json({
       success: true,
       post: updated,

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -576,12 +577,13 @@ export function AppShell({
             className="flex items-center gap-3 rounded-md px-1 py-1 hover:bg-slate-50"
             aria-label="Sighthound Content Ops"
           >
-            <img
+            <Image
               src="/sighthound-badge-animated.gif"
               alt="Sighthound badge"
               width={64}
               height={36}
               className="h-9 w-auto object-contain"
+              priority
             />
             <span className="leading-tight">
               <span className="block text-sm font-semibold text-slate-900">Sighthound</span>

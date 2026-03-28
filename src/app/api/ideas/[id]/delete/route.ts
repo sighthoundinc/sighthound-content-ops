@@ -41,6 +41,14 @@ export const DELETE = async (
   console.warn(
     `[DEPRECATED API] DELETE /api/ideas/${id}/delete called (hit count: ${hitCount}). Please migrate to DELETE /api/ideas/${id}`
   );
+
+  // Alert if still actively used
+  if (hitCount > 5) {
+    console.error(
+      `[ALERT] Deprecated endpoint /api/ideas/[id]/delete still actively used (${hitCount} hits). Immediate migration required.`
+    );
+  }
+
   if (process.env.NODE_ENV === "production") {
     // In production, optionally send to logging service here
     // e.g., logger.warn({ endpoint: "/api/ideas/[id]/delete", hitCount, intent: "deprecated_proxy" })

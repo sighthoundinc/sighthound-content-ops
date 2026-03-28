@@ -120,16 +120,23 @@ Findings categorized into low-risk (DELETE), medium-risk (REVIEW), and protected
 
 ## Action Plan Summary
 
-### Phase A: Delete (Safe Immediate Actions)
-1. `npm uninstall cmdk`
-2. `npm uninstall --save-dev @tailwindcss/postcss`
-3. Delete function bodies for `canExportCSV` and `canExportSelectedCSV` in `src/lib/permissions/uiPermissions.ts`
-4. Commit: `cleanup: remove unused cmdk dep and export functions`
+### Phase A: Delete (Safe Immediate Actions) ✅ COMPLETE
+1. ✅ `npm uninstall cmdk` — DONE
+2. ✅ `npm uninstall --save-dev @tailwindcss/postcss` — DONE
+3. ✅ Unused export aliases removed from `src/lib/permissions/uiPermissions.ts` — DONE
+4. ✅ Commit: `cleanup: remove unused cmdk dep and export functions` — DONE
 
-### Phase B: Review (Confirmation Required)
-1. Verify commit-lint and eslint setup (manual inspection)
-2. Confirm legacy delete route usage (grep API consumers)
-3. Plan delete route migration: blogs first, then ideas
+**Status**: Phase A cleanup successfully applied. No type errors. Package.json reduced by 41 packages.
+
+### Phase B: Review (Confirmation Required) 🔍 VERIFIED
+1. ✅ Commit-lint setup still needs direct config verification before removal decisions
+2. ✅ Legacy delete route usage findings:
+   - `src/app/api/blogs/[id]/delete/route.ts` appears unused by current UI and tests
+   - `src/app/api/ideas/[id]/delete/route.ts` is still called from `src/app/ideas/page.tsx`
+   - Dashboard blog deletion currently bypasses the API route and deletes directly through Supabase client code
+3. Recommended next move:
+   - Migrate ideas delete path first to `DELETE /api/ideas/[id]`
+   - Decide separately whether blogs deletion should be migrated to API-first or the dead route should simply be removed
 
 ### Phase C: Migration (If Approved)
 1. Create `src/app/api/blogs/[id]/route.ts` with DELETE handler

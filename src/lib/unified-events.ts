@@ -74,6 +74,11 @@ export interface UnifiedEvent {
   actorName?: string; // user display name
   actorRole?: "writer" | "publisher" | "admin" | "editor";
 
+  // Target user (for assignment/awaiting actions)
+  // Use this for notifications to show actual user names instead of roles
+  targetUserName?: string; // user to whom task is assigned or who is awaiting action
+  targetUserId?: string; // user ID of target
+
   // Context
   contentTitle?: string;
   metadata?: Record<string, unknown>;
@@ -117,6 +122,8 @@ export function unifiedEventToActivityRecord(
       ...(event.metadata || {}),
       actor_name: event.actorName,
       actor_role: event.actorRole,
+      target_user_name: event.targetUserName,
+      target_user_id: event.targetUserId,
       content_title: event.contentTitle,
     },
   };

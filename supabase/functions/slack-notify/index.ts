@@ -22,6 +22,7 @@ interface NotifyPayload {
   site: string;
   actorName: string;
   targetEmail?: string | null;
+  targetUserName?: string; // User to whom task is assigned/action needed
   appUrl?: string;
 }
 
@@ -84,6 +85,7 @@ function buildMessage(payload: NotifyPayload) {
   const contentType = EVENT_CONTENT_TYPE[payload.eventType];
   const label = EVENT_LABELS[payload.eventType];
   const next = EVENT_NEXT[payload.eventType];
+  const assignedTo = payload.targetUserName || "team";
 
   // Line 1: [ContentType] Event label
   const headerLine = `*[${contentType}]* ${label}`;
@@ -91,13 +93,17 @@ function buildMessage(payload: NotifyPayload) {
   // Line 2: "Title" (site)
   const titleLine = `"${payload.title}" (${payload.site})`;
 
-  // Line 3 (optional): Next: what happens next
+  // Line 3 (optional): Assigned to: user name (instead of role)
+  const assignedLine = payload.targetUserName ? `Assigned to: ${assignedTo}` : null;
+
+  // Line 4 (optional): Next: what happens next
   const nextLine = next ? `Next: ${next}` : null;
 
-  // Line 4 (optional): Open: deep link
+  // Line 5 (optional): Open: deep link
   const openLine = deepLink ? `Open: ${deepLink}` : null;
 
   const parts = [headerLine, titleLine];
+  if (assignedLine) parts.push(assignedLine);
   if (nextLine) parts.push(nextLine);
   if (openLine) parts.push(openLine);
 

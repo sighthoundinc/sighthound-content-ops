@@ -18,4 +18,8 @@ export type NotificationInput = {
   message: string;
   href?: string;
   timestamp?: number;
+  metadata?: {
+    targetUserName?: string;
+    targetUserId?: string;
+  };
 };

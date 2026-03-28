@@ -156,6 +156,10 @@ export function getNotificationFromEvent(event: UnifiedEvent): NotificationInput
     message: buildNotificationMessage(event),
     href: buildNotificationHref(event),
     timestamp: event.timestamp,
+    metadata: {
+      targetUserName: event.targetUserName,
+      targetUserId: event.targetUserId,
+    },
   };
 }
 
@@ -233,23 +237,25 @@ function buildNotificationTitle(event: UnifiedEvent): string {
 
 /**
  * Build notification message from unified event.
+ * Shows user names instead of roles for better clarity.
  */
 function buildNotificationMessage(event: UnifiedEvent): string {
   const title = event.contentTitle || event.contentId;
+  const targetUser = event.targetUserName || "team member";
 
   const messageMap: Record<string, string> = {
     blog_writer_status_changed: `${title} writer stage changed to ${event.newValue || "..."}`,
     blog_publisher_status_changed: `${title} publisher stage changed to ${event.newValue || "..."}`,
-    blog_writer_assigned: `${title} assigned to ${event.actorName || "..."}`,
-    blog_publisher_assigned: `${title} assigned to ${event.actorName || "..."}`,
-    blog_awaiting_writer_action: `${title} needs writer attention`,
-    blog_awaiting_publisher_action: `${title} needs publisher attention`,
+    blog_writer_assigned: `${title} assigned to ${targetUser}`,
+    blog_publisher_assigned: `${title} assigned to ${targetUser}`,
+    blog_awaiting_writer_action: `${title} awaiting action from ${targetUser}`,
+    blog_awaiting_publisher_action: `${title} awaiting action from ${targetUser}`,
     blog_publish_overdue: `${title} is overdue for publishing`,
     social_post_status_changed: `${title} stage changed to ${event.newValue || "..."}`,
-    social_post_assigned: `${title} assigned to ${event.actorName || "..."}`,
-    social_post_reassigned: `${title} reassigned to ${event.newValue || "..."}`,
+    social_post_assigned: `${title} assigned to ${targetUser}`,
+    social_post_reassigned: `${title} reassigned to ${targetUser}`,
     social_post_awaiting_action: `${title} needs your attention`,
-    social_post_editor_assigned: `${title} assigned to editor`,
+    social_post_editor_assigned: `${title} assigned to ${targetUser}`,
     social_review_overdue: `${title} review is overdue`,
     social_publish_overdue: `${title} is overdue for publishing`,
     social_post_live_link_reminder: `${title} is waiting for a live link`,

@@ -1394,7 +1394,15 @@ export default function DashboardPage() {
       if (row.lifecycle_bucket !== "published") {
         return false;
       }
-      const timestamp = row.published_date ?? row.updated_at;
+      // Use the same date source as focusStripMetrics for consistency
+      // For blogs: use original publish date (scheduled/display) not import date
+      // For social posts: updated_at (status=published)
+      let timestamp: string | null = null;
+      if (row.blog) {
+        timestamp = getBlogPublishDate(row.blog);
+      } else if (row.social_post) {
+        timestamp = row.social_post.status === "published" ? row.social_post.updated_at : null;
+      }
       if (!timestamp) {
         return false;
       }
@@ -1482,38 +1490,46 @@ export default function DashboardPage() {
       const matchesContentType =
         contentTypeFilters.length === 0 ||
         contentTypeFilters.includes(row.content_type);
+      // Blog-scoped filters: site and status apply only to blog rows; social rows pass through
       const matchesSite =
-        siteFilters.length === 0 || siteFilters.includes(row.site as BlogSite);
+        siteFilters.length === 0 ||
+        (row.content_type === "social_post" || siteFilters.includes(row.site as BlogSite));
       const matchesStatus =
         statusFilters.length === 0 ||
-        (row.blog ? statusFilters.includes(row.blog.overall_status) : true);
+        (row.content_type === "social_post" ||
+          (row.blog ? statusFilters.includes(row.blog.overall_status) : false));
+      // Blog writer/publisher filters: apply only to blog rows; social rows pass through
       const matchesWriter =
         writerFilters.length === 0 ||
-        (row.content_type !== "blog" ||
+        (row.content_type === "social_post" ||
           (row.blog?.writer_id !== null &&
             row.blog?.writer_id !== undefined &&
             writerFilters.includes(row.blog.writer_id)));
       const matchesPublisher =
         publisherFilters.length === 0 ||
-        (row.content_type !== "blog" ||
+        (row.content_type === "social_post" ||
           (row.blog?.publisher_id !== null &&
             row.blog?.publisher_id !== undefined &&
             publisherFilters.includes(row.blog.publisher_id)));
+      // Blog workflow status filters: apply only to blog rows; social rows pass through
       const matchesWriterStatus =
         writerStatusFilters.length === 0 ||
-        (row.blog ? writerStatusFilters.includes(row.blog.writer_status) : true);
+        (row.content_type === "social_post" ||
+          (row.blog ? writerStatusFilters.includes(row.blog.writer_status) : false));
       const matchesPublisherStatus =
         publisherStatusFilters.length === 0 ||
-        (row.blog ? publisherStatusFilters.includes(row.blog.publisher_status) : true);
+        (row.content_type === "social_post" ||
+          (row.blog ? publisherStatusFilters.includes(row.blog.publisher_status) : false));
+      // Social-scoped filters: apply only to social rows; blog rows pass through
       const matchesSocialStatus =
         socialStatusFilters.length === 0 ||
-        (row.content_type !== "social_post" ||
+        (row.content_type === "blog" ||
           (row.social_post
             ? socialStatusFilters.includes(row.social_post.status)
             : false));
       const matchesSocialProduct =
         socialProductFilters.length === 0 ||
-        (row.content_type !== "social_post" ||
+        (row.content_type === "blog" ||
           (row.social_post?.product !== null &&
             row.social_post?.product !== undefined &&
             socialProductFilters.includes(row.social_post.product)));
@@ -1773,9 +1789,10 @@ export default function DashboardPage() {
       if (blog.overall_status !== "published") {
         return false;
       }
-      const publishedTimestamp =
-        blog.actual_published_at ?? blog.published_at ?? blog.updated_at;
-      return isInLastSevenDays(publishedTimestamp);
+      // Use the original publish date (scheduled/display date) not the import date
+      // This way imported blogs don't inflate the "last 7 days" metric
+      const publishedTimestamp = getBlogPublishDate(blog);
+      return publishedTimestamp && isInLastSevenDays(publishedTimestamp);
     }).length;
     const publishedLastSevenDaysSocialPosts = socialPosts.filter(
       (post) => post.status === "published" && isInLastSevenDays(post.updated_at)
@@ -3112,10 +3129,23 @@ export default function DashboardPage() {
               </div>
             }
           />
-          <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
-            <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
-            <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
-              <button
+          {isLoading ? (
+            <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
+              <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={`overview-skeleton-${i}`}
+                    className="skeleton h-24 w-full rounded-lg"
+                  />
+                ))}
+              </div>
+            </section>
+          ) : (
+            <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
+              <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+                <button
                 type="button"
                 className={`rounded-lg border px-3 py-3 text-left transition ${
                   activeMetricFilter === "open_work"
@@ -3260,141 +3290,153 @@ export default function DashboardPage() {
                 </p>
               </button>
             </div>
-          </section>
-          <DataPageToolbar
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search title, ID, owner, product, status, or site"
-            actions={
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={clearAllFilters}
-              >
-                Clear all filters
-              </Button>
-            }
-            filters={
-              <div className="md:col-span-2 xl:col-span-4 grid gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
-                    Grouped Filters
-                  </p>
-                  <div className="space-y-3">
+            </section>
+          )}
+          {isLoading ? (
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+              <div className="skeleton h-8 w-32" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={`filter-skeleton-${i}`} className="skeleton h-10 w-full" />
+              ))}
+            </div>
+          ) : (
+            <>
+              <DataPageToolbar
+                searchValue={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search title, ID, owner, product, status, or site"
+                actions={
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={clearAllFilters}
+                  >
+                    Clear all filters
+                  </Button>
+                }
+                filters={
+                  <div className="md:col-span-2 xl:col-span-4 grid gap-3">
                     <div>
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Group 1 · Cross-Content Scope
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
+                        Grouped Filters
                       </p>
-                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        <CheckboxMultiSelect
-                          label="Sites"
-                          options={siteFilterOptions}
-                          selectedValues={siteFilters}
-                          onChange={(nextValues) => {
-                            setSiteFilters(nextValues as BlogSite[]);
-                          }}
-                        />
-                        <CheckboxMultiSelect
-                          label="Content Type"
-                          options={contentTypeFilterOptions}
-                          selectedValues={contentTypeFilters}
-                          onChange={(nextValues) => {
-                            setContentTypeFilters(nextValues as DashboardContentTypeFilter[]);
-                          }}
-                        />
-                        <CheckboxMultiSelect
-                          label="Workflow (All Content)"
-                          options={crossWorkflowFilterOptions}
-                          selectedValues={crossWorkflowFilters}
-                          onChange={(nextValues) => {
-                            setCrossWorkflowFilters(
-                              nextValues as CrossContentWorkflowFilter[]
-                            );
-                          }}
-                        />
-                        <CheckboxMultiSelect
-                          label="Delivery (All Content)"
-                          options={crossDeliveryFilterOptions}
-                          selectedValues={crossDeliveryFilters}
-                          onChange={(nextValues) => {
-                            setCrossDeliveryFilters(
-                              nextValues as CrossContentDeliveryFilter[]
-                            );
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Group 2 · Blog Filters
-                      </p>
-                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                        <CheckboxMultiSelect
-                          label="Blog Stage"
-                          options={overallStatusFilterOptions}
-                          selectedValues={statusFilters}
-                          onChange={(nextValues) => {
-                            setStatusFilters(nextValues as OverallBlogStatus[]);
-                          }}
-                        />
-                        <CheckboxMultiSelect
-                          label="Blog Writers"
-                          options={writerFilterOptions}
-                          selectedValues={writerFilters}
-                          onChange={setWriterFilters}
-                        />
-                        <CheckboxMultiSelect
-                          label="Blog Publishers"
-                          options={publisherFilterOptions}
-                          selectedValues={publisherFilters}
-                          onChange={setPublisherFilters}
-                        />
-                        <CheckboxMultiSelect
-                          label="Blog Writer Status"
-                          options={writerStatusFilterOptions}
-                          selectedValues={writerStatusFilters}
-                          onChange={(nextValues) => {
-                            setWriterStatusFilters(nextValues as WriterStageStatus[]);
-                          }}
-                        />
-                        <CheckboxMultiSelect
-                          label="Blog Publisher Status"
-                          options={publisherStatusFilterOptions}
-                          selectedValues={publisherStatusFilters}
-                          onChange={(nextValues) => {
-                            setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Group 3 · Social Filters
-                      </p>
-                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        <CheckboxMultiSelect
-                          label="Social Status"
-                          options={socialStatusFilterOptions}
-                          selectedValues={socialStatusFilters}
-                          onChange={(nextValues) => {
-                            setSocialStatusFilters(nextValues as SocialPostStatus[]);
-                          }}
-                        />
-                        <CheckboxMultiSelect
-                          label="Social Product"
-                          options={socialProductFilterOptions}
-                          selectedValues={socialProductFilters}
-                          onChange={setSocialProductFilters}
-                        />
+                      <div className="space-y-3">
+                        <div>
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Group 1 · Cross-Content Scope
+                          </p>
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <CheckboxMultiSelect
+                              label="Sites"
+                              options={siteFilterOptions}
+                              selectedValues={siteFilters}
+                              onChange={(nextValues) => {
+                                setSiteFilters(nextValues as BlogSite[]);
+                              }}
+                            />
+                            <CheckboxMultiSelect
+                              label="Content Type"
+                              options={contentTypeFilterOptions}
+                              selectedValues={contentTypeFilters}
+                              onChange={(nextValues) => {
+                                setContentTypeFilters(nextValues as DashboardContentTypeFilter[]);
+                              }}
+                            />
+                            <CheckboxMultiSelect
+                              label="Workflow (All Content)"
+                              options={crossWorkflowFilterOptions}
+                              selectedValues={crossWorkflowFilters}
+                              onChange={(nextValues) => {
+                                setCrossWorkflowFilters(
+                                  nextValues as CrossContentWorkflowFilter[]
+                                );
+                              }}
+                            />
+                            <CheckboxMultiSelect
+                              label="Delivery (All Content)"
+                              options={crossDeliveryFilterOptions}
+                              selectedValues={crossDeliveryFilters}
+                              onChange={(nextValues) => {
+                                setCrossDeliveryFilters(
+                                  nextValues as CrossContentDeliveryFilter[]
+                                );
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Group 2 · Blog Filters
+                          </p>
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            <CheckboxMultiSelect
+                              label="Blog Stage"
+                              options={overallStatusFilterOptions}
+                              selectedValues={statusFilters}
+                              onChange={(nextValues) => {
+                                setStatusFilters(nextValues as OverallBlogStatus[]);
+                              }}
+                            />
+                            <CheckboxMultiSelect
+                              label="Blog Writers"
+                              options={writerFilterOptions}
+                              selectedValues={writerFilters}
+                              onChange={setWriterFilters}
+                            />
+                            <CheckboxMultiSelect
+                              label="Blog Publishers"
+                              options={publisherFilterOptions}
+                              selectedValues={publisherFilters}
+                              onChange={setPublisherFilters}
+                            />
+                            <CheckboxMultiSelect
+                              label="Blog Writer Status"
+                              options={writerStatusFilterOptions}
+                              selectedValues={writerStatusFilters}
+                              onChange={(nextValues) => {
+                                setWriterStatusFilters(nextValues as WriterStageStatus[]);
+                              }}
+                            />
+                            <CheckboxMultiSelect
+                              label="Blog Publisher Status"
+                              options={publisherStatusFilterOptions}
+                              selectedValues={publisherStatusFilters}
+                              onChange={(nextValues) => {
+                                setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Group 3 · Social Filters
+                          </p>
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <CheckboxMultiSelect
+                              label="Social Status"
+                              options={socialStatusFilterOptions}
+                              selectedValues={socialStatusFilters}
+                              onChange={(nextValues) => {
+                                setSocialStatusFilters(nextValues as SocialPostStatus[]);
+                              }}
+                            />
+                            <CheckboxMultiSelect
+                              label="Social Product"
+                              options={socialProductFilterOptions}
+                              selectedValues={socialProductFilters}
+                              onChange={setSocialProductFilters}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            }
-          />
-          <DataPageFilterPills pills={activeFilterPills} />
+                }
+              />
+              <DataPageFilterPills pills={activeFilterPills} />
+            </>
+          )}
 
           {selectedRowCount > 0 ? (
             <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">

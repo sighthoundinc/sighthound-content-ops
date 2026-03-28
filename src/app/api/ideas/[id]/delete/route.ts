@@ -1,6 +1,10 @@
-// @deprecated - Use DELETE /api/ideas/[id] instead.
-// This proxy will be removed in a future version.
-// Migration: https://github.com/your-org/your-repo/issues/XXX
+// @deprecated - REMOVAL PLANNED
+// Added: 2025-03-29
+// Removal target: v2.0 (after 2 releases)
+// Owner: Content Ops Team
+// Reason: Legacy endpoint. Use DELETE /api/ideas/[id] instead.
+// Migration: Client should call DELETE /api/ideas/{id} directly
+// Tracking: Monitor console.warn logs for usage patterns
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -13,6 +17,13 @@ export const DELETE = async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const { id } = await params;
+
+  // Log deprecation usage for monitoring
+  console.warn(`[DEPRECATED API] DELETE /api/ideas/${id}/delete called. Please migrate to DELETE /api/ideas/${id}`);
+  if (process.env.NODE_ENV === "production") {
+    // In production, optionally send to logging service here
+    // e.g., logger.warn({ endpoint: "/api/ideas/[id]/delete", intent: "deprecated_proxy" })
+  }
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
 

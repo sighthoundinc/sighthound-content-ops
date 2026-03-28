@@ -1,0 +1,11 @@
+{
+  "ignoreMatches": [
+    "@tailwindcss/postcss"
+  ],
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    ".next",
+    "build"
+  ]
+}

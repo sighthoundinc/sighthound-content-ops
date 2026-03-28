@@ -1,0 +1,12 @@
+Unused dependencies
+* cmdk
+Unused devDependencies
+* @commitlint/cli
+* @commitlint/config-conventional
+* @tailwindcss/postcss
+* depcheck
+* eslint-config-next
+* tailwindcss
+* ts-prune
+Missing dependencies
+* @eslint/eslintrc: ./eslint.config.mjs

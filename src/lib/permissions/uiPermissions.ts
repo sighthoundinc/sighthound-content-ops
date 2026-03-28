@@ -146,9 +146,6 @@ export function canExportSelectedCsv(hasPermission: PermissionLookup) {
   });
 }
 
-export const canExportCSV = canExportCsv;
-export const canExportSelectedCSV = canExportSelectedCsv;
-
 export function canEditBlogMetadata(hasPermission: PermissionLookup) {
   return hasCapabilityByAnyPermission(hasPermission, {
     requiredPermissions: ["edit_blog_metadata", "edit_blog_title"],

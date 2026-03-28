@@ -1,0 +1,154 @@
+next.config.ts:7 - default
+src/middleware.ts:4 - middleware
+src/middleware.ts:27 - config
+src/app/font-variants.tsx:30 - FONT_STACK_SYSTEM_UI (used in module)
+src/app/font-variants.tsx:31 - FONT_STACK_CURRENT
+src/app/layout.tsx:27 - default
+src/app/layout.tsx:22 - metadata
+src/components/bulk-action-preview-modal.tsx:3 - BulkActionPreviewModalProps (used in module)
+src/components/column-editor.tsx:22 - ColumnItem (used in module)
+src/components/column-editor.tsx:28 - ColumnEditorProps (used in module)
+src/components/dashboard-sidebar.tsx:40 - DashboardSidebar
+src/components/dashboard-table.tsx:17 - DashboardTableColumnKey (used in module)
+src/components/dashboard-table.tsx:30 - DASHBOARD_COLUMN_LABELS (used in module)
+src/components/dashboard-table.tsx:50 - DashboardTableRow (used in module)
+src/components/dashboard-table.tsx:69 - DashboardTableProps (used in module)
+src/components/data-page.tsx:159 - DataPageTableShell
+src/components/data-page.tsx:32 - DATA_PAGE_TABLE_FEEDBACK_CLASS (used in module)
+src/components/data-table.tsx:33 - DataTableProps (used in module)
+src/components/detail-drawer.tsx:10 - DETAIL_DRAWER_WIDTH_CLASS (used in module)
+src/components/field-validation-error.tsx:14 - FieldValidationError
+src/components/filter-bar.tsx:43 - FilterBar
+src/components/filter-bar.tsx:5 - FilterBarFilter (used in module)
+src/components/filter-bar.tsx:14 - FilterBarProps (used in module)
+src/components/filter-chip.tsx:3 - FilterChipProps (used in module)
+src/components/name-resolution-modal.tsx:8 - NameResolution (used in module)
+src/hooks/use-checked-notifications.ts:29 - useCheckedNotifications
+src/hooks/use-command-palette.ts:11 - UseCommandPaletteReturn (used in module)
+src/hooks/use-filter-state.ts:49 - useFilterState
+src/hooks/use-filter-state.ts:4 - FilterValue (used in module)
+src/hooks/use-filter-state.ts:9 - FilterDefinition
+src/hooks/use-filter-state.ts:15 - FilterState
+src/hooks/use-filter-state.ts:22 - UseFilterStateOptions (used in module)
+src/hooks/use-global-quick-create.ts:5 - UseGlobalQuickCreateReturn (used in module)
+src/hooks/use-social-post-transition.ts:47 - useSocialPostTransition
+src/hooks/use-social-post-transition.ts:16 - SocialPostData (used in module)
+src/hooks/use-social-post-transition.ts:32 - UseTransitionOptions (used in module)
+src/hooks/useSidebarState.ts:60 - readSidebarStateSync (used in module)
+src/lib/access-logging.ts:3 - AccessEventType (used in module)
+src/lib/activity-history-format.ts:11 - ActivityChangeEntry (used in module)
+src/lib/activity-history-format.ts:18 - ActivityFormatOptions (used in module)
+src/lib/activity-to-notification-helpers.ts:56 - historyRecordToActivityNotification (used in module)
+src/lib/activity-to-notification-helpers.ts:104 - historyRecordsToActivityNotifications
+src/lib/activity-to-notification-helpers.ts:8 - ActivityNotificationItem (used in module)
+src/lib/api-contract.ts:8 - API_CONTRACT_VERSION (used in module)
+src/lib/api-response.ts:1 - ApiResponseEnvelope (used in module)
+src/lib/command-palette-search.ts:7 - fuzzyMatch (used in module)
+src/lib/dashboard-filter-state.ts:69 - clearDashboardFilterIntent
+src/lib/dashboard-filter-state.ts:9 - DashboardFilterType (used in module)
+src/lib/dashboard-filter-state.ts:14 - DashboardFilterIntent (used in module)
+src/lib/format-date.ts:76 - formatShortDateInTimezone
+src/lib/format-date.ts:90 - formatTimeInTimezone
+src/lib/modal-state.ts:12 - isModalOpen
+src/lib/notification-helpers.ts:171 - blogAssignedToWriterNotification
+src/lib/notification-helpers.ts:188 - blogAssignedToPublisherNotification
+src/lib/notification-helpers.ts:205 - blogAwaitingActionNotification
+src/lib/notification-helpers.ts:263 - blogAssignmentChangedNotification
+src/lib/notification-helpers.ts:29 - NOTIFICATION_TYPE_TO_PREFERENCE_KEY (used in module)
+src/lib/notification-preferences-cache.ts:80 - getDefaultPreferences (used in module)
+src/lib/notification-preferences-cache.ts:98 - clearPreferencesCache
+src/lib/permissions.ts:765 - isAppPermissionKey
+src/lib/permissions.ts:772 - toCanonicalPermissionKeys (used in module)
+src/lib/permissions.ts:988 - canAdvanceWriterStatus
+src/lib/permissions.ts:1002 - canAdvancePublisherStatus
+src/lib/permissions.ts:11 - PermissionGroup (used in module)
+src/lib/permissions.ts:25 - PermissionDefinition (used in module)
+src/lib/permissions.ts:51 - LEGACY_PERMISSION_KEYS (used in module)
+src/lib/permissions.ts:664 - ALL_PERMISSION_KEYS (used in module)
+src/lib/permissions.ts:694 - DEFAULT_ROLE_PERMISSION_TEMPLATES (used in module)
+src/lib/quick-view.ts:1 - QUICK_VIEW_STORAGE_KEY (used in module)
+src/lib/server-permissions.ts:16 - AuthenticatedRequestContext (used in module)
+src/lib/shape-validation.ts:7 - ValidAuthor (used in module)
+src/lib/shape-validation.ts:43 - ValidBlogRelation (used in module)
+src/lib/site.ts:3 - SITE_LABELS (used in module)
+src/lib/site.ts:8 - SITE_SHORT_LABELS (used in module)
+src/lib/site.ts:13 - SITE_BADGE_CLASSES (used in module)
+src/lib/social-post-workflow.ts:40 - isValidTransition
+src/lib/social-post-workflow.ts:122 - getStatusActorId (used in module)
+src/lib/social-post-workflow.ts:187 - isFieldLocked
+src/lib/status.ts:181 - WORKFLOW_STAGES
+src/lib/table.ts:5 - TableDensity (used in module)
+src/lib/table.ts:20 - TABLE_NUMERIC_CELL_CLASS
+src/lib/task-logic.ts:87 - isSocialTaskForUser
+src/lib/task-logic.ts:123 - isBlogTaskForUser
+src/lib/task-logic.ts:48 - ACTIVE_PUBLISHER_STATUSES (used in module)
+src/lib/types.ts:190 - AppSettingsRecord (used in module)
+src/lib/types.ts:199 - UserIntegrations
+src/lib/types.ts:210 - RolePermissionRecord (used in module)
+src/lib/types.ts:218 - PermissionAuditLogRecord (used in module)
+src/lib/types.ts:314 - Database
+src/lib/typography.ts:103 - cx (used in module)
+src/lib/typography.ts:110 - buildTypography
+src/lib/typography.ts:6 - TYPOGRAPHY
+src/lib/typography.ts:69 - FONT_SIZES (used in module)
+src/lib/typography.ts:78 - FONT_WEIGHTS (used in module)
+src/lib/typography.ts:85 - LEADING (used in module)
+src/lib/typography.ts:94 - TRACKING
+src/lib/unified-events.ts:15 - UnifiedEventType (used in module)
+src/lib/unified-events.ts:94 - ActivityHistoryRecord (used in module)
+src/lib/user-matching.ts:6 - MatchType (used in module)
+src/providers/notifications-provider.tsx:16 - NotificationInput (used in module)
+src/providers/notifications-provider.tsx:16 - NotificationType (used in module)
+src/providers/system-feedback-provider-compat.tsx:12 - SystemFeedbackProvider
+src/providers/system-feedback-provider-compat.tsx:13 - useSystemFeedback
+src/providers/system-feedback-provider.tsx:17 - SystemFeedbackProvider
+tests/rls/sprint-1-permission-boundaries.test.ts:6 - testSuite
+.next/types/app/page.ts:54 - PageProps (used in module)
+.next/types/app/page.ts:58 - LayoutProps
+src/lib/permissions/roleMatrix.ts:16 - getRolePermissions
+src/lib/permissions/roleMatrix.ts:10 - RolePermissions (used in module)
+src/lib/permissions/uiPermissions.contract.test.ts:16 - ScheduledFieldPermissionContract
+src/lib/permissions/uiPermissions.contract.test.ts:20 - DisplayFieldPermissionContract
+src/lib/permissions/uiPermissions.contract.test.ts:40 - permissionContractSmokeChecks
+src/lib/permissions/uiPermissions.ts:98 - canCreateBlog (used in module)
+src/lib/permissions/uiPermissions.ts:105 - canCreateComment (used in module)
+src/lib/permissions/uiPermissions.ts:112 - canViewDashboard (used in module)
+src/lib/permissions/uiPermissions.ts:119 - canEditDisplayPublishDate (used in module)
+src/lib/permissions/uiPermissions.ts:127 - canEditScheduledPublishDate (used in module)
+src/lib/permissions/uiPermissions.ts:135 - canExportCsv (used in module)
+src/lib/permissions/uiPermissions.ts:142 - canExportSelectedCsv (used in module)
+src/lib/permissions/uiPermissions.ts:152 - canEditBlogMetadata (used in module)
+src/lib/permissions/uiPermissions.ts:160 - canChangeWriterAssignment (used in module)
+src/lib/permissions/uiPermissions.ts:168 - canChangePublisherAssignment (used in module)
+src/lib/permissions/uiPermissions.ts:176 - canArchiveBlog (used in module)
+src/lib/permissions/uiPermissions.ts:184 - canDeleteBlog (used in module)
+src/lib/permissions/uiPermissions.ts:192 - canEditWriterWorkflow (used in module)
+src/lib/permissions/uiPermissions.ts:206 - canEditPublisherWorkflow (used in module)
+src/lib/permissions/uiPermissions.ts:219 - canViewWritingQueue (used in module)
+src/lib/permissions/uiPermissions.ts:227 - canViewPublishingQueue (used in module)
+src/lib/permissions/uiPermissions.ts:235 - canCalendarDragReschedule (used in module)
+src/lib/permissions/uiPermissions.ts:243 - canManageUsers (used in module)
+src/lib/permissions/uiPermissions.ts:249 - canDeleteUsers (used in module)
+src/lib/permissions/uiPermissions.ts:256 - canManageRoles (used in module)
+src/lib/permissions/uiPermissions.ts:263 - canManagePermissions (used in module)
+src/lib/permissions/uiPermissions.ts:270 - canEditAppSettings (used in module)
+src/lib/permissions/uiPermissions.ts:278 - canReassignWriterAssignments (used in module)
+src/lib/permissions/uiPermissions.ts:290 - canReassignPublisherAssignments (used in module)
+src/lib/permissions/uiPermissions.ts:11 - PermissionLookup (used in module)
+src/lib/permissions/uiPermissions.ts:24 - satisfies (used in module)
+src/lib/permissions/uiPermissions.ts:24 - Record (used in module)
+src/lib/permissions/uiPermissions.ts:149 - canExportCSV
+src/lib/permissions/uiPermissions.ts:150 - canExportSelectedCSV
+src/lib/permissions/uiPermissions.ts:339 - UiPermissionContract
+.next/types/app/blogs/page.ts:54 - PageProps (used in module)
+.next/types/app/blogs/page.ts:58 - LayoutProps
+.next/types/app/calendar/page.ts:54 - PageProps (used in module)
+.next/types/app/calendar/page.ts:58 - LayoutProps
+.next/types/app/dashboard/page.ts:54 - PageProps (used in module)
+.next/types/app/dashboard/page.ts:58 - LayoutProps
+.next/types/app/ideas/page.ts:54 - PageProps (used in module)
+.next/types/app/ideas/page.ts:58 - LayoutProps
+.next/types/app/login/page.ts:54 - PageProps (used in module)
+.next/types/app/login/page.ts:58 - LayoutProps
+.next/types/app/resources/page.ts:54 - PageProps (used in module)
+.next/types/app/resources/page.ts:58 - LayoutProps

@@ -1,0 +1,25 @@
+name: API Structure Check
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/app/api/**'
+      - 'scripts/check-api-patterns.sh'
+      - '.github/workflows/api-check.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/app/api/**'
+      - 'scripts/check-api-patterns.sh'
+
+jobs:
+  api-patterns:
+    name: Validate REST API Patterns
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check API structure
+        run: bash scripts/check-api-patterns.sh

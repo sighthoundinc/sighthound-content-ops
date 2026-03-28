@@ -18,11 +18,32 @@ export const DELETE = async (
 ) => {
   const { id } = await params;
 
+  // Kill switch: Disable legacy endpoint in production if needed
+  if (process.env.DISABLE_LEGACY_IDEAS_DELETE === "true") {
+    console.warn(`[DEPRECATED API DISABLED] DELETE /api/ideas/${id}/delete no longer available`);
+    return NextResponse.json(
+      {
+        error: "Endpoint removed. Please use DELETE /api/ideas/[id] instead.",
+        migrationType: "legacy_endpoint_deprecated",
+      },
+      { status: 410 } // 410 Gone
+    );
+  }
+
+  // Increment usage counter for monitoring
+  if (typeof globalThis !== "undefined") {
+    (globalThis as any).__deprecatedIdeasDeleteHits =
+      ((globalThis as any).__deprecatedIdeasDeleteHits || 0) + 1;
+  }
+
   // Log deprecation usage for monitoring
-  console.warn(`[DEPRECATED API] DELETE /api/ideas/${id}/delete called. Please migrate to DELETE /api/ideas/${id}`);
+  const hitCount = (globalThis as any).__deprecatedIdeasDeleteHits || 1;
+  console.warn(
+    `[DEPRECATED API] DELETE /api/ideas/${id}/delete called (hit count: ${hitCount}). Please migrate to DELETE /api/ideas/${id}`
+  );
   if (process.env.NODE_ENV === "production") {
     // In production, optionally send to logging service here
-    // e.g., logger.warn({ endpoint: "/api/ideas/[id]/delete", intent: "deprecated_proxy" })
+    // e.g., logger.warn({ endpoint: "/api/ideas/[id]/delete", hitCount, intent: "deprecated_proxy" })
   }
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;

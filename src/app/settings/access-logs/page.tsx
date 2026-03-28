@@ -19,7 +19,7 @@ import {
   TableRowLimitSelect,
 } from "@/components/table-controls";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   getApiErrorMessage,
@@ -58,7 +58,7 @@ type UnifiedActivity = {
 
 export default function AccessLogsPage() {
   const { session, profile } = useAuth();
-  const { showError } = useSystemFeedback();
+  const { showError } = useAlerts();
   const isAdmin = profile?.role === "admin";
 
   const [activities, setActivities] = useState<UnifiedActivity[]>([]);

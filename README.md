@@ -6,6 +6,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - DB-authoritative permissions and workflow enforcement
 - Queue-first dashboard, tasks, and calendar execution views
 - Ideas intake and conversion into blogs or social posts
+- Global delete confirmation via shared in-app modal (`ConfirmationModal`)
 - Workspace home with mixed task snapshot (`Required by: <username>` / `Waiting on Others`)
 - OAuth login and connected-service management for Google and Slack
 - Unified notifications across activity history, in-app notifications, and Slack
@@ -150,6 +151,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - in `awaiting_live_link`, non-admin users can submit live links only
   - admin-only `Edit Brief` reopens status to `creative_approved`
   - rollback from execution stages to `changes_requested` requires a reason
+  - rollback/reopen reasons are entered through in-app modal dialogs (no browser prompt usage)
   - `published` requires at least one valid live link
 - Stage transition saves include `associated_blog_id`, so linked blog context persists when moving stages.
 - Record-level visibility:
@@ -194,6 +196,7 @@ npm run dev
 ## API highlights
 - `/api/dashboard/summary` — standup summary counts (assignment-scoped social counts)
 - `/api/dashboard/tasks-snapshot` — grouped mixed My Tasks snapshot for `/`
+- Dashboard summary/snapshot endpoints now rely on canonical blog date + social ownership fields (no runtime legacy fallback branches).
 - `/api/admin/permissions` — role permission read/update/reset
 - `/api/admin/reassign-assignments` — controlled assignment transfer
 - `/api/admin/activity-history` — admin activity/audit cleanup
@@ -203,6 +206,7 @@ npm run dev
 - `/api/blogs/import` — blog import endpoint (supports `nameResolutions` with `userId`/`selectedUserId` compatibility)
   - `draftDocLink` and `actualPublishDate` are optional import fields
   - writer/publisher resolution uses exact + loose contains/token-overlap matching across full/display/username/first/last/email signals with confidence scoring
+- `/api/blogs/[id]/transition` — canonical blog workflow transition endpoint (writer/publisher status, assignment, scheduled/display dates)
 - `/api/social-posts/[postId]/transition` — canonical social status transitions
 - `/api/social-posts/[postId]/reopen-brief` — admin execution-stage brief reopen
 - `/api/social-posts/reminders` — awaiting-live-link reminder sweep
@@ -230,6 +234,7 @@ npm run dev
 - URL interaction contract uses shared `LinkQuickActions` (`src/components/link-quick-actions.tsx`) for consistent in-place `Open` + `Copy` controls across workflow surfaces.
 - `DataTable` keeps fixed row-height and forced single-line text truncation invariants.
 - Workflow state mutations must follow: client action → API contract → DB mutation (no bypass).
+- Dashboard/My Tasks blog workflow edits are API-authoritative through `/api/blogs/[id]/transition` and no longer rely on direct client `blogs.update(...)` calls.
 - Public-schema tables exposed to PostgREST must keep RLS enabled; admin maintenance endpoints use `service_role` server clients instead of disabling RLS.
 
 ## Supabase migrations

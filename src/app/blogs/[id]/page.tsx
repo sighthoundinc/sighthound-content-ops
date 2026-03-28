@@ -12,10 +12,8 @@ import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import { validateAuthor } from "@/lib/shape-validation";
 import {
-  BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   isMissingBlogCommentsTableError,
-  isMissingBlogDateColumnsError,
   normalizeBlogRow,
 } from "@/lib/blog-schema";
 import { notifySlack } from "@/lib/notifications";
@@ -82,27 +80,11 @@ function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
       id: String(row.id ?? ""),
       blog_id: String(row.blog_id ?? ""),
       comment: String(row.comment ?? ""),
-      created_by: String(row.user_id ?? row.created_by ?? ""),
+      created_by: String(row.user_id ?? ""),
       created_at: String(row.created_at ?? ""),
       author,
     } satisfies BlogCommentRecord;
   });
-}
-
-
-function isMissingBlogCommentUserIdColumnError(error: {
-  code?: string | null;
-  message?: string | null;
-  details?: string | null;
-  hint?: string | null;
-} | null) {
-  if (!error) {
-    return false;
-  }
-  const code = (error.code ?? "").toUpperCase();
-  const text =
-    `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
-  return code === "42703" && text.includes("user_id");
 }
 
 function toDateTimeLocalInput(value: string | null | undefined) {
@@ -181,24 +163,12 @@ export default function BlogDetailPage() {
       setIsLoading(true);
       setError(null);
       setCommentsUnavailableMessage(null);
-      const fetchBlog = async () => {
-        let { data, error } = await supabase
+      const fetchBlog = async () =>
+        supabase
           .from("blogs")
           .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
           .eq("id", blogId)
           .single();
-        if (isMissingBlogDateColumnsError(error)) {
-          const fallback = await supabase
-            .from("blogs")
-            .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
-            .eq("id", blogId)
-            .single();
-          data = fallback.data as typeof data;
-          error = fallback.error;
-        }
-
-        return { data, error };
-      };
 
       const [
         { data: blogData, error: blogError },
@@ -220,23 +190,12 @@ export default function BlogDetailPage() {
             .order("changed_at", { ascending: false })
             .limit(50),
           (async () => {
-            let { data, error } = await supabase
+            const { data, error } = await supabase
               .schema("public")
               .from("blog_comments")
               .select("id,blog_id,comment,user_id,created_at,author:user_id(id,full_name,email)")
               .eq("blog_id", blogId)
               .order("created_at", { ascending: false });
-
-            if (isMissingBlogCommentUserIdColumnError(error)) {
-              const fallback = await supabase
-                .schema("public")
-                .from("blog_comments")
-                .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
-                .eq("blog_id", blogId)
-                .order("created_at", { ascending: false });
-              data = fallback.data as typeof data;
-              error = fallback.error;
-            }
 
             return { data, error };
           })(),
@@ -368,31 +327,12 @@ export default function BlogDetailPage() {
     }
 
     const supabase = getSupabaseBrowserClient();
-    let { data, error: updateError } = await supabase
+    const { data, error: updateError } = await supabase
       .from("blogs")
       .update(updates)
       .eq("id", blog.id)
       .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
       .single();
-
-    if (isMissingBlogDateColumnsError(updateError)) {
-      const legacyUpdates = {
-        ...updates,
-      };
-      delete (legacyUpdates as { scheduled_publish_date?: string | null }).scheduled_publish_date;
-      delete (legacyUpdates as { display_published_date?: string | null }).display_published_date;
-      delete (legacyUpdates as { actual_published_at?: string | null }).actual_published_at;
-      delete (legacyUpdates as { published_at?: string | null }).published_at;
-
-      const fallbackUpdate = await supabase
-        .from("blogs")
-        .update(legacyUpdates)
-        .eq("id", blog.id)
-        .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
-        .single();
-      data = fallbackUpdate.data as typeof data;
-      updateError = fallbackUpdate.error;
-    }
 
     if (updateError) {
       console.error("Blog update failed:", updateError);
@@ -614,7 +554,7 @@ export default function BlogDetailPage() {
     setCommentsUnavailableMessage(null);
 
     const supabase = getSupabaseBrowserClient();
-    let { error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .schema("public")
       .from("blog_comments")
       .insert({
@@ -622,17 +562,6 @@ export default function BlogDetailPage() {
         comment: trimmedComment,
         user_id: user.id,
       });
-    if (isMissingBlogCommentUserIdColumnError(insertError)) {
-      const fallbackInsert = await supabase
-        .schema("public")
-        .from("blog_comments")
-        .insert({
-          blog_id: blog.id,
-          comment: trimmedComment,
-          created_by: user.id,
-        });
-      insertError = fallbackInsert.error;
-    }
 
 
     if (insertError) {
@@ -648,23 +577,12 @@ export default function BlogDetailPage() {
       return;
     }
 
-    let { data: commentsData, error: commentsError } = await supabase
+    const { data: commentsData, error: commentsError } = await supabase
       .schema("public")
       .from("blog_comments")
       .select("id,blog_id,comment,user_id,created_at,author:user_id(id,full_name,email)")
       .eq("blog_id", blog.id)
       .order("created_at", { ascending: false });
-
-    if (isMissingBlogCommentUserIdColumnError(commentsError)) {
-      const fallback = await supabase
-        .schema("public")
-        .from("blog_comments")
-        .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
-        .eq("blog_id", blog.id)
-        .order("created_at", { ascending: false });
-      commentsData = fallback.data as typeof commentsData;
-      commentsError = fallback.error;
-    }
 
     if (commentsError) {
       if (isMissingBlogCommentsTableError(commentsError)) {

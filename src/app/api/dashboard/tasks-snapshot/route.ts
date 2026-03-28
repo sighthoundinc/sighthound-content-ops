@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiContract } from "@/lib/api-contract";
 import {
-  BLOG_SELECT_LEGACY,
   BLOG_SELECT_WITH_DATES,
   getBlogPublishDate,
-  isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
 import {
@@ -54,15 +52,6 @@ function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
   return 0;
 }
 
-function isMissingSocialOwnershipColumnError(message: string) {
-  return (
-    message.includes("assigned_to_user_id") ||
-    message.includes("worker_user_id") ||
-    message.includes("reviewer_user_id") ||
-    message.includes("editor_user_id") ||
-    message.includes("admin_owner_id")
-  );
-}
 
 function getWriterTaskActionState(writerStatus: WriterStageStatus): TaskActionState {
   if (
@@ -163,31 +152,9 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       blogQuery = blogQuery.or(`writer_id.eq.${userId},publisher_id.eq.${userId}`);
     }
 
-    let { data: blogRows, error: blogError } = await blogQuery
+    const { data: blogRows, error: blogError } = await blogQuery
       .order("scheduled_publish_date", { ascending: true, nullsFirst: false })
       .order("updated_at", { ascending: false });
-
-    if (isMissingBlogDateColumnsError(blogError)) {
-      let blogFallbackQuery = adminClient
-        .from("blogs")
-        .select(BLOG_SELECT_LEGACY)
-        .eq("is_archived", false)
-        .neq("overall_status", "published");
-      if (assignedBlogIds.length > 0) {
-        blogFallbackQuery = blogFallbackQuery.or(
-          `writer_id.eq.${userId},publisher_id.eq.${userId},id.in.(${assignedBlogIds.join(",")})`
-        );
-      } else {
-        blogFallbackQuery = blogFallbackQuery.or(
-          `writer_id.eq.${userId},publisher_id.eq.${userId}`
-        );
-      }
-      const fallback = await blogFallbackQuery
-        .order("target_publish_date", { ascending: true, nullsFirst: false })
-        .order("updated_at", { ascending: false });
-      blogRows = fallback.data as typeof blogRows;
-      blogError = fallback.error;
-    }
 
     if (blogError) {
       return NextResponse.json({ error: "Failed to load blog tasks." }, { status: 500 });
@@ -197,47 +164,16 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       (blogRows ?? []) as Array<Record<string, unknown>>
     ) as BlogRecord[];
 
-    let socialRows: Array<Record<string, unknown>> | null = null;
-    let socialError: { message: string } | null = null;
-
-    const scopedSocial = await adminClient
+    const { data: socialRows, error: socialError } = await adminClient
       .from("social_posts")
       .select(
-        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,editor_user_id,admin_owner_id"
+        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id"
       )
       .in("status", ACTIVE_SOCIAL_STATUSES)
       .or(
-        `assigned_to_user_id.eq.${userId},worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId},editor_user_id.eq.${userId},admin_owner_id.eq.${userId}`
+        `assigned_to_user_id.eq.${userId},worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
       )
       .order("scheduled_date", { ascending: true, nullsFirst: false });
-    socialRows = scopedSocial.data as Array<Record<string, unknown>> | null;
-    socialError = scopedSocial.error as { message: string } | null;
-
-    if (socialError && isMissingSocialOwnershipColumnError(socialError.message)) {
-      const fallbackWithLegacyOwners = await adminClient
-        .from("social_posts")
-        .select("id,title,status,scheduled_date,created_at,created_by,editor_user_id,admin_owner_id")
-        .in("status", ACTIVE_SOCIAL_STATUSES)
-        .or(`created_by.eq.${userId},editor_user_id.eq.${userId},admin_owner_id.eq.${userId}`)
-        .order("scheduled_date", { ascending: true, nullsFirst: false });
-      socialRows = fallbackWithLegacyOwners.data as Array<Record<string, unknown>> | null;
-      socialError = fallbackWithLegacyOwners.error as { message: string } | null;
-    }
-
-    if (
-      socialError &&
-      (socialError.message.includes("editor_user_id") ||
-        socialError.message.includes("admin_owner_id"))
-    ) {
-      const fallbackCreatedByOnly = await adminClient
-        .from("social_posts")
-        .select("id,title,status,scheduled_date,created_at,created_by")
-        .in("status", ACTIVE_SOCIAL_STATUSES)
-        .eq("created_by", userId)
-        .order("scheduled_date", { ascending: true, nullsFirst: false });
-      socialRows = fallbackCreatedByOnly.data as Array<Record<string, unknown>> | null;
-      socialError = fallbackCreatedByOnly.error as { message: string } | null;
-    }
 
     if (socialError) {
       return NextResponse.json({ error: "Failed to load social tasks." }, { status: 500 });
@@ -328,10 +264,6 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null;
         const assignedToUserId =
           typeof row.assigned_to_user_id === "string" ? row.assigned_to_user_id : null;
-        const editorUserId =
-          typeof row.editor_user_id === "string" ? row.editor_user_id : createdBy;
-        const adminOwnerId =
-          typeof row.admin_owner_id === "string" ? row.admin_owner_id : null;
         const actionState = getSocialTaskActionState({
           status,
           userId,
@@ -340,8 +272,8 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           workerUserId,
           reviewerUserId,
           assignedToUserId,
-          editorUserId,
-          adminOwnerId,
+          editorUserId: null,
+          adminOwnerId: null,
         });
 
         return [{

@@ -73,8 +73,9 @@ Use `My Tasks` as your first stop each day.
 - Associated blog linkage persists when moving between workflow stages.
 - Returning from execution to `Changes Requested` requires a reason.
 - `Published` requires at least one valid live link (LinkedIn, Facebook, or Instagram).
+- Required rollback/reopen reasons are entered through in-app dialogs (not browser prompts).
 - On Ideas, comments and references stay visible and are edited through `Edit Idea` (not inline).
-- On Ideas, creators and admins can delete an idea from the card action row after a confirmation prompt.
+- All delete actions use the same in-app confirmation modal pattern (not browser dialogs and not toast-action confirms).
 
 ## 4. Filters and search
 - Search is case-insensitive and supports partial matches.
@@ -115,6 +116,7 @@ Use `My Tasks` as your first stop each day.
 - Core table behavior is standardized across pages (sorting, truncation, row density, pagination controls).
 - Drawers and action feedback follow shared patterns; behavior should feel the same regardless of module.
 - Workflow actions are validated before they are accepted, so invalid transitions are blocked consistently.
+- My Tasks and Dashboard inline blog updates use the same transition API validation path, so permission and workflow errors are consistent across both surfaces.
 - When an action fails, feedback uses standardized error wording (and may include a short error code) for easier troubleshooting.
 
 ## 5. Import workflow
@@ -189,6 +191,7 @@ This format enables quick scanning in busy channels and shows exactly who is res
 
 ### Action feedback
 - Success/error alerts appear at the bottom-left and auto-dismiss quickly.
+- Delete confirmation is handled through a dedicated in-app modal before deletion executes.
 - Copy actions show a visual copied confirmation.
 - Workflow links now include quick `Open` + `Copy` controls in-place for high-value URLs (for example Google Doc URL, blog Live URL, and social saved live links).
 - Missing URLs still show disabled `Open` + `Copy` controls so required workflow links are easy to scan.

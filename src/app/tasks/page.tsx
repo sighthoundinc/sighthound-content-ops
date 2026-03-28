@@ -33,12 +33,15 @@ import {
   TableResultsSummary,
 } from "@/components/table-controls";
 import {
-  BLOG_SELECT_LEGACY,
   BLOG_SELECT_WITH_DATES,
   getBlogPublishDate,
-  isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import {
   PUBLISHER_STATUSES,
   PUBLISHER_STATUS_LABELS,
@@ -244,15 +247,6 @@ function comparePublishDatesAsc(leftDate: string | null, rightDate: string | nul
   return 0;
 }
 
-function isMissingSocialOwnershipColumnError(message: string) {
-  return (
-    message.includes("assigned_to_user_id") ||
-    message.includes("worker_user_id") ||
-    message.includes("reviewer_user_id") ||
-    message.includes("editor_user_id") ||
-    message.includes("admin_owner_id")
-  );
-}
 
 function getTaskReason({
   isDelayed,
@@ -317,7 +311,7 @@ function getAdminAssignmentTaskActionState(
 
 function MyTasksPageContent() {
   const searchParams = useSearchParams();
-  const { user, hasPermission, profile } = useAuth();
+  const { user, session, hasPermission, profile } = useAuth();
   const requiredByLabel = profile?.display_name || profile?.full_name || "You";
   const { showSaving, showSuccess, showError, updateAlert } = useAlerts();
   const permissionContract = useMemo(
@@ -414,29 +408,9 @@ function MyTasksPageContent() {
       query = query.or(`writer_id.eq.${user.id},publisher_id.eq.${user.id}`);
     }
 
-    let { data, error: tasksError } = await query
+    const { data, error: tasksError } = await query
       .order("scheduled_publish_date", { ascending: true, nullsFirst: false })
       .order("updated_at", { ascending: false });
-
-    if (isMissingBlogDateColumnsError(tasksError)) {
-      let fallbackQuery = supabase
-        .from("blogs")
-        .select(BLOG_SELECT_LEGACY)
-        .eq("is_archived", false)
-        .neq("overall_status", "published");
-
-      if (assignedBlogIds.length > 0) {
-        fallbackQuery = fallbackQuery.or(`writer_id.eq.${user.id},publisher_id.eq.${user.id},id.in.(${assignedBlogIds.join(',')})`);
-      } else {
-        fallbackQuery = fallbackQuery.or(`writer_id.eq.${user.id},publisher_id.eq.${user.id}`);
-      }
-
-      const fallback = await fallbackQuery
-        .order("target_publish_date", { ascending: true, nullsFirst: false })
-        .order("updated_at", { ascending: false });
-      data = fallback.data as typeof data;
-      tasksError = fallback.error;
-    }
 
     if (tasksError) {
       console.error("Tasks load failed:", tasksError);
@@ -450,47 +424,16 @@ function MyTasksPageContent() {
     let socialQuery = supabase
       .from("social_posts")
       .select(
-        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,editor_user_id,admin_owner_id"
+        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id"
       )
       .in("status", ACTIVE_SOCIAL_STATUSES);
     socialQuery = socialQuery.or(
-      `assigned_to_user_id.eq.${user.id},worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id},editor_user_id.eq.${user.id},admin_owner_id.eq.${user.id}`
+      `assigned_to_user_id.eq.${user.id},worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
     );
-    let { data: socialRows, error: socialError } = await socialQuery.order("scheduled_date", {
+    const { data: socialRows, error: socialError } = await socialQuery.order("scheduled_date", {
       ascending: true,
       nullsFirst: false,
     });
-
-    if (socialError && isMissingSocialOwnershipColumnError(socialError.message)) {
-      const fallbackWithLegacyOwners = await supabase
-        .from("social_posts")
-        .select("id,title,status,scheduled_date,created_at,created_by,editor_user_id,admin_owner_id")
-        .in("status", ACTIVE_SOCIAL_STATUSES)
-        .or(`created_by.eq.${user.id},editor_user_id.eq.${user.id},admin_owner_id.eq.${user.id}`)
-        .order("scheduled_date", { ascending: true, nullsFirst: false });
-
-      socialRows = fallbackWithLegacyOwners.data as typeof socialRows;
-      socialError = fallbackWithLegacyOwners.error;
-    }
-
-    if (
-      socialError &&
-      (socialError.message.includes("editor_user_id") ||
-        socialError.message.includes("admin_owner_id"))
-    ) {
-      const fallback = await supabase
-        .from("social_posts")
-        .select("id,title,status,scheduled_date,created_at,created_by")
-        .in("status", ACTIVE_SOCIAL_STATUSES)
-        .eq("created_by", user.id)
-        .order("scheduled_date", { ascending: true, nullsFirst: false });
-      socialRows = fallback.data?.map((row) => ({
-        ...row,
-        editor_user_id: row.created_by,
-        admin_owner_id: null,
-      })) as typeof socialRows;
-      socialError = fallback.error;
-    }
 
     if (socialError) {
       console.error("Social posts load failed:", socialError);
@@ -513,10 +456,6 @@ function MyTasksPageContent() {
           typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null;
         const assignedToUserId =
           typeof row.assigned_to_user_id === "string" ? row.assigned_to_user_id : null;
-        const editorUserId =
-          typeof row.editor_user_id === "string" ? row.editor_user_id : createdBy;
-        const adminOwnerId =
-          typeof row.admin_owner_id === "string" ? row.admin_owner_id : null;
         const actionState = getSocialTaskActionState({
           status,
           userId: user.id,
@@ -525,8 +464,8 @@ function MyTasksPageContent() {
           workerUserId,
           reviewerUserId,
           assignedToUserId,
-          editorUserId,
-          adminOwnerId,
+          editorUserId: null,
+          adminOwnerId: null,
         });
         return {
           id: String(row.id ?? ""),
@@ -1304,36 +1243,42 @@ function MyTasksPageContent() {
         ? { writer_status: nextStatus as WriterStageStatus }
         : { publisher_status: nextStatus as PublisherStageStatus };
 
-    const supabase = getSupabaseBrowserClient();
+    if (!session?.access_token) {
+      showError("Couldn't save changes. Please sign in again.");
+      return;
+    }
     setSavingTaskId(task.id);
     const statusId = showSaving("Saving changes…");
-
-    let { data, error: updateError } = await supabase
-      .from("blogs")
-      .update(updates)
-      .eq("id", task.blogId)
-      .select(BLOG_SELECT_WITH_DATES)
-      .single();
-
-    if (isMissingBlogDateColumnsError(updateError)) {
-      const fallback = await supabase
-        .from("blogs")
-        .update(updates)
-        .eq("id", task.blogId)
-        .select(BLOG_SELECT_LEGACY)
-        .single();
-      data = fallback.data as typeof data;
-      updateError = fallback.error;
-    }
-
-    if (updateError) {
+    const response = await fetch(`/api/blogs/${task.blogId}/transition`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(updates),
+    });
+    const payload = await parseApiResponseJson<{ blog?: Record<string, unknown> }>(
+      response
+    );
+    if (isApiFailure(response, payload)) {
+      const errorMessage = getApiErrorMessage(payload, "Couldn't save changes.");
       updateAlert(statusId, {
         type: "error",
-        message: `Couldn't save. ${updateError.message}`,
+        message: errorMessage,
         actionLabel: "Retry",
         onAction: () => {
           void updateTaskStatus(task, nextStatus);
         },
+      });
+      setSavingTaskId(null);
+      return;
+    }
+    const data =
+      payload.blog && typeof payload.blog === "object" ? payload.blog : null;
+    if (!data) {
+      updateAlert(statusId, {
+        type: "error",
+        message: "Couldn't save changes.",
       });
       setSavingTaskId(null);
       return;

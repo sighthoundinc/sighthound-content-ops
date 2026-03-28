@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Button } from "@/components/button";
 
 type ConfirmationTone = "danger" | "default";
@@ -13,6 +13,8 @@ export function ConfirmationModal({
   cancelLabel = "Cancel",
   tone = "default",
   isConfirming = false,
+  confirmDisabled = false,
+  children,
   onCancel,
   onConfirm,
 }: {
@@ -23,6 +25,8 @@ export function ConfirmationModal({
   cancelLabel?: string;
   tone?: ConfirmationTone;
   isConfirming?: boolean;
+  confirmDisabled?: boolean;
+  children?: ReactNode;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -72,6 +76,7 @@ export function ConfirmationModal({
           <div>
             <h3 className="text-base font-semibold text-slate-900">{title}</h3>
             <p className="mt-1 text-sm text-slate-600">{description}</p>
+            {children ? <div className="mt-3">{children}</div> : null}
           </div>
         </div>
         <div className="mt-4 flex items-center justify-end gap-2">
@@ -89,7 +94,7 @@ export function ConfirmationModal({
             variant={tone === "danger" ? "destructive" : "primary"}
             size="md"
             onClick={onConfirm}
-            disabled={isConfirming}
+            disabled={isConfirming || confirmDisabled}
           >
             {isConfirming ? "Working..." : confirmLabel}
           </Button>

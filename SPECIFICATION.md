@@ -213,6 +213,10 @@ Key behavior:
 - action-led empty states:
   - filtered no-results: clear filters / open import
   - no data yet: add new blog / open import
+- delete confirmation contract:
+  - all delete actions use shared in-app confirmation modal
+  - browser `window.confirm` is not used for delete UX
+  - toast/alert action buttons are not used as primary delete confirmations
 - **Phase 4C**: Unified DataTable with:
   - two-line clamped titles
   - site badges (`SH`, `RED`)
@@ -302,6 +306,7 @@ Key behavior:
   - `ready_to_publish` → `changes_requested`
   - `awaiting_live_link` → `changes_requested`
 - execution-stage rollback to `changes_requested` requires a reason
+- rollback/reopen reason capture uses in-app modal dialogs (no browser prompt flows)
 - moving a social post to `published` requires at least one saved live link (`social_post_links`)
 - deleting a social post is idempotent and safe when live links exist; link-removal activity logging is best-effort and skipped if the parent post is already removed by cascade delete
 
@@ -703,6 +708,10 @@ The project is migration-driven (`supabase/migrations`) with compatibility layer
 - auth integrations trigger hardening (`20260326103000_harden_auth_user_integrations_trigger.sql`) to prevent `relation "user_integrations" does not exist` failures from aborting auth user creation
 - social-link delete audit guard (`20260326113000_guard_social_post_link_delete_audit.sql`) to prevent FK failures during cascade deletes
 - wipe cleanup hardening (`20260326123000_fix_wipe_app_clean_preserve_current_admin.sql`) to preserve only signed-in admin while deleting all other app data
+- runtime compatibility retirement:
+  - dashboard/task/blog runtime routes now target canonical blog date columns directly (no legacy date-column fallback branch)
+  - blog comment runtime reads/writes use canonical `blog_comments.user_id` (legacy `created_by` runtime fallback retired)
+  - dashboard summary/snapshot APIs use canonical social ownership fields (`assigned_to_user_id`, `worker_user_id`, `reviewer_user_id`, `created_by`) without legacy ownership fallback branches
 ## 14) Non-functional requirements
 - fast workflow execution
 - deterministic DB-level invariants for workflow integrity

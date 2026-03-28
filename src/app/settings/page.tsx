@@ -42,7 +42,7 @@ import {
 } from "@/lib/table";
 import type { AppRole, ProfileRecord } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 
 const WEEK_DAYS = [
   { label: "Sunday", value: 0 },
@@ -116,7 +116,7 @@ export default function SettingsPage() {
 function SettingsPageContent() {
   const searchParams = useSearchParams();
   const { hasPermission, session, profile, refreshProfile, user } = useAuth();
-  const { showError, showSuccess } = useSystemFeedback();
+  const { showError, showSuccess } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]

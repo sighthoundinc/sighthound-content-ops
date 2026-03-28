@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { ProtectedPage } from "@/components/protected-page";
@@ -50,8 +51,8 @@ import type {
 import { formatDateInput } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 import { useNotifications } from "@/providers/notifications-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type BlogLookupResult = {
   id: string;
@@ -246,13 +247,8 @@ function toBoldFormat(input: string) {
   return output;
 }
 
-function formatSavedTimestamp(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+function formatSavedTimestamp(value: string, timezone?: string | null) {
+  return formatDateInTimezone(value, timezone ?? undefined, "MMM d, h:mm a");
 }
 
 function normalizePostRow(row: Record<string, unknown>): SocialPostEditorRecord {
@@ -303,7 +299,7 @@ export default function SocialPostEditorPage() {
   const router = useRouter();
   const { profile, session, user } = useAuth();
   const { pushNotification } = useNotifications();
-  const { showSaving, showSuccess, showError, updateStatus } = useSystemFeedback();
+  const { showSaving, showSuccess, showError, updateAlert: updateStatus } = useAlerts();
   const postId = params?.id ?? "";
   const captionRef = useRef<HTMLTextAreaElement | null>(null);
   const userRoles = useMemo(() => getUserRoles(profile), [profile]);
@@ -327,6 +323,12 @@ export default function SocialPostEditorPage() {
   const [activity, setActivity] = useState<SocialActivityRecord[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
   const [isCommentSaving, setIsCommentSaving] = useState(false);
+  const [pendingRollbackTransition, setPendingRollbackTransition] = useState<{
+    toStatus: SocialPostStatus;
+    reason: string;
+  } | null>(null);
+  const [isReopenBriefModalOpen, setIsReopenBriefModalOpen] = useState(false);
+  const [reopenBriefReason, setReopenBriefReason] = useState("");
   const canEditBrief = useMemo(() => {
     if (!post) {
       return false;
@@ -594,7 +596,7 @@ export default function SocialPostEditorPage() {
   );
 
   const transitionPostStatus = useCallback(
-    async (toStatus: SocialPostStatus) => {
+    async (toStatus: SocialPostStatus, rollbackReason?: string | null) => {
       if (!post) {
         return false;
       }
@@ -624,16 +626,19 @@ export default function SocialPostEditorPage() {
         toStatus === "changes_requested" &&
         (currentStatus === "ready_to_publish" ||
           currentStatus === "awaiting_live_link");
-      let reason: string | null = null;
+      const reason =
+        typeof rollbackReason === "string" && rollbackReason.trim().length > 0
+          ? rollbackReason.trim()
+          : null;
       if (requiresRollbackReason) {
-        const rawReason = window.prompt(
-          "Provide a reason for sending this post back to Changes Requested:"
-        );
-        if (!rawReason || rawReason.trim().length === 0) {
+        if (!reason) {
+          setPendingRollbackTransition({ toStatus, reason: "" });
+          return false;
+        }
+        if (reason.trim().length === 0) {
           showError(VALIDATION_MESSAGES.rollbackReasonRequired);
           return false;
         }
-        reason = rawReason.trim();
       }
 
       setIsSaving(true);
@@ -727,7 +732,19 @@ export default function SocialPostEditorPage() {
       void loadPost();
       return true;
     },
-    [form, isAdmin, post, profile?.full_name, pushNotification, session?.access_token, showError, showSuccess, canCurrentUserTransition, user?.id, loadPost]
+    [
+      form,
+      isAdmin,
+      post,
+      profile?.full_name,
+      pushNotification,
+      session?.access_token,
+      showError,
+      showSuccess,
+      canCurrentUserTransition,
+      user?.id,
+      loadPost,
+    ]
   );
 
   const saveAssignments = useCallback(async () => {
@@ -1188,7 +1205,7 @@ export default function SocialPostEditorPage() {
       setIsLiveLinksSaving(false);
     }
   };
-  const handleReopenBrief = async () => {
+  const submitReopenBrief = async (reason: string | null) => {
     if (!post) {
       return;
     }
@@ -1196,9 +1213,6 @@ export default function SocialPostEditorPage() {
       showError(VALIDATION_MESSAGES.sessionExpired);
       return;
     }
-    const reasonInput = window.prompt(
-      "Optional reason for reopening this post to Creative Approved:"
-    );
     setIsSaving(true);
     const response = await fetch(`/api/social-posts/${post.id}/reopen-brief`, {
       method: "POST",
@@ -1207,10 +1221,7 @@ export default function SocialPostEditorPage() {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        reason:
-          typeof reasonInput === "string" && reasonInput.trim().length > 0
-            ? reasonInput.trim()
-            : null,
+        reason,
       }),
     }).catch(() => null);
     if (!response) {
@@ -1255,6 +1266,10 @@ export default function SocialPostEditorPage() {
     showSuccess(VALIDATION_MESSAGES.postReopened);
     setIsSaving(false);
   };
+  const handleReopenBrief = () => {
+    setReopenBriefReason("");
+    setIsReopenBriefModalOpen(true);
+  };
 
   const handleFinalAction = async () => {
     if (!form || !post) {
@@ -1271,15 +1286,10 @@ export default function SocialPostEditorPage() {
   };
 
   const [isDeletingPost, setIsDeletingPost] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleDeletePost = async () => {
     if (!post || !session?.access_token) {
-      return;
-    }
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${post.title}"? This action cannot be undone.`
-    );
-    if (!confirmed) {
       return;
     }
     setIsDeletingPost(true);
@@ -1294,7 +1304,6 @@ export default function SocialPostEditorPage() {
     const payload = await parseApiResponseJson<Record<string, unknown>>(response);
     if (isApiFailure(response, payload)) {
       showError(getApiErrorMessage(payload, "Failed to delete post."));
-      showError(payload.error ?? "Failed to delete post.");
       setIsDeletingPost(false);
       return;
     }
@@ -1356,7 +1365,7 @@ export default function SocialPostEditorPage() {
                   size="sm"
                   disabled={isDeletingPost}
                   onClick={() => {
-                    void handleDeletePost();
+                    setIsDeleteModalOpen(true);
                   }}
                 >
                   {isDeletingPost ? "Deleting…" : "Delete"}
@@ -1373,6 +1382,95 @@ export default function SocialPostEditorPage() {
               </div>
             }
           />
+          <ConfirmationModal
+            isOpen={isDeleteModalOpen}
+            title="Delete post?"
+            description="Are you sure you want to delete this post? This action cannot be undone."
+            confirmLabel="Delete post"
+            tone="danger"
+            isConfirming={isDeletingPost}
+            onCancel={() => {
+              if (!isDeletingPost) {
+                setIsDeleteModalOpen(false);
+              }
+            }}
+            onConfirm={() => {
+              void handleDeletePost();
+            }}
+          />
+          <ConfirmationModal
+            isOpen={pendingRollbackTransition !== null}
+            title="Send back to Changes Requested?"
+            description="Provide a reason for this rollback. This reason is required."
+            confirmLabel="Send back"
+            isConfirming={isSaving}
+            confirmDisabled={!pendingRollbackTransition?.reason.trim()}
+            onCancel={() => {
+              if (!isSaving) {
+                setPendingRollbackTransition(null);
+              }
+            }}
+            onConfirm={() => {
+              if (!pendingRollbackTransition) {
+                return;
+              }
+              const reason = pendingRollbackTransition.reason.trim();
+              if (!reason) {
+                showError(VALIDATION_MESSAGES.rollbackReasonRequired);
+                return;
+              }
+              const nextStatus = pendingRollbackTransition.toStatus;
+              setPendingRollbackTransition(null);
+              void transitionPostStatus(nextStatus, reason);
+            }}
+          >
+            <label className="space-y-1 text-sm text-slate-700">
+              <span className="font-medium">Reason</span>
+              <textarea
+                value={pendingRollbackTransition?.reason ?? ""}
+                onChange={(event) => {
+                  setPendingRollbackTransition((previous) =>
+                    previous ? { ...previous, reason: event.target.value } : previous
+                  );
+                }}
+                rows={3}
+                className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Add context for the requested changes..."
+              />
+            </label>
+          </ConfirmationModal>
+          <ConfirmationModal
+            isOpen={isReopenBriefModalOpen}
+            title="Reopen brief to Creative Approved?"
+            description="Optionally provide a reason for reopening this post."
+            confirmLabel="Reopen brief"
+            isConfirming={isSaving}
+            onCancel={() => {
+              if (!isSaving) {
+                setIsReopenBriefModalOpen(false);
+                setReopenBriefReason("");
+              }
+            }}
+            onConfirm={() => {
+              const reason = reopenBriefReason.trim();
+              setIsReopenBriefModalOpen(false);
+              setReopenBriefReason("");
+              void submitReopenBrief(reason.length > 0 ? reason : null);
+            }}
+          >
+            <label className="space-y-1 text-sm text-slate-700">
+              <span className="font-medium">Reason (optional)</span>
+              <textarea
+                value={reopenBriefReason}
+                onChange={(event) => {
+                  setReopenBriefReason(event.target.value);
+                }}
+                rows={3}
+                className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Add context for why this brief is being reopened..."
+              />
+            </label>
+          </ConfirmationModal>
           {!canEditBrief ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
               <span>
@@ -2064,7 +2162,7 @@ export default function SocialPostEditorPage() {
                   </p>
                   <p className="text-xs text-slate-600">Type: {SOCIAL_POST_TYPE_LABELS[form.type]}</p>
                   <p className="text-xs text-slate-600">
-                    Last saved: {formatSavedTimestamp(post.updated_at)}
+                    Last saved: {formatSavedTimestamp(post.updated_at, profile?.timezone)}
                   </p>
                 </div>
               </section>

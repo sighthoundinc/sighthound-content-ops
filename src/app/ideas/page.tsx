@@ -4,30 +4,25 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ProtectedPage } from "@/components/protected-page";
 import { parseApiResponseJson, isApiFailure, getApiErrorMessage } from "@/lib/api-response";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getUserRoles } from "@/lib/roles";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { formatDateInTimezone } from "@/lib/format-date";
 import type { BlogIdeaRecord, BlogSite, IdeaCommentRecord } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+import { useAlerts } from "@/providers/alerts-provider";
+function formatDateTime(value: string, timezone?: string | null) {
+  return formatDateInTimezone(value, timezone ?? undefined, "MMM d, yyyy h:mm a");
 }
 
 export default function IdeasPage() {
   const router = useRouter();
   const { hasPermission, profile, session, user } = useAuth();
-  const { showError, showSuccess } = useSystemFeedback();
+  const { showError, showSuccess } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -48,6 +43,7 @@ export default function IdeasPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [ideaComments, setIdeaComments] = useState<Record<string, IdeaCommentRecord[]>>({});
   const [deletingIdeaId, setDeletingIdeaId] = useState<string | null>(null);
+  const [pendingDeleteIdea, setPendingDeleteIdea] = useState<BlogIdeaRecord | null>(null);
 
   const canCreateBlog = permissionContract.canCreateBlog;
   const isAdmin = useMemo(() => getUserRoles(profile).includes("admin"), [profile]);
@@ -290,21 +286,24 @@ export default function IdeasPage() {
     if (!didSave) return;
     closeEditModal();
   };
-  const handleDeleteIdea = async (idea: BlogIdeaRecord) => {
+  const handleDeleteIdea = (idea: BlogIdeaRecord) => {
     if (!session?.access_token) {
       setError("You must be logged in.");
       return;
     }
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${idea.title}"? This action cannot be undone.`
-    );
-    if (!confirmed) {
+    if (deletingIdeaId) {
       return;
     }
+    setPendingDeleteIdea(idea);
+  };
 
-    setDeletingIdeaId(idea.id);
-    const response = await fetch(`/api/ideas/${idea.id}`, {
+  const confirmDeleteIdea = async () => {
+    if (!session?.access_token || !pendingDeleteIdea) {
+      setError("You must be logged in.");
+      return;
+    }
+    setDeletingIdeaId(pendingDeleteIdea.id);
+    const response = await fetch(`/api/ideas/${pendingDeleteIdea.id}`, {
       method: "DELETE",
       headers: {
         authorization: `Bearer ${session.access_token}`,
@@ -317,9 +316,11 @@ export default function IdeasPage() {
       setDeletingIdeaId(null);
       return;
     }
-
-    setIdeas((previous) => previous.filter((existingIdea) => existingIdea.id !== idea.id));
+    setIdeas((previous) =>
+      previous.filter((existingIdea) => existingIdea.id !== pendingDeleteIdea.id)
+    );
     showSuccess("Idea deleted.");
+    setPendingDeleteIdea(null);
     setDeletingIdeaId(null);
   };
 
@@ -395,7 +396,7 @@ export default function IdeasPage() {
                     <h4 className="text-base font-semibold text-slate-900">{idea.title}</h4>
                     <p className="mt-1 text-sm text-slate-600">Site: {idea.site}</p>
                     <p className="mt-2 text-xs text-slate-500">
-                      Added {formatDateTime(idea.created_at)}
+                      Added {formatDateTime(idea.created_at, profile?.timezone)}
                     </p>
 
                     {/* Comments & References Section */}
@@ -410,7 +411,7 @@ export default function IdeasPage() {
                             <li key={comment.id} className="border-l-2 border-slate-300 pl-3 text-sm">
                               <p className="text-slate-700">{comment.comment}</p>
                               <p className="mt-1 text-xs text-slate-500">
-                                {formatDateTime(comment.created_at)}
+                                {formatDateTime(comment.created_at, profile?.timezone)}
                               </p>
                             </li>
                           ))}
@@ -677,6 +678,26 @@ export default function IdeasPage() {
             </div>
           </div>
         ) : null}
+        <ConfirmationModal
+          isOpen={pendingDeleteIdea !== null}
+          title="Delete idea?"
+          description={
+            pendingDeleteIdea
+              ? `Are you sure you want to delete "${pendingDeleteIdea.title}"? This action cannot be undone.`
+              : "This action cannot be undone."
+          }
+          confirmLabel="Delete idea"
+          tone="danger"
+          isConfirming={Boolean(pendingDeleteIdea && deletingIdeaId === pendingDeleteIdea.id)}
+          onCancel={() => {
+            if (!deletingIdeaId) {
+              setPendingDeleteIdea(null);
+            }
+          }}
+          onConfirm={() => {
+            void confirmDeleteIdea();
+          }}
+        />
       </AppShell>
     </ProtectedPage>
   );

@@ -19,7 +19,7 @@ import {
 } from "@/lib/api-response";
 import type { AppRole, CanonicalAppPermissionKey } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 
 type PermissionAuditRow = {
   id: string;
@@ -78,7 +78,7 @@ function getTaskLabel(permissionKey: CanonicalAppPermissionKey, fallbackLabel: s
 
 export default function PermissionsSettingsPage() {
   const { refreshPermissions, session } = useAuth();
-  const { showError, showSuccess } = useSystemFeedback();
+  const { showError, showSuccess } = useAlerts();
   const [selectedRole, setSelectedRole] = useState<AppRole>("writer");
   const [simulatedRole, setSimulatedRole] = useState<AppRole | "off">("off");
   const [permissionRows, setPermissionRows] = useState<PermissionRow[]>([]);

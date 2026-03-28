@@ -18,10 +18,8 @@ import {
 } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import {
-  BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogPublishDate,
-  isMissingBlogDateColumnsError,
   normalizeBlogRow,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
@@ -47,7 +45,7 @@ import type {
 } from "@/lib/types";
 import { formatDisplayDate } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 
 type BoardStage = "idea" | "writing" | "reviewing" | "publishing" | "published";
 type BoardStageFilter = "all" | BoardStage;
@@ -193,7 +191,7 @@ function getStageUpdatePayload(blog: BlogRecord, targetStage: BoardStage): Stage
 export default function BlogCardBoardPage() {
   const router = useRouter();
   const { hasPermission, user } = useAuth();
-  const { showSaving, showSuccess, showError, updateStatus } = useSystemFeedback();
+  const { showSaving, showSuccess, showError, updateAlert: updateStatus } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -245,18 +243,8 @@ export default function BlogCardBoardPage() {
       return;
     }
 
-    let blogsData = blogsResponse.data;
-    let blogsError = blogsResponse.error;
-
-    if (isMissingBlogDateColumnsError(blogsError)) {
-      const fallback = await supabase
-        .from("blogs")
-        .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
-        .eq("is_archived", false)
-        .order("updated_at", { ascending: false });
-      blogsData = fallback.data as typeof blogsData;
-      blogsError = fallback.error;
-    }
+    const blogsData = blogsResponse.data;
+    const blogsError = blogsResponse.error;
 
     if (blogsError) {
       console.error("Blogs load failed:", blogsError);
@@ -515,23 +503,12 @@ export default function BlogCardBoardPage() {
       const statusId = showSaving("Updating stage…");
       const supabase = getSupabaseBrowserClient();
 
-      let { data, error: updateError } = await supabase
+      const { data, error: updateError } = await supabase
         .from("blogs")
         .update(nextPayload)
         .eq("id", blog.id)
         .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
         .single();
-
-      if (isMissingBlogDateColumnsError(updateError)) {
-        const fallback = await supabase
-          .from("blogs")
-          .update(nextPayload)
-          .eq("id", blog.id)
-          .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
-          .single();
-        data = fallback.data as typeof data;
-        updateError = fallback.error;
-      }
 
       if (updateError) {
         updateStatus(statusId, { type: "error", message: updateError.message });
@@ -602,21 +579,11 @@ export default function BlogCardBoardPage() {
       created_by: user.id,
     };
 
-    let { data, error: insertError } = await supabase
+    const { data, error: insertError } = await supabase
       .from("blogs")
       .insert(payload)
       .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
       .single();
-
-    if (isMissingBlogDateColumnsError(insertError)) {
-      const fallback = await supabase
-        .from("blogs")
-        .insert(payload)
-        .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
-        .single();
-      data = fallback.data as typeof data;
-      insertError = fallback.error;
-    }
 
     if (insertError) {
       showError(insertError.message);

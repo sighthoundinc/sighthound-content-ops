@@ -43,12 +43,9 @@ import { WorkflowStageBadge } from "@/components/status-badge";
 import { TablePaginationControls, TableRowLimitSelect } from "@/components/table-controls";
 import { KbdShortcut } from "@/components/kbd-shortcut";
 import {
-  BLOG_SELECT_LEGACY,
-  BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogScheduledDate,
-  isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
 import {
@@ -84,7 +81,7 @@ import type {
 } from "@/lib/types";
 import { toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 
 type CalendarMode = "month" | "week";
 type CalendarViewScope = "mine" | "all";
@@ -340,7 +337,7 @@ function CalendarSocialEventCard({
 
 export default function CalendarPage() {
   const { hasPermission, profile, user } = useAuth();
-  const { showSaving, showError, updateStatus } = useSystemFeedback();
+  const { showSaving, showError, updateAlert: updateStatus } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -406,21 +403,11 @@ export default function CalendarPage() {
     setIsLoading(true);
     setError(null);
     const fetchBlogs = async () => {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from("blogs")
         .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
         .eq("is_archived", false)
         .order("scheduled_publish_date", { ascending: true, nullsFirst: false });
-
-      if (isMissingBlogDateColumnsError(error)) {
-        const fallback = await supabase
-          .from("blogs")
-          .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
-          .eq("is_archived", false)
-          .order("target_publish_date", { ascending: true, nullsFirst: false });
-        data = fallback.data as typeof data;
-        error = fallback.error;
-      }
 
       return { data, error };
     };
@@ -794,47 +781,6 @@ export default function CalendarPage() {
       .eq("id", blogId)
       .select(BLOG_SELECT_WITH_DATES)
       .single();
-
-    if (isMissingBlogDateColumnsError(updateError)) {
-      const fallback = await supabase
-        .from("blogs")
-        .update({
-          target_publish_date: scheduledDate,
-        })
-        .eq("id", blogId)
-        .select(BLOG_SELECT_LEGACY)
-        .single();
-
-      if (fallback.error) {
-        updateStatus(statusId, {
-          type: "error",
-          message: "Failed to save changes.",
-          actionLabel: "Retry",
-          onAction: () => {
-            void updateScheduledDate(blogId, scheduledDate);
-          },
-        });
-        return;
-      }
-
-      setBlogs((previous) =>
-        normalizeBlogRows(
-          previous.map((blog) =>
-            blog.id === blogId ? ({ ...blog, ...fallback.data } as Record<string, unknown>) : blog
-          ) as Array<Record<string, unknown>>
-        ) as BlogRecord[]
-      );
-      updateStatus(statusId, {
-        type: "success",
-        message: "Status updated.",
-        notification: {
-          icon: "calendar",
-          message: "Calendar event rescheduled",
-          href: `/calendar`,
-        },
-      });
-      return;
-    }
 
     if (updateError) {
       updateStatus(statusId, {

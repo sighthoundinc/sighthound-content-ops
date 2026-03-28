@@ -6,7 +6,7 @@ import type { Command } from "@/lib/command-palette-config";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getUserRoles } from "@/lib/roles";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 
 export interface UseCommandPaletteReturn {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export interface UseCommandPaletteReturn {
 export function useCommandPalette(): UseCommandPaletteReturn {
   const pathname = usePathname();
   const { hasPermission, profile } = useAuth();
-  const { showError } = useSystemFeedback();
+  const { showError } = useAlerts();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);

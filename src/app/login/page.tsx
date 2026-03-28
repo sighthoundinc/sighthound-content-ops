@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon } from "@/lib/icons";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 const LOGIN_HIGHLIGHTS = [
   "See upcoming and overdue publishing work in one calendar view",
   "Keep blog drafts, reviews, and publish dates moving on schedule",
@@ -18,7 +18,7 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { session } = useAuth();
-  const { showError } = useSystemFeedback();
+  const { showError } = useAlerts();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

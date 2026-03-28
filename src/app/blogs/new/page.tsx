@@ -6,17 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
-import {
-  isMissingBlogCommentsTableError,
-  isMissingBlogDateColumnsError,
-} from "@/lib/blog-schema";
+import { isMissingBlogCommentsTableError } from "@/lib/blog-schema";
 import { notifySlack } from "@/lib/notifications";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { BlogSite, ProfileRecord } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 
 function slugify(value: string) {
   return value
@@ -27,26 +24,12 @@ function slugify(value: string) {
     .replace(/-+/g, "-");
 }
 
-function isMissingBlogCommentUserIdColumnError(error: {
-  code?: string | null;
-  message?: string | null;
-  details?: string | null;
-  hint?: string | null;
-} | null) {
-  if (!error) {
-    return false;
-  }
-  const code = (error.code ?? "").toUpperCase();
-  const text =
-    `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
-  return code === "42703" && text.includes("user_id");
-}
 
 function NewBlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { hasPermission, user, profile } = useAuth();
-  const { showError } = useSystemFeedback();
+  const { showError } = useAlerts();
   const sourceIdeaId = searchParams.get("ideaId");
   const requestedScheduledPublishDate = searchParams.get("scheduled_publish_date");
   const [users, setUsers] = useState<ProfileRecord[]>([]);
@@ -194,27 +177,11 @@ function NewBlogPageContent() {
       created_by: user.id,
     };
 
-    let { data, error: insertError } = await supabase
+    const { data, error: insertError } = await supabase
       .from("blogs")
       .insert(payload)
       .select("id,title,site")
       .single();
-
-    if (isMissingBlogDateColumnsError(insertError)) {
-      const legacyPayload = {
-        ...payload,
-      };
-      delete (legacyPayload as { scheduled_publish_date?: string | null }).scheduled_publish_date;
-      delete (legacyPayload as { display_published_date?: string | null }).display_published_date;
-
-      const fallbackInsert = await supabase
-        .from("blogs")
-        .insert(legacyPayload)
-        .select("id,title,site")
-        .single();
-      data = fallbackInsert.data;
-      insertError = fallbackInsert.error;
-    }
 
     if (insertError) {
       console.error("Blog insert failed:", insertError);
@@ -235,7 +202,7 @@ function NewBlogPageContent() {
         setIsSubmitting(false);
         return;
       }
-      let { error: commentInsertError } = await supabase
+      const { error: commentInsertError } = await supabase
         .schema("public")
         .from("blog_comments")
         .insert({
@@ -243,18 +210,6 @@ function NewBlogPageContent() {
           comment: trimmedInitialComment,
           user_id: user.id,
         });
-
-      if (isMissingBlogCommentUserIdColumnError(commentInsertError)) {
-        const fallback = await supabase
-          .schema("public")
-          .from("blog_comments")
-          .insert({
-            blog_id: data.id,
-            comment: trimmedInitialComment,
-            created_by: user.id,
-          });
-        commentInsertError = fallback.error;
-      }
       if (commentInsertError) {
         if (isMissingBlogCommentsTableError(commentInsertError)) {
           console.warn(

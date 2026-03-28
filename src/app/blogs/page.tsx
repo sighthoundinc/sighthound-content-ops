@@ -35,11 +35,9 @@ import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { ProtectedPage } from "@/components/protected-page";
 import { TablePaginationControls } from "@/components/table-controls";
 import {
-  BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogPublishDate,
   isMissingBlogCommentsTableError,
-  isMissingBlogDateColumnsError,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
 import {
@@ -67,7 +65,7 @@ import type {
 } from "@/lib/types";
 import { cn, formatDisplayDate } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 
 type LibraryStatusFilter = "published" | "published_and_unpublished" | "unpublished";
 type LibraryStage = "writing" | "needs_revision" | "ready_to_publish" | "publishing" | "published";
@@ -326,7 +324,7 @@ function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
       id: String(row.id ?? ""),
       blog_id: String(row.blog_id ?? ""),
       comment: String(row.comment ?? ""),
-      created_by: String(row.user_id ?? row.created_by ?? ""),
+      created_by: String(row.user_id ?? ""),
       created_at: String(row.created_at ?? ""),
       author: (Array.isArray(row.author) ? row.author[0] : row.author) as
         | Pick<ProfileRecord, "id" | "full_name" | "email">
@@ -335,21 +333,6 @@ function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
     } satisfies BlogCommentRecord;
   });
 }
-function isMissingBlogCommentUserIdColumnError(error: {
-  code?: string | null;
-  message?: string | null;
-  details?: string | null;
-  hint?: string | null;
-} | null) {
-  if (!error) {
-    return false;
-  }
-  const code = (error.code ?? "").toUpperCase();
-  const text =
-    `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
-  return code === "42703" && text.includes("user_id");
-}
-
 
 function isBoardStageQueryFilter(value: string | null): value is BoardStageQueryFilter {
   return value === "idea" || value === "writing" || value === "reviewing" || value === "publishing" || value === "published";
@@ -358,8 +341,7 @@ function isBoardStageQueryFilter(value: string | null): value is BoardStageQuery
 function BlogLibraryPageContent() {
   const searchParams = useSearchParams();
   const { hasPermission, profile } = useAuth();
-  const { showSaving, showSuccess, showError, updateStatus, pushNotification } =
-    useSystemFeedback();
+  const { showSaving, showSuccess, showError, updateAlert: updateStatus } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -408,23 +390,12 @@ function BlogLibraryPageContent() {
     setIsLoading(true);
     setError(null);
 
-    let { data, error: blogsError } = await supabase
+    const { data, error: blogsError } = await supabase
       .from("blogs")
       .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
       .eq("is_archived", false)
       .order("display_published_date", { ascending: false, nullsFirst: false })
       .order("updated_at", { ascending: false });
-
-    if (isMissingBlogDateColumnsError(blogsError)) {
-      const fallback = await supabase
-        .from("blogs")
-        .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
-        .eq("is_archived", false)
-        .order("target_publish_date", { ascending: false, nullsFirst: false })
-        .order("updated_at", { ascending: false });
-      data = fallback.data as typeof data;
-      blogsError = fallback.error;
-    }
 
     if (blogsError) {
       setError(
@@ -623,25 +594,13 @@ function BlogLibraryPageContent() {
       setPanelError(null);
       const supabase = getSupabaseBrowserClient();
       const fetchComments = async () => {
-        let { data, error } = await supabase
+        const { data, error } = await supabase
           .schema("public")
           .from("blog_comments")
           .select("id,blog_id,comment,user_id,created_at,author:user_id(id,full_name,email)")
           .eq("blog_id", activeBlogId)
           .order("created_at", { ascending: false })
           .limit(5);
-
-        if (isMissingBlogCommentUserIdColumnError(error)) {
-          const fallback = await supabase
-            .schema("public")
-            .from("blog_comments")
-            .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
-            .eq("blog_id", activeBlogId)
-            .order("created_at", { ascending: false })
-            .limit(5);
-          data = fallback.data as typeof data;
-          error = fallback.error;
-        }
         return { data, error };
       };
       const [{ data: historyData, error: historyError }, { data: commentsData, error: commentsError }] =
@@ -1291,11 +1250,6 @@ function BlogLibraryPageContent() {
         message: `Export ready (${scope === "view" ? "view" : "selected"} PDF)`,
         href: "/blogs",
       },
-    });
-    pushNotification({
-      icon: "file",
-      message: "Use browser print dialog to save PDF",
-      href: "/blogs",
     });
   };
   useEffect(() => {

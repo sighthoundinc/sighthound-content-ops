@@ -27,6 +27,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { CalendarTile } from "@/components/calendar-tile";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   DATA_PAGE_CONTROL_STRIP_CLASS,
@@ -94,8 +95,8 @@ import {
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
 import { useAuth } from "@/providers/auth-provider";
+import { useAlerts } from "@/providers/alerts-provider";
 import { useNotifications } from "@/providers/notifications-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
 
 type SocialPostsView = "board" | "list" | "calendar";
 
@@ -133,6 +134,17 @@ type SocialPostFormState = {
   status: SocialPostStatus;
   associated_blog_id: string | null;
 };
+type PendingDeleteRequest =
+  | {
+      kind: "single";
+      postId: string;
+      source: "table" | "panel";
+    }
+  | {
+      kind: "bulk";
+      postIds: string[];
+      publishedCount: number;
+    };
 
 const STATUS_DROP_ZONE_PREFIX = "social-status-";
 const ASSIGNED_USER_HELPER_TEXT = "Only assigned user can perform this action";
@@ -472,7 +484,7 @@ function SocialPostsPageContent() {
   const { pushNotification } = useNotifications();
   const userRoles = useMemo(() => getUserRoles(profile), [profile]);
   const isAdmin = userRoles.includes("admin");
-  const { showError, showSuccess } = useSystemFeedback();
+  const { showError, showSuccess } = useAlerts();
   const requestedView = searchParams.get("view");
   const shouldOpenCreateModal = searchParams.get("create") === "1";
   const requestedTitle = searchParams.get("title");
@@ -523,6 +535,13 @@ function SocialPostsPageContent() {
   const [panelCommentDraft, setPanelCommentDraft] = useState("");
   const [replyToComment, setReplyToComment] = useState<SocialCommentRecord | null>(null);
   const [isCommentSaving, setIsCommentSaving] = useState(false);
+  const [pendingRollbackTransition, setPendingRollbackTransition] = useState<{
+    postId: string;
+    toStatus: SocialPostStatus;
+    reason: string;
+  } | null>(null);
+  const [isReopenBriefModalOpen, setIsReopenBriefModalOpen] = useState(false);
+  const [reopenBriefReason, setReopenBriefReason] = useState("");
 
   const [blogSearchQuery, setBlogSearchQuery] = useState("");
   const [blogSearchResults, setBlogSearchResults] = useState<BlogLookupResult[]>([]);
@@ -1066,13 +1085,16 @@ function SocialPostsPageContent() {
     setIsCreating(false);
   };
 
-  const transitionPostStatus = async ({
-    post,
-    toStatus,
-  }: {
-    post: SocialPostWithRelations;
-    toStatus: SocialPostStatus;
-  }) => {
+  const transitionPostStatus = async (
+    {
+      post,
+      toStatus,
+    }: {
+      post: SocialPostWithRelations;
+      toStatus: SocialPostStatus;
+    },
+    rollbackReason?: string | null
+  ) => {
     const postId = post.id;
     const title = post.title;
     const currentStatus = post.status;
@@ -1099,16 +1121,23 @@ function SocialPostsPageContent() {
       toStatus === "changes_requested" &&
       (currentStatus === "ready_to_publish" ||
         currentStatus === "awaiting_live_link");
-    let reason: string | null = null;
+    const reason =
+      typeof rollbackReason === "string" && rollbackReason.trim().length > 0
+        ? rollbackReason.trim()
+        : null;
     if (requiresRollbackReason) {
-      const raw = window.prompt(
-        "Provide a reason for sending this post back to Changes Requested:"
-      );
-      if (!raw || raw.trim().length === 0) {
+      if (!reason) {
+        setPendingRollbackTransition({
+          postId,
+          toStatus,
+          reason: "",
+        });
+        return false;
+      }
+      if (reason.trim().length === 0) {
         setError("Rollback reason is required.");
         return false;
       }
-      reason = raw.trim();
     }
 
     const transitionPayload: Record<string, unknown> = { nextStatus: toStatus };
@@ -1287,7 +1316,7 @@ function SocialPostsPageContent() {
     setIsPanelSaving(false);
   };
 
-  const handleReopenBrief = async () => {
+  const submitReopenBrief = async (reason: string | null) => {
     if (!activePost) {
       return;
     }
@@ -1295,9 +1324,6 @@ function SocialPostsPageContent() {
       setPanelError("Session expired. Refresh and try again.");
       return;
     }
-    const reasonInput = window.prompt(
-      "Optional reason for reopening this post to Creative Approved:"
-    );
     const response = await fetch(`/api/social-posts/${activePost.id}/reopen-brief`, {
       method: "POST",
       headers: {
@@ -1305,10 +1331,7 @@ function SocialPostsPageContent() {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        reason:
-          typeof reasonInput === "string" && reasonInput.trim().length > 0
-            ? reasonInput.trim()
-            : null,
+        reason,
       }),
     }).catch(() => null);
     if (!response) {
@@ -1344,6 +1367,58 @@ function SocialPostsPageContent() {
     showSuccess("Post reopened to Creative Approved for brief edits.");
     await loadPanelDetails(activePost.id);
   };
+  const handleReopenBrief = () => {
+    setReopenBriefReason("");
+    setIsReopenBriefModalOpen(true);
+  };
+  const confirmPendingRollbackTransition = useCallback(async () => {
+    if (!pendingRollbackTransition) {
+      return;
+    }
+    const reason = pendingRollbackTransition.reason.trim();
+    if (!reason) {
+      setError("Rollback reason is required.");
+      return;
+    }
+    const targetPost =
+      posts.find((candidate) => candidate.id === pendingRollbackTransition.postId) ?? null;
+    if (!targetPost) {
+      setPendingRollbackTransition(null);
+      setError("Post no longer available.");
+      return;
+    }
+
+    const nextStatus = pendingRollbackTransition.toStatus;
+    setPendingRollbackTransition(null);
+    const transitioned = await transitionPostStatus(
+      {
+        post: targetPost,
+        toStatus: nextStatus,
+      },
+      reason
+    );
+    if (!transitioned) {
+      return;
+    }
+
+    setPosts((previous) =>
+      previous.map((entry) =>
+        entry.id === targetPost.id ? { ...entry, status: nextStatus } : entry
+      )
+    );
+    setPanelForm((previous) => (previous ? { ...previous, status: nextStatus } : previous));
+    showSuccess(`Status moved to ${SOCIAL_POST_STATUS_LABELS[nextStatus]}.`);
+    if (activePostId === targetPost.id) {
+      await loadPanelDetails(targetPost.id);
+    }
+  }, [
+    activePostId,
+    loadPanelDetails,
+    pendingRollbackTransition,
+    posts,
+    showSuccess,
+    transitionPostStatus,
+  ]);
 
   const handleSaveLinks = async () => {
     if (!activePost || !user?.id) {
@@ -1466,8 +1541,11 @@ function SocialPostsPageContent() {
   const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [selectedRowIndices, setSelectedRowIndices] = useState<Set<number>>(new Set());
+  const [pendingDeleteRequest, setPendingDeleteRequest] = useState<PendingDeleteRequest | null>(
+    null
+  );
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedRowIndices.size === 0 || !session?.access_token) {
       return;
     }
@@ -1481,84 +1559,39 @@ function SocialPostsPageContent() {
       return;
     }
 
-    const postCount = deletablePosts.length;
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${postCount} post${postCount === 1 ? "" : "s"}? This action cannot be undone.${publishedCount > 0 ? `\n\n${publishedCount} published post${publishedCount === 1 ? " will" : "s will"} be skipped.` : ""}`
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setIsDeletingPost(true);
-
-    let successCount = 0;
-    let failureCount = 0;
-    const failedPostIds: string[] = [];
-
-    for (const post of deletablePosts) {
-      const response = await fetch(`/api/social-posts/${post.id}`, {
-        method: "DELETE",
-        headers: {
-          authorization: `Bearer ${session.access_token}`,
-          "content-type": "application/json",
-        },
-      });
-      const payload = await parseApiResponseJson<Record<string, unknown>>(response);
-      if (!isApiFailure(response, payload)) {
-        successCount++;
-      } else {
-        failureCount++;
-        failedPostIds.push(post.title);
-      }
-    }
-
-    setPosts((previous) =>
-      previous.filter((p) => !deletablePosts.some((d) => d.id === p.id))
-    );
-    setPostLinks((previous) =>
-      previous.filter(
-        (link) => !deletablePosts.some((d) => d.id === link.social_post_id)
-      )
-    );
-    setSelectedRowIndices(new Set());
-    setIsDeletingPost(false);
-
-    let message = "";
-    if (successCount > 0) {
-      message = `Deleted ${successCount} post${successCount === 1 ? "" : "s"}`;
-    }
-    if (failureCount > 0) {
-      message += (message ? ", " : "") + `failed to delete ${failureCount} post${failureCount === 1 ? "" : "s"}`;
-    }
-    if (publishedCount > 0) {
-      message += (message ? ", " : "") + `skipped ${publishedCount} published post${publishedCount === 1 ? "" : "s"}`;
-    }
-
-    if (failureCount === 0 && publishedCount === 0) {
-      showSuccess(message);
-    } else {
-      showError(message);
-    }
+    setPendingDeleteRequest({
+      kind: "bulk",
+      postIds: deletablePosts.map((post) => post.id),
+      publishedCount,
+    });
   };
 
   const handleDeletePost = useCallback(
-    async (postIdParam?: string) => {
-      const postId = postIdParam ?? activePost?.id;
+    (postIdParam?: string) => {
       const post = postIdParam ? posts.find((p) => p.id === postIdParam) : activePost;
       if (!post || !session?.access_token) {
         return;
       }
-      const confirmed = window.confirm(
-        `Are you sure you want to delete "${post.title}"? This action cannot be undone.`
-      );
-      if (!confirmed) {
-        return;
-      }
-      setIsDeletingPost(true);
-      setPanelError(null);
-      setOpenRowMenuId(null);
+      setPendingDeleteRequest({
+        kind: "single",
+        postId: post.id,
+        source: postIdParam ? "table" : "panel",
+      });
+    },
+    [activePost, posts, session?.access_token]
+  );
 
-      const response = await fetch(`/api/social-posts/${postId}`, {
+  const confirmPendingDelete = useCallback(async () => {
+    if (!pendingDeleteRequest || !session?.access_token) {
+      return;
+    }
+
+    setIsDeletingPost(true);
+    setPanelError(null);
+    setOpenRowMenuId(null);
+
+    if (pendingDeleteRequest.kind === "single") {
+      const response = await fetch(`/api/social-posts/${pendingDeleteRequest.postId}`, {
         method: "DELETE",
         headers: {
           authorization: `Bearer ${session.access_token}`,
@@ -1568,25 +1601,91 @@ function SocialPostsPageContent() {
       const payload = await parseApiResponseJson<Record<string, unknown>>(response);
       if (isApiFailure(response, payload)) {
         const errorMessage = getApiErrorMessage(payload, "Failed to delete post.");
-        if (postIdParam) {
-          showError(errorMessage);
-        } else {
+        if (pendingDeleteRequest.source === "panel") {
           setPanelError(errorMessage);
+        } else {
+          showError(errorMessage);
         }
         setIsDeletingPost(false);
+        setPendingDeleteRequest(null);
         return;
       }
-      setPosts((previous) => previous.filter((p) => p.id !== postId));
+
+      const postId = pendingDeleteRequest.postId;
+      setPosts((previous) => previous.filter((post) => post.id !== postId));
       setPostLinks((previous) => previous.filter((link) => link.social_post_id !== postId));
-      if (activePost?.id === postId) {
+      if (activePost?.id === postId || pendingDeleteRequest.source === "panel") {
         setActivePostId(null);
       }
-      setActivePostId(null);
       showSuccess("Post deleted.");
       setIsDeletingPost(false);
-    },
-    [activePost, posts, session?.access_token, showError, showSuccess]
-  );
+      setPendingDeleteRequest(null);
+      return;
+    }
+
+    let successCount = 0;
+    let failureCount = 0;
+    const successfulPostIds: string[] = [];
+    for (const postId of pendingDeleteRequest.postIds) {
+      const response = await fetch(`/api/social-posts/${postId}`, {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+      });
+      const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+      if (isApiFailure(response, payload)) {
+        failureCount += 1;
+      } else {
+        successCount += 1;
+        successfulPostIds.push(postId);
+      }
+    }
+
+    if (successfulPostIds.length > 0) {
+      const deletedIdSet = new Set(successfulPostIds);
+      setPosts((previous) => previous.filter((post) => !deletedIdSet.has(post.id)));
+      setPostLinks((previous) =>
+        previous.filter((link) => !deletedIdSet.has(link.social_post_id))
+      );
+      setSelectedRowIndices(new Set());
+    }
+
+    let message = "";
+    if (successCount > 0) {
+      message = `Deleted ${successCount} post${successCount === 1 ? "" : "s"}`;
+    }
+    if (failureCount > 0) {
+      message +=
+        (message ? ", " : "") +
+        `failed to delete ${failureCount} post${failureCount === 1 ? "" : "s"}`;
+    }
+    if (pendingDeleteRequest.publishedCount > 0) {
+      message +=
+        (message ? ", " : "") +
+        `skipped ${pendingDeleteRequest.publishedCount} published post${
+          pendingDeleteRequest.publishedCount === 1 ? "" : "s"
+        }`;
+    }
+    if (!message) {
+      message = "No posts were deleted.";
+    }
+
+    if (failureCount === 0 && pendingDeleteRequest.publishedCount === 0) {
+      showSuccess(message);
+    } else {
+      showError(message);
+    }
+    setIsDeletingPost(false);
+    setPendingDeleteRequest(null);
+  }, [
+    activePost?.id,
+    pendingDeleteRequest,
+    session?.access_token,
+    showError,
+    showSuccess,
+  ]);
 
 
   const renderCommentTree = (parentId: string | null, depth: number) => {
@@ -2621,6 +2720,101 @@ function SocialPostsPageContent() {
             </aside>
           </>
         ) : null}
+        <ConfirmationModal
+          isOpen={pendingDeleteRequest !== null}
+          title={
+            pendingDeleteRequest?.kind === "bulk" ? "Delete selected posts?" : "Delete post?"
+          }
+          description={
+            pendingDeleteRequest?.kind === "bulk"
+              ? `Are you sure you want to delete ${pendingDeleteRequest.postIds.length} post${
+                  pendingDeleteRequest.postIds.length === 1 ? "" : "s"
+                }? This action cannot be undone.${
+                  pendingDeleteRequest.publishedCount > 0
+                    ? ` ${pendingDeleteRequest.publishedCount} published post${
+                        pendingDeleteRequest.publishedCount === 1 ? " will" : "s will"
+                      } be skipped.`
+                    : ""
+                }`
+              : "Are you sure you want to delete this post? This action cannot be undone."
+          }
+          confirmLabel={
+            pendingDeleteRequest?.kind === "bulk" ? "Delete selected" : "Delete post"
+          }
+          tone="danger"
+          isConfirming={isDeletingPost}
+          onCancel={() => {
+            if (!isDeletingPost) {
+              setPendingDeleteRequest(null);
+            }
+          }}
+          onConfirm={() => {
+            void confirmPendingDelete();
+          }}
+        />
+        <ConfirmationModal
+          isOpen={pendingRollbackTransition !== null}
+          title="Send back to Changes Requested?"
+          description="Provide a reason for this rollback. This reason is required."
+          confirmLabel="Send back"
+          isConfirming={isPanelSaving}
+          confirmDisabled={!pendingRollbackTransition?.reason.trim()}
+          onCancel={() => {
+            if (!isPanelSaving) {
+              setPendingRollbackTransition(null);
+            }
+          }}
+          onConfirm={() => {
+            void confirmPendingRollbackTransition();
+          }}
+        >
+          <label className="space-y-1 text-sm text-slate-700">
+            <span className="font-medium">Reason</span>
+            <textarea
+              value={pendingRollbackTransition?.reason ?? ""}
+              onChange={(event) => {
+                setPendingRollbackTransition((previous) =>
+                  previous ? { ...previous, reason: event.target.value } : previous
+                );
+              }}
+              rows={3}
+              className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="Add context for the requested changes..."
+            />
+          </label>
+        </ConfirmationModal>
+        <ConfirmationModal
+          isOpen={isReopenBriefModalOpen}
+          title="Reopen brief to Creative Approved?"
+          description="Optionally provide a reason for reopening this post."
+          confirmLabel="Reopen brief"
+          isConfirming={isPanelSaving}
+          onCancel={() => {
+            if (!isPanelSaving) {
+              setIsReopenBriefModalOpen(false);
+              setReopenBriefReason("");
+            }
+          }}
+          onConfirm={() => {
+            const reason = reopenBriefReason.trim();
+            setIsReopenBriefModalOpen(false);
+            setReopenBriefReason("");
+            void submitReopenBrief(reason.length > 0 ? reason : null);
+          }}
+        >
+          <label className="space-y-1 text-sm text-slate-700">
+            <span className="font-medium">Reason (optional)</span>
+            <textarea
+              value={reopenBriefReason}
+              onChange={(event) => {
+                setReopenBriefReason(event.target.value);
+              }}
+              rows={3}
+              className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="Add context for why this brief is being reopened..."
+            />
+          </label>
+        </ConfirmationModal>
 
         {isCreateModalOpen ? (
           <div className="fixed inset-0 z-40 flex items-center justify-center p-4">

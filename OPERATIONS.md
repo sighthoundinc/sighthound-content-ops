@@ -17,6 +17,7 @@ For end-user manual instructions, see `HOW_TO_USE_APP.md`.
   - clicking the top-left Sighthound brand in the app shell routes to `/`
 
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
+Workflow-critical blog status/assignment/date edits from Dashboard and My Tasks are API-authoritative through `POST /api/blogs/[id]/transition` (not direct client `blogs.update(...)` mutations).
 For social execution-stage completion, live links are entered from `/social-posts/[id]` Step 4 (`Review & Publish` → `Live Links`) and persisted in `social_post_links`.
 - Social status transition API writes record-level activity using canonical fields (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `metadata`) to avoid schema drift between activity writers and readers.
 - Record-level assignment/comments/activity visibility in drawers and full pages is available to all authenticated users; admin-only restrictions apply only to global Settings activity pages.
@@ -76,6 +77,9 @@ For social execution-stage completion, live links are entered from `/social-post
 - Collapsed sidebar links expose keyboard-first UX: visible focus ring (`focus-visible` inset ring) and tooltip opening on focus
 - CardBoard nav item uses a dedicated kanban icon to improve icon-only state recognition
 - Link target invariant: internal app links open in same tab; external URLs open in new tab with safe rel attributes
+- Delete confirmation invariant: all UI delete flows use shared `ConfirmationModal`; browser-native confirms and toast-action confirms are not valid delete confirmation patterns
+- Social rollback/reopen reason capture uses in-app modal dialogs; browser `window.prompt` is not used for workflow reasons
+- Feedback hooks are direct-only: app routes use `useAlerts` and `useNotifications`; deprecated system-feedback wrappers are removed
 - Sidebar toggle includes focus-retention handling: if focus was inside sidebar during toggle, focus is preserved predictably (fallback to toggle control) instead of dropping to document body
 - Active nav item in collapsed mode is intentionally high-contrast (dark background + white icon) so state is clear without labels/tooltips
 - Collapsed nav item hit area is constrained to ~44px minimum row height with centered icon and full-row click target
@@ -150,7 +154,9 @@ For social execution-stage completion, live links are entered from `/social-post
 - `src/app/api/admin/users/[userId]/password/` — admin password reset API
 - `src/app/api/dashboard/summary/` — home standup counts (social counts are assignment-scoped)
 - `src/app/api/dashboard/tasks-snapshot/` — grouped mixed-task snapshot for home page
+- Dashboard summary/snapshot APIs now read canonical blog date + social ownership columns directly (legacy runtime fallback branches retired).
 - `src/app/api/social-posts/[postId]/transition/` — canonical social status transition API
+- `src/app/api/blogs/[id]/transition/` — canonical blog transition API for dashboard/task workflow edits
 - `src/app/api/social-posts/[postId]/reopen-brief/` — admin execution-stage brief reopen API
 - `src/app/api/social-posts/reminders/` — awaiting-live-link reminder sweep API
 - `src/app/api/ideas/[id]/delete/` — idea deletion API (creator/admin-gated, idempotent response)

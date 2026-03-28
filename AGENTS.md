@@ -82,6 +82,17 @@ For every non-trivial UI or workflow change:
    - UI update (badges, filters, labels, next-action cues)
    - Documentation update
 
+## Blog Transition API Authority (MUST)
+1. Workflow-critical blog mutations from dashboard/task surfaces must use `POST /api/blogs/[id]/transition` instead of direct client-side `blogs.update(...)`.
+2. Transition API is the permission boundary for writer/publisher status transitions, assignment changes, and scheduled/display publish date edits.
+3. The route must enforce assignment/status prerequisites (for example, no publisher completion before writer completion) and return contract-normalized API errors.
+4. Dashboard and My Tasks clients must parse responses with `parseApiResponseJson()`, `isApiFailure()`, and `getApiErrorMessage()`.
+
+## Runtime Schema Compatibility Retirement (MUST)
+1. Do not add new runtime fallback branches for legacy blog date columns in dashboard/task/blog surfaces.
+2. Blog comment actors are canonical on `blog_comments.user_id` for app runtime reads/writes.
+3. Legacy compatibility is migration-history only; active app routes should target canonical schema paths.
+
 ## Permissions Enforcement (MUST)
 
 1. Supabase RLS is the source of truth for authorization.
@@ -129,6 +140,14 @@ For every non-trivial UI or workflow change:
    - Provide success/failure breakdown
 3. Destructive actions must require confirmation.
 4. No partial silent updates.
+
+## Delete Confirmation Pattern (MUST)
+
+1. All delete confirmations in app UI must use the shared `ConfirmationModal` component from `src/components/confirmation-modal.tsx`.
+2. Do not use browser-native `window.confirm()` for delete flows.
+3. Do not use alert/toast action buttons as the primary delete confirmation mechanism.
+4. Confirmation copy must clearly state permanence (`This action cannot be undone.`).
+5. Keep the visual/interaction pattern consistent across ideas, blogs, social posts, dashboard bulk actions, and future entities.
 
 ## Destructive SQL Safety (MUST)
 
@@ -383,7 +402,7 @@ To keep idea intake predictable and avoid split editing patterns:
 
 ### Implementation
 - **No emoji icons**: All feedback uses `AppIcon` from `src/lib/icons.tsx`
-- **Backward compat**: Old `useSystemFeedback()` calls re-routed to `useAlerts()` via wrapper
+- **Direct provider usage**: App routes/hooks must import `useAlerts()` and `useNotifications()` directly; deprecated system-feedback compatibility wrappers are removed
 - **Helper functions**: `src/lib/notification-helpers.ts` generates typed notification payloads
 - **Blog workflows**: Status changes in `/blogs/[id]/page.tsx` emit notifications via `pushNotification()`
 

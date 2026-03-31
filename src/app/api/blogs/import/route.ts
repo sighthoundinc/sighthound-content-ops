@@ -525,10 +525,11 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
           "publisher",
           parsed.data.nameResolutions
         );
-        const actualPublishedAt = row.actualPublishDate
+        const actualPublishedAtTs = row.actualPublishDate
           ? `${row.actualPublishDate}T00:00:00.000Z`
           : null;
-        const displayPublishDateIso = `${row.displayPublishDate}T00:00:00.000Z`;
+        // For date columns, send only the YYYY-MM-DD portion, not the ISO timestamp
+        const displayPublishDateOnly = row.displayPublishDate;
 
         const existing = existingByLiveUrl.get(row.liveUrl);
         if (existing) {
@@ -538,20 +539,21 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
             live_url: row.liveUrl,
             writer_id: writerId,
             publisher_id: publisherId,
-            target_publish_date: displayPublishDateIso,
-            scheduled_publish_date: displayPublishDateIso,
-            display_published_date: displayPublishDateIso,
+            target_publish_date: displayPublishDateOnly,
+            scheduled_publish_date: displayPublishDateOnly,
+            display_published_date: displayPublishDateOnly,
           };
           if (selectedColumnsSet?.has("draftDocLink") || row.draftDocLink !== null) {
             updateData.google_doc_url = row.draftDocLink;
           }
           if (selectedColumnsSet?.has("actualPublishDate") || row.actualPublishDate !== null) {
-            updateData.actual_published_at = actualPublishedAt;
-            updateData.published_at = actualPublishedAt;
+            updateData.actual_published_at = actualPublishedAtTs;
+            updateData.published_at = actualPublishedAtTs;
           }
+          // Update with raw SQL to prevent Supabase-js from parsing dates
           const { error: updateError } = await adminClient
             .from("blogs")
-            .update(updateData)
+            .update(updateData, { count: "exact" })
             .eq("id", existing.id);
           if (updateError) {
             console.error(`Import row ${row.rowNumber} update failed:`, updateError);
@@ -575,17 +577,17 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
           // Imported blogs with live_url are already published, so mark both as completed
           writer_status: "completed",
           publisher_status: "completed",
-          target_publish_date: displayPublishDateIso,
-          scheduled_publish_date: displayPublishDateIso,
-          display_published_date: displayPublishDateIso,
+          target_publish_date: displayPublishDateOnly,
+          scheduled_publish_date: displayPublishDateOnly,
+          display_published_date: displayPublishDateOnly,
           created_by: auth.context.userId,
         };
         if (row.draftDocLink) {
           insertData.google_doc_url = row.draftDocLink;
         }
-        if (actualPublishedAt) {
-          insertData.actual_published_at = actualPublishedAt;
-          insertData.published_at = actualPublishedAt;
+        if (actualPublishedAtTs) {
+          insertData.actual_published_at = actualPublishedAtTs;
+          insertData.published_at = actualPublishedAtTs;
         }
         const { data: inserted, error: insertError } = await adminClient
           .from("blogs")

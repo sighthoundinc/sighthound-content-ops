@@ -148,9 +148,8 @@ function toIsoDateString(value: unknown) {
     const [, day, month, year] = dmyMatch;
     return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   }
-  // Parse all dates as Eastern Time (US) to ensure consistency
-  // regardless of where the import is run from.
-  // This treats the input date string as if it were entered in ET/EDT.
+  // Parse dates as-is without timezone conversion
+  // Input dates are treated as date values, not timestamps
   
   // Try parsing as YYYY-MM-DD (with optional slashes)
   const isoMatch = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
@@ -168,29 +167,7 @@ function toIsoDateString(value: unknown) {
     const day = String(dayStr).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
-  // Fallback: use Date.parse with Eastern Time offset
-  // This is a last resort for non-standard date formats
-  const parsedTime = Date.parse(text);
-  if (Number.isNaN(parsedTime)) {
-    return text;
-  }
-  // Convert to Eastern Time by creating a date object
-  // and using toLocaleString to read it as if in Eastern timezone
-  const date = new Date(parsedTime);
-  // Use en-US locale with Eastern timezone to extract date components
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const parts = formatter.formatToParts(date);
-  const yearPart = parts.find(p => p.type === 'year')?.value;
-  const monthPart = parts.find(p => p.type === 'month')?.value;
-  const dayPart = parts.find(p => p.type === 'day')?.value;
-  if (yearPart && monthPart && dayPart) {
-    return `${yearPart}-${monthPart}-${dayPart}`;
-  }
+  // Fallback: treat as invalid date format
   return text;
 }
 

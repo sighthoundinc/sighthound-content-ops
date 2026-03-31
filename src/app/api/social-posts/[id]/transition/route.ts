@@ -327,12 +327,37 @@ export const POST = withApiContract(async function POST(
         );
     }
 
-    // 14. Emit activity event for notifications
-    const { data: actorProfile } = await auth.context.adminClient
-      .from("profiles")
-      .select("full_name")
-      .eq("id", auth.context.userId)
-      .maybeSingle();
+    // 14. Resolve actor and target user names for display-layer notifications
+    const targetUserId =
+      nextStatus === "in_review" || nextStatus === "creative_approved"
+        ? socialPost.reviewer_user_id
+        : nextStatus === "published"
+          ? null
+          : socialPost.worker_user_id;
+    const profileIds = [auth.context.userId, targetUserId].filter(
+      (value): value is string => typeof value === "string" && value.trim().length > 0
+    );
+    const uniqueProfileIds = Array.from(new Set(profileIds));
+    let actorName: string | undefined;
+    let targetUserName: string | undefined;
+    if (uniqueProfileIds.length > 0) {
+      const { data: profileRows } = await auth.context.adminClient
+        .from("profiles")
+        .select("id,full_name")
+        .in("id", uniqueProfileIds);
+      const profileNameById = new Map<string, string>();
+      for (const row of profileRows ?? []) {
+        const id = typeof row.id === "string" ? row.id : "";
+        const fullName = typeof row.full_name === "string" ? row.full_name : "";
+        if (id) {
+          profileNameById.set(id, fullName);
+        }
+      }
+      actorName = profileNameById.get(auth.context.userId);
+      if (targetUserId) {
+        targetUserName = profileNameById.get(targetUserId);
+      }
+    }
 
     await emitEvent({
       type: "social_post_status_changed",
@@ -342,7 +367,9 @@ export const POST = withApiContract(async function POST(
       newValue: nextStatus,
       fieldName: "status",
       actor: auth.context.userId,
-      actorName: actorProfile?.full_name,
+      actorName,
+      targetUserId: targetUserId ?? undefined,
+      targetUserName,
       contentTitle: socialPost.title,
       metadata: {
         reason: normalizedReason,
@@ -369,7 +396,8 @@ export const POST = withApiContract(async function POST(
             socialPostId: id,
             title: socialPost.title,
             site: socialPost.product ?? "general_company",
-            actorName: actorProfile?.full_name ?? "Team",
+            actorName: actorName ?? "Team",
+            targetUserName: targetUserName ?? "Team",
             appUrl: process.env.NEXT_PUBLIC_APP_URL,
           },
         })

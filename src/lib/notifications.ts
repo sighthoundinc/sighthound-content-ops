@@ -1,6 +1,27 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { shouldSendNotification } from "@/lib/notification-helpers";
 import { getUserNotificationPreferencesWithCache } from "@/lib/notification-preferences-cache";
+const ROLE_LABELS = new Set([
+  "writer",
+  "publisher",
+  "editor",
+  "social editor",
+  "admin",
+]);
+
+function normalizeDisplayName(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (ROLE_LABELS.has(trimmed.toLowerCase())) {
+    return null;
+  }
+  return trimmed;
+}
 
 // Map Slack event types to notification preference keys
 const SLACK_EVENT_TO_NOTIFICATION_TYPE: Record<
@@ -39,6 +60,8 @@ interface NotifySlackInput {
   site: string;
   actorName: string;
   targetEmail?: string | null;
+  targetUserName?: string;
+  targetUserNames?: string[];
   userId?: string; // User ID to check notification preferences
 }
 
@@ -72,11 +95,24 @@ export async function notifySlack(input: NotifySlackInput): Promise<boolean> {
         console.warn("Could not check notification preferences, continuing with Slack send", error);
       }
     }
+    const normalizedActorName = normalizeDisplayName(input.actorName) ?? "Team";
+    const normalizedTargetUserNames = Array.isArray(input.targetUserNames)
+      ? input.targetUserNames
+          .map((name) => normalizeDisplayName(name))
+          .filter((name): name is string => Boolean(name))
+      : [];
+    const normalizedTargetUserName =
+      normalizeDisplayName(input.targetUserName) ??
+      (normalizedTargetUserNames.length > 0 ? normalizedTargetUserNames[0] : undefined);
 
     const supabase = getSupabaseBrowserClient();
     await supabase.functions.invoke("slack-notify", {
       body: {
         ...input,
+        actorName: normalizedActorName,
+        targetUserName: normalizedTargetUserName,
+        targetUserNames:
+          normalizedTargetUserNames.length > 0 ? normalizedTargetUserNames : undefined,
         appUrl: process.env.NEXT_PUBLIC_APP_URL,
       },
     });

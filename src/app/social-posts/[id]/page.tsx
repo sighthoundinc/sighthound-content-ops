@@ -345,6 +345,31 @@ export default function SocialPostEditorPage() {
   const [editWorkerUserId, setEditWorkerUserId] = useState<string | null>(null);
   const [editReviewerUserId, setEditReviewerUserId] = useState<string | null>(null);
   const [isAssignmentSaving, setIsAssignmentSaving] = useState(false);
+  const getUserDisplayNameById = useCallback(
+    (userId: string | null | undefined) => {
+      if (!userId) {
+        return "Team";
+      }
+      const match = availableUsers.find((entry) => entry.id === userId);
+      return match?.full_name?.trim() || "Team";
+    },
+    [availableUsers]
+  );
+  const getTargetUserNameForStatus = useCallback(
+    (
+      status: SocialPostStatus,
+      sourcePost: Pick<SocialPostEditorRecord, "worker_user_id" | "reviewer_user_id">
+    ) => {
+      if (status === "in_review" || status === "creative_approved") {
+        return getUserDisplayNameById(sourcePost.reviewer_user_id);
+      }
+      if (status === "published") {
+        return "Team";
+      }
+      return getUserDisplayNameById(sourcePost.worker_user_id);
+    },
+    [getUserDisplayNameById]
+  );
   const canActOnCurrentStatus = useMemo(() => {
     if (!post) {
       return false;
@@ -724,7 +749,8 @@ export default function SocialPostEditorPage() {
           currentStatus,
           toStatus,
           profile?.full_name ?? null,
-          post.id
+          post.id,
+          getTargetUserNameForStatus(toStatus, post)
         )
       );
     showSuccess(`Status moved to ${SOCIAL_POST_STATUS_LABELS[toStatus]}.`);
@@ -744,6 +770,7 @@ export default function SocialPostEditorPage() {
       canCurrentUserTransition,
       user?.id,
       loadPost,
+      getTargetUserNameForStatus,
     ]
   );
 
@@ -790,6 +817,8 @@ export default function SocialPostEditorPage() {
               fieldName: "worker_user_id",
               actor: actorId,
               actorName: profile?.full_name ?? undefined,
+              targetUserId: normalized.worker_user_id ?? undefined,
+              targetUserName: getUserDisplayNameById(normalized.worker_user_id),
               contentTitle: normalized.title,
               metadata: { role: "assigned_to" },
               timestamp: Date.now(),
@@ -805,6 +834,8 @@ export default function SocialPostEditorPage() {
               fieldName: "reviewer_user_id",
               actor: actorId,
               actorName: profile?.full_name ?? undefined,
+              targetUserId: normalized.reviewer_user_id ?? undefined,
+              targetUserName: getUserDisplayNameById(normalized.reviewer_user_id),
               contentTitle: normalized.title,
               metadata: { role: "reviewer" },
               timestamp: Date.now(),
@@ -817,7 +848,7 @@ export default function SocialPostEditorPage() {
     await loadPost();
     showSuccess("Assignments saved.");
     setIsAssignmentSaving(false);
-  }, [post, editWorkerUserId, editReviewerUserId, showError, showSuccess, loadPost, user?.id, profile?.full_name]);
+  }, [post, editWorkerUserId, editReviewerUserId, showError, showSuccess, loadPost, user?.id, profile?.full_name, getUserDisplayNameById]);
 
   useEffect(() => {
     if (!form || !post || !canEditBrief || isSaving) {
@@ -1259,7 +1290,8 @@ export default function SocialPostEditorPage() {
         previousStatus,
         "creative_approved",
         profile?.full_name ?? null,
-        post.id
+        post.id,
+        getTargetUserNameForStatus("creative_approved", post)
       )
     );
     await loadPost();

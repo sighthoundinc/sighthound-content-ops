@@ -429,7 +429,8 @@ export default function BlogDetailPage() {
           blogId: blog.id,
           title: form.title,
           site: form.site,
-          actorName: profile?.full_name ?? "Admin",
+          actorName: profile?.full_name ?? "Team",
+          targetUserName: selectedWriter.full_name || "Team",
           targetEmail: selectedWriter.email,
         });
       });
@@ -443,7 +444,8 @@ export default function BlogDetailPage() {
           blogId: blog.id,
           title: form.title,
           site: form.site,
-          actorName: profile?.full_name ?? "Admin",
+          actorName: profile?.full_name ?? "Team",
+          targetUserName: selectedPublisher.full_name || "Team",
           targetEmail: selectedPublisher.email,
         });
       });
@@ -464,6 +466,8 @@ export default function BlogDetailPage() {
           fieldName: "writer_id",
           actor: user?.id ?? "",
           actorName: profile?.full_name ?? undefined,
+          targetUserId: form.writer_id || undefined,
+          targetUserName: selectedWriter?.full_name || "Team",
           contentTitle: form.title,
           metadata: {
             role: "writer",
@@ -495,6 +499,8 @@ export default function BlogDetailPage() {
           fieldName: "publisher_id",
           actor: user?.id ?? "",
           actorName: profile?.full_name ?? undefined,
+          targetUserId: form.publisher_id || undefined,
+          targetUserName: selectedPublisher?.full_name || "Team",
           contentTitle: form.title,
           metadata: {
             role: "publisher",
@@ -782,8 +788,10 @@ export default function BlogDetailPage() {
       return;
     }
 
-    const targetPublisherEmail =
-      users.find((nextUser) => nextUser.id === form.publisher_id)?.email ?? null;
+    const targetPublisher =
+      users.find((nextUser) => nextUser.id === form.publisher_id) ?? null;
+    const targetPublisherEmail = targetPublisher?.email ?? null;
+    const targetPublisherName = targetPublisher?.full_name || "Team";
 
     await updateBlog(
       {
@@ -807,7 +815,8 @@ export default function BlogDetailPage() {
           blogId: blog.id,
           title: blog.title,
           site: blog.site,
-          actorName: profile?.full_name ?? "Writer",
+          actorName: profile?.full_name ?? "Team",
+          targetUserName: targetPublisherName,
           targetEmail: targetPublisherEmail,
         });
       }
@@ -848,7 +857,7 @@ export default function BlogDetailPage() {
           blogId: blog.id,
           title: blog.title,
           site: blog.site,
-          actorName: profile?.full_name ?? "Publisher",
+          actorName: profile?.full_name ?? "Team",
           targetEmail: null,
         });
       }

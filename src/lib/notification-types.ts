@@ -20,6 +20,7 @@ export type NotificationInput = {
   timestamp?: number;
   metadata?: {
     targetUserName?: string;
+    targetUserNames?: string[];
     targetUserId?: string;
   };
 };

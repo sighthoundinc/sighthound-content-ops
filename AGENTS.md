@@ -365,6 +365,17 @@ To keep idea intake predictable and avoid split editing patterns:
 - **Trigger**: Workflow mutations (blog status changes, task assignments, submissions, publications)
 - **Provider**: `NotificationsProvider` in root layout
 
+### Slack Notification Display Contract (MUST)
+- Applies to all Slack-enabled workflow notifications regardless of event type.
+- Display lines must follow:
+  1. `[Blog|Social] <Title> (<Site>)`
+  2. `Action: <action text>`
+  3. `Assigned to: <resolved user name(s) | Team>`
+  4. `Assigned by: <resolved actor name | Team>`
+  5. `Open link: <app-url>` when deep-linkable content exists
+- Role labels (`Writer`, `Editor`, `Publisher`, etc.) are not valid assignee/actor display values and must be normalized to resolved names or `Team`.
+- If multiple assignees exist, join with comma + space.
+
 ### Notification Preferences Enforcement (MUST)
 
 **Automatic enforcement at emission point** ensures all notifications respect user preferences without requiring code changes throughout the codebase.

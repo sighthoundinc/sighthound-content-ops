@@ -20,6 +20,22 @@ import type {
 } from "@/lib/types";
 import { SOCIAL_POST_STATUS_LABELS, getNextActor } from "@/lib/status";
 
+const ROLE_LABELS = new Set(["writer", "publisher", "editor", "social editor", "admin"]);
+
+function normalizeDisplayName(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (ROLE_LABELS.has(trimmed.toLowerCase())) {
+    return null;
+  }
+  return trimmed;
+}
+
 /**
  * Map notification types to user preference toggle fields.
  * Each notification type must be explicitly mapped to a preference toggle.
@@ -134,14 +150,25 @@ export function blogWriterStatusChangedNotification(
   blogId: string
 ): NotificationInput {
   const statusLabel = getWriterStatusLabel(newStatus);
+  const normalizedWriterName = normalizeDisplayName(writerName);
 
   return {
     type: "stage_changed",
     title: `Blog Update: ${blogTitle}`,
-    message: `Writer stage changed to ${statusLabel}${writerName ? ` by ${writerName}` : ""}`,
+    message: `Writer stage changed to ${statusLabel}${normalizedWriterName ? ` by ${normalizedWriterName}` : ""}`,
     href: `/blogs/${blogId}`,
     timestamp: Date.now(),
   };
+}
+
+function formatTargetUserDisplay(targetUserName?: string | string[] | null) {
+  if (Array.isArray(targetUserName)) {
+    const names = targetUserName
+      .map((value) => normalizeDisplayName(value))
+      .filter((value): value is string => Boolean(value));
+    return names.length > 0 ? names.join(", ") : "Team";
+  }
+  return normalizeDisplayName(targetUserName) ?? "Team";
 }
 
 /**
@@ -155,11 +182,12 @@ export function blogPublisherStatusChangedNotification(
   blogId: string
 ): NotificationInput {
   const statusLabel = getPublisherStatusLabel(newStatus);
+  const normalizedPublisherName = normalizeDisplayName(publisherName);
 
   return {
     type: "stage_changed",
     title: `Blog Update: ${blogTitle}`,
-    message: `Publisher stage changed to ${statusLabel}${publisherName ? ` by ${publisherName}` : ""}`,
+    message: `Publisher stage changed to ${statusLabel}${normalizedPublisherName ? ` by ${normalizedPublisherName}` : ""}`,
     href: `/blogs/${blogId}`,
     timestamp: Date.now(),
   };
@@ -173,10 +201,11 @@ export function blogAssignedToWriterNotification(
   writerName: string,
   blogId: string
 ): NotificationInput {
+  const assignedTo = normalizeDisplayName(writerName) ?? "Team";
   return {
     type: "task_assigned",
     title: "Blog Assignment",
-    message: `${blogTitle} assigned to writer ${writerName}`,
+    message: `${blogTitle} assigned to ${assignedTo}`,
     href: `/blogs/${blogId}`,
     timestamp: Date.now(),
   };
@@ -190,10 +219,11 @@ export function blogAssignedToPublisherNotification(
   publisherName: string,
   blogId: string
 ): NotificationInput {
+  const assignedTo = normalizeDisplayName(publisherName) ?? "Team";
   return {
     type: "task_assigned",
     title: "Blog Assignment",
-    message: `${blogTitle} assigned to publisher ${publisherName}`,
+    message: `${blogTitle} assigned to ${assignedTo}`,
     href: `/blogs/${blogId}`,
     timestamp: Date.now(),
   };
@@ -205,12 +235,14 @@ export function blogAssignedToPublisherNotification(
 export function blogAwaitingActionNotification(
   blogTitle: string,
   actionType: "writer_revision" | "publisher_review",
-  blogId: string
+  blogId: string,
+  targetUserName?: string | string[] | null
 ): NotificationInput {
+  const target = formatTargetUserDisplay(targetUserName);
   const message =
     actionType === "writer_revision"
-      ? `${blogTitle} needs writer revision`
-      : `${blogTitle} awaiting publisher review`;
+      ? `${blogTitle} awaiting action from ${target}`
+      : `${blogTitle} awaiting action from ${target}`;
 
   return {
     type: "awaiting_action",
@@ -231,10 +263,11 @@ export function blogSubmittedForReviewNotification(
   blogId: string
 ): NotificationInput {
   const reviewTypeLabel = reviewType === "writer" ? "Writer" : "Publisher";
+  const normalizedSubmitter = normalizeDisplayName(submitterName) ?? "Team";
   return {
     type: "submitted_for_review",
     title: `Submitted for ${reviewTypeLabel} Review`,
-    message: `${blogTitle} submitted by ${submitterName || "user"}`,
+    message: `${blogTitle} submitted by ${normalizedSubmitter}`,
     href: `/blogs/${blogId}`,
     timestamp: Date.now(),
   };
@@ -248,10 +281,11 @@ export function blogPublishedNotification(
   publisherName: string | null,
   blogId: string
 ): NotificationInput {
+  const normalizedPublisherName = normalizeDisplayName(publisherName) ?? "Team";
   return {
     type: "published",
     title: "Blog Published",
-    message: `${blogTitle} published by ${publisherName || "user"}`,
+    message: `${blogTitle} published by ${normalizedPublisherName}`,
     href: `/blogs/${blogId}`,
     timestamp: Date.now(),
   };
@@ -262,15 +296,16 @@ export function blogPublishedNotification(
  */
 export function blogAssignmentChangedNotification(
   blogTitle: string,
-  assignmentType: "writer" | "publisher",
+  _assignmentType: "writer" | "publisher",
   assignedToName: string | null,
   assignedByName: string | null,
   blogId: string
 ): NotificationInput {
-  const roleLabel = assignmentType === "writer" ? "Writer" : "Publisher";
-  const message = assignedToName
-    ? `${blogTitle} reassigned to ${assignedToName} as ${roleLabel} by ${assignedByName || "user"}`
-    : `${blogTitle} ${roleLabel} assignment removed`;
+  const normalizedAssignedTo = normalizeDisplayName(assignedToName);
+  const normalizedAssignedBy = normalizeDisplayName(assignedByName) ?? "Team";
+  const message = normalizedAssignedTo
+    ? `${blogTitle} reassigned to ${normalizedAssignedTo} by ${normalizedAssignedBy}`
+    : `${blogTitle} assignment removed`;
 
   return {
     type: "assignment_changed",
@@ -317,20 +352,20 @@ export function socialPostStatusChangedNotification(
   previousStatus: SocialPostStatus | null,
   newStatus: SocialPostStatus,
   actorName: string | null,
-  postId: string
+  postId: string,
+  nextActorName?: string | string[] | null
 ): NotificationInput {
   const nextActor = getNextActor(newStatus);
+  const normalizedActorName = normalizeDisplayName(actorName);
   const nextActorLabel =
     nextActor === "none"
-      ? "No next actor"
-      : nextActor === "admin"
-        ? "Admin"
-        : "Social Editor";
+      ? "No next action"
+      : formatTargetUserDisplay(nextActorName);
 
   return {
     type: "stage_changed",
     title: `Social Post Update: ${postTitle}`,
-    message: `${SOCIAL_POST_STATUS_LABELS[newStatus]}${actorName ? ` by ${actorName}` : ""} • Next: ${nextActorLabel}`,
+    message: `${SOCIAL_POST_STATUS_LABELS[newStatus]}${normalizedActorName ? ` by ${normalizedActorName}` : ""} • Next: ${nextActorLabel}`,
     href: `/social-posts/${postId}`,
     timestamp: Date.now(),
   };

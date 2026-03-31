@@ -231,7 +231,8 @@ function NewBlogPageContent() {
         blogId: data.id,
         title: data.title,
         site: data.site,
-        actorName: profile?.full_name ?? "Admin",
+        actorName: profile?.full_name ?? "Team",
+        targetUserName: selectedWriter.full_name || "Team",
         targetEmail: selectedWriter.email,
       });
     }

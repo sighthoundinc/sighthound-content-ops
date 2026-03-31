@@ -7,35 +7,40 @@ Slack notifications are sent to the `#content-ops-alerts` channel and/or direct 
 All Slack messages follow a streamlined format optimized for quick scanning and clear action items:
 
 ```
-*[Blog|Social]* [Event Label] • [Title] ([Site])
+[Blog|Social] [Title] ([Site])
 Action: [What needs to happen or what just happened]
-Owner: [Role responsible] (only when relevant)
-Open: [Deep Link to Content]
+Assigned to: [Resolved assignee name(s) | Team]
+Assigned by: [Resolved actor name | Team]
+Open link: [Deep Link to Content]
 ```
 
 **Examples:**
 
 Blog assignment (actionable):
 ```
-*[Blog]* Writer assigned • "5 Key Features of ALPR Plus" (SH)
-Action: Writer assigned — awaiting writing
-Owner: Writer
-Open: https://app.example.com/blogs/blog-id-123
+[Blog] "5 Key Features of ALPR Plus" (SH)
+Action: Assigned - work can start
+Assigned to: Sarah Chen
+Assigned by: Adam Zampa
+Open link: https://app.example.com/blogs/blog-id-123
 ```
 
 Social post awaiting action (actionable):
 ```
-*[Social]* Awaiting live link • "Social Media Campaign" (RED)
-Action: Awaiting live link — awaiting creator submission
-Owner: Creator
-Open: https://app.example.com/social-posts/post-id-456
+[Social] "Social Media Campaign" (RED)
+Action: Awaiting live link - awaiting submission
+Assigned to: Sarah Chen
+Assigned by: Adam Zampa
+Open link: https://app.example.com/social-posts/post-id-456
 ```
 
 Blog publication (completion):
 ```
-*[Blog]* Published • "Marketing Trends 2026" (SH)
+[Blog] "Marketing Trends 2026" (SH)
 Action: Published
-Open: https://app.example.com/blogs/blog-id-789
+Assigned to: Team
+Assigned by: Adam Zampa
+Open link: https://app.example.com/blogs/blog-id-789
 ```
 
 ---
@@ -48,7 +53,7 @@ Open: https://app.example.com/blogs/blog-id-789
 **Recipient:** Assigned writer's email  
 **Label:** "Writer assigned"  
 **Action:** "Writer assigned — awaiting writing"  
-**Owner:** Writer  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
 **Notification Type:** `task_assigned`
 
 ### 2. Ready to Publish
@@ -57,7 +62,7 @@ Open: https://app.example.com/blogs/blog-id-789
 **Recipient:** Assigned publisher's email  
 **Label:** "Ready to publish"  
 **Action:** "Ready to publish — awaiting publisher action"  
-**Owner:** Publisher  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
 **Notification Type:** `stage_changed`  
 **Note:** `writer_completed` is no longer sent (redundant signal; `ready_to_publish` carries the actionable item)
 
@@ -79,7 +84,7 @@ Open: https://app.example.com/blogs/blog-id-789
 **Recipient:** Channel only  
 **Label:** "Submitted for review"  
 **Action:** "Submitted for review — awaiting editorial approval"  
-**Owner:** Editor  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
 **Notification Type:** `submitted_for_review`
 
 ### 2. Changes Requested
@@ -88,7 +93,7 @@ Open: https://app.example.com/blogs/blog-id-789
 **Recipient:** Channel only  
 **Label:** "Changes requested"  
 **Action:** "Changes requested — awaiting creator revisions"  
-**Owner:** Creator  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
 **Notification Type:** `awaiting_action`
 
 ### 3. Ready to Publish
@@ -97,7 +102,7 @@ Open: https://app.example.com/blogs/blog-id-789
 **Recipient:** Channel only  
 **Label:** "Ready to publish"  
 **Action:** "Ready to publish — awaiting creator action"  
-**Owner:** Creator  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
 **Notification Type:** `stage_changed`
 
 ### 4. Awaiting Live Link
@@ -106,7 +111,7 @@ Open: https://app.example.com/blogs/blog-id-789
 **Recipient:** Channel only  
 **Label:** "Awaiting live link"  
 **Action:** "Awaiting live link — awaiting creator submission"  
-**Owner:** Creator  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
 **Notification Type:** `awaiting_action`
 
 ### 5. Published
@@ -123,7 +128,7 @@ Open: https://app.example.com/blogs/blog-id-789
 **Recipient:** Channel only  
 **Label:** "Live link reminder"  
 **Action:** "Reminder: awaiting live link submission"  
-**Owner:** Creator  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
 **Notification Type:** `awaiting_action`
 
 ### Removed Events
@@ -221,7 +226,7 @@ Failure handling (non-blocking, Slack is optional delivery channel)
 
 - **Content-type prefix:** `[Blog]` and `[Social]` tags enable quick scanning in shared channels
 - **Action-focused:** Each notification includes a clear action statement (what happened and what's next)
-- **Owner field:** Identifies the role/person responsible, helping rapid context in busy channels
+- **Assignment fields:** `Assigned to` and `Assigned by` show resolved user names; role-only values normalize to `Team`
 - **Slack is optional:** If Slack send fails, in-app notification already succeeded; failure doesn't propagate
 - **Preference-driven:** All notifications respect user settings; no "forced" notifications
 - **Noise reduction:** Redundant events removed; channel shows only actionable items

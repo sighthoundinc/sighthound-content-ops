@@ -179,13 +179,18 @@ Name resolution behavior:
 ### Slack notification format
 Slack notifications follow a clear, actionable format:
 ```
-[Blog|Social] Event Label • Title (Site)
+[Blog|Social] Title (Site)
 Action: What needs to happen or what just happened
-Owner: Role responsible (when relevant)
-Open: Link to content
+Assigned to: User name(s) (fallback: Team)
+Assigned by: User name (fallback: Team)
+Open link: Link to content
 ```
-
-Example: `[Social] Awaiting live link • "Campaign Post" (SH)` with action "Awaiting live link — awaiting creator submission"
+Example:
+- `[Social] ALPR for EV enforcement (alpr_plus)`
+- `Action: Submitted for review - awaiting editorial approval`
+- `Assigned to: Sarah Chen` (fallback: `Assigned to: Team`)
+- `Assigned by: Adam Zampa` (fallback: `Assigned by: Team`)
+- `Open link: https://sighthound-content-ops.vercel.app/social-posts/<id>`
 
 This format enables quick scanning in busy channels and shows exactly who is responsible for the next step.
 

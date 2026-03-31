@@ -158,6 +158,7 @@ export function getNotificationFromEvent(event: UnifiedEvent): NotificationInput
     timestamp: event.timestamp,
     metadata: {
       targetUserName: event.targetUserName,
+      targetUserNames: event.targetUserNames,
       targetUserId: event.targetUserId,
     },
   };
@@ -227,7 +228,7 @@ function buildNotificationTitle(event: UnifiedEvent): string {
     social_post_assigned: `${contentLabel} Assignment`,
     social_post_reassigned: `${contentLabel} Reassigned`,
     social_post_awaiting_action: "Action Needed",
-    social_post_editor_assigned: `${contentLabel} Assigned to Editor`,
+    social_post_editor_assigned: `${contentLabel} Assignment`,
     social_review_overdue: "Review Overdue",
     social_publish_overdue: "Publish Overdue",
     social_post_live_link_reminder: "Live Link Needed",
@@ -236,12 +237,39 @@ function buildNotificationTitle(event: UnifiedEvent): string {
 }
 
 /**
+ * Returns a display-safe target user string for notification copy.
+ * Fallback is always "Team" when no user name is available.
+ */
+function getTargetUserDisplay(event: UnifiedEvent): string {
+  if (Array.isArray(event.targetUserNames) && event.targetUserNames.length > 0) {
+    return event.targetUserNames.join(", ");
+  }
+  if (typeof event.targetUserName === "string" && event.targetUserName.trim().length > 0) {
+    return event.targetUserName.trim();
+  }
+  const metadataNames = event.metadata?.targetUserNames;
+  if (Array.isArray(metadataNames)) {
+    const names = metadataNames
+      .map((value) => String(value).trim())
+      .filter((value) => value.length > 0);
+    if (names.length > 0) {
+      return names.join(", ");
+    }
+  }
+  const metadataName = event.metadata?.targetUserName;
+  if (typeof metadataName === "string" && metadataName.trim().length > 0) {
+    return metadataName.trim();
+  }
+  return "Team";
+}
+
+/**
  * Build notification message from unified event.
  * Shows user names instead of roles for better clarity.
  */
 function buildNotificationMessage(event: UnifiedEvent): string {
   const title = event.contentTitle || event.contentId;
-  const targetUser = event.targetUserName || "team member";
+  const targetUser = getTargetUserDisplay(event);
 
   const messageMap: Record<string, string> = {
     blog_writer_status_changed: `${title} writer stage changed to ${event.newValue || "..."}`,
@@ -254,7 +282,7 @@ function buildNotificationMessage(event: UnifiedEvent): string {
     social_post_status_changed: `${title} stage changed to ${event.newValue || "..."}`,
     social_post_assigned: `${title} assigned to ${targetUser}`,
     social_post_reassigned: `${title} reassigned to ${targetUser}`,
-    social_post_awaiting_action: `${title} needs your attention`,
+    social_post_awaiting_action: `${title} awaiting action from ${targetUser}`,
     social_post_editor_assigned: `${title} assigned to ${targetUser}`,
     social_review_overdue: `${title} review is overdue`,
     social_publish_overdue: `${title} is overdue for publishing`,

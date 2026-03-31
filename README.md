@@ -300,6 +300,11 @@ Slack delivery:
 - override channel: `SLACK_MARKETING_CHANNEL`
 - secrets: `SLACK_BOT_TOKEN` and optional `SLACK_WEBHOOK_URL`
 - channel failure should not block fallback delivery attempts
+- global display contract for Slack-enabled notifications:
+  - `Assigned to` and `Assigned by` must show user display names (not role labels)
+  - fallback for unknown/role-only names is `Team`
+  - multiple assignees render as comma-joined names
+  - include `Open link: <app-url>` deep links when content ID is available
 
 ## Quality checks
 ```bash

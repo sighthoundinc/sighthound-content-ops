@@ -11,7 +11,6 @@ import { BulkActionPreviewModal } from "@/components/bulk-action-preview-modal";
 import { Button } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ColumnEditor } from "@/components/column-editor";
-import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DashboardTable } from "@/components/dashboard-table";
 import { DetailDrawerField } from "@/components/detail-drawer";
 import {
@@ -41,17 +40,14 @@ import {
   TableRowLimitSelect,
 } from "@/components/table-controls";
 import {
+  BLOG_SELECT_LEGACY_WITH_RELATIONS,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogPublishDate,
   getBlogScheduledDate,
+  isMissingBlogDateColumnsError,
   normalizeBlogRow,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
-import {
-  getApiErrorMessage,
-  isApiFailure,
-  parseApiResponseJson,
-} from "@/lib/api-response";
 import {
   canTransitionPublisherStatus,
   canTransitionWriterStatus,
@@ -100,7 +96,7 @@ import {
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
 import { useAuth } from "@/providers/auth-provider";
-import { useAlerts } from "@/providers/alerts-provider";
+import { useSystemFeedback } from "@/providers/system-feedback-provider";
 import { logDashboardVisitEvent } from "@/app/actions/log-dashboard-visit";
 
 type BlogCommentRecord = {
@@ -127,7 +123,7 @@ function normalizeCommentRows(rows: Array<Record<string, unknown>>) {
       id: String(row.id ?? ""),
       blog_id: String(row.blog_id ?? ""),
       comment: String(row.comment ?? ""),
-      created_by: String(row.user_id ?? ""),
+      created_by: String(row.user_id ?? row.created_by ?? ""),
       created_at: String(row.created_at ?? ""),
       author,
     } satisfies BlogCommentRecord;
@@ -141,6 +137,20 @@ function normalizeRelationObject<T>(value: unknown): T | null {
   return (value ?? null) as T | null;
 }
 
+function isMissingBlogCommentUserIdColumnError(error: {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+} | null) {
+  if (!error) {
+    return false;
+  }
+  const code = (error.code ?? "").toUpperCase();
+  const text =
+    `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return code === "42703" && text.includes("user_id");
+}
 
 function isMissingBlogCommentsTableError(error: {
   code?: string | null;
@@ -570,8 +580,8 @@ const normalizeSavedViews = (value: unknown): SavedDashboardView[] => {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { hasPermission, profile, user, session } = useAuth();
-  const { showError, showSuccess } = useAlerts();
+  const { hasPermission, profile, user } = useAuth();
+  const { showError, showSuccess, showWarning } = useSystemFeedback();
   useEffect(() => {
     if (!user?.id) {
       return;
@@ -652,9 +662,6 @@ export default function DashboardPage() {
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
   const [selectedSocialPostIds, setSelectedSocialPostIds] = useState<string[]>([]);
-  const [pendingBulkDeleteBlogIds, setPendingBulkDeleteBlogIds] = useState<string[] | null>(
-    null
-  );
   const [bulkWriterId, setBulkWriterId] = useState("");
   const [bulkPublisherId, setBulkPublisherId] = useState("");
   const [bulkWriterStatus, setBulkWriterStatus] = useState<WriterStageStatus | "">("");
@@ -802,19 +809,29 @@ export default function DashboardPage() {
     activeMetricFilter !== null;
 
   const loadData = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
     setIsLoading(true);
     setError(null);
     const fetchBlogs = async () => {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("blogs")
         .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
         .eq("is_archived", false)
         .order("scheduled_publish_date", { ascending: true, nullsFirst: false })
         .order("updated_at", { ascending: false });
+      if (isMissingBlogDateColumnsError(error)) {
+        const fallback = await supabase
+          .from("blogs")
+          .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
+          .eq("is_archived", false)
+          .order("target_publish_date", { ascending: true, nullsFirst: false })
+          .order("updated_at", { ascending: false });
+        data = fallback.data as typeof data;
+        error = fallback.error;
+      }
 
       return { data, error };
     };
-    const supabase = getSupabaseBrowserClient();
     const fetchSocialPosts = async () => {
       const { data, error } = await supabase
         .from("social_posts")
@@ -2638,7 +2655,7 @@ export default function DashboardPage() {
     setShowBulkPreviewModal(false);
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (!canDeleteBlog) {
       setError("You do not have permission to delete blogs.");
       return;
@@ -2647,27 +2664,26 @@ export default function DashboardPage() {
       return;
     }
     const selectedIdsSnapshot = [...selectedBlogIds];
+    const selectedCount = selectedIdsSnapshot.length;
     setError(null);
     setSuccessMessage(null);
-    setPendingBulkDeleteBlogIds(selectedIdsSnapshot);
-  };
-  const confirmBulkDelete = async () => {
-    if (!pendingBulkDeleteBlogIds || pendingBulkDeleteBlogIds.length === 0) {
-      return;
-    }
-    const selectedCount = pendingBulkDeleteBlogIds.length;
-    await runBulkMutation(async () => {
-      const supabase = getSupabaseBrowserClient();
-      const { error: deleteError } = await supabase
-        .from("blogs")
-        .delete()
-        .in("id", pendingBulkDeleteBlogIds);
-      if (deleteError) {
-        throw new Error(deleteError.message);
-      }
-      return `Deleted ${selectedCount} blog(s).`;
+    showWarning(`Delete ${selectedCount} selected blog(s)? This cannot be undone.`, {
+      actionLabel: "Delete",
+      durationMs: 7000,
+      onAction: () => {
+        void runBulkMutation(async () => {
+          const supabase = getSupabaseBrowserClient();
+          const { error: deleteError } = await supabase
+            .from("blogs")
+            .delete()
+            .in("id", selectedIdsSnapshot);
+          if (deleteError) {
+            throw new Error(deleteError.message);
+          }
+          return `Deleted ${selectedCount} blog(s).`;
+        });
+      },
     });
-    setPendingBulkDeleteBlogIds(null);
   };
 
 
@@ -2772,32 +2788,37 @@ export default function DashboardPage() {
 
       setError(null);
       setSuccessMessage(null);
-      if (!session?.access_token) {
-        setError("Couldn't save changes. Please sign in again.");
-        setSuccessMessage(null);
-        return;
+
+      const supabase = getSupabaseBrowserClient();
+      let { data, error: updateError } = await supabase
+        .from("blogs")
+        .update(updates)
+        .eq("id", blog.id)
+        .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
+        .single();
+
+      if (isMissingBlogDateColumnsError(updateError)) {
+        const legacyUpdates = {
+          ...updates,
+        };
+        delete (legacyUpdates as { scheduled_publish_date?: string | null })
+          .scheduled_publish_date;
+        delete (legacyUpdates as { display_published_date?: string | null })
+          .display_published_date;
+        delete (legacyUpdates as { target_publish_date?: string | null }).target_publish_date;
+
+        const fallback = await supabase
+          .from("blogs")
+          .update(legacyUpdates)
+          .eq("id", blog.id)
+          .select(BLOG_SELECT_LEGACY_WITH_RELATIONS)
+          .single();
+        data = fallback.data as typeof data;
+        updateError = fallback.error;
       }
-      const response = await fetch(`/api/blogs/${blog.id}/transition`, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${session.access_token}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(updates),
-      });
-      const payload = await parseApiResponseJson<{ blog?: Record<string, unknown> }>(
-        response
-      );
-      if (isApiFailure(response, payload)) {
-        const errorMessage = getApiErrorMessage(payload, "Couldn't save changes.");
-        console.error("Blog update failed:", errorMessage);
-        setError("Couldn't save changes. Please try again.");
-        setSuccessMessage(null);
-        return;
-      }
-      const data =
-        payload.blog && typeof payload.blog === "object" ? payload.blog : null;
-      if (!data) {
+
+      if (updateError) {
+        console.error("Blog update failed:", updateError);
         setError("Couldn't save changes. Please try again.");
         setSuccessMessage(null);
         return;
@@ -2832,7 +2853,6 @@ export default function DashboardPage() {
       canEditDisplayDate,
       canEditScheduledDate,
       hasPermission,
-      session?.access_token,
     ]
   );
 
@@ -2842,12 +2862,23 @@ export default function DashboardPage() {
 
     const supabase = getSupabaseBrowserClient();
     const fetchComments = async () => {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .schema("public")
         .from("blog_comments")
         .select("id,blog_id,comment,user_id,created_at,author:user_id(id,full_name,email)")
         .eq("blog_id", blogId)
         .order("created_at", { ascending: false });
+
+      if (isMissingBlogCommentUserIdColumnError(error)) {
+        const fallback = await supabase
+          .schema("public")
+          .from("blog_comments")
+          .select("id,blog_id,comment,created_by,created_at,author:created_by(id,full_name,email)")
+          .eq("blog_id", blogId)
+          .order("created_at", { ascending: false });
+        data = fallback.data as typeof data;
+        error = fallback.error;
+      }
 
       return { data, error };
     };
@@ -2984,7 +3015,7 @@ export default function DashboardPage() {
     setPanelError(null);
 
     const supabase = getSupabaseBrowserClient();
-    const { error: insertError } = await supabase
+    let { error: insertError } = await supabase
       .schema("public")
       .from("blog_comments")
       .insert({
@@ -2993,6 +3024,17 @@ export default function DashboardPage() {
         user_id: user.id,
       });
 
+    if (isMissingBlogCommentUserIdColumnError(insertError)) {
+      const fallback = await supabase
+        .schema("public")
+        .from("blog_comments")
+        .insert({
+          blog_id: activeBlog.id,
+          comment: trimmedComment,
+          created_by: user.id,
+        });
+      insertError = fallback.error;
+    }
 
     if (insertError) {
       if (isMissingBlogCommentsTableError(insertError)) {
@@ -4267,28 +4309,6 @@ export default function DashboardPage() {
               setIsPanelEditMode((previous) => !previous);
             }}
           />
-        <ConfirmationModal
-          isOpen={Boolean(pendingBulkDeleteBlogIds && pendingBulkDeleteBlogIds.length > 0)}
-          title="Delete selected blogs?"
-          description={
-            pendingBulkDeleteBlogIds
-              ? `Delete ${pendingBulkDeleteBlogIds.length} selected blog${
-                  pendingBulkDeleteBlogIds.length === 1 ? "" : "s"
-                }? This action cannot be undone.`
-              : "This action cannot be undone."
-          }
-          confirmLabel="Delete selected"
-          tone="danger"
-          isConfirming={isBulkSaving}
-          onCancel={() => {
-            if (!isBulkSaving) {
-              setPendingBulkDeleteBlogIds(null);
-            }
-          }}
-          onConfirm={() => {
-            void confirmBulkDelete();
-          }}
-        />
 
         <BulkActionPreviewModal
           isOpen={showBulkPreviewModal}

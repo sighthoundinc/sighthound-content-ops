@@ -803,6 +803,28 @@ function SocialPostsPageContent() {
       }),
     [isAdmin, user?.id]
   );
+  const getUserDisplayNameById = useCallback(
+    (userId: string | null | undefined) => {
+      if (!userId) {
+        return "Team";
+      }
+      const match = availableUsers.find((entry) => entry.id === userId);
+      return match?.full_name?.trim() || "Team";
+    },
+    [availableUsers]
+  );
+  const getTargetUserNameForStatus = useCallback(
+    (status: SocialPostStatus, post: SocialPostWithRelations) => {
+      if (status === "in_review" || status === "creative_approved") {
+        return post.reviewer_name || getUserDisplayNameById(post.reviewer_user_id);
+      }
+      if (status === "published") {
+        return "Team";
+      }
+      return post.worker_name || getUserDisplayNameById(post.worker_user_id);
+    },
+    [getUserDisplayNameById]
+  );
 
   const loadPanelDetails = async (postId: string) => {
     const supabase = getSupabaseBrowserClient();
@@ -1167,7 +1189,8 @@ function SocialPostsPageContent() {
         currentStatus,
         toStatus,
         profile?.full_name ?? null,
-        postId
+        postId,
+        getTargetUserNameForStatus(toStatus, post)
       )
     );
     return true;
@@ -1356,7 +1379,8 @@ function SocialPostsPageContent() {
         activePost.status,
         "creative_approved",
         profile?.full_name ?? null,
-        activePost.id
+        activePost.id,
+        getTargetUserNameForStatus("creative_approved", activePost)
       )
     );
     setPanelForm((previous) =>

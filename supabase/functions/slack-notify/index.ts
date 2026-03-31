@@ -23,6 +23,7 @@ interface NotifyPayload {
   actorName: string;
   targetEmail?: string | null;
   targetUserName?: string; // User to whom task is assigned/action needed
+  targetUserNames?: string[];
   appUrl?: string;
 }
 
@@ -31,19 +32,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const EVENT_LABELS: Record<EventType, string> = {
-  writer_assigned: "Writer assigned",
-  writer_completed: "Writing complete",
-  ready_to_publish: "Ready to publish",
-  published: "Published",
-  social_submitted_for_review: "Submitted for review",
-  social_changes_requested: "Changes requested",
-  social_creative_approved: "Creative approved",
-  social_ready_to_publish: "Ready to publish",
-  social_awaiting_live_link: "Awaiting live link",
-  social_published: "Published",
-  social_live_link_reminder: "Live link reminder",
-};
 
 const EVENT_CONTENT_TYPE: Record<EventType, string> = {
   writer_assigned: "Blog",
@@ -59,19 +47,48 @@ const EVENT_CONTENT_TYPE: Record<EventType, string> = {
   social_live_link_reminder: "Social",
 };
 
-const EVENT_NEXT: Record<EventType, string | null> = {
-  writer_assigned: "Writing",
-  writer_completed: "Publisher review",
-  ready_to_publish: "Publishing",
-  published: null,
-  social_submitted_for_review: "Editorial review",
-  social_changes_requested: "Creator revisions",
-  social_creative_approved: null,
-  social_ready_to_publish: "Creator action",
-  social_awaiting_live_link: "Live link submission",
-  social_published: null,
-  social_live_link_reminder: "Live link submission",
+
+const EVENT_ACTION: Record<EventType, string> = {
+  writer_assigned: "Assigned - work can start",
+  writer_completed: "Writing complete - awaiting publishing review",
+  ready_to_publish: "Ready to publish - awaiting publishing action",
+  published: "Published",
+  social_submitted_for_review: "Submitted for review - awaiting editorial approval",
+  social_changes_requested: "Changes requested - awaiting revision",
+  social_creative_approved: "Creative approved - awaiting next action",
+  social_ready_to_publish: "Ready to publish - awaiting execution",
+  social_awaiting_live_link: "Awaiting live link - awaiting submission",
+  social_published: "Published",
+  social_live_link_reminder: "Live link reminder - awaiting submission",
 };
+
+const ROLE_LABELS = new Set(["writer", "publisher", "editor", "social editor", "admin"]);
+
+function normalizeName(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (ROLE_LABELS.has(trimmed.toLowerCase())) {
+    return null;
+  }
+  return trimmed;
+}
+
+function resolveAssignedTo(payload: NotifyPayload) {
+  const names = Array.isArray(payload.targetUserNames)
+    ? payload.targetUserNames
+        .map((name) => normalizeName(name))
+        .filter((name): name is string => Boolean(name))
+    : [];
+  if (names.length > 0) {
+    return names.join(", ");
+  }
+  return normalizeName(payload.targetUserName) ?? "Team";
+}
 
 function buildMessage(payload: NotifyPayload) {
   const deepLink = payload.appUrl
@@ -83,28 +100,22 @@ function buildMessage(payload: NotifyPayload) {
     : null;
 
   const contentType = EVENT_CONTENT_TYPE[payload.eventType];
-  const label = EVENT_LABELS[payload.eventType];
-  const next = EVENT_NEXT[payload.eventType];
-  const assignedTo = payload.targetUserName || "team";
+  const action = EVENT_ACTION[payload.eventType];
+  const assignedTo = resolveAssignedTo(payload);
+  const assignedBy = normalizeName(payload.actorName) ?? "Team";
 
-  // Line 1: [ContentType] Event label
-  const headerLine = `*[${contentType}]* ${label}`;
+  // Line 1: [Social|Blog] Title (site)
+  const headerLine = `[${contentType}] ${payload.title} (${payload.site})`;
+  // Line 2: Action
+  const actionLine = `Action: ${action}`;
+  // Line 3: Assigned to
+  const assignedToLine = `Assigned to: ${assignedTo}`;
+  // Line 4: Assigned by
+  const assignedByLine = `Assigned by: ${assignedBy}`;
+  // Line 5 (optional): Open link
+  const openLine = deepLink ? `Open link: ${deepLink}` : null;
 
-  // Line 2: "Title" (site)
-  const titleLine = `"${payload.title}" (${payload.site})`;
-
-  // Line 3 (optional): Assigned to: user name (instead of role)
-  const assignedLine = payload.targetUserName ? `Assigned to: ${assignedTo}` : null;
-
-  // Line 4 (optional): Next: what happens next
-  const nextLine = next ? `Next: ${next}` : null;
-
-  // Line 5 (optional): Open: deep link
-  const openLine = deepLink ? `Open: ${deepLink}` : null;
-
-  const parts = [headerLine, titleLine];
-  if (assignedLine) parts.push(assignedLine);
-  if (nextLine) parts.push(nextLine);
+  const parts = [headerLine, actionLine, assignedToLine, assignedByLine];
   if (openLine) parts.push(openLine);
 
   return parts.join("\n");

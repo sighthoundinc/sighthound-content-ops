@@ -36,6 +36,11 @@ For social execution-stage completion, live links are entered from `/social-post
   - `blog_publish_overdue`
   - `social_post_live_link_reminder`
 - Operational expectation: one event should drive activity history, in-app notification eligibility, and Slack delivery. Do not add new direct Slack-only branches for workflow events.
+- Slack display-layer contract for all Slack-enabled notifications:
+  - `Assigned to` and `Assigned by` must use resolved user display names
+  - role-only labels (`Writer`, `Editor`, `Publisher`, etc.) must not appear as assignee/actor values
+  - unresolved or role-only values fall back to `Team`
+  - include `Open link: <app-url>` when content deep link is available
 
 ### Contract enforcement model
 - API contract normalization is centralized in `src/lib/api-contract.ts` and applied to all route handlers in `src/app/api/**/route.ts`.
@@ -848,8 +853,12 @@ Settings UI grouping (for operator orientation):
 **Channel notifications**:
 - Default channel: `#content-ops-alerts`
 - Configurable via `SLACK_MARKETING_CHANNEL` env var
-- Message format: `*Event Label* • Post Title (site)`
-- Includes: Actor name, deep link to app, timestamp
+- Message format (line-based):
+  - `[Blog|Social] <Title> (<Site>)`
+  - `Action: <action text>`
+  - `Assigned to: <name(s) | Team>`
+  - `Assigned by: <name | Team>`
+  - `Open link: <app-url>` (when content ID exists)
 
 **Direct message notifications**:
 - Sent to `targetEmail` if provided in notification payload

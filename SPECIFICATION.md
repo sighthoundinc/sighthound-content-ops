@@ -612,6 +612,13 @@ Delivery:
 - optional DM resolution by email (attempted even if channel post fails)
 - webhook fallback when bot-token deliveries do not succeed
 - connected-services bootstrap rows in `user_integrations` are created by an auth trigger path that must not block user provisioning
+- Slack display contract for all Slack-enabled notifications:
+  - line 1: `[Blog|Social] <Title> (<Site>)`
+  - line 2: `Action: <action text>`
+  - line 3: `Assigned to: <resolved user name(s) | Team>`
+  - line 4: `Assigned by: <resolved actor name | Team>`
+  - line 5 (optional): `Open link: <app-url>` when a deep link is available
+  - role labels are display-invalid for assignee/actor lines and must be normalized to user names or `Team`
 ## 11b) Unified Events System
 The application uses a unified event emission system that consolidates notifications and activity history recording into single `emitEvent()` calls. This ensures a single source of truth for workflow events.
 ### Architecture

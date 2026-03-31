@@ -77,6 +77,7 @@ export interface UnifiedEvent {
   // Target user (for assignment/awaiting actions)
   // Use this for notifications to show actual user names instead of roles
   targetUserName?: string; // user to whom task is assigned or who is awaiting action
+  targetUserNames?: string[]; // multiple responsible users (display joined with comma)
   targetUserId?: string; // user ID of target
 
   // Context
@@ -123,6 +124,7 @@ export function unifiedEventToActivityRecord(
       actor_name: event.actorName,
       actor_role: event.actorRole,
       target_user_name: event.targetUserName,
+      target_user_names: event.targetUserNames,
       target_user_id: event.targetUserId,
       content_title: event.contentTitle,
     },

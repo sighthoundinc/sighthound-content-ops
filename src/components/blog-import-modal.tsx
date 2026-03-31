@@ -602,12 +602,13 @@ export function BlogImportModal({
           nextSelectedColumns.add(key);
         }
       }
-      const rowsWithFallbacks = applyFallbacksToRows(parseResult.rows, nextSelectedColumns);
-      setRows(rowsWithFallbacks);
-      setSelectedRowNumbers(rowsWithFallbacks.map((row) => row.rowNumber));
+      setRows(parseResult.rows);
+      setSelectedRowNumbers(parseResult.rows.map((row) => row.rowNumber));
       setDetectedColumns(parseResult.detectedColumns);
       setSelectedColumns(nextSelectedColumns);
-      setParseErrors(validateRows(rowsWithFallbacks, nextSelectedColumns));
+      setParseErrors(
+        validateRows(applyFallbacksToRows(parseResult.rows, nextSelectedColumns), nextSelectedColumns)
+      );
     } catch (parseError) {
       console.error("File parse failed:", parseError);
       setError("Failed to parse file. Please check the format and try again.");
@@ -637,11 +638,18 @@ export function BlogImportModal({
           },
         ])
       );
-      const rowsToImport = selectedRows.map((row) => ({
-        ...row,
-        actualPublishDate: selectedColumns.has("actualPublishDate") ? row.actualPublishDate : "",
-        draftDocLink: selectedColumns.has("draftDocLink") ? row.draftDocLink : "",
-      }));
+      const rowsToImport = selectedRows.map((row) => {
+        const rowWithFallbacks = applyRowFallbacks(row, selectedColumns);
+        return {
+          ...rowWithFallbacks,
+          actualPublishDate: selectedColumns.has("actualPublishDate")
+            ? rowWithFallbacks.actualPublishDate
+            : "",
+          draftDocLink: selectedColumns.has("draftDocLink")
+            ? rowWithFallbacks.draftDocLink
+            : "",
+        };
+      });
       const response = await fetch("/api/blogs/import", {
         method: "POST",
         headers: {
@@ -892,10 +900,8 @@ export function BlogImportModal({
                             } else {
                               next.add(key);
                             }
-                            const rowsWithFallbacks = applyFallbacksToRows(rows, next);
                             setSelectedColumns(next);
-                            setRows(rowsWithFallbacks);
-                            setParseErrors(validateRows(rowsWithFallbacks, next));
+                            setParseErrors(validateRows(applyFallbacksToRows(rows, next), next));
                           }}
                           className={isDetected ? "cursor-pointer" : "cursor-not-allowed"}
                         />

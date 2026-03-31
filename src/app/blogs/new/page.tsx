@@ -15,6 +15,14 @@ import type { BlogSite, ProfileRecord } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
+// Utility: Format date as YYYY-MM-DD for input[type="date"]
+function formatDateForInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -40,12 +48,14 @@ function NewBlogPageContent() {
   const [googleDocUrl, setGoogleDocUrl] = useState("");
   const [scheduledPublishDate, setScheduledPublishDate] = useState("");
   const [displayPublishDate, setDisplayPublishDate] = useState("");
+  const [syncDisplayToScheduled, setSyncDisplayToScheduled] = useState(true);
   const [initialComment, setInitialComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prefilledIdeaId, setPrefilledIdeaId] = useState<string | null>(null);
   const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
   const [convertedIdeaBlogId, setConvertedIdeaBlogId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -120,6 +130,18 @@ function NewBlogPageContent() {
     void loadIdeaPrefill();
   }, [sourceIdeaId]);
 
+  // Initialize defaults: today's date for scheduled, sync display to scheduled
+  useEffect(() => {
+    if (isInitialized) return;
+    setIsInitialized(true);
+
+    const today = formatDateForInput(new Date());
+    setScheduledPublishDate(today);
+    setDisplayPublishDate(today);
+    setSyncDisplayToScheduled(true);
+  }, [isInitialized]);
+
+  // Handle requested scheduled date from query params
   useEffect(() => {
     if (
       !requestedScheduledPublishDate ||
@@ -128,8 +150,18 @@ function NewBlogPageContent() {
       return;
     }
     setScheduledPublishDate((previous) => previous || requestedScheduledPublishDate);
-    setDisplayPublishDate((previous) => previous || requestedScheduledPublishDate);
-  }, [requestedScheduledPublishDate]);
+    // If sync is enabled, update display date too
+    if (syncDisplayToScheduled) {
+      setDisplayPublishDate(requestedScheduledPublishDate);
+    }
+  }, [requestedScheduledPublishDate, syncDisplayToScheduled]);
+
+  // Sync display date when scheduled date changes and sync is enabled
+  useEffect(() => {
+    if (syncDisplayToScheduled && scheduledPublishDate) {
+      setDisplayPublishDate(scheduledPublishDate);
+    }
+  }, [scheduledPublishDate, syncDisplayToScheduled]);
 
   useEffect(() => {
     if (!error) {
@@ -162,6 +194,10 @@ function NewBlogPageContent() {
     setError(null);
 
     const supabase = getSupabaseBrowserClient();
+    // For blog creation, both admin and non-admin users can set display date
+    // Client-side: display_published_date always has a value (never NULL)
+    // Fallback: display_published_date = displayPublishDate || scheduledPublishDate || today
+    const finalDisplayPublishDate = displayPublishDate || scheduledPublishDate || scheduledPublishDate;
     const payload = {
       title: title.trim(),
       slug: slugify(title),
@@ -172,7 +208,7 @@ function NewBlogPageContent() {
       publisher_status: "not_started",
       google_doc_url: googleDocUrl.trim() || null,
       scheduled_publish_date: scheduledPublishDate || null,
-      display_published_date: displayPublishDate || scheduledPublishDate || null,
+      display_published_date: finalDisplayPublishDate || null,
       target_publish_date: scheduledPublishDate || null,
       created_by: user.id,
     };
@@ -349,16 +385,34 @@ function NewBlogPageContent() {
             </div>
 
             <label className="block">
+              <div className="mb-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={syncDisplayToScheduled}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setSyncDisplayToScheduled(checked);
+                    if (checked && scheduledPublishDate) {
+                      setDisplayPublishDate(scheduledPublishDate);
+                    }
+                  }}
+                  className="rounded border-slate-300"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  Same as Scheduled Publish Date
+                </span>
+              </div>
               <span className="mb-1 block text-sm font-medium text-slate-700">
                 Display Publish Date
               </span>
               <input
                 type="date"
                 value={displayPublishDate}
+                disabled={syncDisplayToScheduled}
                 onChange={(event) => {
                   setDisplayPublishDate(event.target.value);
                 }}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
               />
             </label>
 

@@ -67,6 +67,21 @@ Use `My Tasks` as your first stop each day.
 - Social post create modal requires Product, Type, and Reviewer; Title is optional.
 - To submit for review, include Product, Type, and Canva link.
 - Creative approval requires Product, Type, Canva link, Platforms, Caption, and Scheduled Publish Date.
+- On `Add Blog`, date fields default to today and work for all users:
+  - `Scheduled Publish Date` defaults to today
+  - `Display Publish Date` defaults to match Scheduled Publish Date via a sync checkbox
+  - Checkbox labeled "Same as Scheduled Publish Date" is checked by default; uncheck to set a different display date
+  - When checkbox is checked, display date auto-updates when you change scheduled date
+  - When checkbox is unchecked, display date remains independent (changing scheduled date does not affect it)
+  - If you uncheck, change scheduled date, then recheck the checkbox: display date syncs back to the new scheduled date
+  - Both dates can be freely edited by any user creating a blog (no permission gating on create)
+  - Display Published Date can never be empty; if not explicitly set, it always defaults to Scheduled Publish Date
+  - This behavior is automatic and handled by the database, so you don't need to worry about missing dates
+  - After creation, assigned writers and publishers can keep editing workflow dates on their assigned blogs
+- Workflow-critical blog fields follow ownership:
+  - Assigned writers and publishers can edit Google Doc URL and Live URL on blogs they own in the workflow
+  - Assigned writers and publishers can edit scheduled and display publish dates on blogs they own in the workflow
+  - These core workflow fields are not meant to be blocked by separate permission toggles
 - Non-admin writers can edit brief fields in Draft and Changes Requested.
 - Admin/reviewer can edit brief fields at any stage when needed.
 - In `Awaiting Live Link`, non-admin users can only add/update live links.
@@ -77,7 +92,12 @@ Use `My Tasks` as your first stop each day.
 - On Ideas, comments and references stay visible and are edited through `Edit Idea` (not inline).
 - All delete actions use the same in-app confirmation modal pattern (not browser dialogs and not toast-action confirms).
 
-## 4. Filters and search
+## 4. Task assignment transparency
+- All authenticated users can see who owns each task.
+- This is intentional so handoffs, blockers, and next-step ownership stay visible across the team.
+- Only the assigned user and admins can change task assignments.
+
+## 5. Filters and search
 - Search is case-insensitive and supports partial matches.
 - Filters can be combined to isolate actionable work quickly.
 - Filters persist until changed or cleared.

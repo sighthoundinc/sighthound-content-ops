@@ -466,10 +466,8 @@ begin
     raise exception 'Permission denied: edit_scheduled_publish_date';
   end if;
 
-  if new.display_published_date is not null
-    and not public.has_permission('edit_display_publish_date') then
-    raise exception 'Permission denied: edit_display_publish_date';
-  end if;
+  -- Display publish date can be set by any user during blog creation (no permission gate)
+  -- Permission gating for display date applies only on updates, not on initial creation
 
   if new.writer_status is distinct from 'not_started'::public.writer_stage_status
     and not public.can_transition_writer_status(

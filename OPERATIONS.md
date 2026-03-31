@@ -1,3 +1,7 @@
+## Workflow ownership and permissions
+- If a writer or publisher owns a blog in the workflow, they can edit workflow-critical URLs and dates without needing separate permission toggles.
+- Keep permission toggles focused on optional or privileged actions (exports, archive, admin overrides), not core workflow completion fields.
+- Task assignment rows are readable by all authenticated users to improve coordination; mutation remains limited to the assigned user and admins.
 # Sighthound Content Ops — Operations Runbook
 This runbook is for maintainers and operators.  
 It describes how the system runs in practice today (deployment, monitoring, incident response, and admin maintenance).  
@@ -672,6 +676,13 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 2. verify permission matrix rows for role
 3. verify required permission key for that action
 4. re-login or refresh permission cache
+
+### "Couldn't create blog. Please try again." (blog creation fails)
+1. verify form has valid title, site, and other required fields
+2. confirm you have `create_blog` permission (check `/settings/permissions` if admin)
+3. date fields (scheduled and display) are freely editable by all users on create and do not require special permissions
+4. if sync checkbox behavior seems broken, verify browser console for form submission errors
+5. confirm Supabase is reachable and DB trigger `enforce_blog_insert_permissions` is applied (check migration `20260313213000`)
 
 ### “Migration 20260313213000 fails with `role_permissions_permission_key_valid`”
 1. confirm local migration file includes early constraint drops before legacy remap insert

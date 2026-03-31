@@ -1,9 +1,18 @@
+## Workflow ownership defaults
+- Task assignment visibility is open to all authenticated users for collaboration clarity.
+- Assigned writers and publishers can edit workflow-critical blog fields by ownership:
+  - Google Doc URL
+  - Live URL
+  - Scheduled Publish Date
+  - Display Publish Date
+- These fields are treated as core workflow controls and are not intended to be blocked by separate permission toggles.
 # sighthound-content-ops
 Content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
 
 ## Product snapshot
 - Blog and social-post workflow operations
 - DB-authoritative permissions and workflow enforcement
+- Blog creation with smart date defaults: today's scheduled date, auto-synced display date via checkbox, no permission gating on dates
 - Queue-first dashboard, tasks, and calendar execution views
 - Ideas intake and conversion into blogs or social posts
 - Global delete confirmation via shared in-app modal (`ConfirmationModal`)
@@ -65,9 +74,17 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Export View / Export Selected CSV (permission-gated)
 - Edit Columns popover and bottom pagination controls
 
-### Blogs Library (`/blogs`)
-- Dedicated reference-first page for title/URL lookup
-- Default: published-only, newest-first by display publish date
+### Blog Creation (`/blogs/new`)
+|- New blog form with guided date input:
+  - Scheduled Publish Date defaults to today
+  - Display Publish Date checkbox ("Same as Scheduled Publish Date") is checked by default
+  - Uncheck to set a different display date (allowed for all users, no permissions required)
+  - Changing scheduled date auto-syncs display date when checkbox is checked
+|- Both dates can be set by any user with `create_blog` permission
+
+### Blog Library (`/blogs`)
+|- Dedicated reference-first page for title/URL lookup
+|- Default: published-only, newest-first by display publish date
 - Copy-first utilities:
   - row-level title/url copy (hover-revealed controls)
   - copy-all titles / copy-all URLs

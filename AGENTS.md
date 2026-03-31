@@ -107,6 +107,86 @@ For every non-trivial UI or workflow change:
 4. No feature ships without RLS coverage.
 5. Do not disable RLS on PostgREST-exposed tables in `public`; use explicit policies and service-role API paths for maintenance operations.
 
+## Permission System (MUST)
+
+**Total Permissions**: 92 (76 delegable + 12 admin-locked)
+
+**Roles**:
+- **Admin**: All permissions (full access)
+- **Writer**: 28 permissions (create/edit blogs, writing workflow, ideas, social posts, collaboration, scheduling, dashboard)
+- **Publisher**: 23 permissions (publishing workflow, social posts, scheduling, collaboration, dashboard)
+- **Editor**: 17 permissions (blog editing, idea management, collaboration, workflow support, dashboard)
+
+**Permission Structure**:
+1. **Permission Keys Function**: Centralized list in `public.permission_keys()` SQL function
+2. **Admin-Locked Permissions**: Non-delegable permissions in `public.locked_admin_permission_keys()`
+   - Admin-only operations: `manage_users`, `assign_roles`, `manage_permissions`, `repair_workflow_state`, delete/override operations
+3. **Default Role Permissions**: Defined in `public.default_role_permissions(p_role)` function
+   - New roles automatically get correct defaults from this function
+   - Existing customizations preserved during migrations
+
+**Permission Categories**:
+- **Blog Management** (15): Create, edit, archive, delete (admin-locked)
+- **Writing Workflow** (6): Start, submit, request revision, view queue
+- **Publishing Workflow** (6): Start, complete, upload, view queue
+- **Assignment** (6): Self-assign, change assignments, bulk reassign
+- **Scheduling & Dates** (5): Edit dates (ownership-based for critical fields), calendar operations
+- **Calendar** (4): Month/week views, unscheduled blogs, drag-drop
+- **Collaboration** (6): Comments, mentions, edit/delete own
+- **Ideas** (5) — NEW: Create, view, edit, delete (admin-locked)
+- **Social Posts** (8) — NEW: Create, view, edit brief, transition, links, delete (admin-locked), reopen (admin-locked)
+- **Dashboard** (8): View dashboard, tasks, metrics, exports
+- **Visibility** (3) — NEW: Notifications, activity history, my tasks
+- **Admin Tools** (8): User profiles, integrations, imports, logs
+
+**Ownership vs Permissions**:
+- Workflow-critical fields (Google Doc link, Live URL, dates) are **ownership-controlled** via RLS, not permission-gated
+- Ownership: `blogs.writer_id = auth.uid()` or `blogs.publisher_id = auth.uid()`
+- This ensures assigned users can always complete required workflow steps
+- Permission toggles are for optional features, not core workflow
+
+**Adding New Permissions**:
+1. Add key to `public.permission_keys()` function
+2. Add to `public.locked_admin_permission_keys()` if admin-only
+3. Update `public.default_role_permissions()` with role access
+4. Create RLS policy enforcing permission
+5. Add UI check via `hasPermission()` function
+6. Document in `docs/PERMISSIONS.md` and AGENTS.md
+
+**Backward Compatibility**:
+- New permissions default to `enabled` for intended roles, `disabled` for others
+- Existing custom role permissions preserved during migration
+- No breaking changes to API contracts or stored data
+
+**Reference**:
+- See `docs/PERMISSIONS.md` for complete permission reference
+- See `src/lib/permissions.ts` for frontend helpers
+- See `supabase/migrations/20260401110000_add_explicit_permission_coverage.sql` for schema
+
+## Workflow-Critical Field Ownership (MUST)
+
+**Principle**: Workflow-critical fields (URLs, dates) are controlled by **ownership**, not independent permissions.
+
+1. **Google Doc Link & Live URL**:
+   - Writers and publishers can always edit these fields on their assigned blogs
+   - Permission checks removed from trigger; ownership (RLS + writer_id/publisher_id) is sufficient
+   - These fields are required for workflow transitions, so they must never be blockable by permission toggles
+
+2. **Scheduled Publish Date & Display Publish Date**:
+   - Writers and publishers can edit dates on their assigned blogs without separate permission toggles
+   - Ownership check: `new.writer_id = auth.uid() or new.publisher_id = auth.uid()`
+   - Backward compatible: explicit `edit_scheduled_publish_date` / `edit_display_publish_date` permissions still work if needed
+   - Rationale: Dates are workflow-essential; assigned owners must always be able to control them
+
+3. **Task Assignment Visibility**:
+   - All authenticated users can READ task_assignments (transparency for collaboration)
+   - Only assigned user + admin can UPDATE/DELETE (ownership still protected)
+   - Enables dashboard/task views to show full ownership context without information silos
+
+4. **Override Rule**: When a field is workflow-critical, ownership takes precedence over permission toggles.
+   - If a user owns a blog (writer_id or publisher_id matches), they can edit workflow-critical fields
+   - Permission toggles are for optional features (export, archive, admin overrides), not core workflow
+
 ## Forms & Input Behavior (MUST)
 
 1. All inputs expose clear validation states (error, success/valid, disabled, loading).

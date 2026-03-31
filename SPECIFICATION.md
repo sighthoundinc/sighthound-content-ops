@@ -45,19 +45,38 @@ Role model:
 - `profiles.role` remains synchronized primary role
 
 Permission model:
-- canonical permission matrix by role
-- role templates + configurable subset for managed roles
-- admin-locked permissions not editable in role matrix
-- permission audit history for changes
-- key UI mappings:
-  - `edit_scheduled_publish_date` → Scheduled Publish Date fields + calendar reschedule
-  - `edit_display_publish_date` → Display Publish Date fields
-  - `export_csv` → View Export actions
-  - `export_selected_csv` → Selected Export actions
+- **Total permissions**: 92 (76 delegable + 12 admin-locked)
+- **Default role access**:
+  - Admin: All 92 permissions
+  - Writer: 28 permissions (blog creation, writing workflow, ideas, social posts, collaboration, dashboard)
+  - Publisher: 23 permissions (publishing workflow, social posts, collaboration, dashboard)
+  - Editor: 17 permissions (blog editing, idea management, collaboration, dashboard)
+- canonical permission matrix by role defined in `public.permission_keys()` and `public.default_role_permissions()`
+- role templates + configurable subset for managed roles via `role_permissions` table
+- admin-locked permissions (9) not editable for non-admin roles:
+  - `manage_users`, `assign_roles`, `manage_permissions`
+  - `delete_blog`, `delete_idea`, `delete_social_post` (destructive operations)
+  - `reopen_social_post_brief` (approval override)
+  - `repair_workflow_state`, `override_writer_status`, `override_publisher_status`, `force_publish` (recovery operations)
+  - `edit_actual_publish_timestamp` (audit field)
+- permission audit history for changes logged in `permission_audit_logs`
+- **Permission categories**: Blog management (15), Writing workflow (6), Publishing workflow (6), Assignment (6), Scheduling (5), Calendar (4), Collaboration (6), Ideas (5), Social Posts (8), Dashboard (8), Visibility (3), Admin tools (8)
+- **Workflow-critical fields follow ownership rules, not permission toggles**:
+  - `google_doc_url`, `live_url` → always editable by assigned writer/publisher via RLS
+  - `scheduled_publish_date`, `display_published_date` → editable by assigned writer/publisher or explicit permission
+  - task_assignments visibility: all users can READ for transparency; assigned user + admin can UPDATE/DELETE
+  - These fields cannot be blocked by permission toggles; ownership is the primary control
+- key UI mappings (optional/advanced features):
+  - `export_csv`, `export_selected_csv` → View/Export actions
+  - `view_dashboard`, `view_my_tasks`, `view_notifications` → Dashboard and notification access
+  - `create_idea`, `view_ideas`, `edit_own_idea` → Idea management
+  - `create_social_post`, `view_social_posts`, `edit_social_post_brief` → Social post workflows
+  - `edit_blog_metadata` → Site and other metadata edits (not workflow-critical)
 
 Control plane:
 - UI: `/settings/permissions`
 - API: `/api/admin/permissions`
+- Reference: `docs/PERMISSIONS.md` for complete permission guide
 
 Authorization source of truth:
 - content mutations are DB-authorized via policies/functions/triggers (UI is assistive, not authoritative)
@@ -86,15 +105,34 @@ Rules:
 
 ## 5) Date model
 Primary fields:
-- `scheduled_publish_date`
-- `display_published_date`
-- `actual_published_at`
+- `scheduled_publish_date` — when the content is planned to be published
+- `display_published_date` — the date shown to readers (can differ from scheduled date)
+- `actual_published_at` — server timestamp when actually published
 - `published_at` (compatibility mirror)
 - `target_publish_date` (legacy compatibility companion)
 
 Behavior:
+- `display_published_date` is **never NULL**; it always defaults to `scheduled_publish_date` if not explicitly set
 - scheduling fields remain compatible with legacy consumers
 - publish completion can set publish timestamp
+- workflow-critical blog fields follow ownership:
+  - assigned writers and publishers can edit `google_doc_url` and `live_url` on their assigned blogs
+  - assigned writers and publishers can edit `scheduled_publish_date` and `display_published_date` on their assigned blogs
+  - explicit date permissions remain backward-compatible, but ownership is the primary control
+- blog creation date behavior:
+  - both `scheduled_publish_date` and `display_published_date` can be set freely by any user (no permission gating on insert)
+  - UI defaults `scheduled_publish_date` to today
+  - UI defaults `display_published_date` to match `scheduled_publish_date` via a sync checkbox
+  - sync checkbox allows users to manually override display date while creating
+  - when checkbox is checked: display date auto-syncs with scheduled date
+  - when checkbox is unchecked: display date becomes independently editable
+  - if user unchecks sync, changes scheduled date, then rechecks sync: display date returns to sync with scheduled
+  - permission gating applies only to updates after creation (not on initial insert)
+- display date fallback rules (handled by database triggers):
+  - on INSERT: if `display_published_date` is NULL, silently set to `scheduled_publish_date` or today
+  - on UPDATE: if user attempts to set NULL, silently reset to `scheduled_publish_date` instead of rejecting
+  - activity logging: silent fallback on default creation; explicit event logged if user manually sets display ≠ scheduled
+- edge case: if `display_published_date` is already set and `scheduled_publish_date` changes, the display date **remains unchanged** (user's explicit choice is respected)
 
 ## 6) Core UX and pages
 ### Workspace Home (`/`)

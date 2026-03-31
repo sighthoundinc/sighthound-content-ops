@@ -541,10 +541,10 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
             scheduled_publish_date: row.displayPublishDate,
             display_published_date: row.displayPublishDate,
           };
-          if (selectedColumnsSet?.has("draftDocLink")) {
+          if (selectedColumnsSet?.has("draftDocLink") || row.draftDocLink !== null) {
             updateData.google_doc_url = row.draftDocLink;
           }
-          if (selectedColumnsSet?.has("actualPublishDate")) {
+          if (selectedColumnsSet?.has("actualPublishDate") || row.actualPublishDate !== null) {
             updateData.actual_published_at = actualPublishedAt;
             updateData.published_at = actualPublishedAt;
           }

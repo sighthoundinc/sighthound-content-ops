@@ -1339,7 +1339,10 @@ export default function DashboardPage() {
         status_display: STATUS_LABELS[blog.overall_status],
         lifecycle_bucket: lifecycleBucket,
         scheduled_date: getBlogScheduledDate(blog),
-        published_date: getBlogPublishDate(blog),
+        published_date:
+          blog.actual_published_at?.slice(0, 10) ??
+          blog.published_at?.slice(0, 10) ??
+          null,
         owner_display: ownerDisplay,
         updated_at: blog.updated_at,
         product: null,
@@ -1395,11 +1398,11 @@ export default function DashboardPage() {
         return false;
       }
       // Use the same date source as focusStripMetrics for consistency
-      // For blogs: use original publish date (scheduled/display) not import date
+      // For blogs: use actual published timestamp date
       // For social posts: updated_at (status=published)
       let timestamp: string | null = null;
       if (row.blog) {
-        timestamp = getBlogPublishDate(row.blog);
+        timestamp = row.blog.actual_published_at ?? row.blog.published_at ?? null;
       } else if (row.social_post) {
         timestamp = row.social_post.status === "published" ? row.social_post.updated_at : null;
       }

@@ -107,6 +107,7 @@ Use `My Tasks` as your first stop each day.
 - Sort indicators: `↕` (unsorted), `↑` (ascending), `↓` (descending).
 - Global action order: `Copy` → `Customize` → `Import` → `Export`.
 - Dashboard list is now a unified content table for blogs + social posts using core columns: `Type`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated` (with optional `Product`).
+- In Dashboard, blog `Published` date reflects the blog's **Actual Published Date** (actual published timestamp date), not display/scheduled fallback dates.
 - Clicking a blog row opens the blog detail drawer; clicking a social row opens its dedicated page.
 - Phase A selection behavior: both blog and social rows can be selected in-table.
 - Safety gating: mutation controls remain blog-only and are disabled whenever social rows are part of the current selection.

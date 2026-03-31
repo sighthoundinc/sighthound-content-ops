@@ -288,6 +288,7 @@ Core flow:
 4. Slack delivery is attempted through `supabase/functions/slack-notify/index.ts`.
 
 Unified event coverage includes:
+- blog and social post creation events
 - blog assignments and status changes
 - social assignments and reassignments
 - overdue review/publish reminders

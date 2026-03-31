@@ -164,7 +164,7 @@ Name resolution behavior:
 
 ## 8. Notifications and feedback
 ### Notification bell
-- Tracks assignments, stage changes, submissions, publications, and mentions.
+- Tracks creations, assignments, stage changes, submissions, publications, and mentions.
 - Unread badge shows what still needs review.
 - Click a notification to jump to the related record.
 - Activity items use plain-language titles and change summaries (for example, "Publishing Stage Updated" instead of raw status keys).

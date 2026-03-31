@@ -71,7 +71,7 @@ import type {
   SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDisplayDate, toTitleCase } from "@/lib/utils";
+import { formatDateOnly, toTitleCase } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
@@ -950,7 +950,7 @@ function MyTasksPageContent() {
       return PUBLISHER_STATUS_LABELS[task.publisherStatus];
     }
     if (column === "publish_date") {
-      return formatDisplayDate(task.scheduledDate) || "Not scheduled";
+      return formatDateOnly(task.scheduledDate) || "Not scheduled";
     }
     return "View options";
   }, []);
@@ -1395,7 +1395,7 @@ function MyTasksPageContent() {
       id: "publish_date",
       label: "Publish Date",
       sortable: true,
-      render: (task) => formatDisplayDate(task.scheduledDate) || "Not scheduled",
+      render: (task) => formatDateOnly(task.scheduledDate) || "Not scheduled",
     },
   ];
 
@@ -1560,7 +1560,7 @@ function MyTasksPageContent() {
                             Status: {task.statusLabel}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">
-                            Publish Date: {formatDisplayDate(task.scheduledDate) || "Not scheduled"}
+                            Publish Date: {formatDateOnly(task.scheduledDate) || "Not scheduled"}
                           </p>
                         </Link>
                       </li>
@@ -1588,7 +1588,7 @@ function MyTasksPageContent() {
                             <span className="text-xs text-slate-600">{task.nextAction}</span>
                           </div>
                           <p className="mt-1 text-xs text-slate-500">
-                            Publish Date: {formatDisplayDate(task.scheduledDate) || "Not scheduled"}
+                            Publish Date: {formatDateOnly(task.scheduledDate) || "Not scheduled"}
                           </p>
                         </Link>
                       </li>

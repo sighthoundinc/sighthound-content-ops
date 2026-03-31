@@ -225,17 +225,15 @@ function NewBlogPageContent() {
       }
     }
 
-    if (writerId && selectedWriter) {
-      await notifySlack({
-        eventType: "writer_assigned",
-        blogId: data.id,
-        title: data.title,
-        site: data.site,
-        actorName: profile?.full_name ?? "Team",
-        targetUserName: selectedWriter.full_name || "Team",
-        targetEmail: selectedWriter.email,
-      });
-    }
+    await notifySlack({
+      eventType: "blog_created",
+      blogId: data.id,
+      title: data.title,
+      site: data.site,
+      actorName: profile?.full_name ?? "Team",
+      targetUserName: selectedWriter?.full_name || "Team",
+      targetEmail: selectedWriter?.email ?? null,
+    });
 
     if (prefilledIdeaId) {
       const { error: ideaUpdateError } = await supabase

@@ -89,7 +89,7 @@ import type {
   SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
+import { formatDateInput, formatDateOnly, toTitleCase } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
 import {
   formatActivityChangeDescription,
@@ -2240,10 +2240,10 @@ export default function DashboardPage() {
         return row.lifecycle_bucket.replaceAll("_", " ");
       }
       if (column === "scheduled_date") {
-        return formatDisplayDate(row.scheduled_date) || "—";
+        return formatDateOnly(row.scheduled_date) || "—";
       }
       if (column === "published_date") {
-        return formatDisplayDate(row.published_date) || "—";
+        return formatDateOnly(row.published_date) || "—";
       }
       if (column === "owner_display") {
         return row.owner_display;
@@ -4149,7 +4149,7 @@ export default function DashboardPage() {
                   ) : (
                     <DetailDrawerField
                       label="Scheduled date"
-                      value={formatDisplayDate(getBlogScheduledDate(activeBlog)) || "—"}
+                      value={formatDateOnly(getBlogScheduledDate(activeBlog)) || "—"}
                     />
                   )}
 
@@ -4173,13 +4173,13 @@ export default function DashboardPage() {
                   ) : (
                     <DetailDrawerField
                       label="Display date"
-                      value={formatDisplayDate(activeBlog.display_published_date) || "—"}
+                      value={formatDateOnly(activeBlog.display_published_date) || "—"}
                     />
                   )}
 
                   <DetailDrawerField
                     label="Published date"
-                    value={formatDisplayDate(getBlogPublishDate(activeBlog)) || "—"}
+                    value={formatDateOnly(getBlogPublishDate(activeBlog)) || "—"}
                   />
                 </div>
               ) : null

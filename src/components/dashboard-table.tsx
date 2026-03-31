@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDisplayDate } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import {
@@ -293,14 +293,14 @@ export function DashboardTable({
                     if (column === "scheduled_date") {
                       return (
                         <td key={column} className={bodyCellClass}>
-                          {formatDisplayDate(row.scheduled_date) || "—"}
+                          {formatDateOnly(row.scheduled_date) || "—"}
                         </td>
                       );
                     }
                     if (column === "published_date") {
                       return (
                         <td key={column} className={bodyCellClass}>
-                          {formatDisplayDate(row.published_date) || "—"}
+                          {formatDateOnly(row.published_date) || "—"}
                         </td>
                       );
                     }

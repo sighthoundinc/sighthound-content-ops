@@ -28,10 +28,12 @@ const SLACK_EVENT_TO_NOTIFICATION_TYPE: Record<
   NotifySlackInput["eventType"],
   "task_assigned" | "stage_changed" | "submitted_for_review" | "published" | "awaiting_action"
 > = {
+  blog_created: "task_assigned",
   writer_assigned: "task_assigned",
   writer_completed: "stage_changed",
   ready_to_publish: "stage_changed",
   published: "published",
+  social_post_created: "task_assigned",
   social_submitted_for_review: "submitted_for_review",
   social_changes_requested: "awaiting_action",
   social_creative_approved: "stage_changed",
@@ -43,10 +45,12 @@ const SLACK_EVENT_TO_NOTIFICATION_TYPE: Record<
 
 interface NotifySlackInput {
   eventType:
+    | "blog_created"
     | "writer_assigned"
     | "writer_completed"
     | "ready_to_publish"
     | "published"
+    | "social_post_created"
     | "social_submitted_for_review"
     | "social_changes_requested"
     | "social_creative_approved"

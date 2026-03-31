@@ -59,6 +59,7 @@ import {
 } from "@/lib/status";
 import { canUserActOnStatus } from "@/lib/social-post-workflow";
 import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
+import { notifySlack } from "@/lib/notifications";
 import { getUserRoles } from "@/lib/roles";
 import {
   getApiErrorMessage,
@@ -88,7 +89,7 @@ import type {
   SocialPostType,
   SocialPostWithRelations as SocialPostWithRelationsType,
 } from "@/lib/types";
-import { formatDateInput, formatDisplayDate, toTitleCase } from "@/lib/utils";
+import { formatDateInput, formatDateOnly, toTitleCase } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
 import {
   formatActivityChangeDescription,
@@ -342,7 +343,7 @@ function SocialPostCard({
           {SOCIAL_POST_PRODUCT_LABELS[post.product]} • {SOCIAL_POST_TYPE_LABELS[post.type]}
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          Scheduled: {formatDisplayDate(post.scheduled_date) || "Unscheduled"}
+          Scheduled: {formatDateOnly(post.scheduled_date) || "Unscheduled"}
         </p>
         <p className="mt-1 text-xs text-slate-500">
           Platforms:{" "}
@@ -1092,6 +1093,18 @@ function SocialPostsPageContent() {
     const [createdPost] = normalizeSocialPostRows([
       (data ?? {}) as Record<string, unknown>,
     ]);
+    const selectedWorker =
+      createdPost?.worker ??
+      (availableUsers.find((entry) => entry.id === workerUserId) ?? null);
+    await notifySlack({
+      eventType: "social_post_created",
+      socialPostId: String(data.id),
+      title: String((data.title ?? trimmedTitle) || "Untitled social post"),
+      site: String(data.product ?? newProduct),
+      actorName: profile?.full_name ?? "Team",
+      targetUserName: selectedWorker?.full_name || getUserDisplayNameById(workerUserId),
+      targetEmail: selectedWorker?.email ?? null,
+    });
     if (createdPost) {
       setPosts((previous) => [createdPost, ...previous]);
       router.push(`/social-posts/${createdPost.id}`);
@@ -1788,19 +1801,19 @@ function SocialPostsPageContent() {
         id: "created",
         label: "Created",
         sortable: true,
-        render: (post) => formatDisplayDate(post.created_at),
+        render: (post) => formatDateOnly(post.created_at),
       },
       {
         id: "scheduled",
         label: "Scheduled Publish",
         sortable: true,
-        render: (post) => formatDisplayDate(post.scheduled_date) || "—",
+        render: (post) => formatDateOnly(post.scheduled_date) || "—",
       },
       {
         id: "published",
         label: "Published Date",
         sortable: true,
-        render: (post) => post.status === "published" ? formatDisplayDate(post.updated_at) : "—",
+        render: (post) => post.status === "published" ? formatDateOnly(post.updated_at) : "—",
       },
       {
         id: "updated",

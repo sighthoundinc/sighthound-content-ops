@@ -465,6 +465,7 @@ emitEvent() call
 - `social_post_assignment_changed` — Editor/admin reassignments
 
 **Slack event types** (active):
+- `blog_created`, `social_post_created`
 - `writer_assigned`, `ready_to_publish`, `published`
 - `social_submitted_for_review`, `social_changes_requested`
 - `social_ready_to_publish`, `social_awaiting_live_link`, `social_published`, `social_live_link_reminder`
@@ -841,10 +842,12 @@ Settings UI grouping (for operator orientation):
 - Events currently sent (with Slack event type mapping):
   | Event | Slack Event Type | Description |
   |-------|-----------------|-------------|
+  | `blog_created` | `blog_created` | Blog created |
   | `writer_assigned` | `writer_assigned` | Writer assigned to blog |
   | `writer_completed` | `writer_completed` | Writer finished draft |
   | `ready_to_publish` | `ready_to_publish` | Blog ready for publishing |
   | `published` | `published` | Blog went live |
+  | `social_post_created` | `social_post_created` | Social post created |
   | `social_submitted_for_review` | `social_submitted_for_review` | Social post submitted |
   | `social_changes_requested` | `social_changes_requested` | Changes requested on social post |
   | `social_creative_approved` | `social_creative_approved` | Social creative approved |

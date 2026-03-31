@@ -600,6 +600,8 @@ Slack via Supabase Edge Function:
 - `supabase/functions/slack-notify/index.ts`
 
 Event examples:
+- blog created
+- social post created
 - writer assigned/completed
 - ready to publish
 - published

@@ -2,10 +2,12 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 type EventType =
+  | "blog_created"
   | "writer_assigned"
   | "writer_completed"
   | "ready_to_publish"
   | "published"
+  | "social_post_created"
   | "social_submitted_for_review"
   | "social_changes_requested"
   | "social_creative_approved"
@@ -34,10 +36,12 @@ const corsHeaders = {
 
 
 const EVENT_CONTENT_TYPE: Record<EventType, string> = {
+  blog_created: "Blog",
   writer_assigned: "Blog",
   writer_completed: "Blog",
   ready_to_publish: "Blog",
   published: "Blog",
+  social_post_created: "Social",
   social_submitted_for_review: "Social",
   social_changes_requested: "Social",
   social_creative_approved: "Social",
@@ -49,10 +53,12 @@ const EVENT_CONTENT_TYPE: Record<EventType, string> = {
 
 
 const EVENT_ACTION: Record<EventType, string> = {
+  blog_created: "Created - draft is ready for work",
   writer_assigned: "Assigned - work can start",
   writer_completed: "Writing complete - awaiting publishing review",
   ready_to_publish: "Ready to publish - awaiting publishing action",
   published: "Published",
+  social_post_created: "Created - draft is ready for work",
   social_submitted_for_review: "Submitted for review - awaiting editorial approval",
   social_changes_requested: "Changes requested - awaiting revision",
   social_creative_approved: "Creative approved - awaiting next action",

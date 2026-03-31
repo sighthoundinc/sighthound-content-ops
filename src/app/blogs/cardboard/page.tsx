@@ -23,6 +23,7 @@ import {
   normalizeBlogRow,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
+import { notifySlack } from "@/lib/notifications";
 import {
   canTransitionPublisherStatus,
   canTransitionWriterStatus,
@@ -43,7 +44,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDisplayDate } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
@@ -134,7 +135,7 @@ function getBoardStage(blog: BlogRecord): BoardStage {
 
 function formatPublishedDate(blog: BlogRecord) {
   const dateValue = blog.display_published_date ?? getBlogPublishDate(blog);
-  return formatDisplayDate(dateValue) || "—";
+  return formatDateOnly(dateValue) || "—";
 }
 
 function formatUpdatedDistance(isoValue: string | null | undefined) {
@@ -190,7 +191,7 @@ function getStageUpdatePayload(blog: BlogRecord, targetStage: BoardStage): Stage
 
 export default function BlogCardBoardPage() {
   const router = useRouter();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, profile } = useAuth();
   const { showSaving, showSuccess, showError, updateAlert: updateStatus } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
@@ -592,6 +593,16 @@ export default function BlogCardBoardPage() {
     }
 
     const createdBlog = normalizeBlogRow((data ?? {}) as Record<string, unknown>) as BlogRecord;
+    const selectedAuthor = authors.find((author) => author.id === quickAddAuthorId) ?? null;
+    await notifySlack({
+      eventType: "blog_created",
+      blogId: createdBlog.id,
+      title: createdBlog.title,
+      site: createdBlog.site,
+      actorName: profile?.full_name ?? "Team",
+      targetUserName: selectedAuthor?.full_name || "Team",
+      targetEmail: selectedAuthor?.email ?? null,
+    });
     setBlogs((previous) => [createdBlog, ...previous]);
     setQuickAddTitle("");
     setQuickAddSite("sighthound.com");

@@ -70,6 +70,12 @@ For every non-trivial UI or workflow change:
 3. Do not rely on system/browser timezone for user-facing timestamps.
 4. Use centralized timezone-aware formatters (`src/lib/format-date.ts`) for rendering date/time values.
 5. Apply this rule consistently across tables, badges, detail pages, history timelines, comments, notifications, and any date/time UI.
+6. **Date-Only Formatting Contract (CRITICAL)**:
+   - For date-only fields (YYYY-MM-DD format or ISO timestamps with date components), use `formatDateOnly()` from `src/lib/utils.ts`.
+   - `formatDateOnly()` parses the date part directly without timezone conversion to prevent day-shift bugs in behind-UTC timezones (e.g., showing Feb 10 instead of Feb 11).
+   - Apply to all date-only display surfaces: Dashboard (scheduled, published dates), Blogs, Tasks, Social Posts, import/export, and all UI tables.
+   - Never use `formatDateInTimezone()` or `new Date()` constructor for date-only values; these cause timezone conversion and day-shift errors.
+   - Date-only fields stored in DB (e.g., blog publish dates, social post scheduled dates) are imported as `YYYY-MM-DDT00:00:00.000Z` (midnight UTC) and must use `formatDateOnly()` to display as the original date.
 
 ## State & Workflow Authority (MUST)
 
@@ -426,6 +432,7 @@ To keep idea intake predictable and avoid split editing patterns:
 
 **Existing Types**:
 - `task_assigned` — User is assigned a new blog (writer or publisher role)
+- `task_assigned` also covers create notifications where a newly created blog/social post is immediately assigned
 - `stage_changed` — Blog writer/publisher status transitions (e.g., In Progress → Pending Review)
 - `awaiting_action` — Blog needs revision or is awaiting review
 - `mention` — User is mentioned in a comment

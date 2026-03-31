@@ -46,6 +46,13 @@ Open link: https://app.example.com/blogs/blog-id-789
 ---
 
 ## Blog Workflow Notifications
+### 0. Blog Created
+**Event Type:** `blog_created`  
+**Triggered:** When a new blog is created  
+**Recipient:** Channel (and DM when targetEmail is provided)  
+**Action:** "Created - draft is ready for work"  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
+**Notification Type:** `task_assigned`
 
 ### 1. Writer Assignment
 **Event Type:** `writer_assigned`  
@@ -77,6 +84,13 @@ Open link: https://app.example.com/blogs/blog-id-789
 ---
 
 ## Social Post Workflow Notifications
+### 0. Social Post Created
+**Event Type:** `social_post_created`  
+**Triggered:** When a new social post is created  
+**Recipient:** Channel (and DM when targetEmail is provided)  
+**Action:** "Created - draft is ready for work"  
+**Assigned to:** Resolved assignee name (fallback: `Team`)  
+**Notification Type:** `task_assigned`
 
 ### 1. Submitted for Review
 **Event Type:** `social_submitted_for_review`  
@@ -179,9 +193,11 @@ The `shouldSendNotification()` function in `src/lib/notification-helpers.ts` is 
 ### Notification Mapping (Active Events)
 | Event Type | Notification Type | Maps to Preference |
 |---|---|---|
+| blog_created | task_assigned | `notify_on_task_assigned` |
 | writer_assigned | task_assigned | `notify_on_task_assigned` |
 | ready_to_publish | stage_changed | `notify_on_stage_changed` |
 | published | published | `notify_on_published` |
+| social_post_created | task_assigned | `notify_on_task_assigned` |
 | social_submitted_for_review | submitted_for_review | `notify_on_submitted_for_review` |
 | social_changes_requested | awaiting_action | `notify_on_awaiting_action` |
 | social_ready_to_publish | stage_changed | `notify_on_stage_changed` |

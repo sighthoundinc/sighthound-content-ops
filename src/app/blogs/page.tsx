@@ -63,7 +63,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { cn, formatDisplayDate } from "@/lib/utils";
+import { cn, formatDateOnly } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
@@ -256,7 +256,7 @@ function getPageRows<T>(rows: T[], currentPage: number, rowLimit: LibraryRowLimi
 
 function formatPublishedDate(blog: BlogRecord) {
   const dateKey = getPublishedDateKey(blog);
-  return formatDisplayDate(dateKey) || "—";
+  return formatDateOnly(dateKey) || "—";
 }
 
 function getStageForBadge(blog: BlogRecord): LibraryStage {
@@ -1789,7 +1789,7 @@ function BlogLibraryPageContent() {
                   <DetailDrawerField
                     label="Scheduled date"
                     value={
-                      formatDisplayDate(
+                      formatDateOnly(
                         activeBlog.scheduled_publish_date ?? activeBlog.target_publish_date
                       ) || "—"
                     }

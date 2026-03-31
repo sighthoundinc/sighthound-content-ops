@@ -203,6 +203,35 @@ function validateRow(row: z.infer<typeof importRowSchema>, selectedColumns?: Set
     } satisfies ValidatedImportRow,
   };
 }
+function applyImportFallbacks(
+  row: z.infer<typeof importRowSchema>,
+  selectedColumns?: Set<string>
+) {
+  const nextRow = { ...row };
+  const normalizedSite = normalizeSite(nextRow.site);
+
+  if (!nextRow.liveUrl.trim()) {
+    if (normalizedSite === "sighthound.com") {
+      nextRow.liveUrl = "https://www.sighthound.com/blog/";
+    } else if (normalizedSite === "redactor.com") {
+      nextRow.liveUrl = "https://www.redactor.com/blog/";
+    }
+  }
+
+  if (selectedColumns?.has("draftDocLink") && !nextRow.draftDocLink.trim()) {
+    nextRow.draftDocLink = "https://docs.google.com/";
+  }
+
+  if (
+    selectedColumns?.has("actualPublishDate") &&
+    !nextRow.actualPublishDate.trim() &&
+    nextRow.displayPublishDate.trim()
+  ) {
+    nextRow.actualPublishDate = nextRow.displayPublishDate.trim();
+  }
+
+  return nextRow;
+}
 
 
 type NameResolutionInput = {
@@ -421,18 +450,21 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
     for (const row of parsed.data.rows) {
       rawRowsByNumber.set(row.rowNumber, row);
-      // Convert empty strings to empty strings for validation (will be converted to null later)
-      const normalizedRow = {
-        ...row,
-        actualPublishDate: row.actualPublishDate?.trim() || "",
-        draftDocLink: row.draftDocLink?.trim() || "",
-      };
+      const normalizedRow = applyImportFallbacks(
+        {
+          ...row,
+          // Convert empty strings to empty strings for validation (will be converted to null later)
+          actualPublishDate: row.actualPublishDate?.trim() || "",
+          draftDocLink: row.draftDocLink?.trim() || "",
+        },
+        selectedColumnsSet
+      );
       const validation = validateRow(normalizedRow, selectedColumnsSet);
       if (!validation.valid) {
         validation.failures.forEach((message) => {
           failures.push({ rowNumber: row.rowNumber, message });
           failedRows.push({
-            ...row,
+            ...normalizedRow,
             error: message,
           });
         });
@@ -500,14 +532,19 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         const existing = existingByLiveUrl.get(row.liveUrl);
         if (existing) {
           const updateData: Record<string, unknown> = {
+            site: row.site,
+            title: row.title,
+            live_url: row.liveUrl,
             writer_id: writerId,
             publisher_id: publisherId,
+            target_publish_date: row.displayPublishDate,
+            scheduled_publish_date: row.displayPublishDate,
             display_published_date: row.displayPublishDate,
           };
-          if (row.draftDocLink) {
+          if (selectedColumnsSet?.has("draftDocLink")) {
             updateData.google_doc_url = row.draftDocLink;
           }
-          if (actualPublishedAt) {
+          if (selectedColumnsSet?.has("actualPublishDate")) {
             updateData.actual_published_at = actualPublishedAt;
             updateData.published_at = actualPublishedAt;
           }

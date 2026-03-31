@@ -204,7 +204,13 @@ npm run dev
 - `/api/admin/users` — admin user operations
 - `/api/admin/wipe-app-clean` — full factory reset preserving only signed-in admin account
 - `/api/blogs/import` — blog import endpoint (supports `nameResolutions` with `userId`/`selectedUserId` compatibility)
+  - existing blogs (matched by canonical live URL) are overwritten with imported core fields (site/title/assignees/publish dates)
   - `draftDocLink` and `actualPublishDate` are optional import fields
+  - fallback fill is applied before validation/upsert:
+    - missing `liveUrl` uses site base (`https://www.sighthound.com/blog/` or `https://www.redactor.com/blog/`)
+    - missing selected `draftDocLink` defaults to `https://docs.google.com/`
+    - missing selected `actualPublishDate` copies `displayPublishDate`
+  - for existing rows, selected optional fields are also updated from import values/fallbacks
   - writer/publisher resolution uses exact + loose contains/token-overlap matching across full/display/username/first/last/email signals with confidence scoring
 - `/api/blogs/[id]/transition` — canonical blog workflow transition endpoint (writer/publisher status, assignment, scheduled/display dates)
 - `/api/social-posts/[postId]/transition` — canonical social status transitions

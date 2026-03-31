@@ -69,6 +69,49 @@ type ParseError = {
   rowNumber: number;
   message: string;
 };
+function normalizeSiteForFallback(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (
+    normalized === "sh" ||
+    normalized === "sighthound" ||
+    normalized === "sighthound.com"
+  ) {
+    return "sighthound.com" as const;
+  }
+  if (normalized === "red" || normalized === "redactor" || normalized === "redactor.com") {
+    return "redactor.com" as const;
+  }
+  return null;
+}
+
+function applyRowFallbacks(row: ImportRow, selectedColumns: Set<string>): ImportRow {
+  const next = { ...row };
+  const normalizedSite = normalizeSiteForFallback(next.site);
+
+  if (!next.liveUrl.trim() && normalizedSite === "sighthound.com") {
+    next.liveUrl = "https://www.sighthound.com/blog/";
+  } else if (!next.liveUrl.trim() && normalizedSite === "redactor.com") {
+    next.liveUrl = "https://www.redactor.com/blog/";
+  }
+
+  if (selectedColumns.has("draftDocLink") && !next.draftDocLink.trim()) {
+    next.draftDocLink = "https://docs.google.com/";
+  }
+
+  if (
+    selectedColumns.has("actualPublishDate") &&
+    !next.actualPublishDate.trim() &&
+    next.displayPublishDate.trim()
+  ) {
+    next.actualPublishDate = next.displayPublishDate.trim();
+  }
+
+  return next;
+}
+
+function applyFallbacksToRows(rows: ImportRow[], selectedColumns: Set<string>) {
+  return rows.map((row) => applyRowFallbacks(row, selectedColumns));
+}
 
 function normalizeHeader(value: string) {
   return value.trim().toLowerCase().replace(/[_\s]+/g, " ");
@@ -559,11 +602,12 @@ export function BlogImportModal({
           nextSelectedColumns.add(key);
         }
       }
-      setRows(parseResult.rows);
-      setSelectedRowNumbers(parseResult.rows.map((row) => row.rowNumber));
+      const rowsWithFallbacks = applyFallbacksToRows(parseResult.rows, nextSelectedColumns);
+      setRows(rowsWithFallbacks);
+      setSelectedRowNumbers(rowsWithFallbacks.map((row) => row.rowNumber));
       setDetectedColumns(parseResult.detectedColumns);
       setSelectedColumns(nextSelectedColumns);
-      setParseErrors(validateRows(parseResult.rows, nextSelectedColumns));
+      setParseErrors(validateRows(rowsWithFallbacks, nextSelectedColumns));
     } catch (parseError) {
       console.error("File parse failed:", parseError);
       setError("Failed to parse file. Please check the format and try again.");
@@ -848,8 +892,10 @@ export function BlogImportModal({
                             } else {
                               next.add(key);
                             }
+                            const rowsWithFallbacks = applyFallbacksToRows(rows, next);
                             setSelectedColumns(next);
-                            setParseErrors(validateRows(rows, next));
+                            setRows(rowsWithFallbacks);
+                            setParseErrors(validateRows(rowsWithFallbacks, next));
                           }}
                           className={isDetected ? "cursor-pointer" : "cursor-not-allowed"}
                         />

@@ -126,6 +126,12 @@ Use `My Tasks` as your first stop each day.
 4. Exclude error rows and correct key-field issues.
 5. Run import and update optional fields later if needed.
 6. `Draft Doc Link` and `Actual Publish Date` are optional; if provided, format validation still applies.
+7. Automatic fallbacks are applied for missing selected values:
+   - missing Live URL + SH/sighthound site aliases → `https://www.sighthound.com/blog/`
+   - missing Live URL + RED/redactor site aliases → `https://www.redactor.com/blog/`
+   - missing selected Draft Doc Link → `https://docs.google.com/`
+   - missing selected Actual Publish Date → uses Display Publish Date
+8. If a blog already exists (matched by Live URL), import updates/overwrites it with the latest imported values and selected fallback values.
 
 Required key columns:
 - `SH` or `RED`

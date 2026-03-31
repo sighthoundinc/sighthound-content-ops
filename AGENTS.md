@@ -719,3 +719,14 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 3. Copy actions must provide immediate feedback through the global alerts system.
 4. Disabled/empty URL states must remain visible (do not hide actions when a link is missing).
 5. Open behavior must continue to follow Link Target Behavior rules (internal same-tab, external new-tab).
+
+## Blog Import Fallback Contract (MUST)
+
+When blog import rows are missing selected values, apply deterministic fallbacks before validation/upsert:
+
+1. Missing `liveUrl`:
+   - `SH`/`sighthound`/`sighthound.com` → `https://www.sighthound.com/blog/`
+   - `RED`/`redactor`/`redactor.com` → `https://www.redactor.com/blog/`
+2. Missing `draftDocLink` (only when `draftDocLink` column is selected) → `https://docs.google.com/`
+3. Missing `actualPublishDate` (only when `actualPublishDate` column is selected) → copy `displayPublishDate`
+4. Fallbacks must run in both client preview preprocessing and server import API to keep behavior consistent and authoritative.

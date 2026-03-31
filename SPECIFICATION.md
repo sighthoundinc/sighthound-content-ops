@@ -768,6 +768,12 @@ This step is mandatory for blog import and exists to prevent duplicate profile c
 - A confirmation modal displays auto-resolved mappings and alternatives.
 - Import remains blocked until the user confirms/accepts resolutions.
 - `draftDocLink` and `actualPublishDate` are optional import fields; when present, they must pass URL/date format checks.
+- Deterministic fallback fill is applied before validation/upsert:
+  - Missing `liveUrl` + SH/sighthound site aliases → `https://www.sighthound.com/blog/`
+  - Missing `liveUrl` + RED/redactor site aliases → `https://www.redactor.com/blog/`
+  - Missing `draftDocLink` when selected → `https://docs.google.com/`
+  - Missing `actualPublishDate` when selected → copy `displayPublishDate`
+- Existing blog rows (matched by canonical live URL) are updated by overwriting imported core fields and applying selected optional-field values/fallbacks.
 ### Matching fields and priority
 Matching attempts against active profiles are confidence-scored first, then tie-broken by this priority:
 1. exact `full_name` (100)
@@ -790,6 +796,10 @@ Matching attempts against active profiles are confidence-scored first, then tie-
     - `{ [name]: { action: 'use_existing' | 'create_new', userId?: string, selectedUserId?: string } }`
   - both `userId` and `selectedUserId` are accepted for compatibility
   - unmatched names are provisioned as placeholder users with unique `@sighthound.com` emails
+  - applies import fallbacks server-side prior to validation:
+    - site-based fallback `liveUrl` base
+    - selected-column fallback for missing `draftDocLink`
+    - selected-column fallback for missing `actualPublishDate`
 ### DB support
 - `profiles.username` added as unique indexed column for matching.
 - Existing profiles can be backfilled from email local-part during migration.

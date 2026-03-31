@@ -598,6 +598,11 @@ Matches are scored by confidence level, then tie-broken by match priority:
    - Backend respects user's selections (no re-matching)
    - Import accepts both `userId` and `selectedUserId` in resolution payloads for compatibility and normalizes internally
    - `Draft Doc Link` and `Actual Publish Date` remain optional; when present, format checks still apply
+   - Fallback fill is applied before server validation/upsert:
+     - missing `liveUrl` gets site base URL (`https://www.sighthound.com/blog/` or `https://www.redactor.com/blog/`)
+     - missing selected `draftDocLink` defaults to `https://docs.google.com/`
+     - missing selected `actualPublishDate` inherits `displayPublishDate`
+   - Existing records matched by canonical live URL are overwritten with imported core fields and selected optional values (including fallback-filled values).
 
 ### Database schema
 - `profiles.username` - unique text field, indexed for fast lookup

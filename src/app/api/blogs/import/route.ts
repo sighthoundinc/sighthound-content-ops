@@ -528,6 +528,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         const actualPublishedAt = row.actualPublishDate
           ? `${row.actualPublishDate}T00:00:00.000Z`
           : null;
+        const displayPublishDateIso = `${row.displayPublishDate}T00:00:00.000Z`;
 
         const existing = existingByLiveUrl.get(row.liveUrl);
         if (existing) {
@@ -537,9 +538,9 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
             live_url: row.liveUrl,
             writer_id: writerId,
             publisher_id: publisherId,
-            target_publish_date: row.displayPublishDate,
-            scheduled_publish_date: row.displayPublishDate,
-            display_published_date: row.displayPublishDate,
+            target_publish_date: displayPublishDateIso,
+            scheduled_publish_date: displayPublishDateIso,
+            display_published_date: displayPublishDateIso,
           };
           if (selectedColumnsSet?.has("draftDocLink") || row.draftDocLink !== null) {
             updateData.google_doc_url = row.draftDocLink;
@@ -574,9 +575,9 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
           // Imported blogs with live_url are already published, so mark both as completed
           writer_status: "completed",
           publisher_status: "completed",
-          target_publish_date: row.displayPublishDate,
-          scheduled_publish_date: row.displayPublishDate,
-          display_published_date: row.displayPublishDate,
+          target_publish_date: displayPublishDateIso,
+          scheduled_publish_date: displayPublishDateIso,
+          display_published_date: displayPublishDateIso,
           created_by: auth.context.userId,
         };
         if (row.draftDocLink) {

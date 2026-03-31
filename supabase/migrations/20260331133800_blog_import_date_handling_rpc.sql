@@ -78,3 +78,26 @@ begin
   end if;
 end
 $$;
+
+-- RPC function to update blog date columns with explicit SQL casting
+-- This prevents Supabase-js from parsing dates as JavaScript Date objects and applying timezone conversion
+create or replace function public.update_blog_dates(
+  p_blog_id uuid,
+  p_target_date text,
+  p_scheduled_date text,
+  p_display_date text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.blogs
+  set
+    target_publish_date = p_target_date::date,
+    scheduled_publish_date = p_scheduled_date::date,
+    display_published_date = p_display_date::date
+  where id = p_blog_id;
+end
+$$;

@@ -533,15 +533,13 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
         const existing = existingByLiveUrl.get(row.liveUrl);
         if (existing) {
+          // Don't send date fields in the direct update—RPC will handle them with explicit SQL casting
           const updateData: Record<string, unknown> = {
             site: row.site,
             title: row.title,
             live_url: row.liveUrl,
             writer_id: writerId,
             publisher_id: publisherId,
-            target_publish_date: displayPublishDateOnly,
-            scheduled_publish_date: displayPublishDateOnly,
-            display_published_date: displayPublishDateOnly,
           };
           if (selectedColumnsSet?.has("draftDocLink") || row.draftDocLink !== null) {
             updateData.google_doc_url = row.draftDocLink;
@@ -550,10 +548,9 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
             updateData.actual_published_at = actualPublishedAtTs;
             updateData.published_at = actualPublishedAtTs;
           }
-          // Update with raw SQL to prevent Supabase-js from parsing dates
           const { error: updateError } = await adminClient
             .from("blogs")
-            .update(updateData, { count: "exact" })
+            .update(updateData)
             .eq("id", existing.id);
           if (updateError) {
             console.error(`Import row ${row.rowNumber} update failed:`, updateError);
@@ -561,6 +558,21 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
             const raw = rawRowsByNumber.get(row.rowNumber);
             if (raw) {
               failedRows.push({ ...raw, error: "Failed to update existing blog" });
+            }
+            continue;
+          }
+          const { error: rpcError } = await adminClient.rpc("update_blog_dates", {
+            p_blog_id: existing.id,
+            p_target_date: displayPublishDateOnly,
+            p_scheduled_date: displayPublishDateOnly,
+            p_display_date: displayPublishDateOnly,
+          });
+          if (rpcError) {
+            console.error(`Import row ${row.rowNumber} RPC update failed:`, rpcError);
+            failures.push({ rowNumber: row.rowNumber, message: "Failed to update blog dates" });
+            const raw = rawRowsByNumber.get(row.rowNumber);
+            if (raw) {
+              failedRows.push({ ...raw, error: "Failed to update blog dates" });
             }
             continue;
           }
@@ -577,10 +589,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
           // Imported blogs with live_url are already published, so mark both as completed
           writer_status: "completed",
           publisher_status: "completed",
-          target_publish_date: displayPublishDateOnly,
-          scheduled_publish_date: displayPublishDateOnly,
-          display_published_date: displayPublishDateOnly,
           created_by: auth.context.userId,
+          // Don't send date values here - they will be set via RPC to avoid timezone conversion
         };
         if (row.draftDocLink) {
           insertData.google_doc_url = row.draftDocLink;
@@ -594,6 +604,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
           .insert(insertData)
           .select("id,live_url")
           .single();
+        
         if (insertError || !inserted) {
           console.error(`Import row ${row.rowNumber} insert failed:`, insertError);
           const message = "Failed to insert blog";
@@ -601,6 +612,23 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
           const raw = rawRowsByNumber.get(row.rowNumber);
           if (raw) {
             failedRows.push({ ...raw, error: message });
+          }
+          continue;
+        }
+        
+        // Update date columns via RPC with explicit SQL casting to prevent timezone conversion
+        const { error: rpcError } = await adminClient.rpc("update_blog_dates", {
+          p_blog_id: inserted.id,
+          p_target_date: displayPublishDateOnly,
+          p_scheduled_date: displayPublishDateOnly,
+          p_display_date: displayPublishDateOnly,
+        });
+        if (rpcError) {
+          console.error(`Import row ${row.rowNumber} RPC update failed:`, rpcError);
+          failures.push({ rowNumber: row.rowNumber, message: "Failed to set blog dates" });
+          const raw = rawRowsByNumber.get(row.rowNumber);
+          if (raw) {
+            failedRows.push({ ...raw, error: "Failed to set blog dates" });
           }
           continue;
         }

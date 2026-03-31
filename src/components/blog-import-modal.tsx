@@ -122,10 +122,12 @@ function toIsoDateString(value: unknown) {
     if (Number.isNaN(value.getTime())) {
       return "";
     }
-    // Use UTC methods to avoid timezone shifting (e.g., getDate() uses local timezone)
-    const year = value.getUTCFullYear();
-    const month = String(value.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(value.getUTCDate()).padStart(2, "0");
+    // Use local timezone methods to preserve the intended date value from Excel.
+    // Excel stores dates as local date values (no timezone), so getFullYear/getMonth/getDate
+    // extract the correct local date components without timezone conversion.
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
   if (typeof value === "number") {

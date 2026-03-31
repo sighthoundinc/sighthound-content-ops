@@ -34,6 +34,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useNotifications } from "@/providers/notifications-provider";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { SidebarToggle } from "@/components/sidebar-toggle";
+import { SidebarVersionFooter } from "@/components/sidebar-version-footer";
 
 type NavItem = { href: string; label: string; icon: AppIconName };
 
@@ -995,6 +996,7 @@ export function AppShell({
           {!collapsed && sidebarContent ? (
             <div className="shrink-0 border-t border-slate-200 px-1 pt-3 pb-3">{sidebarContent}</div>
           ) : null}
+          {!collapsed ? <SidebarVersionFooter /> : null}
         </aside>
         <div className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-7xl px-6 py-6">

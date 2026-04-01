@@ -182,6 +182,15 @@ export function AppShell({
     }
     return shortcuts;
   }, [canCreateBlogs, canManageSocialPosts]);
+
+  // Reset sidebar scroll position on route change to prevent random jumps
+  useEffect(() => {
+    if (!sidebarNavScrollRef.current) {
+      return;
+    }
+    sidebarNavScrollRef.current.scrollTop = 0;
+  }, [pathname]);
+
   const pageShortcutScopeLabel = useMemo(() => {
     if (pathname.startsWith("/dashboard")) {
       return "Dashboard";
@@ -873,7 +882,7 @@ export function AppShell({
             {collapsed ? (
               <Tooltip
                 content="Open sidebar"
-                delay={150}
+                delay={100}
                 className="block w-full"
               >
                 <SidebarToggle
@@ -887,7 +896,7 @@ export function AppShell({
                 <span className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Menu</span>
                 <Tooltip
                   content="Close sidebar"
-                  delay={150}
+                  delay={100}
                   className="inline-flex"
                 >
                   <SidebarToggle
@@ -910,7 +919,7 @@ export function AppShell({
                     collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2",
                     isActive
                       ? "bg-slate-900 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)] hover:bg-slate-900 hover:text-white"
-                      : "text-slate-700 font-medium hover:bg-slate-50"
+                      : "text-slate-700 font-medium hover:bg-slate-100 hover:text-slate-900"
                   );
 
                   const navContent = (
@@ -924,9 +933,9 @@ export function AppShell({
                         name={item.icon}
                         boxClassName="h-4 w-4 shrink-0"
                         size={14}
-                        className={
-                          isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"
-                        }
+                        className={cn(
+                          isActive ? "text-white" : "text-slate-400 group-hover:text-slate-700"
+                        )}
                       />
                       {!collapsed ? <span className="text-sm">{item.label}</span> : null}
                     </Link>
@@ -937,7 +946,7 @@ export function AppShell({
                       <Tooltip
                         key={navKey}
                         content={item.label}
-                        delay={150}
+                        delay={100}
                         className="block w-full"
                       >
                         {navContent}

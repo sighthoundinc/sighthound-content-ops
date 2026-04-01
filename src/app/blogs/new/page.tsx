@@ -63,7 +63,7 @@ function NewBlogPageContent() {
   const canCreateComments = permissionContract.canCreateComment;
   const canManageWriterAssignment = permissionContract.canChangeWriterAssignment;
   const canManagePublisherAssignment = permissionContract.canChangePublisherAssignment;
-  const canManageAssignments = canManageWriterAssignment || canManagePublisherAssignment;
+  const isAdmin = canManageWriterAssignment && canManagePublisherAssignment;
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -130,7 +130,7 @@ function NewBlogPageContent() {
     void loadIdeaPrefill();
   }, [sourceIdeaId]);
 
-  // Initialize defaults: today's date for scheduled, sync display to scheduled
+  // Initialize defaults: today's date for scheduled, sync display to scheduled, and writer assignment
   useEffect(() => {
     if (isInitialized) return;
     setIsInitialized(true);
@@ -139,7 +139,13 @@ function NewBlogPageContent() {
     setScheduledPublishDate(today);
     setDisplayPublishDate(today);
     setSyncDisplayToScheduled(true);
-  }, [isInitialized]);
+    
+    // Non-admin users: default writer to self (current user)
+    // Admin users: leave writer blank (they'll assign explicitly)
+    if (!isAdmin && user?.id) {
+      setWriterId(user.id);
+    }
+  }, [isInitialized, isAdmin, user?.id]);
 
   // Handle requested scheduled date from query params
   useEffect(() => {
@@ -198,13 +204,25 @@ function NewBlogPageContent() {
     // Client-side: display_published_date always has a value (never NULL)
     // Fallback: display_published_date = displayPublishDate || scheduledPublishDate || today
     const finalDisplayPublishDate = displayPublishDate || scheduledPublishDate || scheduledPublishDate;
+    
+    // Assignment logic:
+    // - Admins can assign writer/publisher explicitly via permissions
+    // - Non-admins: writer defaults to self, can optionally assign publisher
+    const finalWriterId = canManageWriterAssignment 
+      ? writerId || null 
+      : user?.id || null; // Non-admin: default to self
+    
+    const finalPublisherId = canManagePublisherAssignment 
+      ? publisherId || null 
+      : publisherId || null; // Non-admin: allow selecting publisher if desired
+    
     const payload = {
       title: title.trim(),
       slug: slugify(title),
       site,
-      writer_id: canManageWriterAssignment ? writerId || null : null,
-      publisher_id: canManagePublisherAssignment ? publisherId || null : null,
-      writer_status: canManageWriterAssignment && writerId ? "in_progress" : "not_started",
+      writer_id: finalWriterId,
+      publisher_id: finalPublisherId,
+      writer_status: finalWriterId ? "in_progress" : "not_started",
       publisher_status: "not_started",
       google_doc_url: googleDocUrl.trim() || null,
       scheduled_publish_date: scheduledPublishDate || null,
@@ -417,56 +435,56 @@ function NewBlogPageContent() {
               />
             </label>
 
-            {canManageAssignments ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Writer
-                  </span>
-                  <select
-                    required={canManageWriterAssignment}
-                    disabled={!canManageWriterAssignment}
-                    value={writerId}
-                    onChange={(event) => {
-                      setWriterId(event.target.value);
-                    }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-                  >
-                    <option value="">Select writer</option>
-                    {users.map((nextUser) => (
-                      <option key={nextUser.id} value={nextUser.id}>
-                        {nextUser.full_name} ({nextUser.role})
-                      </option>
-                    ))}
-                  </select>
-                </label>
+            {/* Assignment section: admins can assign both, non-admins can only select publisher */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700">
+                  Writer
+                </span>
+                <select
+                  required={canManageWriterAssignment}
+                  disabled={!canManageWriterAssignment}
+                  value={writerId}
+                  onChange={(event) => {
+                    setWriterId(event.target.value);
+                  }}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="">Select writer</option>
+                  {users.map((nextUser) => (
+                    <option key={nextUser.id} value={nextUser.id}>
+                      {nextUser.full_name} ({nextUser.role})
+                    </option>
+                  ))}
+                </select>
+                {!canManageWriterAssignment && writerId && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    You are assigned as the writer.
+                  </p>
+                )}
+              </label>
 
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
-                    Publisher
-                  </span>
-                  <select
-                    disabled={!canManagePublisherAssignment}
-                    value={publisherId}
-                    onChange={(event) => {
-                      setPublisherId(event.target.value);
-                    }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-                  >
-                    <option value="">Unassigned</option>
-                    {users.map((nextUser) => (
-                      <option key={nextUser.id} value={nextUser.id}>
-                        {nextUser.full_name} ({nextUser.role})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            ) : (
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                Blog will be created without assignment unless assignment permissions are enabled.
-              </p>
-            )}
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700">
+                  Publisher
+                </span>
+                <select
+                  disabled={!canManagePublisherAssignment}
+                  value={publisherId}
+                  onChange={(event) => {
+                    setPublisherId(event.target.value);
+                  }}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((nextUser) => (
+                    <option key={nextUser.id} value={nextUser.id}>
+                      {nextUser.full_name} ({nextUser.role})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">

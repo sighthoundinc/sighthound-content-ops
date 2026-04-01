@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { getWorkflowRowClassName } from "@/lib/table-row-tones";
 import {
   getTableBodyCellClass,
   TABLE_BASE_CLASS,
@@ -244,11 +245,11 @@ export function DataTable<TData>({
             data.map((item, index) => {
               const isSelected = selectedIndices.has(index);
               const isActive = activeIndex === index;
-              const defaultRowClass = isActive
-                ? "bg-slate-100"
-                : isSelected
-                  ? "bg-slate-50"
-                  : "hover:bg-slate-50";
+              const defaultRowClass = getWorkflowRowClassName(
+                item,
+                isActive,
+                isSelected
+              );
 
               return (
                 <tr

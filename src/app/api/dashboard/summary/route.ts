@@ -18,6 +18,27 @@ interface DashboardSummary {
   socialPostCounts: Record<string, number>;
   userRoles: string[];
 }
+function isMissingAssignedOwnershipColumnError(
+  error:
+    | {
+        message?: string;
+        details?: string;
+        hint?: string;
+        code?: string;
+      }
+    | null
+    | undefined
+) {
+  if (!error) {
+    return false;
+  }
+  const combinedText = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`;
+  return (
+    error.code === "42703" ||
+    combinedText.includes("assigned_to_user_id") ||
+    combinedText.includes("Unexpected input: ,assigned_to_user_id")
+  );
+}
 
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
@@ -96,18 +117,33 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       userRoles.includes("editor") ||
       userRoles.includes("writer")
     ) {
-      const { data: socialRows, error: socialError } = await adminClient
-        .from("social_posts")
-        .select("status,created_by,assigned_to_user_id,worker_user_id,reviewer_user_id")
-        .in("status", ACTIVE_SOCIAL_STATUSES)
-        .or(
-          `assigned_to_user_id.eq.${profile.id},worker_user_id.eq.${profile.id},reviewer_user_id.eq.${profile.id},created_by.eq.${profile.id}`
+      const fetchSocialRows = async (includeOwnershipColumn: boolean) => {
+        let query = adminClient
+          .from("social_posts")
+          .select(
+            includeOwnershipColumn
+              ? "status,created_by,assigned_to_user_id,worker_user_id,reviewer_user_id"
+              : "status,created_by,worker_user_id,reviewer_user_id"
+          )
+          .in("status", ACTIVE_SOCIAL_STATUSES);
+        query = query.or(
+          includeOwnershipColumn
+            ? `assigned_to_user_id.eq.${profile.id},worker_user_id.eq.${profile.id},reviewer_user_id.eq.${profile.id},created_by.eq.${profile.id}`
+            : `worker_user_id.eq.${profile.id},reviewer_user_id.eq.${profile.id},created_by.eq.${profile.id}`
         );
+        return query;
+      };
+      let { data: socialRows, error: socialError } = await fetchSocialRows(true);
+      if (isMissingAssignedOwnershipColumnError(socialError)) {
+        const fallback = await fetchSocialRows(false);
+        socialRows = fallback.data;
+        socialError = fallback.error;
+      }
 
       if (socialError) {
         console.error("Error fetching social post counts:", socialError);
       } else if (socialRows && Array.isArray(socialRows)) {
-        socialRows.forEach((row: Record<string, unknown>) => {
+        ((socialRows ?? []) as unknown as Array<Record<string, unknown>>).forEach((row) => {
           const status = row.status as SocialPostStatus | undefined;
           if (!status) {
             return;

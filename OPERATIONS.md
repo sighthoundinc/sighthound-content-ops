@@ -92,7 +92,14 @@ For social execution-stage completion, live links are entered from `/social-post
   - bottom strip uses `TableRowLimitSelect` + `TablePaginationControls`
   - default density is `compact`
   - default row limit is `10` with options `10`, `20`, `50`, `all`
-  - Dashboard row highlight states match DataTable parity (`active bg-slate-100`, `selected bg-slate-50`, default hover `hover:bg-slate-50`)
+  - workflow row tones are status-aware and shared across these tables:
+    - published/completed = emerald
+    - awaiting-live-link/waiting = amber
+    - ready-to-publish/approval-ready = sky
+    - review/pending-review = violet
+    - needs-revision/changes-requested = rose
+    - in-progress = blue
+    - neutral/default = slate
 - Explicit exceptions: `/settings` and `/settings/access-logs` keep specialized admin table layouts and are not forced into the primary-table contract
 - Column definitions defined at page level with type safety
 - StatusBadgeSystem used throughout for status rendering

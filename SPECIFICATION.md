@@ -175,10 +175,15 @@ Behavior:
   - row density: `compact`
   - row limit: `10`
   - row-limit options: `10`, `20`, `50`, `all`
-- Dashboard row visuals align with DataTable states:
-  - active = `bg-slate-100`
-  - selected = `bg-slate-50`
-  - hover = `hover:bg-slate-50`
+- Workflow row colorization is shared across these operational tables:
+  - published/completed = emerald tones
+  - awaiting-live-link/waiting = amber tones
+  - ready-to-publish/approval-ready = sky tones
+  - review/pending-review = violet tones
+  - needs-revision/changes-requested = rose tones
+  - in-progress = blue tones
+  - neutral/default = slate tones
+  - active/selected rows keep the same workflow tone with stronger shades
 - Explicit exceptions: Settings tables (`/settings`) and Activity History tables (`/settings/access-logs`) are admin-specialized and excluded from this contract.
 ### Workspace Home (`/`)
 Daily standup dashboard showing personalized work queue at a glance.

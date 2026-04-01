@@ -437,29 +437,63 @@ function MyTasksPageContent() {
 
     setBlogs(normalizeBlogRows((data ?? []) as Array<Record<string, unknown>>) as BlogRecord[]);
 
-    let socialQuery = supabase
-      .from("social_posts")
-      .select(
-        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id"
-      )
-      .in("status", ACTIVE_SOCIAL_STATUSES);
-    socialQuery = socialQuery.or(
-      `worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
-    );
-    const { data: socialRows, error: socialError } = await socialQuery.order("scheduled_date", {
-      ascending: true,
-      nullsFirst: false,
-    });
+    const socialSelectWithOwnership =
+      "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id";
+    const socialSelectLegacy =
+      "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id";
+    const fetchSocialRows = async (includeOwnershipColumn: boolean) => {
+      let query = supabase
+        .from("social_posts")
+        .select(includeOwnershipColumn ? socialSelectWithOwnership : socialSelectLegacy)
+        .in("status", ACTIVE_SOCIAL_STATUSES);
+      query = query.or(
+        `worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
+      );
+      return query.order("scheduled_date", {
+        ascending: true,
+        nullsFirst: false,
+      });
+    };
+    const isMissingAssignedOwnershipColumnError = (
+      error: {
+        message?: string;
+        details?: string;
+        hint?: string;
+        code?: string;
+      } | null
+    ) => {
+      if (!error) {
+        return false;
+      }
+      const combinedText = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`;
+      return (
+        error.code === "42703" ||
+        combinedText.includes("assigned_to_user_id") ||
+        combinedText.includes("Unexpected input: ,assigned_to_user_id")
+      );
+    };
+
+    let { data: socialRows, error: socialError } = await fetchSocialRows(true);
+    if (isMissingAssignedOwnershipColumnError(socialError)) {
+      console.warn(
+        "Social posts assigned_to_user_id column missing; falling back to legacy social task query."
+      );
+      const fallbackResult = await fetchSocialRows(false);
+      socialRows = fallbackResult.data;
+      socialError = fallbackResult.error;
+    }
 
     if (socialError) {
       console.error("Social posts load failed:", socialError);
-      const errorMsg = socialError.message || 'Unknown error';
-      setError(`Couldn't load social posts: ${errorMsg}`);
+      setError("Couldn't load social posts. Please try again.");
       setIsLoading(false);
       return;
     }
 
-    const derivedSocialTasks = ((socialRows ?? []) as Array<Record<string, unknown>>)
+    const normalizedSocialRows = (socialRows ?? []) as unknown as Array<
+      Record<string, unknown>
+    >;
+    const derivedSocialTasks = normalizedSocialRows
       .map((row) => {
         const status = row.status as SocialPostStatus;
         if (!(status in SOCIAL_POST_STATUS_LABELS)) {

@@ -41,6 +41,27 @@ type BlogTaskCandidate = {
   statusLabel: string;
   association: "writer" | "publisher" | "admin_assignment";
 };
+function isMissingAssignedOwnershipColumnError(
+  error:
+    | {
+        message?: string;
+        details?: string;
+        hint?: string;
+        code?: string;
+      }
+    | null
+    | undefined
+) {
+  if (!error) {
+    return false;
+  }
+  const combinedText = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`;
+  return (
+    error.code === "42703" ||
+    combinedText.includes("assigned_to_user_id") ||
+    combinedText.includes("Unexpected input: ,assigned_to_user_id")
+  );
+}
 
 function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
   if (leftDate && rightDate) {
@@ -183,16 +204,28 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       (blogRows ?? []) as Array<Record<string, unknown>>
     ) as BlogRecord[];
 
-    const { data: socialRows, error: socialError } = await adminClient
-      .from("social_posts")
-      .select(
-        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id"
-      )
-      .in("status", ACTIVE_SOCIAL_STATUSES)
-      .or(
-        `assigned_to_user_id.eq.${userId},worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
-      )
-      .order("scheduled_date", { ascending: true, nullsFirst: false });
+    const fetchSocialRows = async (includeOwnershipColumn: boolean) => {
+      let query = adminClient
+        .from("social_posts")
+        .select(
+          includeOwnershipColumn
+            ? "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id"
+            : "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id"
+        )
+        .in("status", ACTIVE_SOCIAL_STATUSES);
+      query = query.or(
+        includeOwnershipColumn
+          ? `assigned_to_user_id.eq.${userId},worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
+          : `worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
+      );
+      return query.order("scheduled_date", { ascending: true, nullsFirst: false });
+    };
+    let { data: socialRows, error: socialError } = await fetchSocialRows(true);
+    if (isMissingAssignedOwnershipColumnError(socialError)) {
+      const fallback = await fetchSocialRows(false);
+      socialRows = fallback.data;
+      socialError = fallback.error;
+    }
 
     if (socialError) {
       return NextResponse.json({ error: "Failed to load social tasks." }, { status: 500 });
@@ -265,9 +298,10 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       });
     }
 
-    const socialTasks: SnapshotTask[] = (
-      (socialRows ?? []) as Array<Record<string, unknown>>
-    ).flatMap((row) => {
+    const normalizedSocialRows = (socialRows ?? []) as unknown as Array<
+      Record<string, unknown>
+    >;
+    const socialTasks: SnapshotTask[] = normalizedSocialRows.flatMap((row) => {
         const status = row.status as SocialPostStatus;
         if (!(status in SOCIAL_POST_STATUS_LABELS)) {
           return [];

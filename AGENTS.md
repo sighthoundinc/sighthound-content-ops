@@ -475,10 +475,15 @@ These rules apply to all table implementations (DataTable, DashboardTable, etc.)
    - default row density: `compact`
    - default row limit: `10`
    - row-limit options: `10`, `20`, `50`, `all`
-5. Dashboard row state styling must match DataTable-style row states:
-   - active row: `bg-slate-100`
-   - selected row: `bg-slate-50`
-   - default hover: `hover:bg-slate-50`
+5. Workflow row colorization is enabled globally on operational tables:
+   - published/completed rows use emerald tones
+   - awaiting live-link and similar waiting states use amber tones
+   - ready-to-publish/approval-ready states use sky tones
+   - review/pending-review states use violet tones
+   - changes-requested/needs-revision states use rose tones
+   - in-progress writing/execution states use blue tones
+   - unknown/neutral states use slate tones
+   - active/selected rows keep the same status tone with stronger shade variants
 6. Explicit exceptions: Settings and Activity History tables are excluded from this contract and may keep specialized admin-oriented layouts.
 
 ## Table Interaction Rules (MUST)

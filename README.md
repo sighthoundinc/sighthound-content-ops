@@ -84,7 +84,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - bottom control strip uses rows-per-page selector + pagination controls
   - default density is `compact`
   - default rows-per-page is `10` (`10`, `20`, `50`, `all` options)
-  - Dashboard row state styling matches DataTable parity for active/selected/hover rows
+  - rows are workflow-colorized globally (`published` emerald, `awaiting live link` amber, `ready` sky, `in review` violet, `changes requested` rose, `in progress` blue, neutral fallback slate)
 - Exceptions: `Settings` and `Activity History` tables keep specialized admin layouts and are intentionally excluded from the primary-table UX contract
 - Export View / Export Selected CSV (permission-gated)
 - Edit Columns popover and bottom pagination controls

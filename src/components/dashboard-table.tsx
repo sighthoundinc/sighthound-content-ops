@@ -2,6 +2,7 @@
 
 import { formatDateOnly } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
+import { getWorkflowRowClassName } from "@/lib/table-row-tones";
 import { cn } from "@/lib/utils";
 import {
   getTableBodyCellClass,
@@ -195,11 +196,7 @@ export function DashboardTable({
                   key={`${row.content_type}:${row.id}`}
                   className={cn(
                     "cursor-pointer transition-colors",
-                    isActive
-                      ? "bg-slate-100"
-                      : isSelected
-                        ? "bg-slate-50"
-                        : "hover:bg-slate-50"
+                    getWorkflowRowClassName(row, isActive, isSelected)
                   )}
                   onClick={() => {
                     onRowClick(row);

@@ -208,6 +208,13 @@ Start with the role you are actively working as right now:
   - default density: `Compact`
   - default rows per page: `10`
   - rows-per-page options: `10`, `20`, `50`, `All`
+- Rows are colorized by workflow state to improve scanability:
+  - `Published/Completed` rows use green tones
+  - `Needs Revision/Changes Requested` rows use red tones
+  - `In Review` rows use violet tones
+  - `Ready to Publish` rows use sky tones
+  - `Awaiting Live Link` rows use amber tones
+  - `In Progress` rows use blue tones
 - Dashboard list is now a unified content table for blogs + social posts using core columns: `Type`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated` (with optional `Product`).
 - In Dashboard, blog `Published` date reflects the blog's **Actual Published Date** (actual published timestamp date), not display/scheduled fallback dates.
 - Clicking a blog row opens the blog detail drawer; clicking a social row opens its dedicated page.

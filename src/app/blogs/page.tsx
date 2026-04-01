@@ -1664,16 +1664,6 @@ function BlogLibraryPageContent() {
                 activeIndex={pagedBlogs.findIndex((blog) => blog.id === activeBlogId)}
                 density={rowDensity}
                 emptyMessage="No blogs found."
-                rowClassName={(_blog, _index, isActive, isSelected) =>
-                  cn(
-                    "transition-colors",
-                    isActive
-                      ? "bg-slate-100"
-                      : isSelected
-                        ? "bg-slate-50"
-                        : "hover:bg-slate-50"
-                  )
-                }
               />
             )}
             <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>

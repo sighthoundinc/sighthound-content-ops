@@ -72,7 +72,24 @@ export type CanonicalAppPermissionKey =
   | "override_writer_status"
   | "override_publisher_status"
   | "edit_actual_publish_timestamp"
-  | "force_publish";
+  | "force_publish"
+  // NEW: Ideas module (5)
+  | "create_idea"
+  | "view_ideas"
+  | "edit_own_idea"
+  | "edit_idea_description"
+  // NEW: Social Posts module (8)
+  | "create_social_post"
+  | "view_social_posts"
+  | "view_social_post_details"
+  | "edit_social_post_brief"
+  | "reopen_social_post_brief"
+  | "transition_social_post"
+  | "add_social_post_link"
+  // NEW: General visibility (3)
+  | "view_my_tasks"
+  | "view_notifications"
+  | "view_activity_history";
 export type LegacyAppPermissionKey =
   | "submit_writing"
   | "edit_writing_stage"

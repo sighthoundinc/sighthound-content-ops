@@ -700,8 +700,6 @@ export const DEFAULT_ROLE_PERMISSION_TEMPLATES: Record<
     "create_blog",
     "edit_blog_metadata",
     "edit_blog_title",
-    "delete_idea",
-    "delete_social_post",
     "start_writing",
     "submit_draft",
     "request_revision",
@@ -717,11 +715,23 @@ export const DEFAULT_ROLE_PERMISSION_TEMPLATES: Record<
     "view_dashboard",
     "view_metrics",
     "export_csv",
+    // NEW: Ideas (3)
+    "create_idea",
+    "view_ideas",
+    "edit_own_idea",
+    // NEW: Social Posts (5)
+    "create_social_post",
+    "view_social_posts",
+    "edit_social_post_brief",
+    "transition_social_post",
+    "add_social_post_link",
+    // NEW: Visibility (3)
+    "view_my_tasks",
+    "view_notifications",
+    "view_activity_history",
   ],
   publisher: [
     "edit_blog_metadata",
-    "delete_idea",
-    "delete_social_post",
     "start_publishing",
     "complete_publishing",
     "edit_live_url",
@@ -737,13 +747,20 @@ export const DEFAULT_ROLE_PERMISSION_TEMPLATES: Record<
     "view_dashboard",
     "view_metrics",
     "export_csv",
+    // NEW: Social Posts (4)
+    "view_social_posts",
+    "edit_social_post_brief",
+    "transition_social_post",
+    "add_social_post_link",
+    // NEW: Visibility (3)
+    "view_my_tasks",
+    "view_notifications",
+    "view_activity_history",
   ],
   editor: [
     "edit_blog_metadata",
     "edit_blog_title",
     "edit_blog_description",
-    "delete_idea",
-    "delete_social_post",
     "request_revision",
     "create_comment",
     "edit_own_comment",
@@ -753,6 +770,13 @@ export const DEFAULT_ROLE_PERMISSION_TEMPLATES: Record<
     "view_dashboard",
     "view_metrics",
     "export_csv",
+    // NEW: Ideas (2)
+    "view_ideas",
+    "create_idea",
+    // NEW: Visibility (3)
+    "view_my_tasks",
+    "view_notifications",
+    "view_activity_history",
   ],
 };
 

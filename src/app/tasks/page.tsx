@@ -437,7 +437,8 @@ function MyTasksPageContent() {
 
     if (socialError) {
       console.error("Social posts load failed:", socialError);
-      setError("Couldn't load social posts. Please try again.");
+      const errorMsg = socialError.message || 'Unknown error';
+      setError(`Couldn't load social posts: ${errorMsg}`);
       setIsLoading(false);
       return;
     }

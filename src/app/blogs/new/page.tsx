@@ -221,7 +221,8 @@ function NewBlogPageContent() {
 
     if (insertError) {
       console.error("Blog insert failed:", insertError);
-      setError("Couldn't create blog. Please try again.");
+      const errorMsg = insertError.message || 'Unknown error';
+      setError(`Couldn't create blog: ${errorMsg}`);
       setIsSubmitting(false);
       return;
     }

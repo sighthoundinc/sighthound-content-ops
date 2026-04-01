@@ -435,7 +435,7 @@ function NewBlogPageContent() {
               />
             </label>
 
-            {/* Assignment section: admins can assign both, non-admins can only select publisher */}
+            {/* Assignment section: admins can assign both, non-admins can select writer (defaults to self) */}
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">
@@ -443,12 +443,11 @@ function NewBlogPageContent() {
                 </span>
                 <select
                   required={canManageWriterAssignment}
-                  disabled={!canManageWriterAssignment}
                   value={writerId}
                   onChange={(event) => {
                     setWriterId(event.target.value);
                   }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 >
                   <option value="">Select writer</option>
                   {users.map((nextUser) => (
@@ -459,7 +458,7 @@ function NewBlogPageContent() {
                 </select>
                 {!canManageWriterAssignment && writerId && (
                   <p className="mt-1 text-xs text-slate-500">
-                    You are assigned as the writer.
+                    Defaults to you, but you can select another writer if needed.
                   </p>
                 )}
               </label>

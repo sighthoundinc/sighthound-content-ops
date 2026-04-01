@@ -116,21 +116,6 @@ export function DashboardTable({
     }
     return sortDirection === "asc" ? "ascending" : "descending";
   };
-  const getLifecycleToneClass = (bucket: DashboardTableRow["lifecycle_bucket"]) => {
-    if (bucket === "awaiting_live_link") {
-      return "bg-rose-50";
-    }
-    if (bucket === "ready_to_publish") {
-      return "bg-amber-50";
-    }
-    if (bucket === "awaiting_review" || bucket === "open_work") {
-      return "bg-blue-50";
-    }
-    if (bucket === "published") {
-      return "bg-emerald-50/40";
-    }
-    return "bg-white";
-  };
 
   return (
     <div className={TABLE_CONTAINER_CLASS}>
@@ -204,14 +189,17 @@ export function DashboardTable({
           ) : (
             rows.map((row) => {
               const isSelected = selectedRowKeys.has(getRowKey(row));
+              const isActive = activeRowId === row.id;
               return (
                 <tr
                   key={`${row.content_type}:${row.id}`}
                   className={cn(
-                    "table-row-focus cursor-pointer",
-                    activeRowId === row.id
+                    "cursor-pointer transition-colors",
+                    isActive
                       ? "bg-slate-100"
-                      : `${getLifecycleToneClass(row.lifecycle_bucket)} hover:bg-slate-100`
+                      : isSelected
+                        ? "bg-slate-50"
+                        : "hover:bg-slate-50"
                   )}
                   onClick={() => {
                     onRowClick(row);

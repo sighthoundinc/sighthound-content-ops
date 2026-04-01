@@ -361,7 +361,10 @@ After any feature or behavior change (when applicable):
    - What changed
    - Why it changed
    - Constraints/edge cases
-3. Definition of done: implementation is incomplete until docs reflect reality.
+3. User-facing manual coverage:
+   - `HOW_TO_USE_APP.md` and `/resources` must include role-based quick links for Writer, Publisher, Editor/Reviewer, and Admin navigation paths.
+   - Anchor text should be explicit enough that users can jump to the right section without searching.
+4. Definition of done: implementation is incomplete until docs reflect reality.
 
 ## OAuth Provider Connection Flow (MUST)
 
@@ -398,6 +401,7 @@ Requirements:
 Before considering a task complete:
 
 1. Run relevant validation steps (lint/typecheck/tests/build) when available; if not run, state exactly why.
+   - For full-app stabilization/release verification, run `npm run check:full` (no-cache lint + typecheck + build).
 2. Verify affected UX surfaces for consistency with existing global patterns and invariants in this file.
 3. Confirm documentation updates from the rule above are applied when applicable.
 4. Prefer small, reversible changes over broad rewrites unless the task explicitly requires larger refactoring.
@@ -452,6 +456,30 @@ To prevent pagination breakage, pagination control misalignment, and unpredictab
 4. **Pagination Boundary**: Keep pagination controls (row limit, page controls) structurally outside the table body. Controls must never render between table rows or appear to be pushed by row expansion.
 
 These rules apply to all table implementations (DataTable, DashboardTable, etc.) across the application.
+## Global Table Consistency Contract (MUST)
+
+1. Primary operational table surfaces must share one consistent table UX contract:
+   - `/dashboard`
+   - `/tasks`
+   - `/blogs`
+   - `/social-posts` (list view)
+2. These surfaces must use shared table controls from `src/components/table-controls.tsx` for:
+   - visible results summary (`TableResultsSummary`)
+   - rows-per-page selector (`TableRowLimitSelect`)
+   - pagination controls (`TablePaginationControls`)
+3. Control-strip layout contract:
+   - top strip: summary (left) + action controls (right)
+   - action order: `Copy` → `Customize` → `Import` → `Export` (when each action is present)
+   - bottom strip: rows-per-page selector + pagination controls
+4. Default behavior contract:
+   - default row density: `compact`
+   - default row limit: `10`
+   - row-limit options: `10`, `20`, `50`, `all`
+5. Dashboard row state styling must match DataTable-style row states:
+   - active row: `bg-slate-100`
+   - selected row: `bg-slate-50`
+   - default hover: `hover:bg-slate-50`
+6. Explicit exceptions: Settings and Activity History tables are excluded from this contract and may keep specialized admin-oriented layouts.
 
 ## Table Interaction Rules (MUST)
 
@@ -487,6 +515,15 @@ These rules apply to all table implementations (DataTable, DashboardTable, etc.)
    - Cross-Content Scope filters apply to both content types.
    - Blog filters apply only to blog rows (social rows pass through).
    - Social filters apply only to social rows (blog rows pass through).
+
+## Workspace Home Snapshot Contract (MUST)
+
+1. `GET /api/dashboard/tasks-snapshot` must return full grouped results for associated active tasks (no top-N truncation).
+2. `requiredByMe` contains all associated blog/social tasks where the logged-in user is currently responsible for action.
+3. `waitingOnOthers` contains all associated blog/social tasks where another user currently owns the next action.
+4. Grouping logic must remain aligned with the same action-state ownership model used by `/tasks`.
+5. Blog items must be deduplicated to one snapshot row per blog even when the logged-in user has multiple associations (for example writer + publisher + reviewer assignment).
+6. If multiple blog associations exist, selection precedence must favor `action_required` over `waiting_on_others`.
 
 ## Ideas Page Interaction Invariants (MUST)
 
@@ -692,6 +729,19 @@ P0 UX invariants for the dedicated editor:
 - Setup keeps required-now fields prominent while optional brief fields remain de-emphasized in an optional disclosure.
 - Live-link workflow supports quick paste with platform auto-detection while retaining platform-specific link inputs.
 - Current snapshot includes explicit handoff context (`Assigned to`, `Reviewer`, `Current owner`, `Next owner`) and latest rollback reason when available.
+
+P1 UX invariants for social workflow ergonomics:
+- `Changes Requested` transitions must use a structured template (category + checklist + optional context) rather than free-text-only reasons.
+- Social post create flow should preload remembered defaults for `product`, `type`, and `platforms`, and expose quick preset buttons for common combos.
+- Primary stage-changing CTA actions in the dedicated editor must present a compact confirmation summary (`status change`, `next owner`, `locking behavior`) before transition submission.
+
+P2 UX invariants for social workflow continuity:
+- List-to-editor continuity must pass a status-derived focus target when opening `Work in Full View` from `/social-posts`, and `/social-posts/[id]` must auto-focus the matching editor section (`setup`, `review-publish`, `live-links`) once on load.
+- Keyboard-first helpers in `/social-posts/[id]` must include:
+  - `Alt+Shift+J` → jump to the next missing transition-required field
+  - `Alt+Shift+Enter` → run the primary sidebar action
+- Shortcut handlers must respect existing ownership, validation, and disabled-state guards (shortcuts cannot bypass transition rules).
+- Shortcut discoverability uses a clickable `Shortcut` label in the editor sidebar that opens the shared shortcuts modal.
 
 Workflow authority invariants:
 - Status transitions are API-authoritative and must use `POST /api/social-posts/[postId]/transition`.

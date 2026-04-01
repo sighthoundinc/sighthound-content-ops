@@ -8,8 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:full": "next lint --no-cache",
     "typecheck": "tsc --noEmit",
     "check": "run-p lint typecheck",
+    "check:full": "run-s lint:full typecheck build",
     "prepare": "husky",
     "import:legacy": "node scripts/import-legacy-xlsx.mjs"
   },

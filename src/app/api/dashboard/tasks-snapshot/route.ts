@@ -36,8 +36,11 @@ type SnapshotResponse = {
   requiredByMe: SnapshotTask[];
   waitingOnOthers: SnapshotTask[];
 };
-
-const SNAPSHOT_MAX_ITEMS = 8;
+type BlogTaskCandidate = {
+  actionState: TaskActionState;
+  statusLabel: string;
+  association: "writer" | "publisher" | "admin_assignment";
+};
 
 function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
   if (leftDate && rightDate) {
@@ -89,10 +92,26 @@ function getAdminAssignmentTaskActionState(
     ? "action_required"
     : "waiting_on_others";
 }
+function compareBlogCandidatePriority(left: BlogTaskCandidate, right: BlogTaskCandidate) {
+  const actionPriority: Record<TaskActionState, number> = {
+    action_required: 2,
+    waiting_on_others: 1,
+  };
+  if (actionPriority[left.actionState] !== actionPriority[right.actionState]) {
+    return actionPriority[right.actionState] - actionPriority[left.actionState];
+  }
+
+  const associationPriority: Record<BlogTaskCandidate["association"], number> = {
+    admin_assignment: 3,
+    publisher: 2,
+    writer: 1,
+  };
+  return associationPriority[right.association] - associationPriority[left.association];
+}
 
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, "view_writing_queue");
+    const auth = await requirePermission(request, "view_dashboard");
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -180,28 +199,21 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     }
 
     const blogTasks: SnapshotTask[] = [];
-    const processedBlogIds = new Set<string>();
     for (const blog of normalizedBlogs) {
       const scheduledDate = getBlogPublishDate(blog);
       const assignment = assignmentMap.get(blog.id);
-      const isAdminAssignment = assignment !== undefined;
+      const candidates: BlogTaskCandidate[] = [];
 
       assertValidStatus(blog.writer_status, "writer");
       assertValidStatus(blog.publisher_status, "publisher");
 
       if (blog.writer_id === userId) {
         const actionState = getWriterTaskActionState(blog.writer_status);
-        blogTasks.push({
-          id: `${blog.id}:writer`,
-          title: blog.title,
-          kind: "blog",
-          href: `/blogs/${blog.id}`,
+        candidates.push({
+          association: "writer",
           statusLabel: WRITER_STATUS_LABELS[blog.writer_status],
-          scheduledDate,
-          createdAt: blog.created_at,
           actionState,
         });
-        processedBlogIds.add(blog.id);
       }
 
       if (blog.publisher_id === userId) {
@@ -209,44 +221,48 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           blog.writer_status,
           blog.publisher_status
         );
-        blogTasks.push({
-          id: `${blog.id}:publisher`,
-          title: blog.title,
-          kind: "blog",
-          href: `/blogs/${blog.id}`,
+        candidates.push({
+          association: "publisher",
           statusLabel:
             blog.writer_status === "completed" && blog.publisher_status === "not_started"
               ? "Ready to publish"
               : PUBLISHER_STATUS_LABELS[blog.publisher_status],
-          scheduledDate,
-          createdAt: blog.created_at,
           actionState,
         });
-        processedBlogIds.add(blog.id);
       }
 
-      if (isAdminAssignment && !processedBlogIds.has(blog.id)) {
+      if (assignment) {
         const taskType = assignment.taskType;
         const actionState = getAdminAssignmentTaskActionState(
           taskType,
           blog.writer_status,
           blog.publisher_status
         );
-        blogTasks.push({
-          id: `${blog.id}:${taskType}:admin`,
-          title: blog.title,
-          kind: "blog",
-          href: `/blogs/${blog.id}`,
+        candidates.push({
+          association: "admin_assignment",
           statusLabel:
             taskType === "writer_review"
               ? WRITER_STATUS_LABELS[blog.writer_status]
               : PUBLISHER_STATUS_LABELS[blog.publisher_status],
-          scheduledDate,
-          createdAt: blog.created_at,
           actionState,
         });
-        processedBlogIds.add(blog.id);
       }
+
+      if (candidates.length === 0) {
+        continue;
+      }
+
+      const [selected] = [...candidates].sort(compareBlogCandidatePriority);
+      blogTasks.push({
+        id: `${blog.id}:blog`,
+        title: blog.title,
+        kind: "blog",
+        href: `/blogs/${blog.id}`,
+        statusLabel: selected.statusLabel,
+        scheduledDate,
+        createdAt: blog.created_at,
+        actionState: selected.actionState,
+      });
     }
 
     const socialTasks: SnapshotTask[] = (
@@ -289,23 +305,21 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         } satisfies SnapshotTask];
       });
 
-    const merged = [...blogTasks, ...socialTasks].sort((left, right) => {
-      if (left.actionState !== right.actionState) {
-        return left.actionState === "action_required" ? -1 : 1;
-      }
+    const allItems = [...blogTasks, ...socialTasks];
+    const compareByScheduleThenCreated = (left: SnapshotTask, right: SnapshotTask) => {
       const dateCompare = compareDatesAsc(left.scheduledDate, right.scheduledDate);
       if (dateCompare !== 0) {
         return dateCompare;
       }
       return left.createdAt.localeCompare(right.createdAt);
-    });
-
-    const topItems = merged.slice(0, SNAPSHOT_MAX_ITEMS);
+    };
     const response: SnapshotResponse = {
-      requiredByMe: topItems.filter((item) => item.actionState === "action_required"),
-      waitingOnOthers: topItems.filter(
-        (item) => item.actionState === "waiting_on_others"
-      ),
+      requiredByMe: allItems
+        .filter((item) => item.actionState === "action_required")
+        .sort(compareByScheduleThenCreated),
+      waitingOnOthers: allItems
+        .filter((item) => item.actionState === "waiting_on_others")
+        .sort(compareByScheduleThenCreated),
     };
 
     return NextResponse.json(response);

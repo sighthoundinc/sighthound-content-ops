@@ -33,7 +33,11 @@ import {
 } from "@/components/data-page";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { ProtectedPage } from "@/components/protected-page";
-import { TablePaginationControls } from "@/components/table-controls";
+import {
+  TablePaginationControls,
+  TableResultsSummary,
+  TableRowLimitSelect,
+} from "@/components/table-controls";
 import {
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogPublishDate,
@@ -74,7 +78,7 @@ type LibraryWriterStatusFilter = "all" | WriterStageStatus;
 type LibraryPublisherStatusFilter = "all" | PublisherStageStatus;
 type LibrarySortField = "none" | "published_date" | "title" | "site";
 type LibrarySortDirection = "asc" | "desc";
-type LibraryRowLimit = 10 | 20 | 50 | 100 | "all";
+type LibraryRowLimit = 10 | 20 | 50 | "all";
 type LibraryColumnKey =
   | "site"
   | "title"
@@ -87,8 +91,8 @@ type LibraryColumnKey =
   | "stage";
 type BoardStageQueryFilter = "idea" | "writing" | "reviewing" | "publishing" | "published";
 
-const ROW_LIMIT_OPTIONS: LibraryRowLimit[] = [10, 20, 50, 100, "all"];
-const DEFAULT_ROW_LIMIT: LibraryRowLimit = 20;
+const ROW_LIMIT_OPTIONS: LibraryRowLimit[] = [10, 20, 50, "all"];
+const DEFAULT_ROW_LIMIT: LibraryRowLimit = 10;
 const BLOG_LIBRARY_COLUMN_VIEW_STORAGE_KEY = "blog-library-column-view:v1";
 const LIBRARY_SORT_FIELDS: LibrarySortField[] = ["none", "published_date", "title", "site"];
 const isLibrarySortField = (value: unknown): value is LibrarySortField =>
@@ -233,17 +237,6 @@ function getPageCount(totalRows: number, rowLimit: LibraryRowLimit) {
     return 1;
   }
   return Math.max(1, Math.ceil(totalRows / rowLimit));
-}
-function getVisibleRange(totalRows: number, currentPage: number, rowLimit: LibraryRowLimit) {
-  if (totalRows === 0) {
-    return { start: 0, end: 0 };
-  }
-  if (rowLimit === "all") {
-    return { start: 1, end: totalRows };
-  }
-  const start = (currentPage - 1) * rowLimit + 1;
-  const end = Math.min(totalRows, currentPage * rowLimit);
-  return { start, end };
 }
 
 function getPageRows<T>(rows: T[], currentPage: number, rowLimit: LibraryRowLimit) {
@@ -728,10 +721,6 @@ function BlogLibraryPageContent() {
   const pagedBlogs = useMemo(
     () => getPageRows(sortedBlogs, currentPage, rowLimit),
     [currentPage, rowLimit, sortedBlogs]
-  );
-  const visibleRange = useMemo(
-    () => getVisibleRange(sortedBlogs.length, currentPage, rowLimit),
-    [currentPage, rowLimit, sortedBlogs.length]
   );
   useEffect(() => {
     if (pagedBlogs.length === 0) {
@@ -1394,11 +1383,12 @@ function BlogLibraryPageContent() {
           <section className={DATA_PAGE_TABLE_SECTION_CLASS}>
             <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} relative`}>
               <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
-                <p className="text-sm text-slate-600">
-                  Showing <span className="font-medium text-slate-900">{visibleRange.start}</span>-
-                  <span className="font-medium text-slate-900">{visibleRange.end}</span> of{" "}
-                  <span className="font-medium text-slate-900">{sortedBlogs.length}</span> blogs
-                </p>
+                <TableResultsSummary
+                  totalRows={sortedBlogs.length}
+                  currentPage={currentPage}
+                  rowLimit={rowLimit}
+                  noun="blogs"
+                />
                 <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
                   <details className="relative">
                     <summary
@@ -1687,26 +1677,12 @@ function BlogLibraryPageContent() {
               />
             )}
             <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <span className="font-medium text-slate-700">Rows per page</span>
-                <select
-                  className="focus-field rounded-md border border-slate-300 px-2 py-1 text-sm"
-                  value={String(rowLimit)}
-                  onChange={(event) => {
-                    const nextValue =
-                      event.target.value === "all"
-                        ? "all"
-                        : (Number(event.target.value) as LibraryRowLimit);
-                    setRowLimit(nextValue);
-                  }}
-                >
-                  {ROW_LIMIT_OPTIONS.map((option) => (
-                    <option key={String(option)} value={String(option)}>
-                      {option === "all" ? "All" : option}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <TableRowLimitSelect
+                value={rowLimit}
+                onChange={(value) => {
+                  setRowLimit(value as LibraryRowLimit);
+                }}
+              />
               <TablePaginationControls
                 currentPage={currentPage}
                 pageCount={pageCount}

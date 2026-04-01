@@ -47,11 +47,13 @@ export function formatDateInTimezone(
     const month = parseInt(partMap.month, 10) - 1;
     const day = parseInt(partMap.day, 10);
     const year = parseInt(partMap.year, 10);
-    const hour = partMap.hour12 === "PM" && parseInt(partMap.hour, 10) !== 12
-      ? parseInt(partMap.hour, 10) + 12
-      : partMap.hour12 === "AM" && parseInt(partMap.hour, 10) === 12
+    const parsedHour = parseInt(partMap.hour, 10);
+    const dayPeriod = (partMap.dayPeriod ?? "").toUpperCase();
+    const hour = dayPeriod === "PM" && parsedHour !== 12
+      ? parsedHour + 12
+      : dayPeriod === "AM" && parsedHour === 12
       ? 0
-      : parseInt(partMap.hour, 10);
+      : parsedHour;
     const minute = parseInt(partMap.minute, 10);
     const second = parseInt(partMap.second, 10);
 

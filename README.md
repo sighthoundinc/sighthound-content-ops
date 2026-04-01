@@ -16,7 +16,8 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Queue-first dashboard, tasks, and calendar execution views
 - Ideas intake and conversion into blogs or social posts
 - Global delete confirmation via shared in-app modal (`ConfirmationModal`)
-- Workspace home with mixed task snapshot (`Required by: <username>` / `Waiting on Others`)
+- Workspace home with full associated task snapshot (`Required by: <username>` / `Waiting on Others`)
+- Workspace snapshot deduplicates multi-role same-blog associations and prioritizes actionable ownership
 - OAuth login and connected-service management for Google and Slack
 - Unified notifications across activity history, in-app notifications, and Slack
 
@@ -24,6 +25,12 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Product behavior: `SPECIFICATION.md`
 - End-user manual: `HOW_TO_USE_APP.md`
 - Operations runbook: `OPERATIONS.md`
+- In-app manual page: `/resources`
+- Role-based quick starts:
+  - Writer: `HOW_TO_USE_APP.md#writer-quick-start`
+  - Publisher: `HOW_TO_USE_APP.md#publisher-quick-start`
+  - Editor/Reviewer: `HOW_TO_USE_APP.md#editorreviewer-quick-start`
+  - Admin: `HOW_TO_USE_APP.md#admin-quick-start`
 
 ## Core product areas
 ### Dashboard
@@ -71,6 +78,14 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - Phase A selection: mixed row selection enabled (blogs + social)
   - safety gate: blog mutation controls disable when any social row is selected
   - selected export supports mixed selected rows
+- Shared primary-table UX contract (`Dashboard`, `My Tasks`, `Blogs`, `Social Posts` list):
+  - top control strip uses results summary + action controls
+  - action order remains `Copy` → `Customize` → `Import` → `Export` when present
+  - bottom control strip uses rows-per-page selector + pagination controls
+  - default density is `compact`
+  - default rows-per-page is `10` (`10`, `20`, `50`, `all` options)
+  - Dashboard row state styling matches DataTable parity for active/selected/hover rows
+- Exceptions: `Settings` and `Activity History` tables keep specialized admin layouts and are intentionally excluded from the primary-table UX contract
 - Export View / Export Selected CSV (permission-gated)
 - Edit Columns popover and bottom pagination controls
 
@@ -115,7 +130,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Top-3 priority summary is mixed across blogs and social posts
 - `Overdue` / `Due Soon` / `Upcoming` indicators
 - Priority sorting by schedule urgency and status state
-- Social task queue with next-action labels, social status filtering, and full filtered-row visibility
+- Single unified tasks table across blogs + social posts with shared sorting, filters, pagination, and exports
 - Assignment-based visibility for non-published work tied to current user
 - Social action-state classification is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` worker-owned; `in_review/creative_approved` reviewer-owned) so handoff items appear in the correct bucket
 - Action-state filtering for `Required by: <username>` vs `Waiting on Others`
@@ -131,6 +146,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 
 ### Settings and Permissions
 - `My Profile` for all personal preferences (name, timezone, week start, draft attention threshold)
+- Timezone-based timestamps preserve correct midnight/noon AM/PM rendering (for example, `12:34 AM` remains AM)
 - `Connected Services` for Google and Slack OAuth management:
   - Click `Connect` to link a provider's account
   - OAuth flow opens directly from Settings (no login page redirect)
@@ -155,7 +171,15 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   3. Write Caption (UTF-8 editor + formatting + grouped Copy menu + platform guidance)
   4. Review & Publish (checklist validation, transition preflight, live-link actions, stage-based final CTA)
 - Sidebar CTA is the primary transition path; raw status transition controls are available under `Advanced transition controls`
+- Primary stage-changing CTA transitions now show a compact confirmation summary before submission (`status change`, `next owner`, `locking behavior`)
 - Transition preflight summarizes required fields for the next transition and provides `Go to field` shortcuts
+- `Changes Requested` transitions use a structured template (category + actionable checklist + optional context note), and the template is serialized into the existing `reason` payload contract
+- Social post create modal remembers last-used `product` + `type` + `platforms` defaults and includes quick preset buttons for common setup combinations
+- `Work in Full View` from `/social-posts` now carries status-aware continuity focus and lands the editor at the most relevant section (`Setup`, `Review & Publish`, or `Live Links`)
+- Keyboard-first editor helpers:
+  - `Alt+Shift+J` jumps to the next missing transition-required field
+  - `Alt+Shift+Enter` runs the primary sidebar action using the same transition guards as button clicks
+  - clickable `Shortcut` text in the sidebar opens the shared shortcuts modal with these page-specific keys
 - Transition requirements:
   - `draft` → `in_review`: product + type + Canva link
   - `in_review` → `creative_approved`: product + type + Canva link + platforms + caption + scheduled date
@@ -215,13 +239,15 @@ npm run dev
 - `npm run dev` — Next dev server
 - `npm run dev:full` — Next dev + TS watch
 - `npm run lint` — ESLint
+- `npm run lint:full` — ESLint (no cache)
 - `npm run typecheck` — TypeScript check
 - `npm run check` — lint + typecheck
+- `npm run check:full` — lint (no cache) + typecheck + production build
 - `npm run import:legacy` — legacy XLSX import
 
 ## API highlights
-- `/api/dashboard/summary` — standup summary counts (assignment-scoped social counts)
-- `/api/dashboard/tasks-snapshot` — grouped mixed My Tasks snapshot for `/`
+- `/api/dashboard/summary` — standup summary counts (assignment-scoped social counts; requires `view_dashboard`)
+- `/api/dashboard/tasks-snapshot` — grouped mixed My Tasks snapshot for `/` (requires `view_dashboard`)
 - Dashboard summary/snapshot endpoints now rely on canonical blog date + social ownership fields (no runtime legacy fallback branches).
 - `/api/admin/permissions` — role permission read/update/reset
 - `/api/admin/reassign-assignments` — controlled assignment transfer
@@ -345,4 +371,5 @@ Slack delivery:
 npm run lint
 npm run typecheck
 npm run check
+npm run check:full
 ```

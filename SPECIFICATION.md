@@ -44,6 +44,22 @@ Role model:
 - multi-role users are supported (`profiles.user_roles`)
 - `profiles.role` remains synchronized primary role
 
+### Role-to-surface navigation contract
+The product and documentation must keep role navigation explicit so users can move without ambiguity.
+
+Canonical role entry points:
+- Writer: start at `/tasks`, then execute in `/blogs/[id]` or `/social-posts/[id]`
+- Publisher: start at `/tasks`, validate schedules in `/calendar`, complete publishing fields in record pages
+- Editor/Reviewer: start at `/tasks`, process review-stage transitions and revision requests
+- Admin: monitor in `/dashboard`, administer in `/settings` and `/settings/permissions`, audit in `/settings/access-logs`
+
+Documentation quick links (must stay current with product behavior):
+- `HOW_TO_USE_APP.md#writer-quick-start`
+- `HOW_TO_USE_APP.md#publisher-quick-start`
+- `HOW_TO_USE_APP.md#editorreviewer-quick-start`
+- `HOW_TO_USE_APP.md#admin-quick-start`
+- In-app mirrored manual at `/resources`
+
 Permission model:
 - **Total permissions**: 92 (79 delegable + 13 admin-locked)
 - **Default role access**:
@@ -149,6 +165,21 @@ Behavior:
   - if the remembered publisher no longer exists or is no longer selectable, the stored value is discarded and the field falls back safely
 
 ## 6) Core UX and pages
+### Global table UX contract (primary operational tables)
+- Applies to `/dashboard`, `/tasks`, `/blogs`, and `/social-posts` list view.
+- Shared control-strip behavior:
+  - top strip = results summary + action controls
+  - bottom strip = rows-per-page selector + pagination controls
+- Action control order is fixed when available: `Copy` → `Customize` → `Import` → `Export`.
+- Default table settings on these surfaces:
+  - row density: `compact`
+  - row limit: `10`
+  - row-limit options: `10`, `20`, `50`, `all`
+- Dashboard row visuals align with DataTable states:
+  - active = `bg-slate-100`
+  - selected = `bg-slate-50`
+  - hover = `hover:bg-slate-50`
+- Explicit exceptions: Settings tables (`/settings`) and Activity History tables (`/settings/access-logs`) are admin-specialized and excluded from this contract.
 ### Workspace Home (`/`)
 Daily standup dashboard showing personalized work queue at a glance.
 
@@ -163,8 +194,10 @@ Key behavior:
 - **Empty state**: "All work is on track" with summary when no items pending
 - **Bottom buttons**: persistent quick links to `Dashboard` and `Calendar` for context switching
 - **My Tasks Snapshot**:
-  - shows top mixed assigned items (blogs + social, max 8)
+  - shows all associated active items (blogs + social)
   - grouped into `Required by: <username>` and `Waiting on Others`
+  - deduplicates blogs to one row when a user has multiple associations on the same blog
+  - applies precedence so any actionable association classifies the blog under `Required by: <username>`
   - includes `View all` action to `/tasks`
 - **Notification shortcuts alignment**:
   - bell drawer includes `Required by: <username>` shortcut rows sourced from the same tasks-snapshot ownership model
@@ -317,7 +350,7 @@ Key behavior:
   - `All Action States`
   - `Required by: <username>`
   - `Waiting on Others`
-- social tasks section reflects all rows that match current filters (not capped preview-only subset)
+- main table is a unified mixed queue containing both blog and social tasks
 
 ### Calendar (`/calendar`)
 - month/week views
@@ -356,10 +389,13 @@ Key behavior:
 - board drag/drop and side-panel status edits are restricted to valid stage transitions
 - status transitions are API-authoritative (`POST /api/social-posts/[postId]/transition`)
 - transition endpoint returns conflict when concurrent writes modify the same post before update commit
+- create modal remembers last-used `product`/`type`/`platforms` defaults and provides quick presets for common combinations
+- social post drawer `Work in Full View` navigation appends a status-derived `focus` query (`setup`, `review-publish`, `live-links`) for editor continuity
 - allowed backward transitions are locked to:
   - `ready_to_publish` → `changes_requested`
   - `awaiting_live_link` → `changes_requested`
 - execution-stage rollback to `changes_requested` requires a reason
+- all `changes_requested` transitions use a structured template (category + checklist + optional context) in UI and serialize into existing transition `reason` payload
 - rollback/reopen reason capture uses in-app modal dialogs (no browser prompt flows)
 - moving a social post to `published` requires at least one saved live link (`social_post_links`)
 - deleting a social post is idempotent and safe when live links exist; link-removal activity logging is best-effort and skipped if the parent post is already removed by cascade delete
@@ -372,10 +408,19 @@ Key behavior:
   4. Review & Publish (checklist validation, transition preflight, live-link URL management, stage-based final action)
 - primary progression contract:
   - sidebar final CTA is the default transition path
+  - stage-changing sidebar CTA transitions require a compact pre-submit confirmation summary (`status change`, `next owner`, `locking behavior`)
   - raw status transition selector is secondary under an advanced disclosure
 - transition preflight contract:
   - sidebar preflight summarizes required fields for the pending transition
   - missing required fields provide jump-to-field actions for fast correction
+- continuity contract:
+  - when `focus` query is present, editor auto-scrolls once to the mapped section anchor (`setup`, `review-publish`, `live-links`)
+  - supported section anchors are explicit IDs in the dedicated editor layout
+- keyboard-first contract:
+  - `Alt+Shift+J` jumps to the next missing transition-required field
+  - `Alt+Shift+Enter` triggers the primary sidebar action
+  - shortcuts are guard-railed by the same ownership/validation rules as normal button actions (no bypass)
+  - sidebar includes clickable `Shortcut` text that opens the shared shortcuts modal
 - handoff clarity contract:
   - snapshot panel shows `Assigned to`, `Reviewer`, `Current owner`, `Next owner`
   - latest rollback reason is shown when available in activity metadata
@@ -480,6 +525,8 @@ All timestamps and date displays throughout the app must respect the logged-in u
 - **Non-admin users**: All timestamps display in their personal timezone
 - **Admin users viewing other users**: Timestamps may display in UTC for consistency when appropriate
 - **Implementation**: Use centralized timezone-aware formatting utility (`formatDateInTimezone`, `formatShortDateInTimezone`, `formatTimeInTimezone` from `src/lib/format-date.ts`)
+- **12-hour period parsing**: timezone conversion must read `Intl.DateTimeFormat(...).formatToParts()` `dayPeriod` (AM/PM) token, not a non-existent `hour12` part key
+- **Midnight/noon contract**: `12:xx AM` must normalize to hour `0`; `12:xx PM` must remain hour `12` before final formatting
 - **Examples**: Blog creation timestamps, activity history, calendar dates, comment timestamps, history entry timestamps
 
 ## 6.5) Iconography and visual consistency (MUST)
@@ -626,7 +673,7 @@ Highlights:
 ### GET `/api/dashboard/summary`
 Returns aggregated work counts for the daily standup home page.
 
-**Authorization**: requires `view_writing_queue` permission
+**Authorization**: requires `view_dashboard` permission
 
 **Response**:
 ```
@@ -657,6 +704,13 @@ Returns aggregated work counts for the daily standup home page.
 - **Social post scope**: social counts are assignment-scoped to current user ownership/relevance (not global)
 - Admins and those with appropriate roles see their respective queues
 - Counts reflect actual assignments (not admin overviews)
+
+### GET `/api/dashboard/tasks-snapshot`
+Returns grouped mixed-task snapshot for the workspace home page (`requiredByMe`, `waitingOnOthers`).
+
+**Authorization**: requires `view_dashboard` permission
+**Result scope**: returns full grouped results for associated active tasks (no top-N truncation)
+**Deduplication + precedence**: one blog row per blog; if multiple associations exist, `action_required` takes precedence over `waiting_on_others`
 
 ## 11) Admin control APIs (logical)
 |- `/api/admin/permissions` — permission matrix read/update/reset
@@ -900,5 +954,8 @@ Documentation updated:
 - `README.md` (if applicable)
 
 ### Validation
+- run automated quality gates:
+  - `npm run check` for fast lint + typecheck
+  - `npm run check:full` for stabilization/release gate (no-cache lint + typecheck + production build)
 - feature passes manual workflow validation:
   - Create → Assign → Progress → Complete → Publish (if applicable)

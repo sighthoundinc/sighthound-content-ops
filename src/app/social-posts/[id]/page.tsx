@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -39,6 +39,14 @@ import {
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
 import { getUserRoles } from "@/lib/roles";
+import {
+  CHANGE_REQUEST_CATEGORY_OPTIONS,
+  CHANGE_REQUEST_CHECKLIST_OPTIONS,
+  createEmptyChangeRequestTemplate,
+  formatChangeRequestReason,
+  getChangeRequestTemplateError,
+  type ChangeRequestTemplateState,
+} from "@/lib/social-post-change-request";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
   BlogSite,
@@ -146,6 +154,31 @@ const PREFLIGHT_FIELD_META = {
   live_links: { label: "At least one live link", targetId: "social-post-live-links" },
 } as const;
 type PreflightFieldKey = keyof typeof PREFLIGHT_FIELD_META;
+type EditorFocusTarget = "setup" | "review-publish" | "live-links";
+const EDITOR_FOCUS_TARGET_IDS: Record<EditorFocusTarget, string> = {
+  setup: "social-editor-step-setup",
+  "review-publish": "social-editor-step-review-publish",
+  "live-links": "social-post-live-links",
+};
+const SOCIAL_POST_EDITOR_SHORTCUTS = {
+  nextRequired: {
+    key: "j",
+    keys: ["⌥⇧J"],
+    label: "Jump to next required field",
+  },
+  primaryAction: {
+    key: "Enter",
+    keys: ["⌥⇧↵"],
+    label: "Run primary action",
+  },
+} as const;
+
+function isEditorFocusTarget(value: string | null): value is EditorFocusTarget {
+  if (!value) {
+    return false;
+  }
+  return value in EDITOR_FOCUS_TARGET_IDS;
+}
 
 // Unicode bold sans-serif characters for LinkedIn-compatible bold text
 const BOLD_SANS_UPPER = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭";
@@ -331,10 +364,15 @@ function createFormFromPost(post: SocialPostEditorRecord): EditorFormState {
 export default function SocialPostEditorPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { profile, session, user } = useAuth();
   const { pushNotification } = useNotifications();
   const { showSaving, showSuccess, showError, updateAlert: updateStatus } = useAlerts();
   const postId = params?.id ?? "";
+  const requestedFocusTarget = useMemo(() => {
+    const focusParam = searchParams.get("focus");
+    return isEditorFocusTarget(focusParam) ? focusParam : null;
+  }, [searchParams]);
   const captionRef = useRef<HTMLTextAreaElement | null>(null);
   const userRoles = useMemo(() => getUserRoles(profile), [profile]);
   const isAdmin = userRoles.includes("admin");
@@ -359,12 +397,19 @@ export default function SocialPostEditorPage() {
   const [activity, setActivity] = useState<SocialActivityRecord[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
   const [isCommentSaving, setIsCommentSaving] = useState(false);
-  const [pendingRollbackTransition, setPendingRollbackTransition] = useState<{
-    toStatus: SocialPostStatus;
-    reason: string;
-  } | null>(null);
+  const [pendingChangeRequestTransition, setPendingChangeRequestTransition] =
+    useState<{
+      toStatus: SocialPostStatus;
+      template: ChangeRequestTemplateState;
+    } | null>(null);
+  const [pendingPrimaryTransitionConfirmation, setPendingPrimaryTransitionConfirmation] =
+    useState<{
+      fromStatus: SocialPostStatus;
+      toStatus: SocialPostStatus;
+    } | null>(null);
   const [isReopenBriefModalOpen, setIsReopenBriefModalOpen] = useState(false);
   const [reopenBriefReason, setReopenBriefReason] = useState("");
+  const [hasAppliedRequestedFocus, setHasAppliedRequestedFocus] = useState(false);
   const canEditBrief = useMemo(() => {
     if (!post) {
       return false;
@@ -657,7 +702,10 @@ export default function SocialPostEditorPage() {
   );
 
   const transitionPostStatus = useCallback(
-    async (toStatus: SocialPostStatus, rollbackReason?: string | null) => {
+    async (
+      toStatus: SocialPostStatus,
+      options?: { changeRequestTemplate?: ChangeRequestTemplateState | null }
+    ) => {
       if (!post) {
         return false;
       }
@@ -683,23 +731,30 @@ export default function SocialPostEditorPage() {
         showError(VALIDATION_MESSAGES.sessionExpired);
         return false;
       }
+      let reason: string | null = null;
+      if (toStatus === "changes_requested") {
+        const template = options?.changeRequestTemplate ?? null;
+        if (!template) {
+          setPendingChangeRequestTransition({
+            toStatus,
+            template: createEmptyChangeRequestTemplate(),
+          });
+          return false;
+        }
+        const templateError = getChangeRequestTemplateError(template);
+        if (templateError) {
+          showError(templateError);
+          return false;
+        }
+        reason = formatChangeRequestReason(template);
+      }
       const requiresRollbackReason =
         toStatus === "changes_requested" &&
         (currentStatus === "ready_to_publish" ||
           currentStatus === "awaiting_live_link");
-      const reason =
-        typeof rollbackReason === "string" && rollbackReason.trim().length > 0
-          ? rollbackReason.trim()
-          : null;
-      if (requiresRollbackReason) {
-        if (!reason) {
-          setPendingRollbackTransition({ toStatus, reason: "" });
-          return false;
-        }
-        if (reason.trim().length === 0) {
-          showError(VALIDATION_MESSAGES.rollbackReasonRequired);
-          return false;
-        }
+      if (requiresRollbackReason && !reason) {
+        showError(VALIDATION_MESSAGES.rollbackReasonRequired);
+        return false;
       }
 
       setIsSaving(true);
@@ -1185,6 +1240,18 @@ export default function SocialPostEditorPage() {
     }
     return getTargetUserNameForStatus(finalAction.nextStatus, post);
   }, [finalAction.nextStatus, getTargetUserNameForStatus, post]);
+  const getTransitionLockSummary = useCallback((toStatus: SocialPostStatus) => {
+    if (toStatus === "ready_to_publish" || toStatus === "awaiting_live_link") {
+      return "Brief fields lock for non-admin users during execution stages.";
+    }
+    if (toStatus === "published") {
+      return "Published is terminal for workflow progression unless reopened by admin path.";
+    }
+    if (toStatus === "changes_requested") {
+      return "Brief editing reopens for creator revisions.";
+    }
+    return "Brief editing remains available for the next stage.";
+  }, []);
 
   const applyCaptionEdit = (nextCaption: string, selectionStart: number, selectionEnd: number) => {
     setForm((previous) => (previous ? { ...previous, caption: nextCaption } : previous));
@@ -1291,6 +1358,25 @@ export default function SocialPostEditorPage() {
       nestedFocusable.focus();
     }
   }, []);
+  useEffect(() => {
+    setHasAppliedRequestedFocus(false);
+  }, [postId, requestedFocusTarget]);
+  useEffect(() => {
+    if (!requestedFocusTarget || !post || !form || hasAppliedRequestedFocus) {
+      return;
+    }
+    const targetId = EDITOR_FOCUS_TARGET_IDS[requestedFocusTarget];
+    const target = document.getElementById(targetId);
+    if (!target) {
+      return;
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    const nestedFocusable = target.querySelector("input,textarea,select,button");
+    if (nestedFocusable instanceof HTMLElement) {
+      nestedFocusable.focus();
+    }
+    setHasAppliedRequestedFocus(true);
+  }, [form, hasAppliedRequestedFocus, post, requestedFocusTarget]);
   const handleQuickAddLiveLink = () => {
     const rawInput = quickLiveLinkInput.trim();
     if (!rawInput) {
@@ -1485,7 +1571,7 @@ export default function SocialPostEditorPage() {
     setIsReopenBriefModalOpen(true);
   };
 
-  const handleFinalAction = async () => {
+  const handleFinalAction = useCallback(async () => {
     if (!form || !post) {
       return;
     }
@@ -1496,11 +1582,29 @@ export default function SocialPostEditorPage() {
       await persistBrief(form, "manual");
       return;
     }
-    await transitionPostStatus(finalAction.nextStatus);
+    setPendingPrimaryTransitionConfirmation({
+      fromStatus: form.status,
+      toStatus: finalAction.nextStatus,
+    });
+  }, [finalAction.nextStatus, form, persistBrief, post]);
+  const confirmPendingPrimaryTransition = async () => {
+    if (!pendingPrimaryTransitionConfirmation) {
+      return;
+    }
+    const nextStatus = pendingPrimaryTransitionConfirmation.toStatus;
+    setPendingPrimaryTransitionConfirmation(null);
+    await transitionPostStatus(nextStatus);
   };
 
   const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const isPrimaryActionDisabled =
+    !form ||
+    isSaving ||
+    isOverLimit ||
+    !canActOnCurrentStatus ||
+    !canCurrentUserTransition(form.status, finalAction.nextStatus) ||
+    !canSubmitFinalAction;
 
   const handleDeletePost = async () => {
     if (!post || !session?.access_token) {
@@ -1525,6 +1629,58 @@ export default function SocialPostEditorPage() {
     showSuccess("Post deleted.");
     router.push("/social-posts");
   };
+  useEffect(() => {
+    const handleEditorShortcut = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey) {
+        return;
+      }
+      if (!event.altKey || !event.shiftKey) {
+        return;
+      }
+      if (
+        pendingChangeRequestTransition ||
+        pendingPrimaryTransitionConfirmation ||
+        isReopenBriefModalOpen ||
+        isDeleteModalOpen
+      ) {
+        return;
+      }
+      const normalizedKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      if (normalizedKey === SOCIAL_POST_EDITOR_SHORTCUTS.nextRequired.key) {
+        event.preventDefault();
+        if (missingTransitionFields.length === 0) {
+          showSuccess("All required transition fields are complete.");
+          return;
+        }
+        jumpToPreflightField(missingTransitionFields[0]);
+        showSuccess("Jumped to next required field.");
+        return;
+      }
+      if (event.key === SOCIAL_POST_EDITOR_SHORTCUTS.primaryAction.key) {
+        event.preventDefault();
+        if (isPrimaryActionDisabled) {
+          showError("Primary action is unavailable right now.");
+          return;
+        }
+        void handleFinalAction();
+      }
+    };
+    window.addEventListener("keydown", handleEditorShortcut);
+    return () => {
+      window.removeEventListener("keydown", handleEditorShortcut);
+    };
+  }, [
+    handleFinalAction,
+    isDeleteModalOpen,
+    isPrimaryActionDisabled,
+    isReopenBriefModalOpen,
+    jumpToPreflightField,
+    missingTransitionFields,
+    pendingChangeRequestTransition,
+    pendingPrimaryTransitionConfirmation,
+    showError,
+    showSuccess,
+  ]);
 
   if (isLoading) {
     return (
@@ -1613,45 +1769,178 @@ export default function SocialPostEditorPage() {
             }}
           />
           <ConfirmationModal
-            isOpen={pendingRollbackTransition !== null}
-            title="Send back to Changes Requested?"
-            description="Provide a reason for this rollback. This reason is required."
-            confirmLabel="Send back"
+            isOpen={pendingPrimaryTransitionConfirmation !== null}
+            title="Confirm transition?"
+            description="Review this handoff summary before moving to the next stage."
+            confirmLabel={
+              pendingPrimaryTransitionConfirmation
+                ? `Move to ${SOCIAL_POST_STATUS_LABELS[pendingPrimaryTransitionConfirmation.toStatus]}`
+                : "Confirm"
+            }
             isConfirming={isSaving}
-            confirmDisabled={!pendingRollbackTransition?.reason.trim()}
             onCancel={() => {
               if (!isSaving) {
-                setPendingRollbackTransition(null);
+                setPendingPrimaryTransitionConfirmation(null);
               }
             }}
             onConfirm={() => {
-              if (!pendingRollbackTransition) {
-                return;
-              }
-              const reason = pendingRollbackTransition.reason.trim();
-              if (!reason) {
-                showError(VALIDATION_MESSAGES.rollbackReasonRequired);
-                return;
-              }
-              const nextStatus = pendingRollbackTransition.toStatus;
-              setPendingRollbackTransition(null);
-              void transitionPostStatus(nextStatus, reason);
+              void confirmPendingPrimaryTransition();
             }}
           >
-            <label className="space-y-1 text-sm text-slate-700">
-              <span className="font-medium">Reason</span>
-              <textarea
-                value={pendingRollbackTransition?.reason ?? ""}
-                onChange={(event) => {
-                  setPendingRollbackTransition((previous) =>
-                    previous ? { ...previous, reason: event.target.value } : previous
+            {pendingPrimaryTransitionConfirmation ? (
+              <div className="space-y-2 text-sm text-slate-700">
+                <p>
+                  <span className="font-medium">Status change:</span>{" "}
+                  {SOCIAL_POST_STATUS_LABELS[pendingPrimaryTransitionConfirmation.fromStatus]} →{" "}
+                  {SOCIAL_POST_STATUS_LABELS[pendingPrimaryTransitionConfirmation.toStatus]}
+                </p>
+                <p>
+                  <span className="font-medium">Next owner:</span>{" "}
+                  {getTargetUserNameForStatus(
+                    pendingPrimaryTransitionConfirmation.toStatus,
+                    post
+                  )}
+                </p>
+                <p>
+                  <span className="font-medium">Locking behavior:</span>{" "}
+                  {getTransitionLockSummary(pendingPrimaryTransitionConfirmation.toStatus)}
+                </p>
+              </div>
+            ) : null}
+          </ConfirmationModal>
+          <ConfirmationModal
+            isOpen={pendingChangeRequestTransition !== null}
+            title="Send back to Changes Requested?"
+            description="Select a category and checklist so revisions are clear and actionable."
+            confirmLabel="Send back"
+            isConfirming={isSaving}
+            confirmDisabled={
+              Boolean(
+                pendingChangeRequestTransition &&
+                  getChangeRequestTemplateError(
+                    pendingChangeRequestTransition.template
+                  )
+              )
+            }
+            onCancel={() => {
+              if (!isSaving) {
+                setPendingChangeRequestTransition(null);
+              }
+            }}
+            onConfirm={() => {
+              if (!pendingChangeRequestTransition) {
+                return;
+              }
+              const templateError = getChangeRequestTemplateError(
+                pendingChangeRequestTransition.template
+              );
+              if (templateError) {
+                showError(templateError);
+                return;
+              }
+              const nextStatus = pendingChangeRequestTransition.toStatus;
+              const transitionTemplate = pendingChangeRequestTransition.template;
+              setPendingChangeRequestTransition(null);
+              void transitionPostStatus(nextStatus, {
+                changeRequestTemplate: transitionTemplate,
+              });
+            }}
+          >
+            <div className="space-y-3">
+              <label className="space-y-1 text-sm text-slate-700">
+                <span className="font-medium">Category</span>
+                <select
+                  value={pendingChangeRequestTransition?.template.category ?? ""}
+                  onChange={(event) => {
+                    setPendingChangeRequestTransition((previous) =>
+                      previous
+                        ? {
+                            ...previous,
+                            template: {
+                              ...previous.template,
+                              category: event.target.value as ChangeRequestTemplateState["category"],
+                            },
+                          }
+                        : previous
+                    );
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Select category</option>
+                  {CHANGE_REQUEST_CATEGORY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-slate-700">
+                  Action checklist
+                </legend>
+                {CHANGE_REQUEST_CHECKLIST_OPTIONS.map((option) => {
+                  const isChecked = Boolean(
+                    pendingChangeRequestTransition?.template.checklist.includes(
+                      option.id
+                    )
                   );
-                }}
-                rows={3}
-                className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="Add context for the requested changes..."
-              />
-            </label>
+                  return (
+                    <label
+                      key={option.id}
+                      className="flex items-start gap-2 text-sm text-slate-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(event) => {
+                          setPendingChangeRequestTransition((previous) => {
+                            if (!previous) {
+                              return previous;
+                            }
+                            const nextChecklist = event.target.checked
+                              ? [...previous.template.checklist, option.id]
+                              : previous.template.checklist.filter(
+                                  (entry) => entry !== option.id
+                                );
+                            return {
+                              ...previous,
+                              template: {
+                                ...previous.template,
+                                checklist: Array.from(new Set(nextChecklist)),
+                              },
+                            };
+                          });
+                        }}
+                        className="mt-0.5"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </fieldset>
+              <label className="space-y-1 text-sm text-slate-700">
+                <span className="font-medium">Context (optional)</span>
+                <textarea
+                  value={pendingChangeRequestTransition?.template.note ?? ""}
+                  onChange={(event) => {
+                    setPendingChangeRequestTransition((previous) =>
+                      previous
+                        ? {
+                            ...previous,
+                            template: {
+                              ...previous.template,
+                              note: event.target.value,
+                            },
+                          }
+                        : previous
+                    );
+                  }}
+                  rows={3}
+                  className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Add implementation context for the next pass..."
+                />
+              </label>
+            </div>
           </ConfirmationModal>
           <ConfirmationModal
             isOpen={isReopenBriefModalOpen}
@@ -1707,7 +1996,10 @@ export default function SocialPostEditorPage() {
           ) : null}
           <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
-              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+              <section
+                id="social-editor-step-setup"
+                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+              >
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Setup</h3>
                   <p className="text-sm text-slate-600">
@@ -1975,7 +2267,10 @@ export default function SocialPostEditorPage() {
                 )}
               </section>
 
-              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+              <section
+                id="social-editor-step-link-context"
+                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+              >
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">
                     Link Context <span className="text-slate-500">(optional)</span>
@@ -2074,7 +2369,10 @@ export default function SocialPostEditorPage() {
                 </fieldset>
               </section>
 
-              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+              <section
+                id="social-editor-step-write-caption"
+                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+              >
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Write Caption</h3>
                   <p className="text-sm text-slate-600">
@@ -2186,7 +2484,10 @@ export default function SocialPostEditorPage() {
                 </fieldset>
               </section>
 
-              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+              <section
+                id="social-editor-step-review-publish"
+                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+              >
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Review & Publish</h3>
                   <p className="text-sm text-slate-600">
@@ -2529,19 +2830,29 @@ export default function SocialPostEditorPage() {
                   <Button
                     variant="primary"
                     size="sm"
-                    disabled={
-                      isSaving ||
-                      isOverLimit ||
-                      !canActOnCurrentStatus ||
-                      !canCurrentUserTransition(form.status, finalAction.nextStatus) ||
-                      !canSubmitFinalAction
-                    }
+                    disabled={isPrimaryActionDisabled}
+                    aria-keyshortcuts="Alt+Shift+Enter"
                     onClick={() => {
                       void handleFinalAction();
                     }}
                   >
                     {isSaving ? "Saving…" : finalAction.label}
                   </Button>
+                  <p className="text-[11px] text-slate-500">
+                    <button
+                      type="button"
+                      className="font-medium text-slate-700 underline-offset-2 hover:underline"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent("open-shortcuts-modal"));
+                      }}
+                    >
+                      Shortcut
+                    </button>{" "}
+                    {SOCIAL_POST_EDITOR_SHORTCUTS.nextRequired.label}:{" "}
+                    {SOCIAL_POST_EDITOR_SHORTCUTS.nextRequired.keys[0]} •{" "}
+                    {SOCIAL_POST_EDITOR_SHORTCUTS.primaryAction.label}:{" "}
+                    {SOCIAL_POST_EDITOR_SHORTCUTS.primaryAction.keys[0]}
+                  </p>
                   {!canActOnCurrentStatus ? (
                     <p className="text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
                   ) : null}

@@ -11,6 +11,59 @@ Use it to:
 
 Use `My Tasks` as your first stop each day.
 
+## Role-based quick navigation
+Start with the role you are actively working as right now:
+- [Writer quick start](#writer-quick-start)
+- [Publisher quick start](#publisher-quick-start)
+- [Editor/Reviewer quick start](#editorreviewer-quick-start)
+- [Admin quick start](#admin-quick-start)
+- [Shared navigation map](#shared-navigation-map)
+- [When you are stuck](#when-you-are-stuck)
+
+### Shared navigation map
+- `Dashboard` (`/dashboard`): cross-content queue view with filtering and sorting.
+- `My Tasks` (`/tasks`): your assignment-first execution queue.
+- `Blogs` (`/blogs`): published/reference lookup and copy/export utilities.
+- `Social Posts` (`/social-posts`): social workflow list, board, calendar, and full editor.
+- `Ideas` (`/ideas`): intake and conversion into blog/social records.
+- `Calendar` (`/calendar`): scheduling and capacity planning across content.
+- `Settings` (`/settings`): profile, connectors, notifications, and admin tools.
+
+### Writer quick start
+1. Go to `My Tasks` (`/tasks`) and focus on `Required by: <username>`.
+2. Open each assigned record and complete required fields/checklist items.
+3. For social posts, ensure Product, Type, and Canva link are complete before submitting for review.
+4. Move records forward only when validation/checklist signals are clear.
+5. Use `Waiting on Others` to track handoffs blocked on reviewers or publishers.
+
+### Publisher quick start
+1. Start in `My Tasks` (`/tasks`) and filter to publishing-stage work.
+2. Confirm schedule, caption/platform requirements (social), and publishing readiness.
+3. Publish only when stage prerequisites are complete and approvals are in place.
+4. Add/update required links (`Live URL` for blogs, social live links for social posts).
+5. Use `Calendar` for near-term scheduling conflicts and rescheduling context.
+
+### Editor/Reviewer quick start
+1. Open `My Tasks` (`/tasks`) for items in review-facing stages.
+2. Review quality and required fields before approval.
+3. If revisions are needed, send clear `Changes Requested` guidance.
+4. Approve only when the next owner can execute without missing context.
+5. Use record activity history to verify what changed and who changed it.
+
+### Admin quick start
+1. Use `Dashboard` and `My Tasks` for workflow health and bottlenecks.
+2. Use `Settings` (`/settings`) to manage users, roles, permissions, and connectors.
+3. Use `Activity History` for audit review and operational troubleshooting.
+4. Use quick-view to validate non-admin experience from the target user's perspective.
+5. Use destructive tools (cleanup, wipe) only after confirming scope and impact.
+
+### When you are stuck
+- Recheck status and transition requirements: [Workflow rules and statuses](#3-workflow-rules-and-statuses).
+- Recheck queue narrowing: [Filters and search](#5-filters-and-search).
+- Recheck import quality: [Import workflow](#5-import-workflow).
+- Recheck alerting and update signals: [Notifications and feedback](#8-notifications-and-feedback).
+- Use fallback fixes: [Troubleshooting quick fixes](#10-troubleshooting-quick-fixes).
+
 ## 2. Daily workflow (recommended order)
 1. Open `/` and review the `My Tasks Snapshot` groups (`Required by: <username>` and `Waiting on Others`).
 2. Open `My Tasks` and review assigned and due work.
@@ -24,11 +77,13 @@ Use `My Tasks` as your first stop each day.
 - `My Tasks` shows all of your assigned, non-published work (blogs + social), including items where the next step is currently on someone else.
 - For social posts, task ownership is derived from workflow stage ownership (`draft/changes_requested/ready_to_publish/awaiting_live_link` → worker, `in_review/creative_approved` → reviewer) so handoff items appear in the correct action bucket.
 - `Next Tasks` is mixed and prioritized across both blogs and social posts so actionable social handoffs (for example `Ready to Publish`) are not hidden behind blog-only ordering.
-- `Social Tasks` list shows all matching social rows for current filters (not only a small preview subset).
+- The main tasks table is a single mixed list (blogs + social), not split into separate blog/social sections.
 - Use `Action State` filter to switch between:
   - `Required by: <username>` (actionable now)
   - `Waiting on Others` (assigned to you but blocked on another actor)
-- The home page uses the same model for `My Tasks Snapshot`, showing top mixed items grouped by those two states.
+- The home page uses the same model for `My Tasks Snapshot`, showing all associated active items grouped by those two states.
+- If you are associated to the same blog in multiple ways (for example writer + publisher), it appears once in the snapshot.
+- For multi-association blog rows, `Required by: <username>` wins over `Waiting on Others` when any associated role is actionable.
 - Home summary cards also include writer-relevant social handoff stage `Ready to Publish`.
 - Notification panel includes `Required by: <username>` shortcuts (top actionable items) that deep-link directly to the relevant blog/social record.
 - Admin quick-view mode opens on `My Tasks` with `Required by Me` filter intent so impersonated sessions start on actionable work.
@@ -59,16 +114,25 @@ Use `My Tasks` as your first stop each day.
 ### Social post editor usability defaults
 - Use the right-sidebar primary button as the standard transition action.
 - Keep `Advanced transition controls` for exceptional/manual transitions only.
+- Before stage-changing primary transitions, review the compact confirmation summary (`status change`, `next owner`, `locking behavior`) and confirm.
 - Use `Transition Preflight` in the sidebar to see missing required fields and jump directly to each field.
 - In Setup, complete required-now fields first, then required-before-approval fields; optional fields are grouped in `Optional Details`.
 - In Live Links, paste one URL to auto-detect the platform quickly, then use platform-specific fields for final edits if needed.
 - Snapshot panel shows `Assigned to`, `Reviewer`, `Current owner`, and `Next owner` so handoffs stay explicit.
+- When sending a post to `Changes Requested`, complete the structured template (category + checklist + optional context) instead of writing only free text.
+- In `New Social Post`, use quick presets for common combinations and rely on remembered last-used `product`, `type`, and `platforms`.
+- From the social post list panel, use `Work in Full View` to open the editor at the most relevant section for the post's current stage.
+- Keyboard-first actions in full editor:
+  - `Alt+Shift+J`: jump to the next missing required field in transition preflight
+  - `Alt+Shift+Enter`: run the primary sidebar action
+  - use the sidebar `Shortcut` link to open the shortcuts modal and view these keys
 
 ### Record visibility (blogs + social)
 - Detail drawers show latest assignment context and recent change history (latest-first) so anyone can quickly understand ownership and what changed.
 - Full record pages show assignment, comments, and activity history for all authenticated users.
 - Record-level history visibility is read-only and does not grant extra edit permissions.
 - Section order is standardized: when present, `Comments` and `Activity` appear as the final sections on record pages/drawers.
+- Timezone-rendered times preserve correct AM/PM around midnight/noon (for example, `12:34 AM` stays AM and does not flip to PM).
 
 ### Workflow rules to remember
 - Social editors can collaborate on the same post concurrently.
@@ -137,12 +201,20 @@ Use `My Tasks` as your first stop each day.
 - Click table headers to sort ascending/descending.
 - Sort indicators: `↕` (unsorted), `↑` (ascending), `↓` (descending).
 - Global action order: `Copy` → `Customize` → `Import` → `Export`.
+- Primary table surfaces (`Dashboard`, `My Tasks`, `Blogs`, `Social Posts` list view) use the same control layout:
+  - top strip: results summary + actions
+  - bottom strip: `Rows per page` + pagination
+- Default table settings on those surfaces:
+  - default density: `Compact`
+  - default rows per page: `10`
+  - rows-per-page options: `10`, `20`, `50`, `All`
 - Dashboard list is now a unified content table for blogs + social posts using core columns: `Type`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated` (with optional `Product`).
 - In Dashboard, blog `Published` date reflects the blog's **Actual Published Date** (actual published timestamp date), not display/scheduled fallback dates.
 - Clicking a blog row opens the blog detail drawer; clicking a social row opens its dedicated page.
 - Phase A selection behavior: both blog and social rows can be selected in-table.
 - Safety gating: mutation controls remain blog-only and are disabled whenever social rows are part of the current selection.
 - Selected CSV/PDF export supports mixed selected rows.
+- Exception: `Settings` and `Activity History` tables keep specialized admin layouts and are intentionally outside this global table consistency contract.
 
 ### Consistency guarantees
 - Core table behavior is standardized across pages (sorting, truncation, row density, pagination controls).
@@ -191,6 +263,7 @@ Name resolution behavior:
 - Command palette: `⌘K` (Mac) or `Ctrl+K` (Windows).
 - `Esc` closes open dropdowns and modals.
 - Quick Create: `↑/↓` to move, `Enter` to select, `Esc` to close.
+- Social Post editor (`/social-posts/[id]`): `Alt+Shift+J` (next required field), `Alt+Shift+Enter` (primary action).
 - Navigation behavior: internal app links open in the same tab; external links open in a new tab.
 
 ## 8. Notifications and feedback
@@ -273,3 +346,4 @@ This format enables quick scanning in busy channels and shows exactly who is res
 - If you see “Concurrent modification detected. Refresh and retry.” while changing workflow state, another update landed first—refresh the page and retry your change.
 - Cannot access Activity History or system/import log views: confirm your account has admin access and required permissions.
 - Unexpected UI state: refresh once, retry action, then report the item ID and failed step.
+- For maintainers running end-to-end stabilization checks before release, run `npm run check:full`.

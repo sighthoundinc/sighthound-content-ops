@@ -30,6 +30,9 @@ import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
+  DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
+  DATA_PAGE_CONTROL_ACTIONS_CLASS,
+  DATA_PAGE_CONTROL_ROW_CLASS,
   DATA_PAGE_CONTROL_STRIP_CLASS,
   DATA_PAGE_STACK_CLASS,
   DATA_PAGE_TABLE_SECTION_CLASS,
@@ -61,6 +64,14 @@ import { canUserActOnStatus } from "@/lib/social-post-workflow";
 import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
 import { notifySlack } from "@/lib/notifications";
 import { getUserRoles } from "@/lib/roles";
+import {
+  CHANGE_REQUEST_CATEGORY_OPTIONS,
+  CHANGE_REQUEST_CHECKLIST_OPTIONS,
+  createEmptyChangeRequestTemplate,
+  formatChangeRequestReason,
+  getChangeRequestTemplateError,
+  type ChangeRequestTemplateState,
+} from "@/lib/social-post-change-request";
 import {
   getApiErrorMessage,
   isApiFailure,
@@ -146,15 +157,125 @@ type PendingDeleteRequest =
       postIds: string[];
       publishedCount: number;
     };
+type PendingChangeRequestTransition = {
+  postId: string;
+  toStatus: SocialPostStatus;
+  template: ChangeRequestTemplateState;
+};
+type SocialPostCreateDefaults = {
+  product: SocialPostProduct;
+  type: SocialPostType;
+  platforms: SocialPlatform[];
+};
+type SocialPostEditorFocusTarget = "setup" | "review-publish" | "live-links";
 
 const STATUS_DROP_ZONE_PREFIX = "social-status-";
 const ASSIGNED_USER_HELPER_TEXT = "Only assigned user can perform this action";
+const CREATE_DEFAULTS_STORAGE_KEY = "social-post-create-defaults:v1";
+const SOCIAL_POST_LIST_TABLE_VIEW_STORAGE_KEY = "social-posts-list-table-view:v1";
+const SOCIAL_POST_LIST_MANDATORY_COLUMNS = [
+  "product",
+  "type",
+  "status",
+  "created",
+  "scheduled",
+  "published",
+  "updated",
+] as const;
+const SOCIAL_POST_LIST_OPTIONAL_COLUMNS = ["platforms", "blog", "actions"] as const;
+const SOCIAL_POST_LIST_ALL_COLUMNS = [
+  ...SOCIAL_POST_LIST_MANDATORY_COLUMNS,
+  ...SOCIAL_POST_LIST_OPTIONAL_COLUMNS,
+] as const;
+const SOCIAL_POST_LIST_SORT_FIELDS = [
+  "title",
+  "product",
+  "type",
+  "status",
+  "created",
+  "scheduled",
+  "published",
+  "updated",
+] as const;
+const DEFAULT_CREATE_DEFAULTS: SocialPostCreateDefaults = {
+  product: "general_company",
+  type: "image",
+  platforms: [],
+};
+const SOCIAL_POST_CREATE_PRESETS: Array<
+  SocialPostCreateDefaults & { id: string; label: string }
+> = [
+  {
+    id: "general-linkedin",
+    label: "General LinkedIn",
+    product: "general_company",
+    type: "image",
+    platforms: ["linkedin"],
+  },
+  {
+    id: "alpr-multi-platform",
+    label: "ALPR Campaign",
+    product: "alpr_plus",
+    type: "carousel",
+    platforms: ["linkedin", "facebook"],
+  },
+  {
+    id: "redactor-update",
+    label: "Redactor Update",
+    product: "redactor",
+    type: "link",
+    platforms: ["linkedin"],
+  },
+];
+const SOCIAL_POST_EDITOR_FOCUS_BY_STATUS: Record<
+  SocialPostStatus,
+  SocialPostEditorFocusTarget
+> = {
+  draft: "setup",
+  in_review: "review-publish",
+  changes_requested: "setup",
+  creative_approved: "review-publish",
+  ready_to_publish: "review-publish",
+  awaiting_live_link: "live-links",
+  published: "review-publish",
+};
+
+function getSocialPostEditorHref(post: Pick<SocialPostWithRelations, "id" | "status">) {
+  const params = new URLSearchParams({
+    focus: SOCIAL_POST_EDITOR_FOCUS_BY_STATUS[post.status],
+  });
+  return `/social-posts/${post.id}?${params.toString()}`;
+}
 
 function normalizeRelationObject<T>(value: unknown): T | null {
   if (Array.isArray(value)) {
     return (value[0] ?? null) as T | null;
   }
   return (value ?? null) as T | null;
+}
+function normalizeCreateDefaults(
+  value: unknown
+): SocialPostCreateDefaults {
+  if (!value || typeof value !== "object") {
+    return DEFAULT_CREATE_DEFAULTS;
+  }
+  const candidate = value as Partial<SocialPostCreateDefaults>;
+  const product = SOCIAL_POST_PRODUCTS.includes(candidate.product as SocialPostProduct)
+    ? (candidate.product as SocialPostProduct)
+    : DEFAULT_CREATE_DEFAULTS.product;
+  const type = SOCIAL_POST_TYPES.includes(candidate.type as SocialPostType)
+    ? (candidate.type as SocialPostType)
+    : DEFAULT_CREATE_DEFAULTS.type;
+  const platforms = Array.isArray(candidate.platforms)
+    ? candidate.platforms.filter((platform): platform is SocialPlatform =>
+        SOCIAL_PLATFORMS.includes(platform as SocialPlatform)
+      )
+    : DEFAULT_CREATE_DEFAULTS.platforms;
+  return {
+    product,
+    type,
+    platforms: Array.from(new Set(platforms)),
+  };
 }
 
 
@@ -503,16 +624,27 @@ function SocialPostsPageContent() {
   const [listCurrentPage, setListCurrentPage] = useState(1);
   const [listSortField, setListSortField] = useState<string>("updated");
   const [listSortDirection, setListSortDirection] = useState<"asc" | "desc">("desc");
-  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
-    new Set(["product", "type", "status", "created", "scheduled", "published", "updated"])
+  const [listRowDensity, setListRowDensity] = useState<"compact" | "comfortable">(
+    "compact"
   );
-  const [isEditColumnsOpen, setIsEditColumnsOpen] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
+    new Set(SOCIAL_POST_LIST_MANDATORY_COLUMNS)
+  );
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [hasAppliedCreateQuery, setHasAppliedCreateQuery] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newProduct, setNewProduct] = useState<SocialPostProduct>("general_company");
-  const [newType, setNewType] = useState<SocialPostType>("image");
+  const [createDefaults, setCreateDefaults] =
+    useState<SocialPostCreateDefaults>(DEFAULT_CREATE_DEFAULTS);
+  const [newProduct, setNewProduct] = useState<SocialPostProduct>(
+    DEFAULT_CREATE_DEFAULTS.product
+  );
+  const [newType, setNewType] = useState<SocialPostType>(
+    DEFAULT_CREATE_DEFAULTS.type
+  );
+  const [newPlatforms, setNewPlatforms] = useState<SocialPlatform[]>(
+    DEFAULT_CREATE_DEFAULTS.platforms
+  );
   const [newScheduledDate, setNewScheduledDate] = useState("");
   const [newWorkerUserId, setNewWorkerUserId] = useState<string | null>(null);
   const [newReviewerUserId, setNewReviewerUserId] = useState<string | null>(null);
@@ -536,11 +668,8 @@ function SocialPostsPageContent() {
   const [panelCommentDraft, setPanelCommentDraft] = useState("");
   const [replyToComment, setReplyToComment] = useState<SocialCommentRecord | null>(null);
   const [isCommentSaving, setIsCommentSaving] = useState(false);
-  const [pendingRollbackTransition, setPendingRollbackTransition] = useState<{
-    postId: string;
-    toStatus: SocialPostStatus;
-    reason: string;
-  } | null>(null);
+  const [pendingChangeRequestTransition, setPendingChangeRequestTransition] =
+    useState<PendingChangeRequestTransition | null>(null);
   const [isReopenBriefModalOpen, setIsReopenBriefModalOpen] = useState(false);
   const [reopenBriefReason, setReopenBriefReason] = useState("");
 
@@ -553,6 +682,131 @@ function SocialPostsPageContent() {
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
     })
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const rawDefaults = window.localStorage.getItem(CREATE_DEFAULTS_STORAGE_KEY);
+    if (!rawDefaults) {
+      return;
+    }
+    try {
+      const parsedDefaults = JSON.parse(rawDefaults) as unknown;
+      const normalizedDefaults = normalizeCreateDefaults(parsedDefaults);
+      setCreateDefaults(normalizedDefaults);
+      setNewProduct(normalizedDefaults.product);
+      setNewType(normalizedDefaults.type);
+      setNewPlatforms(normalizedDefaults.platforms);
+    } catch (storageError) {
+      console.error("Failed to parse social post create defaults:", storageError);
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const stored = window.localStorage.getItem(
+      SOCIAL_POST_LIST_TABLE_VIEW_STORAGE_KEY
+    );
+    if (!stored) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(stored) as {
+        visibleColumns?: unknown;
+        rowLimit?: unknown;
+        sortField?: unknown;
+        sortDirection?: unknown;
+        rowDensity?: unknown;
+      };
+      if (Array.isArray(parsed.visibleColumns)) {
+        const allowedColumns = new Set<string>(SOCIAL_POST_LIST_ALL_COLUMNS);
+        const nextVisible = parsed.visibleColumns.filter(
+          (column): column is string =>
+            typeof column === "string" && allowedColumns.has(column)
+        );
+        const mandatoryColumns = new Set<string>(
+          SOCIAL_POST_LIST_MANDATORY_COLUMNS
+        );
+        for (const mandatoryColumn of mandatoryColumns) {
+          if (!nextVisible.includes(mandatoryColumn)) {
+            nextVisible.push(mandatoryColumn);
+          }
+        }
+        setVisibleColumns(new Set(nextVisible));
+      }
+      if (
+        parsed.rowLimit === "all" ||
+        parsed.rowLimit === 10 ||
+        parsed.rowLimit === 20 ||
+        parsed.rowLimit === 50
+      ) {
+        setListRowLimit(parsed.rowLimit as TableRowLimit);
+      }
+      if (
+        typeof parsed.sortField === "string" &&
+        SOCIAL_POST_LIST_SORT_FIELDS.includes(
+          parsed.sortField as (typeof SOCIAL_POST_LIST_SORT_FIELDS)[number]
+        )
+      ) {
+        setListSortField(parsed.sortField);
+      }
+      if (parsed.sortDirection === "asc" || parsed.sortDirection === "desc") {
+        setListSortDirection(parsed.sortDirection);
+      }
+      if (parsed.rowDensity === "compact" || parsed.rowDensity === "comfortable") {
+        setListRowDensity(parsed.rowDensity);
+      }
+    } catch (storageError) {
+      console.error(
+        "Failed to parse social posts list table preferences:",
+        storageError
+      );
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      SOCIAL_POST_LIST_TABLE_VIEW_STORAGE_KEY,
+      JSON.stringify({
+        visibleColumns: Array.from(visibleColumns),
+        rowLimit: listRowLimit,
+        sortField: listSortField,
+        sortDirection: listSortDirection,
+        rowDensity: listRowDensity,
+      })
+    );
+  }, [
+    listRowDensity,
+    listRowLimit,
+    listSortDirection,
+    listSortField,
+    visibleColumns,
+  ]);
+
+  const initializeCreateForm = useCallback(() => {
+    setNewScheduledDate("");
+    setNewWorkerUserId(isAdmin ? null : user?.id ?? null);
+    setNewReviewerUserId(null);
+    setNewTitle("");
+    setNewProduct(createDefaults.product);
+    setNewType(createDefaults.type);
+    setNewPlatforms(createDefaults.platforms);
+  }, [createDefaults, isAdmin, user?.id]);
+  const closeCreateModal = useCallback(() => {
+    initializeCreateForm();
+    setIsCreateModalOpen(false);
+  }, [initializeCreateForm]);
+  const applyCreatePreset = useCallback(
+    (preset: SocialPostCreateDefaults) => {
+      setNewProduct(preset.product);
+      setNewType(preset.type);
+      setNewPlatforms(preset.platforms);
+    },
+    []
   );
 
 
@@ -645,6 +899,7 @@ function SocialPostsPageContent() {
     if (hasAppliedCreateQuery) {
       return;
     }
+    initializeCreateForm();
     setIsCreateModalOpen(true);
     if (requestedTitle?.trim()) {
       setNewTitle(requestedTitle.trim());
@@ -658,6 +913,7 @@ function SocialPostsPageContent() {
     setHasAppliedCreateQuery(true);
   }, [
     hasAppliedCreateQuery,
+    initializeCreateForm,
     requestedTitle,
     requestedScheduledDate,
     shouldOpenCreateModal,
@@ -746,6 +1002,15 @@ function SocialPostsPageContent() {
         case "scheduled":
           comparison = (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? "");
           break;
+        case "created":
+          comparison = a.created_at.localeCompare(b.created_at);
+          break;
+        case "published": {
+          const aPublishedDate = a.status === "published" ? a.updated_at : "";
+          const bPublishedDate = b.status === "published" ? b.updated_at : "";
+          comparison = aPublishedDate.localeCompare(bPublishedDate);
+          break;
+        }
         case "updated":
         default:
           comparison = a.updated_at.localeCompare(b.updated_at);
@@ -827,7 +1092,7 @@ function SocialPostsPageContent() {
     [getUserDisplayNameById]
   );
 
-  const loadPanelDetails = async (postId: string) => {
+  const loadPanelDetails = useCallback(async (postId: string) => {
     const supabase = getSupabaseBrowserClient();
     setIsPanelLoading(true);
     setPanelError(null);
@@ -875,7 +1140,7 @@ function SocialPostsPageContent() {
       normalizeSocialActivityRows((activityData ?? []) as Array<Record<string, unknown>>)
     );
     setIsPanelLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (!activePost) {
@@ -927,7 +1192,7 @@ function SocialPostsPageContent() {
     );
     setIsBlogSearchOpen(false);
     void loadPanelDetails(activePost.id);
-  }, [activePost, linksByPost]);
+  }, [activePost, linksByPost, loadPanelDetails]);
 
   useEffect(() => {
     const query = blogSearchQuery.trim();
@@ -1024,6 +1289,11 @@ function SocialPostsPageContent() {
     setStatusFilter("all");
     setListCurrentPage(1);
   };
+  const closeOpenDetailsMenus = useCallback(() => {
+    document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
+      menu.open = false;
+    });
+  }, []);
 
   const activePostLinks = useMemo(
     () => (activePost ? linksByPost[activePost.id] ?? [] : []),
@@ -1049,6 +1319,7 @@ function SocialPostsPageContent() {
     }
 
     const trimmedTitle = newTitle.trim();
+    const normalizedPlatforms = Array.from(new Set(newPlatforms));
 
     const workerUserId = isAdmin ? newWorkerUserId : user.id;
     const reviewerUserId = newReviewerUserId;
@@ -1073,7 +1344,7 @@ function SocialPostsPageContent() {
         type: newType,
         scheduled_date: newScheduledDate || null,
         status: "draft",
-        platforms: [],
+        platforms: normalizedPlatforms,
         created_by: user.id,
         worker_user_id: workerUserId,
         reviewer_user_id: reviewerUserId,
@@ -1109,18 +1380,24 @@ function SocialPostsPageContent() {
       setPosts((previous) => [createdPost, ...previous]);
       router.push(`/social-posts/${createdPost.id}`);
     }
-    setNewTitle("");
-    setNewProduct("general_company");
-    setNewType("image");
-    setNewScheduledDate("");
-    setNewWorkerUserId(isAdmin ? null : user.id);
-    setNewReviewerUserId(null);
-    setIsCreateModalOpen(false);
+    const nextDefaults: SocialPostCreateDefaults = {
+      product: newProduct,
+      type: newType,
+      platforms: normalizedPlatforms,
+    };
+    setCreateDefaults(nextDefaults);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        CREATE_DEFAULTS_STORAGE_KEY,
+        JSON.stringify(nextDefaults)
+      );
+    }
+    closeCreateModal();
     showSuccess("Social post created.");
     setIsCreating(false);
   };
 
-  const transitionPostStatus = async (
+  const transitionPostStatus = useCallback(async (
     {
       post,
       toStatus,
@@ -1128,7 +1405,7 @@ function SocialPostsPageContent() {
       post: SocialPostWithRelations;
       toStatus: SocialPostStatus;
     },
-    rollbackReason?: string | null
+    options?: { changeRequestTemplate?: ChangeRequestTemplateState | null }
   ) => {
     const postId = post.id;
     const title = post.title;
@@ -1152,27 +1429,31 @@ function SocialPostsPageContent() {
       return false;
     }
 
+    let reason: string | null = null;
+    if (toStatus === "changes_requested") {
+      const template = options?.changeRequestTemplate ?? null;
+      if (!template) {
+        setPendingChangeRequestTransition({
+          postId,
+          toStatus,
+          template: createEmptyChangeRequestTemplate(),
+        });
+        return false;
+      }
+      const templateError = getChangeRequestTemplateError(template);
+      if (templateError) {
+        setError(templateError);
+        return false;
+      }
+      reason = formatChangeRequestReason(template);
+    }
     const requiresRollbackReason =
       toStatus === "changes_requested" &&
       (currentStatus === "ready_to_publish" ||
         currentStatus === "awaiting_live_link");
-    const reason =
-      typeof rollbackReason === "string" && rollbackReason.trim().length > 0
-        ? rollbackReason.trim()
-        : null;
-    if (requiresRollbackReason) {
-      if (!reason) {
-        setPendingRollbackTransition({
-          postId,
-          toStatus,
-          reason: "",
-        });
-        return false;
-      }
-      if (reason.trim().length === 0) {
-        setError("Rollback reason is required.");
-        return false;
-      }
+    if (requiresRollbackReason && !reason) {
+      setError("Rollback reason is required.");
+      return false;
     }
 
     const transitionPayload: Record<string, unknown> = { nextStatus: toStatus };
@@ -1207,7 +1488,13 @@ function SocialPostsPageContent() {
       )
     );
     return true;
-  };
+  }, [
+    canCurrentUserActOnPost,
+    getTargetUserNameForStatus,
+    profile?.full_name,
+    pushNotification,
+    session?.access_token,
+  ]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const overId = event.over ? String(event.over.id) : null;
@@ -1408,31 +1695,38 @@ function SocialPostsPageContent() {
     setReopenBriefReason("");
     setIsReopenBriefModalOpen(true);
   };
-  const confirmPendingRollbackTransition = useCallback(async () => {
-    if (!pendingRollbackTransition) {
+  const confirmPendingChangeRequestTransition = useCallback(async () => {
+    if (!pendingChangeRequestTransition) {
       return;
     }
-    const reason = pendingRollbackTransition.reason.trim();
-    if (!reason) {
-      setError("Rollback reason is required.");
+    const templateError = getChangeRequestTemplateError(
+      pendingChangeRequestTransition.template
+    );
+    if (templateError) {
+      setError(templateError);
       return;
     }
     const targetPost =
-      posts.find((candidate) => candidate.id === pendingRollbackTransition.postId) ?? null;
+      posts.find(
+        (candidate) => candidate.id === pendingChangeRequestTransition.postId
+      ) ?? null;
     if (!targetPost) {
-      setPendingRollbackTransition(null);
+      setPendingChangeRequestTransition(null);
       setError("Post no longer available.");
       return;
     }
 
-    const nextStatus = pendingRollbackTransition.toStatus;
-    setPendingRollbackTransition(null);
+    const nextStatus = pendingChangeRequestTransition.toStatus;
+    const transitionTemplate = pendingChangeRequestTransition.template;
+    setPendingChangeRequestTransition(null);
     const transitioned = await transitionPostStatus(
       {
         post: targetPost,
         toStatus: nextStatus,
       },
-      reason
+      {
+        changeRequestTemplate: transitionTemplate,
+      }
     );
     if (!transitioned) {
       return;
@@ -1451,7 +1745,7 @@ function SocialPostsPageContent() {
   }, [
     activePostId,
     loadPanelDetails,
-    pendingRollbackTransition,
+    pendingChangeRequestTransition,
     posts,
     showSuccess,
     transitionPostStatus,
@@ -1898,6 +2192,18 @@ function SocialPostsPageContent() {
     () => allTableColumns.filter((col) => visibleColumns.has(col.id)),
     [allTableColumns, visibleColumns]
   );
+  const mandatoryColumnSet = useMemo(
+    () => new Set<string>(SOCIAL_POST_LIST_MANDATORY_COLUMNS),
+    []
+  );
+  const mandatoryTableColumns = useMemo(
+    () => allTableColumns.filter((column) => mandatoryColumnSet.has(column.id)),
+    [allTableColumns, mandatoryColumnSet]
+  );
+  const optionalTableColumns = useMemo(
+    () => allTableColumns.filter((column) => !mandatoryColumnSet.has(column.id)),
+    [allTableColumns, mandatoryColumnSet]
+  );
 
   return (
     <ProtectedPage>
@@ -1913,7 +2219,7 @@ function SocialPostsPageContent() {
                   variant="primary"
                   size="md"
                   onClick={() => {
-                    setNewScheduledDate("");
+                    initializeCreateForm();
                     setIsCreateModalOpen(true);
                   }}
                 >
@@ -1998,78 +2304,128 @@ function SocialPostsPageContent() {
             </DndContext>
           ) : view === "list" ? (
             <section className={DATA_PAGE_TABLE_SECTION_CLASS}>
-              <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
-                <TableResultsSummary
-                  totalRows={filteredPosts.length}
-                  currentPage={listCurrentPage}
-                  rowLimit={listRowLimit}
-                  noun="social posts"
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setIsEditColumnsOpen(!isEditColumnsOpen);
-                    }}
-                  >
-                    Edit Columns
-                  </Button>
-                  <TableRowLimitSelect
-                    value={listRowLimit}
-                    onChange={(value) => {
-                      setListRowLimit(value);
-                    }}
+              <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} relative`}>
+                <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
+                  <TableResultsSummary
+                    totalRows={filteredPosts.length}
+                    currentPage={listCurrentPage}
+                    rowLimit={listRowLimit}
+                    noun="social posts"
                   />
-                </div>
-              </div>
-              {isEditColumnsOpen ? (
-                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Mandatory Columns</p>
-                      <div className="space-y-2">
-                        {allTableColumns.slice(0, 7).map((col) => (
-                          <div key={col.id} className="flex items-center gap-2 text-sm text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={true}
-                              disabled
-                              className="cursor-not-allowed"
-                            />
-                            <span>{col.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Optional Columns</p>
-                      <div className="space-y-2">
-                        {allTableColumns.slice(7).map((col) => (
-                          <label key={col.id} className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={visibleColumns.has(col.id)}
-                              onChange={(event) => {
-                                const newVisible = new Set(visibleColumns);
-                                if (event.target.checked) {
-                                  newVisible.add(col.id);
-                                } else {
-                                  newVisible.delete(col.id);
-                                }
-                                setVisibleColumns(newVisible);
+                  <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
+                    <details className="relative">
+                      <summary
+                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                      >
+                        Customize
+                      </summary>
+                      <div className="absolute right-0 z-20 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-md">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Show Columns
+                          </p>
+                          <button
+                            type="button"
+                            className="pressable rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                            onClick={() => {
+                              setVisibleColumns(
+                                new Set(SOCIAL_POST_LIST_MANDATORY_COLUMNS)
+                              );
+                              setListRowDensity("compact");
+                              closeOpenDetailsMenus();
+                            }}
+                          >
+                            Reset
+                          </button>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Density
+                          </span>
+                          <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
+                            <button
+                              type="button"
+                              className={segmentedControlItemClass({
+                                isActive: listRowDensity === "compact",
+                                className: "px-2 py-1 text-xs",
+                              })}
+                              onClick={() => {
+                                setListRowDensity("compact");
                               }}
-                              className="cursor-pointer"
-                            />
-                            <span className="cursor-pointer">{col.label}</span>
-                          </label>
-                        ))}
+                            >
+                              Compact
+                            </button>
+                            <button
+                              type="button"
+                              className={segmentedControlItemClass({
+                                isActive: listRowDensity === "comfortable",
+                                className: "px-2 py-1 text-xs",
+                              })}
+                              onClick={() => {
+                                setListRowDensity("comfortable");
+                              }}
+                            >
+                              Comfortable
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Mandatory Columns
+                          </p>
+                          <div className="space-y-1">
+                            {mandatoryTableColumns.map((column) => (
+                              <label
+                                key={column.id}
+                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-slate-700"
+                              >
+                                <span>{column.label}</span>
+                                <input
+                                  type="checkbox"
+                                  checked={true}
+                                  disabled
+                                  className="cursor-not-allowed"
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Optional Columns
+                          </p>
+                          <div className="space-y-1">
+                            {optionalTableColumns.map((column) => (
+                              <label
+                                key={column.id}
+                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                              >
+                                <span>{column.label || "Actions"}</span>
+                                <input
+                                  type="checkbox"
+                                  checked={visibleColumns.has(column.id)}
+                                  onChange={(event) => {
+                                    const nextVisible = new Set(visibleColumns);
+                                    for (const mandatoryColumn of SOCIAL_POST_LIST_MANDATORY_COLUMNS) {
+                                      nextVisible.add(mandatoryColumn);
+                                    }
+                                    if (event.target.checked) {
+                                      nextVisible.add(column.id);
+                                    } else {
+                                      nextVisible.delete(column.id);
+                                    }
+                                    setVisibleColumns(nextVisible);
+                                  }}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </details>
                   </div>
                 </div>
-              ) : null}
+              </div>
               {selectedRowIndices.size > 0 ? (
                 <div className="mb-3 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
                   <span className="text-sm font-medium text-blue-900">
@@ -2106,13 +2462,19 @@ function SocialPostsPageContent() {
                 }}
                 onRowClick={(post) => openPostPanel(post.id)}
                 activeIndex={pagedListPosts.findIndex((p) => p.id === activePostId)}
-                density="comfortable"
+                density={listRowDensity}
                 emptyMessage="No social posts found"
                 showSelection={true}
                 selectedIndices={selectedRowIndices}
                 onSelectionChange={setSelectedRowIndices}
               />
-              <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} justify-end`}>
+              <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
+                <TableRowLimitSelect
+                  value={listRowLimit}
+                  onChange={(value) => {
+                    setListRowLimit(value);
+                  }}
+                />
                 <TablePaginationControls
                   currentPage={listCurrentPage}
                   pageCount={listPageCount}
@@ -2272,7 +2634,7 @@ function SocialPostsPageContent() {
                     variant="primary"
                     size="sm"
                     onClick={() => {
-                      router.push(`/social-posts/${activePost.id}`);
+                      router.push(getSocialPostEditorHref(activePost));
                     }}
                   >
                     Work in Full View
@@ -2790,35 +3152,135 @@ function SocialPostsPageContent() {
           }}
         />
         <ConfirmationModal
-          isOpen={pendingRollbackTransition !== null}
+          isOpen={pendingChangeRequestTransition !== null}
           title="Send back to Changes Requested?"
-          description="Provide a reason for this rollback. This reason is required."
+          description="Select a category and checklist so the next revision pass is specific and actionable."
           confirmLabel="Send back"
           isConfirming={isPanelSaving}
-          confirmDisabled={!pendingRollbackTransition?.reason.trim()}
+          confirmDisabled={
+            Boolean(
+              pendingChangeRequestTransition &&
+                getChangeRequestTemplateError(
+                  pendingChangeRequestTransition.template
+                )
+            )
+          }
           onCancel={() => {
             if (!isPanelSaving) {
-              setPendingRollbackTransition(null);
+              setPendingChangeRequestTransition(null);
             }
           }}
           onConfirm={() => {
-            void confirmPendingRollbackTransition();
+            void confirmPendingChangeRequestTransition();
           }}
         >
-          <label className="space-y-1 text-sm text-slate-700">
-            <span className="font-medium">Reason</span>
-            <textarea
-              value={pendingRollbackTransition?.reason ?? ""}
-              onChange={(event) => {
-                setPendingRollbackTransition((previous) =>
-                  previous ? { ...previous, reason: event.target.value } : previous
+          <div className="space-y-3">
+            <label className="space-y-1 text-sm text-slate-700">
+              <span className="font-medium">Category</span>
+              <select
+                value={pendingChangeRequestTransition?.template.category ?? ""}
+                onChange={(event) => {
+                  setPendingChangeRequestTransition((previous) =>
+                    previous
+                      ? {
+                          ...previous,
+                          template: {
+                            ...previous.template,
+                            category: event.target.value as ChangeRequestTemplateState["category"],
+                          },
+                        }
+                      : previous
+                  );
+                }}
+                className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="">Select category</option>
+                {CHANGE_REQUEST_CATEGORY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-slate-700">
+                Action checklist
+              </legend>
+              {CHANGE_REQUEST_CHECKLIST_OPTIONS.map((option) => {
+                const isChecked = Boolean(
+                  pendingChangeRequestTransition?.template.checklist.includes(
+                    option.id
+                  )
                 );
-              }}
-              rows={3}
-              className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Add context for the requested changes..."
-            />
-          </label>
+                return (
+                  <label
+                    key={option.id}
+                    className="flex items-start gap-2 text-sm text-slate-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(event) => {
+                        setPendingChangeRequestTransition((previous) => {
+                          if (!previous) {
+                            return previous;
+                          }
+                          const nextChecklist = event.target.checked
+                            ? [...previous.template.checklist, option.id]
+                            : previous.template.checklist.filter(
+                                (entry) => entry !== option.id
+                              );
+                          return {
+                            ...previous,
+                            template: {
+                              ...previous.template,
+                              checklist: Array.from(new Set(nextChecklist)),
+                            },
+                          };
+                        });
+                      }}
+                      className="mt-0.5"
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </fieldset>
+            <label className="space-y-1 text-sm text-slate-700">
+              <span className="font-medium">Context (optional)</span>
+              <textarea
+                value={pendingChangeRequestTransition?.template.note ?? ""}
+                onChange={(event) => {
+                  setPendingChangeRequestTransition((previous) =>
+                    previous
+                      ? {
+                          ...previous,
+                          template: {
+                            ...previous.template,
+                            note: event.target.value,
+                          },
+                        }
+                      : previous
+                  );
+                }}
+                rows={3}
+                className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Add implementation context for the next pass..."
+              />
+            </label>
+            {pendingChangeRequestTransition &&
+            getChangeRequestTemplateError(
+              pendingChangeRequestTransition.template
+            ) ? (
+              <p className="text-xs text-rose-700">
+                {
+                  getChangeRequestTemplateError(
+                    pendingChangeRequestTransition.template
+                  )
+                }
+              </p>
+            ) : null}
+          </div>
         </ConfirmationModal>
         <ConfirmationModal
           isOpen={isReopenBriefModalOpen}
@@ -2861,13 +3323,7 @@ function SocialPostsPageContent() {
               className="absolute inset-0 bg-slate-900/30"
               onClick={() => {
                 if (!isCreating) {
-                  setNewScheduledDate("");
-                  setNewWorkerUserId(isAdmin ? null : user?.id ?? null);
-                  setNewReviewerUserId(null);
-                  setNewTitle("");
-                  setNewProduct("general_company");
-                  setNewType("image");
-                  setIsCreateModalOpen(false);
+                  closeCreateModal();
                 }
               }}
             />
@@ -2884,13 +3340,7 @@ function SocialPostsPageContent() {
                   className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
                   onClick={() => {
                     if (!isCreating) {
-                      setNewScheduledDate("");
-                      setNewWorkerUserId(isAdmin ? null : user?.id ?? null);
-                      setNewReviewerUserId(null);
-                      setNewTitle("");
-                      setNewProduct("general_company");
-                      setNewType("image");
-                      setIsCreateModalOpen(false);
+                      closeCreateModal();
                     }
                   }}
                 >
@@ -2909,6 +3359,38 @@ function SocialPostsPageContent() {
                     maxLength={200}
                   />
                 </label>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Quick Presets
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {SOCIAL_POST_CREATE_PRESETS.map((preset) => {
+                      const isActive =
+                        newProduct === preset.product &&
+                        newType === preset.type &&
+                        preset.platforms.length === newPlatforms.length &&
+                        preset.platforms.every((platform) =>
+                          newPlatforms.includes(platform)
+                        );
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                            isActive
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                          }`}
+                          onClick={() => {
+                            applyCreatePreset(preset);
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="block">
                     <span className="mb-1 block text-sm font-medium text-slate-700">
@@ -2944,6 +3426,36 @@ function SocialPostsPageContent() {
                       ))}
                     </select>
                   </label>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Platforms (optional)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {SOCIAL_PLATFORMS.map((platform) => {
+                      const isSelected = newPlatforms.includes(platform);
+                      return (
+                        <button
+                          key={platform}
+                          type="button"
+                          className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                            isSelected
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                          }`}
+                          onClick={() => {
+                            setNewPlatforms((previous) =>
+                              previous.includes(platform)
+                                ? previous.filter((entry) => entry !== platform)
+                                : [...previous, platform]
+                            );
+                          }}
+                        >
+                          {SOCIAL_PLATFORM_LABELS[platform]}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   {isAdmin ? (
@@ -3003,13 +3515,7 @@ function SocialPostsPageContent() {
                     className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     onClick={() => {
                       if (!isCreating) {
-                        setNewScheduledDate("");
-                        setNewWorkerUserId(isAdmin ? null : user?.id ?? null);
-                        setNewReviewerUserId(null);
-                        setNewTitle("");
-                        setNewProduct("general_company");
-                        setNewType("image");
-                        setIsCreateModalOpen(false);
+                        closeCreateModal();
                       }
                     }}
                   >

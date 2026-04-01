@@ -9,6 +9,14 @@ For product behavior, see `SPECIFICATION.md`.
 For implementation/build rules, see `AGENTS.md`.  
 For end-user manual instructions, see `HOW_TO_USE_APP.md`.
 
+## Role-oriented documentation quick links
+- In-app user manual: `/resources`
+- Writer navigation guide: `HOW_TO_USE_APP.md#writer-quick-start`
+- Publisher navigation guide: `HOW_TO_USE_APP.md#publisher-quick-start`
+- Editor/Reviewer navigation guide: `HOW_TO_USE_APP.md#editorreviewer-quick-start`
+- Admin navigation guide: `HOW_TO_USE_APP.md#admin-quick-start`
+- Shared page map: `HOW_TO_USE_APP.md#shared-navigation-map`
+
 ## 1) System overview
 - Frontend: Next.js + TypeScript + Tailwind (Phase 4A-4C UI complete)
 - Backend: Supabase (Postgres, Auth, RLS, triggers/functions)
@@ -78,6 +86,14 @@ For social execution-stage completion, live links are entered from `/social-post
 **Phase 4B**: Global command palette + quick create modal  
 **Phase 4C**: Unified DataTable system for Dashboard, Tasks, Blogs, Social Posts
 - All pages use consistent DataTable component for sorting, filtering, pagination
+- Non-admin primary table contract (`/dashboard`, `/tasks`, `/blogs`, `/social-posts` list):
+  - top strip uses `TableResultsSummary` + right-aligned action controls
+  - action order remains `Copy` → `Customize` → `Import` → `Export` when present
+  - bottom strip uses `TableRowLimitSelect` + `TablePaginationControls`
+  - default density is `compact`
+  - default row limit is `10` with options `10`, `20`, `50`, `all`
+  - Dashboard row highlight states match DataTable parity (`active bg-slate-100`, `selected bg-slate-50`, default hover `hover:bg-slate-50`)
+- Explicit exceptions: `/settings` and `/settings/access-logs` keep specialized admin table layouts and are not forced into the primary-table contract
 - Column definitions defined at page level with type safety
 - StatusBadgeSystem used throughout for status rendering
 - Dashboard left sidebar is intentionally minimal (quick filters and recently published panel removed)
@@ -105,13 +121,15 @@ For social execution-stage completion, live links are entered from `/social-post
 - `/tasks` follows assignment-based visibility:
   - shows all non-published work assigned to the current user (not only currently actionable rows)
   - includes rows waiting on another actor to preserve end-to-end assignment visibility
+  - main table is a unified mixed queue (blogs + social) with shared sorting/pagination/export controls
   - social `Action State` is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` → worker-owned, `in_review/creative_approved` → reviewer-owned) so handoff stages classify consistently even if assignment metadata lags
   - `Next Tasks` priority list is computed across both blog and social datasets (not blog-only)
-  - social list section renders all matching rows for current filters (not capped preview)
   - provides `Action State` filtering (`Required by: <username>` / `Waiting on Others`) for triage
 - `/` home page includes `My Tasks Snapshot`:
-  - mixed blog + social items (max 8)
+  - all associated non-published blog + social items
   - grouped as `Required by: <username>` and `Waiting on Others`
+  - blogs are deduplicated to one row per blog even when a user has multiple associations
+  - when multiple associations exist on one blog, `action_required` classification takes precedence
   - uses the same stage-derived social ownership model as `/tasks` so handoff visibility stays aligned across both surfaces
   - summary buckets include writer-facing social handoff stage `ready_to_publish` in addition to review/live-link stages
 - notification bell panel includes actionable task shortcuts sourced from `/api/dashboard/tasks-snapshot` (`requiredByMe` group), keeping navigation shortcuts aligned with the same ownership/action-state contract
@@ -202,8 +220,10 @@ Required env:
 - `npm run dev` — app only
 - `npm run dev:full` — app + TypeScript watch
 - `npm run lint` — `next lint`
+- `npm run lint:full` — `next lint --no-cache`
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run check` — lint + typecheck in parallel
+- `npm run check:full` — no-cache lint + typecheck + production build (release/stabilization gate)
 - `npm run import:legacy` — legacy import
 
 Pre-commit:
@@ -282,6 +302,9 @@ Per-user preferences are stored in `profiles`:
 - `week_start` (default: 1 = Monday) for calendar views
 - `stale_draft_days` (default: 10) for dashboard draft flagging
 All are editable via Settings → My Profile.
+Timezone formatting operations note:
+- `src/lib/format-date.ts` must derive AM/PM from `formatToParts()` `dayPeriod`; `hour12` is only an option flag and not a parts key.
+- Midnight/noon normalization invariant: `12 AM` maps to hour `0`, `12 PM` maps to hour `12`.
 
 ## 5.6) Calendar runtime behavior
 - Calendar month view is intentionally compact:
@@ -725,6 +748,27 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 1. this indicates optimistic concurrency guard prevented a stale write
 2. refresh data and reapply the intended transition on latest record state
 3. verify clients are not issuing duplicate transition requests for the same record
+
+### “Cannot send to Changes Requested” in social post flows
+1. verify the structured template is complete (category selected + at least one checklist item)
+2. for execution-stage rollback paths (`ready_to_publish`/`awaiting_live_link`), confirm the template context is filled with actionable detail
+3. if transition still fails, inspect `/api/social-posts/[id]/transition` response for workflow/ownership guard errors
+
+### “Social create defaults or presets not persisting”
+1. verify browser local storage is available and not blocked by privacy mode/settings
+2. confirm `social-post-create-defaults:v1` updates after successful post creation
+3. clear local storage key and recreate one post to regenerate defaults
+
+### “Work in Full View opens editor but not the expected section”
+1. confirm navigation URL includes `?focus=setup|review-publish|live-links`
+2. verify target editor section IDs exist (`social-editor-step-setup`, `social-editor-step-review-publish`, `social-post-live-links`)
+3. check for custom DOM/layout overrides that may remove or rename those IDs
+
+### “Social editor keyboard shortcuts are not triggering”
+1. confirm you are on `/social-posts/[id]` (shortcuts are editor-page specific)
+2. use `Shortcut` in the sidebar to open modal and verify expected keys (`⌥⇧J`, `⌥⇧↵`)
+3. confirm no confirmation modal is currently open (shortcuts are intentionally paused while modals are active)
+4. verify primary action state is enabled; `Alt+Shift+Enter` follows the same disabled/ownership guards as button clicks
 
 ### “Queue sections empty unexpectedly”
 1. verify assignment (`writer_id` / `publisher_id`)

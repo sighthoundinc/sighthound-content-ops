@@ -23,7 +23,6 @@ interface NotifyPayload {
   title: string;
   site: string;
   actorName: string;
-  targetEmail?: string | null;
   targetUserName?: string; // User to whom task is assigned/action needed
   targetUserNames?: string[];
   appUrl?: string;
@@ -126,6 +125,9 @@ function buildMessage(payload: NotifyPayload) {
 
   return parts.join("\n");
 }
+function isKnownEventType(eventType: string): eventType is EventType {
+  return eventType in EVENT_CONTENT_TYPE && eventType in EVENT_ACTION;
+}
 
 async function callSlackApi(token: string, endpoint: string, body: Record<string, unknown>) {
   const response = await fetch(`https://slack.com/api/${endpoint}`, {
@@ -161,8 +163,10 @@ serve(async (request) => {
 
   try {
     const payload = (await request.json()) as NotifyPayload;
+    const hasKnownEventType =
+      typeof payload?.eventType === "string" && isKnownEventType(payload.eventType);
     if (
-      !payload?.eventType ||
+      !hasKnownEventType ||
       !payload?.title ||
       !payload?.site ||
       (!payload?.blogId && !payload?.socialPostId)
@@ -192,24 +196,6 @@ serve(async (request) => {
         delivered = true;
       } catch (error) {
         console.error("Could not send channel notification", error);
-      }
-
-      if (payload.targetEmail) {
-        try {
-          const userLookup = await callSlackApi(botToken, "users.lookupByEmail", {
-            email: payload.targetEmail,
-          });
-          const slackUserId = userLookup.user?.id as string | undefined;
-          if (slackUserId) {
-            await callSlackApi(botToken, "chat.postMessage", {
-              channel: slackUserId,
-              text,
-            });
-            delivered = true;
-          }
-        } catch (error) {
-          console.error("Could not send DM notification", error);
-        }
       }
     }
 

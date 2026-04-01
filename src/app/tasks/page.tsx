@@ -13,7 +13,6 @@ import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   PublisherStatusBadge,
   SocialPostStatusBadge,
-  WriterStatusBadge,
 } from "@/components/status-badge";
 import {
   DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
@@ -31,6 +30,7 @@ import { ProtectedPage } from "@/components/protected-page";
 import {
   TablePaginationControls,
   TableResultsSummary,
+  TableRowLimitSelect,
 } from "@/components/table-controls";
 import {
   BLOG_SELECT_WITH_DATES,
@@ -63,7 +63,12 @@ import {
 import { getSiteBadgeClasses, getSiteShortLabel } from "@/lib/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getDashboardFilterIntent } from "@/lib/dashboard-filter-state";
-import { getTablePageCount, getTablePageRows } from "@/lib/table";
+import {
+  DEFAULT_TABLE_ROW_LIMIT,
+  getTablePageCount,
+  getTablePageRows,
+  type TableRowLimit,
+} from "@/lib/table";
 import type {
   BlogRecord,
   BlogSite,
@@ -71,7 +76,7 @@ import type {
   SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDateOnly, toTitleCase } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
@@ -120,6 +125,18 @@ type TaskPreviewItem = {
   createdAt: string;
   actionState: TaskActionState;
 };
+type UnifiedTaskRow = {
+  id: string;
+  contentType: "blog" | "social";
+  title: string;
+  href: string;
+  scheduledDate: string | null;
+  createdAt: string;
+  actionState: TaskActionState;
+  site: BlogSite | null;
+  blogTask: TaskItem | null;
+  socialTask: SocialTaskItem | null;
+};
 
 type TaskTableColumnKey =
   | "site"
@@ -151,8 +168,8 @@ const DEFAULT_TASK_TABLE_HIDDEN_COLUMNS: TaskTableColumnKey[] = [];
 const TASK_TABLE_COLUMN_LABELS: Record<TaskTableColumnKey, string> = {
   site: "Site",
   task: "Task",
-  writer_status: "Writer Status",
-  publisher_status: "Publisher Status",
+  writer_status: "Status",
+  publisher_status: "Next Action",
   publish_date: "Publish Date",
   options: "Options",
 };
@@ -195,8 +212,6 @@ const normalizeTaskHiddenColumns = (value: unknown): TaskTableColumnKey[] => {
   }
   return hiddenColumns;
 };
-
-const FULL_LIST_PAGE_SIZE = 10;
 
 function getDateDifferenceInDays(dateKey: string, todayDateKey: string) {
   return Math.round(
@@ -351,6 +366,7 @@ function MyTasksPageContent() {
   const [hiddenColumns, setHiddenColumns] = useState<TaskTableColumnKey[]>(
     DEFAULT_TASK_TABLE_HIDDEN_COLUMNS
   );
+  const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [rowDensity, setRowDensity] = useState<"compact" | "comfortable">("compact");
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "personal" | "admin">("all");
   const [actionFilter, setActionFilter] = useState<"all" | TaskActionState>("all");
@@ -424,7 +440,7 @@ function MyTasksPageContent() {
     let socialQuery = supabase
       .from("social_posts")
       .select(
-        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id"
+        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id"
       )
       .in("status", ACTIVE_SOCIAL_STATUSES);
     socialQuery = socialQuery.or(
@@ -590,12 +606,21 @@ function MyTasksPageContent() {
       const parsed = JSON.parse(stored) as {
         order?: unknown;
         hidden?: unknown;
+        rowLimit?: unknown;
         sortField?: unknown;
         sortDirection?: unknown;
         density?: unknown;
       };
       setColumnOrder(normalizeTaskColumnOrder(parsed.order));
       setHiddenColumns(normalizeTaskHiddenColumns(parsed.hidden));
+      if (parsed.rowLimit === "all") {
+        setRowLimit("all");
+      } else if (
+        typeof parsed.rowLimit === "number" &&
+        [10, 20, 50].includes(parsed.rowLimit)
+      ) {
+        setRowLimit(parsed.rowLimit as TableRowLimit);
+      }
       if (isTaskTableSortField(parsed.sortField)) {
         setTaskSortField(parsed.sortField);
       }
@@ -608,6 +633,7 @@ function MyTasksPageContent() {
     } catch {
       setColumnOrder(DEFAULT_TASK_TABLE_COLUMN_ORDER);
       setHiddenColumns(DEFAULT_TASK_TABLE_HIDDEN_COLUMNS);
+      setRowLimit(DEFAULT_TABLE_ROW_LIMIT);
       setTaskSortField("publish_date");
       setTaskSortDirection("asc");
       setRowDensity("compact");
@@ -622,12 +648,13 @@ function MyTasksPageContent() {
       JSON.stringify({
         order: columnOrder,
         hidden: hiddenColumns,
+        rowLimit,
         sortField: taskSortField,
         sortDirection: taskSortDirection,
         density: rowDensity,
       })
     );
-  }, [columnOrder, hiddenColumns, rowDensity, taskSortDirection, taskSortField]);
+  }, [columnOrder, hiddenColumns, rowDensity, rowLimit, taskSortDirection, taskSortField]);
 
   const taskItems = useMemo(() => {
     if (!user?.id) {
@@ -635,7 +662,32 @@ function MyTasksPageContent() {
     }
 
     const items: TaskItem[] = [];
-    const processedBlogIds = new Set<string>();
+    const compareCandidatePriority = (
+      left: TaskItem & { association: "writer" | "publisher" | "admin_assignment" },
+      right: TaskItem & { association: "writer" | "publisher" | "admin_assignment" }
+    ) => {
+      const actionPriority: Record<TaskActionState, number> = {
+        action_required: 2,
+        waiting_on_others: 1,
+      };
+      if (actionPriority[left.actionState] !== actionPriority[right.actionState]) {
+        return actionPriority[right.actionState] - actionPriority[left.actionState];
+      }
+      const associationPriority: Record<
+        "writer" | "publisher" | "admin_assignment",
+        number
+      > = {
+        admin_assignment: 3,
+        publisher: 2,
+        writer: 1,
+      };
+      if (associationPriority[left.association] !== associationPriority[right.association]) {
+        return (
+          associationPriority[right.association] - associationPriority[left.association]
+        );
+      }
+      return left.statusPriority - right.statusPriority;
+    };
 
     for (const blog of blogs) {
       if (blog.overall_status === "published") {
@@ -648,7 +700,9 @@ function MyTasksPageContent() {
           : null;
       const isDelayed = diffDays !== null && diffDays < 0;
       const assignment = taskAssignments.get(blog.id);
-      const isAdminAssignment = assignment !== undefined;
+      const candidates: Array<
+        TaskItem & { association: "writer" | "publisher" | "admin_assignment" }
+      > = [];
 
       // Personal writer task
       if (blog.writer_id === user.id) {
@@ -658,7 +712,8 @@ function MyTasksPageContent() {
           scheduledDate,
           todayDateKey
         );
-        items.push({
+        candidates.push({
+          association: "writer",
           id: `${blog.id}:writer`,
           blogId: blog.id,
           site: blog.site,
@@ -680,7 +735,6 @@ function MyTasksPageContent() {
             actionState,
           }),
         });
-        processedBlogIds.add(blog.id);
       }
 
       // Personal publisher task
@@ -694,7 +748,8 @@ function MyTasksPageContent() {
           scheduledDate,
           todayDateKey
         );
-        items.push({
+        candidates.push({
+          association: "publisher",
           id: `${blog.id}:publisher`,
           blogId: blog.id,
           site: blog.site,
@@ -719,11 +774,10 @@ function MyTasksPageContent() {
             actionState,
           }),
         });
-        processedBlogIds.add(blog.id);
       }
 
-      // Admin-assigned task (if not already added as personal task)
-      if (isAdminAssignment && !processedBlogIds.has(blog.id)) {
+      // Admin-assigned review task for current user
+      if (assignment) {
         const taskKind: TaskKind = assignment.taskType === 'writer_review' ? 'writer' : 'publisher';
         const blogStatus = taskKind === 'writer' ? blog.writer_status : blog.publisher_status;
         const actionState = getAdminAssignmentTaskActionState(
@@ -736,7 +790,8 @@ function MyTasksPageContent() {
           scheduledDate,
           todayDateKey
         );
-        items.push({
+        candidates.push({
+          association: "admin_assignment",
           id: `${blog.id}:${taskKind}:admin`,
           blogId: blog.id,
           site: blog.site,
@@ -763,8 +818,18 @@ function MyTasksPageContent() {
             assignmentDate: assignment.assignedAt,
           },
         });
-        processedBlogIds.add(blog.id);
       }
+
+      if (candidates.length === 0) {
+        continue;
+      }
+
+      const selected = [...candidates].sort(compareCandidatePriority)[0];
+      if (!selected) {
+        continue;
+      }
+      const selectedTask: TaskItem = selected;
+      items.push(selectedTask);
     }
 
     return items.sort((left, right) => {
@@ -824,31 +889,6 @@ function MyTasksPageContent() {
     });
   }, [actionFilter, assignmentFilter, kindFilter, searchQuery, siteFilter, statusFilter, taskItems]);
 
-  const sortedTaskItems = useMemo(() => {
-    const sorted = [...filteredTaskItems];
-    sorted.sort((a, b) => {
-      let comparison = 0;
-      switch (taskSortField) {
-        case "site":
-          comparison = a.site.localeCompare(b.site);
-          break;
-        case "task":
-          comparison = a.title.localeCompare(b.title);
-          break;
-        case "writer_status":
-          comparison = String(a.statusPriority).localeCompare(String(b.statusPriority));
-          break;
-        case "publisher_status":
-          comparison = String(a.statusPriority).localeCompare(String(b.statusPriority));
-          break;
-        case "publish_date":
-        default:
-          comparison = comparePublishDatesAsc(a.scheduledDate, b.scheduledDate);
-      }
-      return taskSortDirection === "asc" ? comparison : -comparison;
-    });
-    return sorted;
-  }, [filteredTaskItems, taskSortField, taskSortDirection]);
   const filteredSocialTasks = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
     return socialTasks.filter((task) => {
@@ -865,27 +905,103 @@ function MyTasksPageContent() {
       return haystack.includes(normalizedSearch);
     });
   }, [actionFilter, searchQuery, socialStatusFilter, socialTasks]);
-
-  const nextTasks = useMemo(() => {
-    const blogPreviews: TaskPreviewItem[] = sortedTaskItems.map((task) => ({
+  const combinedTaskRows = useMemo(() => {
+    const blogRows: UnifiedTaskRow[] = filteredTaskItems.map((task) => ({
       id: task.id,
+      contentType: "blog",
       title: task.title,
       href: `/blogs/${task.blogId}`,
-      statusLabel: task.statusLabel,
       scheduledDate: task.scheduledDate,
       createdAt: task.createdAt,
       actionState: task.actionState,
+      site: task.site,
+      blogTask: task,
+      socialTask: null,
     }));
-    const socialPreviews: TaskPreviewItem[] = filteredSocialTasks.map((task) => ({
+    const socialRows: UnifiedTaskRow[] = filteredSocialTasks.map((task) => ({
       id: `social:${task.id}`,
+      contentType: "social",
       title: task.title,
       href: `/social-posts/${task.id}`,
-      statusLabel: SOCIAL_POST_STATUS_LABELS[task.status],
+      scheduledDate: task.scheduledDate,
+      createdAt: task.createdAt,
+      actionState: task.actionState,
+      site: null,
+      blogTask: null,
+      socialTask: task,
+    }));
+    const rows = [...blogRows, ...socialRows];
+    const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+    const compareBySortField = (left: UnifiedTaskRow, right: UnifiedTaskRow) => {
+      if (taskSortField === "site") {
+        const leftSite =
+          left.contentType === "blog" && left.site ? getSiteShortLabel(left.site) : "Social";
+        const rightSite =
+          right.contentType === "blog" && right.site
+            ? getSiteShortLabel(right.site)
+            : "Social";
+        return collator.compare(leftSite, rightSite);
+      }
+      if (taskSortField === "task") {
+        return collator.compare(left.title, right.title);
+      }
+      if (taskSortField === "writer_status") {
+        const leftStatus =
+          left.contentType === "blog" && left.blogTask
+            ? left.blogTask.statusLabel
+            : left.socialTask
+              ? SOCIAL_POST_STATUS_LABELS[left.socialTask.status]
+              : "";
+        const rightStatus =
+          right.contentType === "blog" && right.blogTask
+            ? right.blogTask.statusLabel
+            : right.socialTask
+              ? SOCIAL_POST_STATUS_LABELS[right.socialTask.status]
+              : "";
+        return collator.compare(leftStatus, rightStatus);
+      }
+      if (taskSortField === "publisher_status") {
+        const leftNextAction =
+          left.contentType === "blog" && left.blogTask
+            ? left.blogTask.reason ?? ""
+            : left.socialTask?.nextAction ?? "";
+        const rightNextAction =
+          right.contentType === "blog" && right.blogTask
+            ? right.blogTask.reason ?? ""
+            : right.socialTask?.nextAction ?? "";
+        return collator.compare(leftNextAction, rightNextAction);
+      }
+      return comparePublishDatesAsc(left.scheduledDate, right.scheduledDate);
+    };
+
+    return rows.sort((left, right) => {
+      const baseComparison = compareBySortField(left, right);
+      if (baseComparison !== 0) {
+        return taskSortDirection === "asc" ? baseComparison : -baseComparison;
+      }
+      if (left.actionState !== right.actionState) {
+        return left.actionState === "action_required" ? -1 : 1;
+      }
+      return left.createdAt.localeCompare(right.createdAt);
+    });
+  }, [filteredSocialTasks, filteredTaskItems, taskSortDirection, taskSortField]);
+
+  const nextTasks = useMemo(() => {
+    const previews: TaskPreviewItem[] = combinedTaskRows.map((task) => ({
+      id: task.id,
+      title: task.title,
+      href: task.href,
+      statusLabel:
+        task.contentType === "blog" && task.blogTask
+          ? task.blogTask.statusLabel
+          : task.socialTask
+            ? SOCIAL_POST_STATUS_LABELS[task.socialTask.status]
+            : "",
       scheduledDate: task.scheduledDate,
       createdAt: task.createdAt,
       actionState: task.actionState,
     }));
-    return [...blogPreviews, ...socialPreviews]
+    return previews
       .sort((left, right) => {
         if (left.actionState !== right.actionState) {
           return left.actionState === "action_required" ? -1 : 1;
@@ -900,15 +1016,15 @@ function MyTasksPageContent() {
         return left.createdAt.localeCompare(right.createdAt);
       })
       .slice(0, 3);
-  }, [filteredSocialTasks, sortedTaskItems]);
+  }, [combinedTaskRows]);
 
   const pageCount = useMemo(
-    () => getTablePageCount(sortedTaskItems.length, FULL_LIST_PAGE_SIZE),
-    [sortedTaskItems.length]
+    () => getTablePageCount(combinedTaskRows.length, rowLimit),
+    [combinedTaskRows.length, rowLimit]
   );
   const pagedTasks = useMemo(
-    () => getTablePageRows(sortedTaskItems, currentPage, FULL_LIST_PAGE_SIZE),
-    [currentPage, sortedTaskItems]
+    () => getTablePageRows(combinedTaskRows, currentPage, rowLimit),
+    [combinedTaskRows, currentPage, rowLimit]
   );
   const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
   const visibleColumnOrder = useMemo(
@@ -937,24 +1053,40 @@ function MyTasksPageContent() {
     setColumnOrder(DEFAULT_TASK_TABLE_COLUMN_ORDER);
     setHiddenColumns(DEFAULT_TASK_TABLE_HIDDEN_COLUMNS);
   };
-  const getTaskExportCellValue = useCallback((task: TaskItem, column: TaskTableColumnKey) => {
-    if (column === "site") {
-      return getSiteShortLabel(task.site);
-    }
-    if (column === "task") {
-      return task.title;
-    }
-    if (column === "writer_status") {
-      return WRITER_STATUS_LABELS[task.writerStatus];
-    }
-    if (column === "publisher_status") {
-      return PUBLISHER_STATUS_LABELS[task.publisherStatus];
-    }
-    if (column === "publish_date") {
-      return formatDateOnly(task.scheduledDate) || "Not scheduled";
-    }
-    return "View options";
-  }, []);
+  const getTaskExportCellValue = useCallback(
+    (task: UnifiedTaskRow, column: TaskTableColumnKey) => {
+      if (column === "site") {
+        return task.contentType === "blog" && task.site
+          ? getSiteShortLabel(task.site)
+          : "Social";
+      }
+      if (column === "task") {
+        return task.title;
+      }
+      if (column === "writer_status") {
+        if (task.contentType === "blog" && task.blogTask) {
+          return task.blogTask.kind === "writer"
+            ? WRITER_STATUS_LABELS[task.blogTask.writerStatus]
+            : PUBLISHER_STATUS_LABELS[task.blogTask.publisherStatus];
+        }
+        if (task.socialTask) {
+          return SOCIAL_POST_STATUS_LABELS[task.socialTask.status];
+        }
+        return "";
+      }
+      if (column === "publisher_status") {
+        if (task.contentType === "blog" && task.blogTask) {
+          return task.blogTask.reason ?? "";
+        }
+        return task.socialTask?.nextAction ?? "";
+      }
+      if (column === "publish_date") {
+        return formatDateOnly(task.scheduledDate) || "Not scheduled";
+      }
+      return task.href;
+    },
+    []
+  );
   const closeOpenDetailsMenus = () => {
     document.querySelectorAll("details[open]").forEach((el) => {
       (el as HTMLDetailsElement).open = false;
@@ -973,9 +1105,13 @@ function MyTasksPageContent() {
   const copyAllTasks = async (field: "title" | "url") => {
     const values =
       field === "title"
-        ? sortedTaskItems.map((task) => task.title)
-        : sortedTaskItems
-            .map((task) => task.liveUrl ?? "")
+        ? combinedTaskRows.map((task) => task.title)
+        : combinedTaskRows
+            .map((task) =>
+              task.contentType === "blog"
+                ? task.blogTask?.liveUrl ?? ""
+                : task.href
+            )
             .filter((value) => value.length > 0);
     if (values.length === 0) {
       showError(`No task ${field === "title" ? "titles" : "URLs"} to copy`);
@@ -1002,7 +1138,7 @@ function MyTasksPageContent() {
       showError("Permission denied for task export");
       return;
     }
-    if (filteredTaskItems.length === 0) {
+    if (combinedTaskRows.length === 0) {
       showError("No tasks to export");
       return;
     }
@@ -1014,7 +1150,7 @@ function MyTasksPageContent() {
     const headerRow = exportableColumns
       .map((column) => escapeCsvValue(TASK_TABLE_COLUMN_LABELS[column]))
       .join(",");
-    const dataRows = filteredTaskItems.map((task) =>
+    const dataRows = combinedTaskRows.map((task) =>
       exportableColumns
         .map((column) => escapeCsvValue(getTaskExportCellValue(task, column)))
         .join(",")
@@ -1032,7 +1168,7 @@ function MyTasksPageContent() {
     showSuccess("Task export completed.");
   }, [
     canExportCsv,
-    filteredTaskItems,
+    combinedTaskRows,
     getTaskExportCellValue,
     profile?.timezone,
     showError,
@@ -1045,7 +1181,7 @@ function MyTasksPageContent() {
       showError("Permission denied for task export");
       return;
     }
-    if (filteredTaskItems.length === 0) {
+    if (combinedTaskRows.length === 0) {
       showError("No tasks to export");
       return;
     }
@@ -1065,7 +1201,7 @@ function MyTasksPageContent() {
     const headerMarkup = exportableColumns
       .map((column) => `<th>${escapeHtmlValue(TASK_TABLE_COLUMN_LABELS[column])}</th>`)
       .join("");
-    const rowsMarkup = filteredTaskItems
+    const rowsMarkup = combinedTaskRows
       .map((task) => {
         const cellMarkup = exportableColumns
           .map((column) => `<td>${escapeHtmlValue(getTaskExportCellValue(task, column))}</td>`)
@@ -1145,9 +1281,13 @@ function MyTasksPageContent() {
   }, [pageCount]);
 
   const focusTaskRow = (taskId: string) => {
-    const taskIndex = filteredTaskItems.findIndex((task) => task.id === taskId);
+    const taskIndex = combinedTaskRows.findIndex((task) => task.id === taskId);
     if (taskIndex >= 0) {
-      setCurrentPage(Math.floor(taskIndex / FULL_LIST_PAGE_SIZE) + 1);
+      if (rowLimit === "all") {
+        setCurrentPage(1);
+      } else {
+        setCurrentPage(Math.floor(taskIndex / rowLimit) + 1);
+      }
     }
     setHighlightedTaskId(taskId);
   };
@@ -1187,7 +1327,10 @@ function MyTasksPageContent() {
         kindFilter !== "all"
           ? {
               id: "kind",
-              label: `Task Type: ${toTitleCase(kindFilter)}`,
+              label:
+                kindFilter === "writer"
+                  ? "Task Type: Writing"
+                  : "Task Type: Publishing",
               onRemove: () => {
                 setKindFilter("all");
               },
@@ -1300,19 +1443,25 @@ function MyTasksPageContent() {
     });
   };
 
-  const taskTableColumns: DataTableColumn<TaskItem>[] = [
+  const taskTableColumns: DataTableColumn<UnifiedTaskRow>[] = [
     {
       id: "site",
       label: "Site",
       sortable: true,
       render: (task) => (
-        <span
-          className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${
-            getSiteBadgeClasses(task.site)
-          }`}
-        >
-          {getSiteShortLabel(task.site)}
-        </span>
+        task.contentType === "blog" && task.site ? (
+          <span
+            className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${
+              getSiteBadgeClasses(task.site)
+            }`}
+          >
+            {getSiteShortLabel(task.site)}
+          </span>
+        ) : (
+          <span className="inline-flex items-center justify-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+            Social
+          </span>
+        )
       ),
     },
     {
@@ -1322,15 +1471,19 @@ function MyTasksPageContent() {
       render: (task) => (
         <div>
           <Link
-            href={`/blogs/${task.blogId}`}
+            href={task.href}
             title={task.title}
             className="interactive-link block max-w-[28rem] truncate font-medium text-slate-800"
           >
             {task.title}
           </Link>
           <p className="mt-1 text-xs text-slate-500">
-            {task.kind === "writer" ? "Writer task" : "Publisher task"}
-            {task.isDelayed ? " · Overdue" : ""}
+            {task.contentType === "blog" && task.blogTask
+              ? task.blogTask.kind === "writer"
+                ? "Writing task"
+                : "Publishing task"
+              : "Social task"}
+            {task.contentType === "blog" && task.blogTask?.isDelayed ? " · Overdue" : ""}
             {task.actionState === "action_required"
               ? " · Action required by you"
               : " · Waiting on others"}
@@ -1340,57 +1493,79 @@ function MyTasksPageContent() {
     },
     {
       id: "writer_status",
-      label: "Writer Status",
+      label: "Status",
       sortable: true,
-      render: (task) =>
-        task.kind === "writer" ? (
-          <select
-            value={task.writerStatus}
-            disabled={savingTaskId === task.id}
-            onChange={(event) => {
-              void updateTaskStatus(
-                task,
-                event.target.value as WriterStageStatus
-              );
-            }}
-            className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-          >
-            {WRITER_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {WRITER_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <WriterStatusBadge status={task.writerStatus} />
-        ),
+      render: (task) => {
+        if (task.contentType === "blog" && task.blogTask) {
+          const blogTask = task.blogTask;
+          if (blogTask.kind === "writer") {
+            return (
+              <select
+                value={blogTask.writerStatus}
+                disabled={savingTaskId === blogTask.id}
+                onChange={(event) => {
+                  void updateTaskStatus(
+                    blogTask,
+                    event.target.value as WriterStageStatus
+                  );
+                }}
+                className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+              >
+                {WRITER_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {WRITER_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
+            );
+          }
+          return <PublisherStatusBadge status={blogTask.publisherStatus} />;
+        }
+        if (task.socialTask) {
+          return <SocialPostStatusBadge status={task.socialTask.status} />;
+        }
+        return "—";
+      },
     },
     {
       id: "publisher_status",
-      label: "Publisher Status",
+      label: "Next Action",
       sortable: true,
-      render: (task) =>
-        task.kind === "publisher" ? (
-          <select
-            value={task.publisherStatus}
-            disabled={savingTaskId === task.id}
-            onChange={(event) => {
-              void updateTaskStatus(
-                task,
-                event.target.value as PublisherStageStatus
-              );
-            }}
-            className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-          >
-            {PUBLISHER_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {PUBLISHER_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <PublisherStatusBadge status={task.publisherStatus} />
-        ),
+      render: (task) => {
+        if (task.contentType === "blog" && task.blogTask) {
+          const blogTask = task.blogTask;
+          if (blogTask.kind === "publisher") {
+            return (
+              <select
+                value={blogTask.publisherStatus}
+                disabled={savingTaskId === blogTask.id}
+                onChange={(event) => {
+                  void updateTaskStatus(
+                    blogTask,
+                    event.target.value as PublisherStageStatus
+                  );
+                }}
+                className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+              >
+                {PUBLISHER_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {PUBLISHER_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
+            );
+          }
+          return (
+            <span className="text-xs text-slate-600">
+              {blogTask.reason ?? "Due Soon"}
+            </span>
+          );
+        }
+        if (task.socialTask) {
+          return <span className="text-xs text-slate-600">{task.socialTask.nextAction}</span>;
+        }
+        return "—";
+      },
     },
     {
       id: "publish_date",
@@ -1405,8 +1580,8 @@ function MyTasksPageContent() {
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
-            title="Tasks"
-            description="Prioritized writing and publishing assignments, sorted by urgency."
+            title="My Tasks"
+            description="Unified blog and social queue for what needs your action and what is waiting on others."
           />
           <DataPageToolbar
             searchValue={searchQuery}
@@ -1414,7 +1589,7 @@ function MyTasksPageContent() {
               setSearchQuery(value);
               setCurrentPage(1);
             }}
-            searchPlaceholder="Search task title or URL"
+            searchPlaceholder="Search blog and social tasks"
             actions={
               <Button
                 type="button"
@@ -1495,8 +1670,8 @@ function MyTasksPageContent() {
                   className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
                   <option value="all">All Task Types</option>
-                  <option value="writer">Writer</option>
-                  <option value="publisher">Publisher</option>
+                  <option value="writer">Writing</option>
+                  <option value="publisher">Publishing</option>
                 </select>
                 <select
                   aria-label="Task Site"
@@ -1569,43 +1744,15 @@ function MyTasksPageContent() {
                   </ol>
                 )}
               </section>
-              <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
-                  Social Tasks ({filteredSocialTasks.length})
-                </h3>
-                {filteredSocialTasks.length === 0 ? (
-                  <p className="text-sm text-slate-500">No social tasks assigned right now.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {filteredSocialTasks.map((task) => (
-                      <li key={task.id}>
-                        <Link
-                          href={`/social-posts/${task.id}`}
-                          className="pressable block rounded-md border border-slate-200 bg-white px-3 py-2 hover:bg-slate-100"
-                        >
-                          <p className="truncate font-medium text-slate-900">{task.title}</p>
-                          <div className="mt-1 flex items-center gap-2">
-                            <SocialPostStatusBadge status={task.status} />
-                            <span className="text-xs text-slate-600">{task.nextAction}</span>
-                          </div>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Publish Date: {formatDateOnly(task.scheduledDate) || "Not scheduled"}
-                          </p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
 
               <section className={DATA_PAGE_TABLE_SECTION_CLASS}>
                 <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} relative`}>
                   <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
                     <TableResultsSummary
-                      totalRows={filteredTaskItems.length}
+                      totalRows={combinedTaskRows.length}
                       currentPage={currentPage}
-                      rowLimit={FULL_LIST_PAGE_SIZE}
-                      noun="blog tasks"
+                      rowLimit={rowLimit}
+                      noun="tasks"
                     />
                     <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
                       <details className="relative">
@@ -1617,7 +1764,8 @@ function MyTasksPageContent() {
                         <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-md">
                           <button
                             type="button"
-                            disabled={sortedTaskItems.length === 0}
+                            disabled={combinedTaskRows.length === 0}
+
                             className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               closeOpenDetailsMenus();
@@ -1628,7 +1776,7 @@ function MyTasksPageContent() {
                           </button>
                           <button
                             type="button"
-                            disabled={sortedTaskItems.length === 0}
+                            disabled={combinedTaskRows.length === 0}
                             className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               closeOpenDetailsMenus();
@@ -1731,7 +1879,7 @@ function MyTasksPageContent() {
                         <div className="absolute right-0 z-20 mt-1 rounded-md border border-slate-200 bg-white shadow-md">
                           <button
                             type="button"
-                            disabled={sortedTaskItems.length === 0}
+                            disabled={combinedTaskRows.length === 0}
                             onClick={() => {
                               exportTaskCsv();
                               closeOpenDetailsMenus();
@@ -1742,7 +1890,7 @@ function MyTasksPageContent() {
                           </button>
                           <button
                             type="button"
-                            disabled={sortedTaskItems.length === 0}
+                            disabled={combinedTaskRows.length === 0}
                             onClick={() => {
                               exportTaskPdf();
                               closeOpenDetailsMenus();
@@ -1772,9 +1920,15 @@ function MyTasksPageContent() {
                     (t) => t.id === highlightedTaskId
                   )}
                   density={rowDensity}
-                  emptyMessage="No blog tasks match your current filters."
+                  emptyMessage="No tasks match your current filters."
                 />
-                <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} justify-end`}>
+                <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
+                  <TableRowLimitSelect
+                    value={rowLimit}
+                    onChange={(value) => {
+                      setRowLimit(value);
+                    }}
+                  />
                   <TablePaginationControls
                     currentPage={currentPage}
                     pageCount={pageCount}

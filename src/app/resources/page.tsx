@@ -38,7 +38,7 @@ export default function ResourcesPage() {
         <div className="space-y-5">
           <DataPageHeader
             title="User Manual"
-            description="Practical manual for workflow rules, statuses, filters, imports, shortcuts, notifications, and troubleshooting."
+            description="Role-based manual with quick links for Writers, Publishers, Editors/Reviewers, and Admins."
           />
           <Section id="start-here" title="1. Start here">
             <p>This workspace helps you run blog and social-post work from draft to completion.</p>
@@ -53,6 +53,133 @@ export default function ResourcesPage() {
             <p className="font-medium text-slate-900">
               Keep this page as your day-to-day reference while operating the workflow.
             </p>
+          </Section>
+
+          <Section id="role-quick-links" title="Role quick links">
+            <p>Jump directly to the role path you are operating right now:</p>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              <li>
+                <a href="#writer-quick-start" className="font-medium text-sky-700 underline underline-offset-2">
+                  Writer quick start
+                </a>
+              </li>
+              <li>
+                <a href="#publisher-quick-start" className="font-medium text-sky-700 underline underline-offset-2">
+                  Publisher quick start
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#editor-reviewer-quick-start"
+                  className="font-medium text-sky-700 underline underline-offset-2"
+                >
+                  Editor/Reviewer quick start
+                </a>
+              </li>
+              <li>
+                <a href="#admin-quick-start" className="font-medium text-sky-700 underline underline-offset-2">
+                  Admin quick start
+                </a>
+              </li>
+              <li>
+                <a href="#shared-navigation-map" className="font-medium text-sky-700 underline underline-offset-2">
+                  Shared navigation map
+                </a>
+              </li>
+              <li>
+                <a href="#when-you-are-stuck" className="font-medium text-sky-700 underline underline-offset-2">
+                  When you are stuck
+                </a>
+              </li>
+            </ul>
+          </Section>
+
+          <Section id="shared-navigation-map" title="Shared navigation map">
+            <BulletList
+              items={[
+                "Dashboard (/dashboard): cross-content queue view with filters and sort controls.",
+                "My Tasks (/tasks): assignment-first execution queue.",
+                "Blogs (/blogs): published/reference lookup and copy/export actions.",
+                "Social Posts (/social-posts): social workflow list plus full editor.",
+                "Ideas (/ideas): intake and conversion into blogs or social posts.",
+                "Calendar (/calendar): scheduling and capacity planning.",
+                "Settings (/settings): profile, connectors, notifications, and admin tools.",
+              ]}
+            />
+          </Section>
+
+          <Section id="writer-quick-start" title="Writer quick start">
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>Start in My Tasks (`/tasks`) and focus on `Required by: &lt;username&gt;`.</li>
+              <li>Open assigned records and complete required fields/checklist items.</li>
+              <li>For social posts, ensure Product, Type, and Canva link are complete before review submission.</li>
+              <li>Move stages forward only when validation is complete and handoff context is clear.</li>
+              <li>Use `Waiting on Others` to track blocked handoffs.</li>
+            </ol>
+          </Section>
+
+          <Section id="publisher-quick-start" title="Publisher quick start">
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>Start in My Tasks (`/tasks`) and focus on publishing-stage records.</li>
+              <li>Confirm publish date readiness and required publishing fields.</li>
+              <li>Complete publishing steps only after upstream approvals are complete.</li>
+              <li>Add/update required links (blog live URL or social live links).</li>
+              <li>Use Calendar (`/calendar`) for near-term schedule conflict checks.</li>
+            </ol>
+          </Section>
+
+          <Section id="editor-reviewer-quick-start" title="Editor/Reviewer quick start">
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>Open My Tasks (`/tasks`) for review-stage records.</li>
+              <li>Review quality and required field completeness.</li>
+              <li>Use `Changes Requested` for actionable revision guidance when needed.</li>
+              <li>Approve only when the next owner can execute without missing context.</li>
+              <li>Use record-level Activity to verify change history and ownership transitions.</li>
+            </ol>
+          </Section>
+
+          <Section id="admin-quick-start" title="Admin quick start">
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>Use Dashboard and My Tasks to spot workflow bottlenecks.</li>
+              <li>Use Settings (`/settings`) to manage users, permissions, and connectors.</li>
+              <li>Use Activity History for audit review and troubleshooting.</li>
+              <li>Use quick-view to validate non-admin experience when triaging user reports.</li>
+              <li>Use destructive actions (cleanup, wipe) only after confirming scope and impact.</li>
+            </ol>
+          </Section>
+
+          <Section id="when-you-are-stuck" title="When you are stuck">
+            <p>Use these internal links to get unstuck quickly:</p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                <a
+                  href="#workflow-rules-statuses"
+                  className="font-medium text-sky-700 underline underline-offset-2"
+                >
+                  Workflow rules and statuses
+                </a>
+              </li>
+              <li>
+                <a href="#filters-search" className="font-medium text-sky-700 underline underline-offset-2">
+                  Filters and search
+                </a>
+              </li>
+              <li>
+                <a href="#imports" className="font-medium text-sky-700 underline underline-offset-2">
+                  Import workflow
+                </a>
+              </li>
+              <li>
+                <a href="#notifications" className="font-medium text-sky-700 underline underline-offset-2">
+                  Notifications and feedback
+                </a>
+              </li>
+              <li>
+                <a href="#troubleshooting" className="font-medium text-sky-700 underline underline-offset-2">
+                  Troubleshooting quick fixes
+                </a>
+              </li>
+            </ul>
           </Section>
 
           <Section id="daily-workflow" title="2. Daily workflow (recommended order)">

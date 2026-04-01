@@ -21,7 +21,7 @@ interface DashboardSummary {
 
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, "view_writing_queue");
+    const auth = await requirePermission(request, "view_dashboard");
     if ("error" in auth) {
       console.error("Permission denied:", auth.error);
       return NextResponse.json({ error: auth.error }, { status: auth.status });

@@ -230,6 +230,20 @@ export function AppShell({
         keys: [NEW_BLOG_SHORTCUT_KEY],
       });
     }
+    if (/^\/social-posts\/[^/]+$/.test(pathname)) {
+      shortcuts.push(
+        {
+          id: "page-social-next-required-field",
+          label: "Jump to next required field",
+          keys: ["⌥⇧J"],
+        },
+        {
+          id: "page-social-primary-action",
+          label: "Run primary action",
+          keys: ["⌥⇧↵"],
+        }
+      );
+    }
     return shortcuts;
   }, [canCreateBlogs, pathname]);
   const quickCreateItems = useMemo<QuickCreateItem[]>(() => {

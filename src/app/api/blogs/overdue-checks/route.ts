@@ -44,6 +44,32 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
   }
 
   let publishOverdueNotificationsSent = 0;
+  const claimPublishOverdueSlot = async (options: {
+    id: string;
+    previousTimestamp: string | null;
+  }) => {
+    let claimQuery = auth.context.adminClient
+      .from("blogs")
+      .update({ last_publish_overdue_notification_at: nowIso })
+      .eq("id", options.id)
+      .eq("publisher_status", "pending_review")
+      .lte("scheduled_publish_date", todayIso);
+    claimQuery = options.previousTimestamp
+      ? claimQuery.eq(
+          "last_publish_overdue_notification_at",
+          options.previousTimestamp
+        )
+      : claimQuery.is("last_publish_overdue_notification_at", null);
+
+    const { data: claimedRow, error: claimError } = await claimQuery
+      .select("id")
+      .maybeSingle();
+    if (claimError) {
+      console.warn("Failed to claim blog overdue notification slot:", claimError);
+      return false;
+    }
+    return Boolean(claimedRow);
+  };
 
   // Process publish overdue blogs
   for (const blog of publishDueBlogs ?? []) {
@@ -53,6 +79,13 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       if (!Number.isNaN(previousNotificationAt) && now - previousNotificationAt < OVERDUE_COOLDOWN_MS) {
         continue;
       }
+    }
+    const claimed = await claimPublishOverdueSlot({
+      id: blog.id,
+      previousTimestamp: blog.last_publish_overdue_notification_at ?? null,
+    });
+    if (!claimed) {
+      continue;
     }
 
     const { emitEvent } = await import("@/lib/emit-event");
@@ -68,20 +101,6 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     if (emitSuccess) {
       publishOverdueNotificationsSent += 1;
     }
-  }
-
-  // Update notification timestamps for publish blogs (non-blocking)
-  const publishIds = publishDueBlogs?.map((b) => b.id) ?? [];
-  if (publishIds.length > 0) {
-    auth.context.adminClient
-      .from("blogs")
-      .update({ last_publish_overdue_notification_at: nowIso })
-      .in("id", publishIds)
-      .then(({ error: updateError }) => {
-        if (updateError) {
-          console.warn("Failed to update blog publish overdue notification timestamps:", updateError);
-        }
-      });
   }
 
   return NextResponse.json({

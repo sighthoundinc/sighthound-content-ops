@@ -193,6 +193,7 @@ Key behavior:
 - **Status persistence**:
   - Integration state (google_connected, slack_connected) is fetched on component mount
   - State is cached in local component state during user's Settings session
+  - `PATCH /api/users/integrations` persists provider state using atomic upsert on `user_id` so repeated reconnect callbacks remain idempotent
   - Note: This is independent of sign-in method; connecting a provider does not affect how user logs in next time
 - **Connection independence**:
   - Logging in with Google does not automatically mark Google as "connected" in Settings
@@ -340,6 +341,7 @@ Key behavior:
   - `published`
 - board drag/drop and side-panel status edits are restricted to valid stage transitions
 - status transitions are API-authoritative (`POST /api/social-posts/[postId]/transition`)
+- transition endpoint returns conflict when concurrent writes modify the same post before update commit
 - allowed backward transitions are locked to:
   - `ready_to_publish` → `changes_requested`
   - `awaiting_live_link` → `changes_requested`
@@ -416,6 +418,9 @@ Key behavior:
 - `emitEvent()` is the shared entry point for recording activity history and validating downstream notification generation.
 - Slack is a delivery channel, not a separate workflow source of truth.
 - Reminder and overdue APIs emit unified events rather than sending direct Slack-only notifications.
+- Reminder/overdue routes claim target rows atomically before event emission to avoid duplicate notifications from overlapping runs.
+- User preference writes (`PATCH /api/users/notification-preferences`) are idempotent through atomic upsert on `user_id`.
+- Connector status writes (`PATCH /api/users/integrations`) are idempotent through atomic upsert on `user_id`.
 
 Covered reminder/overdue events:
 - `social_review_overdue`

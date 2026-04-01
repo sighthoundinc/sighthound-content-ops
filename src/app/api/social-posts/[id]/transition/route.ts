@@ -287,6 +287,14 @@ export const POST = withApiContract(async function POST(
       }
       throw updateError;
     }
+    if (!updated) {
+      return NextResponse.json(
+        {
+          error: "Concurrent modification detected. Refresh and retry.",
+        },
+        { status: 409 }
+      );
+    }
 
     // 12. Log canonical activity event (non-blocking)
     const activityType = isBackwardTransition(currentStatus, nextStatus)

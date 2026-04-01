@@ -240,6 +240,7 @@ This format enables quick scanning in busy channels and shows exactly who is res
 2. Find the service (Google or Slack) and click `Connect`
 3. Complete the provider's sign-in flow in the browser
 4. You'll be returned to Settings; the service now shows `Connected`
+5. Reconnect callbacks are idempotent: if the provider is already marked connected, status remains connected without creating duplicate records
 
 ### Disconnect a provider
 1. Open Settings → Connected Services
@@ -257,5 +258,7 @@ This format enables quick scanning in busy channels and shows exactly who is res
 - Add User or import fails with `Database error creating new user`: ask an admin to run latest Supabase migrations (including `20260326103000_harden_auth_user_integrations_trigger.sql`) and retry.
 - Missing notifications: verify notification toggles and connector status in `Settings`.
 - Provider connect failed: ensure you have an active session, then retry from Settings → Connected Services.
+- If you briefly see “Failed to update connected service status” but the badge later turns connected, refresh Settings once to confirm the persisted state.
+- If you see “Concurrent modification detected. Refresh and retry.” while changing workflow state, another update landed first—refresh the page and retry your change.
 - Cannot access Activity History or system/import log views: confirm your account has admin access and required permissions.
 - Unexpected UI state: refresh once, retry action, then report the item ID and failed step.

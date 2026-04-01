@@ -49,7 +49,32 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
   }
 
   let remindersSent = 0;
+  const claimedPosts: Array<{ id: string; title: string | null }> = [];
   for (const post of duePosts) {
+    let claimQuery = auth.context.adminClient
+      .from("social_posts")
+      .update({ last_live_link_reminder_at: nowIso })
+      .eq("id", post.id)
+      .eq("status", "awaiting_live_link");
+    claimQuery = post.last_live_link_reminder_at
+      ? claimQuery.eq("last_live_link_reminder_at", post.last_live_link_reminder_at)
+      : claimQuery.is("last_live_link_reminder_at", null);
+
+    const { data: claimedPost, error: claimError } = await claimQuery
+      .select("id,title")
+      .maybeSingle();
+    if (claimError) {
+      console.warn("Failed to claim social post reminder slot:", claimError);
+      continue;
+    }
+    if (!claimedPost) {
+      continue;
+    }
+
+    claimedPosts.push({
+      id: claimedPost.id,
+      title: claimedPost.title ?? null,
+    });
     const { emitEvent } = await import("@/lib/emit-event");
     const { success: emitSuccess } = await emitEvent({
       type: "social_post_live_link_reminder",
@@ -65,21 +90,10 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     }
   }
 
-  const dueIds = duePosts.map((post) => post.id);
-  const { error: updateError } = await auth.context.adminClient
-    .from("social_posts")
-    .update({ last_live_link_reminder_at: nowIso })
-    .in("id", dueIds);
-
-  if (updateError) {
-    console.error("Failed to update reminder timestamps:", updateError);
-    return NextResponse.json({ error: "Failed to update reminder timestamps. Please try again." }, { status: 500 });
-  }
-
   return NextResponse.json({
     remindersSent,
-    updated: dueIds.length,
-    posts: duePosts.map((post) => ({
+    updated: claimedPosts.length,
+    posts: claimedPosts.map((post) => ({
       id: post.id,
       title: post.title,
     })),

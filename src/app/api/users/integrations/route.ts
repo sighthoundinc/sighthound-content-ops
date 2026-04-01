@@ -128,37 +128,27 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
       updates.slack_connected_at = body.slack_connected ? new Date().toISOString() : null;
     }
 
-    // Try to update existing integrations row
-    const { data: updated, error: updateError } = await supabase
+    // Use atomic upsert keyed on user_id so reconnect callbacks remain idempotent
+    // even when multiple requests race (e.g., duplicate redirects/effect retries).
+    const { data: upserted, error: upsertError } = await supabase
       .from("user_integrations")
-      .update(updates)
-      .eq("user_id", user.id)
+      .upsert(
+        {
+          user_id: user.id,
+          ...updates,
+        },
+        {
+          onConflict: "user_id",
+        }
+      )
       .select()
       .single();
 
-    // If no row exists, create one
-    if (updateError && updateError.code === "PGRST116") {
-      const { data: created, error: createError } = await supabase
-        .from("user_integrations")
-        .insert({
-          user_id: user.id,
-          ...updates,
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        throw createError;
-      }
-
-      return NextResponse.json(created);
+    if (upsertError) {
+      throw upsertError;
     }
 
-    if (updateError) {
-      throw updateError;
-    }
-
-    return NextResponse.json(updated);
+    return NextResponse.json(upserted);
   } catch (error) {
     console.error("Error updating integrations:", error);
     return NextResponse.json(

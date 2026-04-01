@@ -215,46 +215,29 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
       updates.slack_delivery_channel = body.slack_delivery_channel;
     }
 
-    // Try to update existing preferences
-    const { data: updated, error: updateError } = await supabase
+    // Atomic upsert avoids duplicate-key races when multiple requests
+    // try to bootstrap/update notification preferences concurrently.
+    const { data: upserted, error: upsertError } = await supabase
       .from("notification_preferences")
-      .update(updates)
-      .eq("user_id", user.id)
+      .upsert(
+        {
+          user_id: user.id,
+          ...updates,
+        },
+        { onConflict: "user_id" }
+      )
       .select()
       .single();
 
-    // If no row exists, create one
-    if (updateError && updateError.code === "PGRST116") {
-      const { data: created, error: createError } = await supabase
-        .from("notification_preferences")
-        .insert({
-          user_id: user.id,
-          ...updates,
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        throw createError;
-      }
-
-      // Invalidate cache after creation
-      invalidateUserPreferencesCache(user.id);
-
-      return NextResponse.json(
-        normalizePreferences((created ?? null) as RawNotificationPreferences | null)
-      );
+    if (upsertError) {
+      throw upsertError;
     }
 
-    if (updateError) {
-      throw updateError;
-    }
-
-    // Invalidate cache after update
+    // Invalidate cache after upsert
     invalidateUserPreferencesCache(user.id);
 
     return NextResponse.json(
-      normalizePreferences((updated ?? null) as RawNotificationPreferences | null)
+      normalizePreferences((upserted ?? null) as RawNotificationPreferences | null)
     );
   } catch (error) {
     console.error("Error updating notification preferences:", error);

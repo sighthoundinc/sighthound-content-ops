@@ -211,6 +211,7 @@ export const POST = withApiContract(async function POST(
     .from("blogs")
     .update(updatePayload)
     .eq("id", id)
+    .eq("updated_at", blog.updated_at)
     .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
     .maybeSingle();
   if (updateError) {
@@ -220,7 +221,10 @@ export const POST = withApiContract(async function POST(
     );
   }
   if (!updatedRow) {
-    return NextResponse.json({ error: "Blog not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Concurrent modification detected. Refresh and retry." },
+      { status: 409 }
+    );
   }
 
   const updatedBlog = normalizeBlogRow(updatedRow as Record<string, unknown>);

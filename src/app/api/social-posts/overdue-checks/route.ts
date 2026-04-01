@@ -57,6 +57,35 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
   let reviewOverdueNotificationsSent = 0;
   let publishOverdueNotificationsSent = 0;
+  const claimOverdueSlot = async (options: {
+    id: string;
+    status: "in_review" | "ready_to_publish";
+    previousTimestamp: string | null;
+    timestampColumn:
+      | "last_review_overdue_notification_at"
+      | "last_publish_overdue_notification_at";
+  }) => {
+    let claimQuery = auth.context.adminClient
+      .from("social_posts")
+      .update({ [options.timestampColumn]: nowIso })
+      .eq("id", options.id)
+      .eq("status", options.status);
+    claimQuery = options.previousTimestamp
+      ? claimQuery.eq(options.timestampColumn, options.previousTimestamp)
+      : claimQuery.is(options.timestampColumn, null);
+
+    const { data: claimedRow, error: claimError } = await claimQuery
+      .select("id")
+      .maybeSingle();
+    if (claimError) {
+      console.warn(
+        "Failed to claim social overdue notification slot:",
+        claimError
+      );
+      return false;
+    }
+    return Boolean(claimedRow);
+  };
 
   // Process review overdue posts
   for (const post of reviewDuePost ?? []) {
@@ -66,6 +95,15 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       if (!Number.isNaN(previousNotificationAt) && now - previousNotificationAt < OVERDUE_COOLDOWN_MS) {
         continue;
       }
+    }
+    const claimed = await claimOverdueSlot({
+      id: post.id,
+      status: "in_review",
+      previousTimestamp: post.last_review_overdue_notification_at ?? null,
+      timestampColumn: "last_review_overdue_notification_at",
+    });
+    if (!claimed) {
+      continue;
     }
 
     const { emitEvent } = await import("@/lib/emit-event");
@@ -92,6 +130,15 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
         continue;
       }
     }
+    const claimed = await claimOverdueSlot({
+      id: post.id,
+      status: "ready_to_publish",
+      previousTimestamp: post.last_publish_overdue_notification_at ?? null,
+      timestampColumn: "last_publish_overdue_notification_at",
+    });
+    if (!claimed) {
+      continue;
+    }
 
     const { emitEvent } = await import("@/lib/emit-event");
     const { success: emitSuccess } = await emitEvent({
@@ -108,33 +155,6 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     }
   }
 
-  // Update notification timestamps for review posts (non-blocking)
-  const reviewIds = reviewDuePost?.map((p) => p.id) ?? [];
-  if (reviewIds.length > 0) {
-    auth.context.adminClient
-      .from("social_posts")
-      .update({ last_review_overdue_notification_at: nowIso })
-      .in("id", reviewIds)
-      .then(({ error: updateError }) => {
-        if (updateError) {
-          console.warn("Failed to update social post review overdue notification timestamps:", updateError);
-        }
-      });
-  }
-
-  // Update notification timestamps for publish posts (non-blocking)
-  const publishIds = publishDuePost?.map((p) => p.id) ?? [];
-  if (publishIds.length > 0) {
-    auth.context.adminClient
-      .from("social_posts")
-      .update({ last_publish_overdue_notification_at: nowIso })
-      .in("id", publishIds)
-      .then(({ error: updateError }) => {
-        if (updateError) {
-          console.warn("Failed to update social post publish overdue notification timestamps:", updateError);
-        }
-      });
-  }
 
   return NextResponse.json({
     reviewOverdueNotificationsSent,

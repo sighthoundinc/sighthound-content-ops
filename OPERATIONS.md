@@ -694,6 +694,29 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 2. verify auth trigger function writes to `public.user_integrations` (not unqualified `user_integrations`)
 3. re-run auth diagnostic create-user check and confirm trigger no longer aborts transaction
 
+### “duplicate key value violates unique constraint `user_integrations_user_id_key`” during provider reconnect
+1. verify route `PATCH /api/users/integrations` uses atomic upsert on `user_id` (idempotent reconnect writes)
+2. pull latest app code and redeploy API route if environment is behind
+3. re-run provider connect from Settings and confirm final persisted status in Connected Services
+
+### “duplicate key value violates unique constraint ... `notification_preferences`” during preference saves
+1. verify route `PATCH /api/users/notification-preferences` uses atomic upsert on `user_id`
+2. pull latest app code and redeploy API route if environment is behind
+3. retry preference save; expected behavior is idempotent upsert without duplicate row inserts
+
+### Duplicate overdue/reminder notifications from overlapping scheduler/manual runs
+1. verify current routes are deployed with atomic claim-before-emit logic:
+   - `POST /api/social-posts/reminders`
+   - `POST /api/social-posts/overdue-checks`
+   - `POST /api/blogs/overdue-checks`
+2. confirm timestamp columns advance only for rows successfully claimed by the current run
+3. if duplicates persist, inspect invocation overlap (scheduler + manual triggers)
+
+### “Concurrent modification detected. Refresh and retry.” from transition APIs
+1. this indicates optimistic concurrency guard prevented a stale write
+2. refresh data and reapply the intended transition on latest record state
+3. verify clients are not issuing duplicate transition requests for the same record
+
 ### “Queue sections empty unexpectedly”
 1. verify assignment (`writer_id` / `publisher_id`)
 2. verify current queue filter and stage state

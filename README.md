@@ -229,16 +229,17 @@ npm run dev
     - missing selected `actualPublishDate` copies `displayPublishDate`
   - for existing rows, selected optional fields are also updated from import values/fallbacks
   - writer/publisher resolution uses exact + loose contains/token-overlap matching across full/display/username/first/last/email signals with confidence scoring
-- `/api/blogs/[id]/transition` — canonical blog workflow transition endpoint (writer/publisher status, assignment, scheduled/display dates)
-- `/api/social-posts/[postId]/transition` — canonical social status transitions
+- `/api/blogs/[id]/transition` — canonical blog workflow transition endpoint (writer/publisher status, assignment, scheduled/display dates) with optimistic concurrency guard on `updated_at` to prevent stale writes
+- `/api/social-posts/[postId]/transition` — canonical social status transitions with concurrency conflict handling when status changes mid-request
 - `/api/social-posts/[postId]/reopen-brief` — admin execution-stage brief reopen
-- `/api/social-posts/reminders` — awaiting-live-link reminder sweep
+- `/api/social-posts/reminders` — awaiting-live-link reminder sweep with per-row atomic claim to avoid duplicate reminders during concurrent runs
 - `/api/ideas/[id]/delete` — creator/admin idea deletion
 - `/api/users/profile` — current user profile operations
-- `/api/users/notification-preferences` — normalized preference keys (`task_assigned` etc.) with legacy `notify_on_*` column compatibility
+- `/api/users/integrations` — connected services read/update; PATCH is idempotent via atomic upsert on `user_id` to avoid duplicate-key races on repeated reconnect callbacks
+- `/api/users/notification-preferences` — normalized preference keys (`task_assigned` etc.) with legacy `notify_on_*` column compatibility; PATCH is idempotent via atomic upsert on `user_id`
 - `/api/events/record-activity` — unified activity history recording
-- `/api/social-posts/overdue-checks` — social review/publish overdue sweep
-- `/api/blogs/overdue-checks` — blog publish overdue sweep
+- `/api/social-posts/overdue-checks` — social review/publish overdue sweep with atomic per-row claim to prevent duplicate emissions on overlapping runs
+- `/api/blogs/overdue-checks` — blog publish overdue sweep with atomic per-row claim to prevent duplicate emissions on overlapping runs
 
 ## Contract-driven engineering baseline
 - API routes are normalized via `src/lib/api-contract.ts` to prevent drift:

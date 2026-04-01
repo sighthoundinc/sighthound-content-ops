@@ -124,7 +124,7 @@ export function DashboardSidebar({
         className="rounded-md border border-slate-200 bg-slate-50"
       >
         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-          Writer Filters
+          Writing Filters
         </summary>
         {isWriterFilterOpen && (
           <div className="space-y-1 border-t border-slate-200 p-2">
@@ -158,7 +158,7 @@ export function DashboardSidebar({
         className="rounded-md border border-slate-200 bg-slate-50"
       >
         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-          Publisher Filters
+          Publishing Filters
         </summary>
         {isPublisherFilterOpen && (
           <div className="space-y-1 border-t border-slate-200 p-2">

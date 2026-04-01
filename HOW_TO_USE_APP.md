@@ -56,6 +56,14 @@ Use `My Tasks` as your first stop each day.
 - Awaiting Live Link → Submit Link
 - Published → Done
 
+### Social post editor usability defaults
+- Use the right-sidebar primary button as the standard transition action.
+- Keep `Advanced transition controls` for exceptional/manual transitions only.
+- Use `Transition Preflight` in the sidebar to see missing required fields and jump directly to each field.
+- In Setup, complete required-now fields first, then required-before-approval fields; optional fields are grouped in `Optional Details`.
+- In Live Links, paste one URL to auto-detect the platform quickly, then use platform-specific fields for final edits if needed.
+- Snapshot panel shows `Assigned to`, `Reviewer`, `Current owner`, and `Next owner` so handoffs stay explicit.
+
 ### Record visibility (blogs + social)
 - Detail drawers show latest assignment context and recent change history (latest-first) so anyone can quickly understand ownership and what changed.
 - Full record pages show assignment, comments, and activity history for all authenticated users.

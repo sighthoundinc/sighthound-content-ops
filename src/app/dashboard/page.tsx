@@ -2512,11 +2512,11 @@ export default function DashboardPage() {
     const isSettingPublisher = Boolean(bulkPublisherId);
 
     if (isSettingWriter && !canChangeWriterAssignment) {
-      setError("You do not have permission to change writer assignments.");
+      setError("You do not have permission to change writing assignments.");
       return;
     }
     if (isSettingPublisher && !canChangePublisherAssignment) {
-      setError("You do not have permission to change publisher assignments.");
+      setError("You do not have permission to change publishing assignments.");
       return;
     }
     if (
@@ -2525,7 +2525,7 @@ export default function DashboardPage() {
         !canTransitionWriterStatus(blog.writer_status, bulkWriterStatus, hasPermission)
       )
     ) {
-      setError("You do not have permission to apply that writer status change.");
+      setError("You do not have permission to apply that writing status change.");
       return;
     }
     if (
@@ -2538,7 +2538,7 @@ export default function DashboardPage() {
         )
       )
     ) {
-      setError("You do not have permission to apply that publisher status change.");
+      setError("You do not have permission to apply that publishing status change.");
       return;
     }
 
@@ -2547,7 +2547,7 @@ export default function DashboardPage() {
         (blog) => !blog.writer_id && !isSettingWriter
       );
       if (missingWriter.length > 0) {
-        setError("Assign a writer first for all selected blogs before changing writer status.");
+        setError("Assign writing team first for all selected blogs before changing writing status.");
         return;
       }
     }
@@ -2557,7 +2557,7 @@ export default function DashboardPage() {
         (blog) => !blog.publisher_id && !isSettingPublisher
       );
       if (missingPublisher.length > 0) {
-        setError("Assign a publisher first for all selected blogs before changing publisher status.");
+        setError("Assign publishing team first for all selected blogs before changing publishing status.");
         return;
       }
     }
@@ -2570,7 +2570,7 @@ export default function DashboardPage() {
         return nextPublisherStatus === "completed";
       })
     ) {
-      setError("Writer status cannot be set below completed for already published blogs.");
+      setError("Writing status cannot be set below completed for already published blogs.");
       return;
     }
 
@@ -2581,23 +2581,23 @@ export default function DashboardPage() {
         return nextWriterStatus !== "completed";
       })
     ) {
-      setError("Publisher cannot be marked completed unless writing is completed for all selected blogs.");
+      setError("Publishing cannot be marked completed unless writing is completed for all selected blogs.");
       return;
     }
 
     // Build changes summary for preview modal
     const changeLabels: string[] = [];
     if (isSettingWriter) {
-      changeLabels.push("writer assignment");
+      changeLabels.push("writing assignment");
     }
     if (isSettingPublisher) {
-      changeLabels.push("publisher assignment");
+      changeLabels.push("publishing assignment");
     }
     if (bulkWriterStatus !== "") {
-      changeLabels.push("writer status");
+      changeLabels.push("writing status");
     }
     if (bulkPublisherStatus !== "") {
-      changeLabels.push("publisher status");
+      changeLabels.push("publishing status");
     }
     const summary = `Apply ${changeLabels.join(", ")} to ${selectedBlogIds.length} blog${selectedBlogIds.length !== 1 ? "s" : ""}.`;
 
@@ -2639,16 +2639,16 @@ export default function DashboardPage() {
 
       const appliedChangeLabels: string[] = [];
       if (isSettingWriter) {
-        appliedChangeLabels.push("writer assignment");
+        appliedChangeLabels.push("writing assignment");
       }
       if (isSettingPublisher) {
-        appliedChangeLabels.push("publisher assignment");
+        appliedChangeLabels.push("publishing assignment");
       }
       if (bulkWriterStatus !== "") {
-        appliedChangeLabels.push("writer status");
+        appliedChangeLabels.push("writing status");
       }
       if (bulkPublisherStatus !== "") {
-        appliedChangeLabels.push("publisher status");
+        appliedChangeLabels.push("publishing status");
       }
 
       return `Applied ${appliedChangeLabels.join(", ")} to ${selectedBlogIds.length} blog(s).`;
@@ -2728,12 +2728,12 @@ export default function DashboardPage() {
         updates.display_published_date !== undefined;
 
       if (requestedWriterAssignmentChange && !canChangeWriterAssignment) {
-        setError("You do not have permission to change writer assignments.");
+        setError("You do not have permission to change writing assignments.");
         setSuccessMessage(null);
         return;
       }
       if (requestedPublisherAssignmentChange && !canChangePublisherAssignment) {
-        setError("You do not have permission to change publisher assignments.");
+        setError("You do not have permission to change publishing assignments.");
         setSuccessMessage(null);
         return;
       }
@@ -2741,7 +2741,7 @@ export default function DashboardPage() {
         updates.writer_status !== undefined &&
         !canTransitionWriterStatus(blog.writer_status, updates.writer_status, hasPermission)
       ) {
-        setError("You do not have permission to apply that writer status change.");
+        setError("You do not have permission to apply that writing status change.");
         setSuccessMessage(null);
         return;
       }
@@ -2753,7 +2753,7 @@ export default function DashboardPage() {
           hasPermission
         )
       ) {
-        setError("You do not have permission to apply that publisher status change.");
+        setError("You do not have permission to apply that publishing status change.");
         setSuccessMessage(null);
         return;
       }
@@ -2769,12 +2769,12 @@ export default function DashboardPage() {
       }
 
       if (nextWriterStatus !== "not_started" && !nextWriterId) {
-        setError("Assign a writer before changing writer status.");
+        setError("Assign writing team before changing writing status.");
         setSuccessMessage(null);
         return;
       }
       if (nextPublisherStatus !== "not_started" && !nextPublisherId) {
-        setError("Assign a publisher before changing publisher status.");
+        setError("Assign publishing team before changing publishing status.");
         setSuccessMessage(null);
         return;
       }
@@ -3486,10 +3486,10 @@ export default function DashboardPage() {
                   }
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 >
-                  <option value="">No writer change</option>
+                  <option value="">No writing assignment change</option>
                   {assignmentOptions.map((user) => (
                     <option key={user.id} value={user.id}>
-                      Writer: {user.full_name}
+                      Writing: {user.full_name}
                     </option>
                   ))}
                 </select>
@@ -3504,10 +3504,10 @@ export default function DashboardPage() {
                   }
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 >
-                  <option value="">No publisher change</option>
+                  <option value="">No publishing assignment change</option>
                   {assignmentOptions.map((user) => (
                     <option key={user.id} value={user.id}>
-                      Publisher: {user.full_name}
+                      Publishing: {user.full_name}
                     </option>
                   ))}
                 </select>
@@ -3520,10 +3520,10 @@ export default function DashboardPage() {
                   disabled={!canEditWritingStage || isBulkSaving || !hasOnlyBlogSelection}
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 >
-                  <option value="">No writer status change</option>
+                  <option value="">No writing status change</option>
                   {WRITER_STATUSES.map((status) => (
                     <option key={status} value={status}>
-                      Writer Status: {toTitleCase(status)}
+                      Writing Status: {toTitleCase(status)}
                     </option>
                   ))}
                 </select>
@@ -3536,10 +3536,10 @@ export default function DashboardPage() {
                   disabled={!canEditPublishingStage || isBulkSaving || !hasOnlyBlogSelection}
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 >
-                  <option value="">No publisher status change</option>
+                  <option value="">No publishing status change</option>
                   {PUBLISHER_STATUSES.map((status) => (
                     <option key={status} value={status}>
-                      Publisher Status: {toTitleCase(status)}
+                      Publishing Status: {toTitleCase(status)}
                     </option>
                   ))}
                 </select>

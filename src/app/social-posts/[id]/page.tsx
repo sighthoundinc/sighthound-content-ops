@@ -19,7 +19,10 @@ import {
   parseApiResponseJson,
 } from "@/lib/api-response";
 import { validateBlogRelation } from "@/lib/shape-validation";
-import { canUserActOnStatus } from "@/lib/social-post-workflow";
+import {
+  canUserActOnStatus,
+  REQUIRED_FIELDS_FOR_STATUS,
+} from "@/lib/social-post-workflow";
 import {
   SOCIAL_PLATFORMS,
   SOCIAL_POST_ALLOWED_TRANSITIONS,
@@ -130,6 +133,19 @@ const VALIDATION_MESSAGES = {
   canvaUrlInvalid: "Canva link must start with https:// or http://",
 } as const;
 const ASSIGNED_USER_HELPER_TEXT = "Only assigned user can perform this action";
+const PREFLIGHT_FIELD_META = {
+  product: { label: "Product", targetId: "social-post-product" },
+  type: { label: "Type", targetId: "social-post-type" },
+  canva_url: { label: "Canva Link", targetId: "social-post-canva-url" },
+  platforms: { label: "Platform(s)", targetId: "social-post-platforms" },
+  caption: { label: "Caption", targetId: "social-post-caption" },
+  scheduled_date: {
+    label: "Scheduled Publish Date",
+    targetId: "social-post-scheduled-date",
+  },
+  live_links: { label: "At least one live link", targetId: "social-post-live-links" },
+} as const;
+type PreflightFieldKey = keyof typeof PREFLIGHT_FIELD_META;
 
 // Unicode bold sans-serif characters for LinkedIn-compatible bold text
 const BOLD_SANS_UPPER = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭";
@@ -138,6 +154,24 @@ const BOLD_SANS_DIGITS = "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵";
 
 function isExecutionStage(status: SocialPostStatus) {
   return status === "ready_to_publish" || status === "awaiting_live_link";
+}
+function detectPlatformFromUrl(url: string): SocialPlatform | null {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host.includes("linkedin.com")) {
+      return "linkedin";
+    }
+    if (host.includes("facebook.com") || host.includes("fb.com")) {
+      return "facebook";
+    }
+    if (host.includes("instagram.com")) {
+      return "instagram";
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function validateCanvaUrl(url: string): boolean {
@@ -318,6 +352,8 @@ export default function SocialPostEditorPage() {
   const [liveLinkDrafts, setLiveLinkDrafts] = useState<Record<SocialPlatform, string>>(
     createEmptyLiveLinkDrafts()
   );
+  const [quickLiveLinkInput, setQuickLiveLinkInput] = useState("");
+  const [isOptionalSetupOpen, setIsOptionalSetupOpen] = useState(false);
   const [isLiveLinksSaving, setIsLiveLinksSaving] = useState(false);
   const [comments, setComments] = useState<SocialCommentRecord[]>([]);
   const [activity, setActivity] = useState<SocialActivityRecord[]>([]);
@@ -873,6 +909,31 @@ export default function SocialPostEditorPage() {
   const hasLiveLink = liveLinks.some((link) => link.url.trim().length > 0);
   const hasDraftRequirements = hasCanvaLink;
   const hasReviewRequirements = hasCanvaLink && hasCaption && hasPlatform && hasPublishDate;
+  const requiresReviewDetails = Boolean(
+    form &&
+      (form.status === "in_review" ||
+        form.status === "creative_approved" ||
+        form.status === "ready_to_publish" ||
+        form.status === "awaiting_live_link" ||
+        form.status === "published")
+  );
+  const showOptionalSetupByDefault = Boolean(
+    form &&
+      (form.title.trim().length > 0 || form.canva_page.trim().length > 0)
+  );
+  const liveLinkDraftCount = useMemo(
+    () =>
+      SOCIAL_PLATFORMS.filter(
+        (platform) => (liveLinkDrafts[platform] ?? "").trim().length > 0
+      ).length,
+    [liveLinkDrafts]
+  );
+
+  useEffect(() => {
+    if (showOptionalSetupByDefault) {
+      setIsOptionalSetupOpen(true);
+    }
+  }, [showOptionalSetupByDefault]);
 
   const checklistItems = useMemo(
     () => {
@@ -1037,6 +1098,46 @@ export default function SocialPostEditorPage() {
     }
     return true;
   }, [finalAction.nextStatus, form, hasDraftRequirements, hasLiveLink, hasReviewRequirements]);
+  const transitionRequiredFields = useMemo<PreflightFieldKey[]>(() => {
+    if (!form || finalAction.nextStatus === form.status) {
+      return [];
+    }
+    const required = [
+      ...(REQUIRED_FIELDS_FOR_STATUS[finalAction.nextStatus] ?? []),
+    ] as PreflightFieldKey[];
+    if (finalAction.nextStatus === "published") {
+      required.push("live_links");
+    }
+    return Array.from(new Set(required));
+  }, [finalAction.nextStatus, form]);
+  const missingTransitionFields = useMemo<PreflightFieldKey[]>(() => {
+    if (!form || transitionRequiredFields.length === 0) {
+      return [];
+    }
+    return transitionRequiredFields.filter((field) => {
+      if (field === "live_links") {
+        return !hasLiveLink;
+      }
+      if (field === "platforms") {
+        return form.platforms.length === 0;
+      }
+      if (field === "canva_url") {
+        return !validateCanvaUrl(form.canva_url);
+      }
+      if (field === "caption") {
+        return form.caption.trim().length === 0;
+      }
+      if (field === "scheduled_date") {
+        return form.scheduled_date.trim().length === 0;
+      }
+      if (field === "product" || field === "type") {
+        return !form[field];
+      }
+      return false;
+    });
+  }, [form, hasLiveLink, transitionRequiredFields]);
+  const readyTransitionFieldCount =
+    transitionRequiredFields.length - missingTransitionFields.length;
   const activityUserNameById = useMemo(() => {
     const entries: Array<[string, string]> = [];
     for (const nextUser of availableUsers) {
@@ -1052,6 +1153,38 @@ export default function SocialPostEditorPage() {
     return Object.fromEntries(entries);
   }, [activity, availableUsers]);
   const latestActivity = useMemo(() => activity.slice(0, 20), [activity]);
+  const latestRollbackReason = useMemo(() => {
+    for (const entry of latestActivity) {
+      if (entry.event_type !== "social_post_rolled_back") {
+        continue;
+      }
+      const reasonValue = entry.metadata?.reason;
+      if (typeof reasonValue === "string" && reasonValue.trim().length > 0) {
+        return reasonValue.trim();
+      }
+    }
+    return null;
+  }, [latestActivity]);
+  const assignedToName = getUserDisplayNameById(post?.worker_user_id);
+  const reviewerName = getUserDisplayNameById(post?.reviewer_user_id);
+  const currentOwnerName = useMemo(() => {
+    if (!post) {
+      return "Team";
+    }
+    if (post.status === "in_review" || post.status === "creative_approved") {
+      return getUserDisplayNameById(post.reviewer_user_id);
+    }
+    if (post.status === "published") {
+      return "Team";
+    }
+    return getUserDisplayNameById(post.worker_user_id);
+  }, [getUserDisplayNameById, post]);
+  const nextOwnerName = useMemo(() => {
+    if (!post) {
+      return "Team";
+    }
+    return getTargetUserNameForStatus(finalAction.nextStatus, post);
+  }, [finalAction.nextStatus, getTargetUserNameForStatus, post]);
 
   const applyCaptionEdit = (nextCaption: string, selectionStart: number, selectionEnd: number) => {
     setForm((previous) => (previous ? { ...previous, caption: nextCaption } : previous));
@@ -1134,6 +1267,55 @@ export default function SocialPostEditorPage() {
     } catch {
       showError(VALIDATION_MESSAGES.copyFailed);
     }
+  };
+  const jumpToPreflightField = useCallback((field: PreflightFieldKey) => {
+    const targetId = PREFLIGHT_FIELD_META[field]?.targetId;
+    if (!targetId) {
+      return;
+    }
+    const target = document.getElementById(targetId);
+    if (!target) {
+      return;
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement
+    ) {
+      target.focus();
+      return;
+    }
+    const nestedFocusable = target.querySelector("input,textarea,select,button");
+    if (nestedFocusable instanceof HTMLElement) {
+      nestedFocusable.focus();
+    }
+  }, []);
+  const handleQuickAddLiveLink = () => {
+    const rawInput = quickLiveLinkInput.trim();
+    if (!rawInput) {
+      showError("Add a link first.");
+      return;
+    }
+    const normalizedUrl = /^https?:\/\//i.test(rawInput) ? rawInput : `https://${rawInput}`;
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(normalizedUrl);
+    } catch {
+      showError("Enter a valid live link.");
+      return;
+    }
+    const detectedPlatform = detectPlatformFromUrl(parsedUrl.toString());
+    if (!detectedPlatform) {
+      showError("Couldn't detect platform. Use a LinkedIn, Facebook, or Instagram URL.");
+      return;
+    }
+    setLiveLinkDrafts((previous) => ({
+      ...previous,
+      [detectedPlatform]: parsedUrl.toString(),
+    }));
+    setQuickLiveLinkInput("");
+    showSuccess(`${SOCIAL_PLATFORM_LABELS[detectedPlatform]} link added.`);
   };
   const handleAddComment = async () => {
     if (!post || !user?.id) {
@@ -1537,11 +1719,12 @@ export default function SocialPostEditorPage() {
                   className="disabled:opacity-70"
                 >
                   <div className="space-y-3 border-b border-slate-200 pb-3">
-                    <h4 className="text-sm font-semibold text-slate-900">Basic Information</h4>
+                    <h4 className="text-sm font-semibold text-slate-900">Required Now</h4>
                     <div className="grid gap-3 md:grid-cols-2">
                       <label className="space-y-1 text-sm text-slate-700">
                         <span className="font-medium">Product</span>
                         <select
+                          id="social-post-product"
                           value={form.product}
                           onChange={(event) => {
                             setForm((previous) =>
@@ -1562,6 +1745,7 @@ export default function SocialPostEditorPage() {
                       <label className="space-y-1 text-sm text-slate-700">
                         <span className="font-medium">Type</span>
                         <select
+                          id="social-post-type"
                           value={form.type}
                           onChange={(event) => {
                             setForm((previous) =>
@@ -1580,6 +1764,7 @@ export default function SocialPostEditorPage() {
                       <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
                         <span className="font-medium">Canva Link</span>
                         <input
+                          id="social-post-canva-url"
                           type="url"
                           value={form.canva_url}
                           onChange={(event) => {
@@ -1596,37 +1781,21 @@ export default function SocialPostEditorPage() {
                       </label>
                     </div>
                   </div>
-                  <div className="space-y-3 pt-3">
-                    <h4 className="text-sm font-semibold text-slate-900">Optional</h4>
+                  <div
+                    className={`space-y-3 pt-3 ${
+                      requiresReviewDetails
+                        ? "rounded-md border border-blue-200 bg-blue-50/70 p-3"
+                        : ""
+                    }`}
+                  >
+                    <h4 className="text-sm font-semibold text-slate-900">
+                      Required Before Approval
+                    </h4>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <label className="space-y-1 text-sm text-slate-700">
-                        <span className="font-medium">Canva Page</span>
-                        <input
-                          value={form.canva_page}
-                          onChange={(event) => {
-                            setForm((previous) =>
-                              previous ? { ...previous, canva_page: event.target.value } : previous
-                            );
-                          }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                          placeholder="e.g. 23"
-                        />
-                      </label>
-                      <label className="space-y-1 text-sm text-slate-700">
-                        <span className="font-medium">Post Title</span>
-                        <input
-                          value={form.title}
-                          onChange={(event) => {
-                            setForm((previous) =>
-                              previous ? { ...previous, title: event.target.value } : previous
-                            );
-                          }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </label>
                       <label className="space-y-1 text-sm text-slate-700">
                         <span className="font-medium">Scheduled Publish Date</span>
                         <input
+                          id="social-post-scheduled-date"
                           type="date"
                           value={form.scheduled_date}
                           onChange={(event) => {
@@ -1637,7 +1806,7 @@ export default function SocialPostEditorPage() {
                           className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         />
                       </label>
-                      <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+                      <div id="social-post-platforms" className="space-y-1 text-sm text-slate-700 md:col-span-2">
                         <span className="font-medium">Platform(s)</span>
                         <div className="flex flex-wrap gap-2">
                           {SOCIAL_PLATFORMS.map((platform) => {
@@ -1664,12 +1833,50 @@ export default function SocialPostEditorPage() {
                             );
                           })}
                         </div>
-                        {!hasPlatform && (
+                        {requiresReviewDetails && !hasPlatform && (
                           <p className="text-xs text-rose-700">{VALIDATION_MESSAGES.platformRequired}</p>
                         )}
-                      </label>
+                      </div>
                     </div>
                   </div>
+                  <details
+                    open={isOptionalSetupOpen}
+                    onToggle={(event) => {
+                      setIsOptionalSetupOpen(event.currentTarget.open);
+                    }}
+                    className="rounded-md border border-slate-200 bg-slate-50/70 px-3 py-2"
+                  >
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                      Optional Details
+                    </summary>
+                    <div className="grid gap-3 pt-3 md:grid-cols-2">
+                      <label className="space-y-1 text-sm text-slate-700">
+                        <span className="font-medium">Canva Page</span>
+                        <input
+                          value={form.canva_page}
+                          onChange={(event) => {
+                            setForm((previous) =>
+                              previous ? { ...previous, canva_page: event.target.value } : previous
+                            );
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="e.g. 23"
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm text-slate-700">
+                        <span className="font-medium">Post Title</span>
+                        <input
+                          value={form.title}
+                          onChange={(event) => {
+                            setForm((previous) =>
+                              previous ? { ...previous, title: event.target.value } : previous
+                            );
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                    </div>
+                  </details>
                 </fieldset>
               </section>
 
@@ -1904,6 +2111,7 @@ export default function SocialPostEditorPage() {
                     </div>
                   </div>
                   <textarea
+                    id="social-post-caption"
                     ref={captionRef}
                     value={form.caption}
                     onChange={(event) => {
@@ -1987,43 +2195,51 @@ export default function SocialPostEditorPage() {
                 </div>
                 <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Status Transition Controls
+                    Primary Transition Action
                   </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={form.status}
-                      disabled={isSaving || !canActOnCurrentStatus}
-                      onChange={(event) => {
-                        const nextStatus = event.target.value as SocialPostStatus;
-                        if (!canCurrentUserTransition(form.status, nextStatus)) {
-                          if (!canActOnCurrentStatus) {
-                            showError(ASSIGNED_USER_HELPER_TEXT);
-                          } else {
-                            showError(VALIDATION_MESSAGES.noPermissionTransition);
+                  <p className="text-xs text-slate-600">
+                    Use the primary action in the right panel for standard progression.
+                  </p>
+                  <details className="rounded-md border border-slate-200 bg-white p-2">
+                    <summary className="cursor-pointer text-xs font-medium text-slate-700">
+                      Advanced transition controls
+                    </summary>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <select
+                        value={form.status}
+                        disabled={isSaving || !canActOnCurrentStatus}
+                        onChange={(event) => {
+                          const nextStatus = event.target.value as SocialPostStatus;
+                          if (!canCurrentUserTransition(form.status, nextStatus)) {
+                            if (!canActOnCurrentStatus) {
+                              showError(ASSIGNED_USER_HELPER_TEXT);
+                            } else {
+                              showError(VALIDATION_MESSAGES.noPermissionTransition);
+                            }
+                            return;
                           }
-                          return;
-                        }
-                        void transitionPostStatus(nextStatus);
-                      }}
-                      className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs"
-                    >
-                      {Object.entries(SOCIAL_POST_STATUS_LABELS).map(([value, label]) => (
-                        <option
-                          key={value}
-                          value={value}
-                          disabled={
-                            !canCurrentUserTransition(
-                              form.status,
-                              value as SocialPostStatus
-                            )
-                          }
-                        >
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    <SocialPostStatusBadge status={form.status} />
-                  </div>
+                          void transitionPostStatus(nextStatus);
+                        }}
+                        className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        {Object.entries(SOCIAL_POST_STATUS_LABELS).map(([value, label]) => (
+                          <option
+                            key={value}
+                            value={value}
+                            disabled={
+                              !canCurrentUserTransition(
+                                form.status,
+                                value as SocialPostStatus
+                              )
+                            }
+                          >
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <SocialPostStatusBadge status={form.status} />
+                    </div>
+                  </details>
                   {!canActOnCurrentStatus ? (
                     <p className="text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
                   ) : null}
@@ -2032,6 +2248,33 @@ export default function SocialPostEditorPage() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Live Links
                   </p>
+                  <div id="social-post-live-links" className="space-y-2 rounded-md border border-slate-200 bg-white p-2">
+                    <p className="text-xs text-slate-600">
+                      Paste once and auto-assign to LinkedIn, Facebook, or Instagram.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="url"
+                        value={quickLiveLinkInput}
+                        onChange={(event) => {
+                          setQuickLiveLinkInput(event.target.value);
+                        }}
+                        className="focus-field min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                        placeholder="Paste live URL..."
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        onClick={handleQuickAddLiveLink}
+                      >
+                        Add Link
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Draft links ready: {liveLinkDraftCount} / {SOCIAL_PLATFORMS.length}
+                    </p>
+                  </div>
                   <div className="grid gap-2 md:grid-cols-3">
                     {SOCIAL_PLATFORMS.map((platform) => (
                       <label key={platform} className="space-y-1 text-xs text-slate-600">
@@ -2182,7 +2425,7 @@ export default function SocialPostEditorPage() {
             <aside className="space-y-3">
               <section className="sticky top-20 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Current Snapshot
+                  Current Snapshot + Handoff
                 </p>
                 <div className="space-y-2 border-b border-slate-200 pb-2">
                   <div className="flex items-center justify-between">
@@ -2193,10 +2436,22 @@ export default function SocialPostEditorPage() {
                     Product: {SOCIAL_POST_PRODUCT_LABELS[form.product]}
                   </p>
                   <p className="text-xs text-slate-600">Type: {SOCIAL_POST_TYPE_LABELS[form.type]}</p>
+                  <p className="text-xs text-slate-600">Assigned to: {assignedToName}</p>
+                  <p className="text-xs text-slate-600">Reviewer: {reviewerName}</p>
+                  <p className="text-xs text-slate-600">Current owner: {currentOwnerName}</p>
+                  <p className="text-xs text-slate-600">Next owner: {nextOwnerName}</p>
                   <p className="text-xs text-slate-600">
                     Last saved: {formatSavedTimestamp(post.updated_at, profile?.timezone)}
                   </p>
                 </div>
+                {latestRollbackReason ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                      Latest Rollback Reason
+                    </p>
+                    <p className="text-xs text-amber-800">{latestRollbackReason}</p>
+                  </div>
+                ) : null}
               </section>
               <section className="sticky top-56 space-y-3 rounded-lg border border-slate-200 bg-white p-3">
                 <div>
@@ -2227,6 +2482,40 @@ export default function SocialPostEditorPage() {
                     </li>
                   ))}
                 </ul>
+                {transitionRequiredFields.length > 0 ? (
+                  <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Transition Preflight
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      {readyTransitionFieldCount} / {transitionRequiredFields.length} required items ready for{" "}
+                      {SOCIAL_POST_STATUS_LABELS[finalAction.nextStatus]}.
+                    </p>
+                    {missingTransitionFields.length === 0 ? (
+                      <p className="text-xs text-emerald-700">All required items are complete.</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {missingTransitionFields.map((field) => (
+                          <li
+                            key={field}
+                            className="flex items-center justify-between gap-2 text-xs text-slate-700"
+                          >
+                            <span>{PREFLIGHT_FIELD_META[field].label}</span>
+                            <button
+                              type="button"
+                              className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                              onClick={() => {
+                                jumpToPreflightField(field);
+                              }}
+                            >
+                              Go to field
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ) : null}
                 <div className="space-y-2 border-t border-slate-200 pt-3">
                   <p className="text-xs text-slate-600">{finalAction.helper}</p>
                   <p className="text-xs font-medium text-slate-700">

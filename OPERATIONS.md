@@ -27,6 +27,11 @@ Content mutations (blogs, stages, comments, derived status) are DB-authoritative
 |- assigning another user on insert still requires the matching assignment permission
 |- create-form publisher memory is client-only localStorage state and must always be validated against the current selectable users list before prefill
 For social execution-stage completion, live links are entered from `/social-posts/[id]` Step 4 (`Review & Publish` → `Live Links`) and persisted in `social_post_links`.
+- Social editor progression defaults to the sidebar primary CTA; raw status selector remains under `Advanced transition controls`.
+- Social editor sidebar includes `Transition Preflight` to expose missing required fields and jump-to-field remediation.
+- Setup form separates required-now vs required-before-approval fields and keeps optional setup fields in an explicit disclosure to reduce form friction.
+- Live-link entry supports quick paste with platform auto-detection while preserving per-platform URL controls.
+- Snapshot rail must display handoff context (`Assigned to`, `Reviewer`, `Current owner`, `Next owner`) and latest rollback reason when available.
 - Social status transition API writes record-level activity using canonical fields (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `metadata`) to avoid schema drift between activity writers and readers.
 - Record-level assignment/comments/activity visibility in drawers and full pages is available to all authenticated users; admin-only restrictions apply only to global Settings activity pages.
 

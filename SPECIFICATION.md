@@ -366,10 +366,19 @@ Key behavior:
 
 ### Social Post Editor (`/social-posts/[id]`)
 - guided dedicated editor with 4-step workflow:
-  1. Setup (title, platforms, publish date, Canva link/page, product, type)
+  1. Setup (required-now fields first, required-before-approval fields second, optional details in disclosure)
   2. Link Context (optional associated blog lookup + linked blog actions)
   3. Write Caption (UTF-8 editor focus, formatting tools, grouped copy actions, character guidance)
-  4. Review & Publish (checklist validation, role-aware status transition controls, live-link URL management, stage-based final action)
+  4. Review & Publish (checklist validation, transition preflight, live-link URL management, stage-based final action)
+- primary progression contract:
+  - sidebar final CTA is the default transition path
+  - raw status transition selector is secondary under an advanced disclosure
+- transition preflight contract:
+  - sidebar preflight summarizes required fields for the pending transition
+  - missing required fields provide jump-to-field actions for fast correction
+- handoff clarity contract:
+  - snapshot panel shows `Assigned to`, `Reviewer`, `Current owner`, `Next owner`
+  - latest rollback reason is shown when available in activity metadata
 - autosave plus explicit stage action in Step 4:
   - draft incomplete → `Save Draft`
   - draft complete → `Submit for Review`
@@ -377,6 +386,9 @@ Key behavior:
   - ready to publish → `Mark Awaiting Live Link`
   - awaiting live link without links → `Await Live Link`
   - awaiting live link with at least one saved link → `Submit Link` (transitions to `published`)
+- live-link entry contract:
+  - quick paste input auto-detects platform (LinkedIn/Facebook/Instagram) and stages it in live-link drafts
+  - platform-specific URL inputs remain available for explicit per-platform edits
 - execution-stage brief lock:
   - `ready_to_publish` and `awaiting_live_link` are read-only for brief fields
   - admin-only `Edit Brief` action calls `POST /api/social-posts/[postId]/reopen-brief`

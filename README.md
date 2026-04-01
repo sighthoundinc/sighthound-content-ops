@@ -150,10 +150,12 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 
 ### Social Post Editor (`/social-posts/[id]`)
 - Guided 4-step single-post workflow:
-  1. Setup (product, type, Canva link/page, optional title)
+  1. Setup (required-now fields first, required-before-approval fields second, optional details in disclosure)
   2. Link Context (optional blog lookup + linked blog actions)
   3. Write Caption (UTF-8 editor + formatting + grouped Copy menu + platform guidance)
-  4. Review & Publish (checklist validation, status transitions, stage-based final CTA)
+  4. Review & Publish (checklist validation, transition preflight, live-link actions, stage-based final CTA)
+- Sidebar CTA is the primary transition path; raw status transition controls are available under `Advanced transition controls`
+- Transition preflight summarizes required fields for the next transition and provides `Go to field` shortcuts
 - Transition requirements:
   - `draft` → `in_review`: product + type + Canva link
   - `in_review` → `creative_approved`: product + type + Canva link + platforms + caption + scheduled date
@@ -165,7 +167,10 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - Ready to Publish → `Mark Awaiting Live Link`
   - Awaiting Live Link without links → `Await Live Link`
   - Awaiting Live Link with at least one saved link → `Submit Link` (marks `Published`)
-- Step 4 includes a `Live Links` section for per-platform URL entry and save
+- Step 4 includes:
+  - quick paste `Live Links` add with automatic platform detection (LinkedIn/Facebook/Instagram)
+  - platform-specific URL inputs for precise edits before save
+- Snapshot rail includes handoff context (`Assigned to`, `Reviewer`, `Current owner`, `Next owner`) and latest rollback reason when present
 - Execution-stage authority:
   - non-admin writers can edit brief fields in `draft` and `changes_requested` only
   - admins can edit brief fields at any stage when operationally needed

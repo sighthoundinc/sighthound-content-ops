@@ -188,6 +188,51 @@ For every non-trivial UI or workflow change:
 - See `supabase/migrations/20260401110000_add_explicit_permission_coverage.sql` for expanded schema
 - See `supabase/migrations/20260401120000_fix_role_permissions_population.sql` for role permissions fix
 
+## Unified Workflow Terminology (MUST)
+
+**UI Label Normalization** — All user-facing workflow labels use neutral, role-agnostic terminology to minimize confusion across writer, publisher, editor, and admin roles.
+
+**Core Terminology**:
+- `Writing` replaces "Writer" for content creation workflow references
+- `Publishing` replaces "Publisher" for content publishing workflow references
+- `Assigned to` replaces role-specific labels (e.g., "Writer", "Publisher") for ownership display
+- `Content Workflow` umbrella label for workflow & assignment sections
+- `Reviewer` replaces "Editor" or "Admin" when referring to review/approval role in workflow context
+
+**Where This Applies**:
+1. **Dashboard & Table Contexts**:
+   - Column headers: `Writing Status`, `Publishing Status` (instead of "Writer Status", "Publisher Status")
+   - Ownership column: `Assigned to` (unified across all content types)
+   - Filter labels: `Writing Filters`, `Publishing Filters` (instead of "Writer Filters", "Publisher Filters")
+   - Bulk action dropdowns: "No writing assignment change", "Writing: {name}" (instead of "Writer: {name}")
+
+2. **Error & Validation Messages**:
+   - "You do not have permission to change writing assignments" (instead of "writer assignments")
+   - "Assign writing team before changing writing status" (instead of "Assign a writer before...")
+   - All status/transition error messages use neutral `writing`/`publishing` terminology
+
+3. **Drawer Sections**:
+   - Section header: `Content Workflow` (instead of "Workflow & Assignments")
+   - Field labels remain neutral: `Writing status`, `Publishing status`, `Assigned to`
+
+4. **Database & API**:
+   - **No changes**: Database keys (`writer_id`, `publisher_id`, `writer_status`, `publisher_status`) remain unchanged
+   - **No changes**: API contracts remain unchanged
+   - **No changes**: All internal logic and permissions still use `writer_*` and `publisher_*` keys
+   - This is **UI-only normalization**; backend schema and contracts are unaffected
+
+**Rationale**:
+- Simplifies UX by removing role-specific labels that can confuse users
+- Many users simultaneously hold writer, editor, and publisher roles
+- Neutral terminology (writing/publishing workflows) is more intuitive than role labels
+- Database and API continue using internal keys for backward compatibility and clarity
+
+**Maintenance Rules**:
+- Do not add new role-specific labels (e.g., "Writer", "Publisher") to UI surfaces
+- When updating status/workflow labels, use `Writing` / `Publishing` terminology
+- Error messages and user guidance should reference workflows, not roles
+- Keep the mapping centralized: if label changes, update in one place and apply globally
+
 ## Workflow-Critical Field Ownership (MUST)
 
 **Principle**: Workflow-critical fields (URLs, dates) are controlled by **ownership**, not independent permissions.
@@ -640,6 +685,13 @@ The dedicated editor at `/social-posts/[id]` follows a guided 4-step flow:
 2. **Link Context (optional)** — Associated Blog search + linked blog actions.
 3. **Write Caption** — UTF-8 editor focus with formatting tools and grouped copy actions.
 4. **Review & Publish** — Checklist validation, role-aware transition controls, live-link URL entry, and stage-based final CTA labels.
+
+P0 UX invariants for the dedicated editor:
+- Primary stage progression uses the sidebar final CTA; raw status controls are secondary under an advanced disclosure.
+- The sidebar includes a transition preflight summary that lists missing required fields and supports jump-to-field actions.
+- Setup keeps required-now fields prominent while optional brief fields remain de-emphasized in an optional disclosure.
+- Live-link workflow supports quick paste with platform auto-detection while retaining platform-specific link inputs.
+- Current snapshot includes explicit handoff context (`Assigned to`, `Reviewer`, `Current owner`, `Next owner`) and latest rollback reason when available.
 
 Workflow authority invariants:
 - Status transitions are API-authoritative and must use `POST /api/social-posts/[postId]/transition`.

@@ -424,11 +424,11 @@ function MyTasksPageContent() {
     let socialQuery = supabase
       .from("social_posts")
       .select(
-        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id"
+        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id"
       )
       .in("status", ACTIVE_SOCIAL_STATUSES);
     socialQuery = socialQuery.or(
-      `assigned_to_user_id.eq.${user.id},worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
+      `worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
     );
     const { data: socialRows, error: socialError } = await socialQuery.order("scheduled_date", {
       ascending: true,

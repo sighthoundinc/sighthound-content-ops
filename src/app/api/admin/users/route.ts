@@ -115,7 +115,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
 export const DELETE = withApiContract(async function DELETE(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, "delete_user");
+    const auth = await requirePermission(request, "manage_users");
     if ("error" in auth) {
       return NextResponse.json(
         { error: auth.error },

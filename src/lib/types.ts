@@ -57,7 +57,6 @@ export type CanonicalAppPermissionKey =
   | "view_unscheduled_blogs"
   | "reschedule_via_calendar"
   | "manage_users"
-  | "delete_user"
   | "edit_user_profile"
   | "assign_roles"
   | "manage_permissions"

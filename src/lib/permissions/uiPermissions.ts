@@ -245,7 +245,7 @@ export function canManageUsers(hasPermission: PermissionLookup) {
 }
 export function canDeleteUsers(hasPermission: PermissionLookup) {
   return hasCapabilityByPermission(hasPermission, {
-    requiredPermission: "delete_user",
+    requiredPermission: "manage_users",
     capabilityName: "canDeleteUsers",
   });
 }

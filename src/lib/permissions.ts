@@ -503,18 +503,132 @@ const CALENDAR_PERMISSIONS: PermissionDefinition[] = [
   },
 ];
 
+const IDEAS_PERMISSIONS: PermissionDefinition[] = [
+  {
+    key: "create_idea",
+    label: "Create Idea",
+    description: "Create new ideas.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "view_ideas",
+    label: "View Ideas",
+    description: "List and view ideas.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "edit_own_idea",
+    label: "Edit Own Idea",
+    description: "Edit own ideas.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "edit_idea_description",
+    label: "Edit Idea Description",
+    description: "Edit idea details.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "delete_idea",
+    label: "Delete Idea",
+    description: "Delete ideas.",
+    group: "user_management",
+    configurable: false,
+  },
+];
+
+const SOCIAL_POSTS_PERMISSIONS: PermissionDefinition[] = [
+  {
+    key: "create_social_post",
+    label: "Create Social Post",
+    description: "Create new social posts.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "view_social_posts",
+    label: "View Social Posts",
+    description: "List and view social posts.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "view_social_post_details",
+    label: "View Social Post Details",
+    description: "View full social post details.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "edit_social_post_brief",
+    label: "Edit Social Post Brief",
+    description: "Edit social post brief fields.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "reopen_social_post_brief",
+    label: "Reopen Social Post Brief",
+    description: "Reopen brief for editing.",
+    group: "user_management",
+    configurable: false,
+  },
+  {
+    key: "transition_social_post",
+    label: "Transition Social Post",
+    description: "Move social post through workflow.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "add_social_post_link",
+    label: "Add Social Post Link",
+    description: "Add live links to social posts.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "delete_social_post",
+    label: "Delete Social Post",
+    description: "Delete social posts.",
+    group: "user_management",
+    configurable: false,
+  },
+];
+
+const VISIBILITY_PERMISSIONS: PermissionDefinition[] = [
+  {
+    key: "view_my_tasks",
+    label: "View My Tasks",
+    description: "View My Tasks page.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "view_notifications",
+    label: "View Notifications",
+    description: "View notification bell and drawer.",
+    group: "user_management",
+    configurable: true,
+  },
+  {
+    key: "view_activity_history",
+    label: "View Activity History",
+    description: "View record-level activity history.",
+    group: "user_management",
+    configurable: true,
+  },
+];
+
 const USER_MANAGEMENT_PERMISSIONS: PermissionDefinition[] = [
   {
     key: "manage_users",
     label: "Manage Users",
     description: "Create, deactivate, and manage users.",
-    group: "user_management",
-    configurable: false,
-  },
-  {
-    key: "delete_user",
-    label: "Delete User",
-    description: "Permanently delete user accounts.",
     group: "user_management",
     configurable: false,
   },
@@ -641,6 +755,9 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   ...DASHBOARD_PERMISSIONS,
   ...BLOG_DATA_PERMISSIONS,
   ...CALENDAR_PERMISSIONS,
+  ...IDEAS_PERMISSIONS,
+  ...SOCIAL_POSTS_PERMISSIONS,
+  ...VISIBILITY_PERMISSIONS,
   ...USER_MANAGEMENT_PERMISSIONS,
   ...SYSTEM_ADMIN_PERMISSIONS,
   ...WORKFLOW_OVERRIDE_PERMISSIONS,
@@ -672,15 +789,18 @@ export const CONFIGURABLE_PERMISSION_KEYS: CanonicalAppPermissionKey[] =
 
 export const LOCKED_ADMIN_PERMISSION_KEYS: CanonicalAppPermissionKey[] = [
   "manage_users",
-  "delete_user",
   "assign_roles",
   "manage_permissions",
   "delete_blog",
   "repair_workflow_state",
+  "manage_environment_settings",
   "override_writer_status",
   "override_publisher_status",
   "edit_actual_publish_timestamp",
   "force_publish",
+  "reopen_social_post_brief",
+  "delete_idea",
+  "delete_social_post",
 ];
 
 const PERMISSION_KEY_SET = new Set<CanonicalAppPermissionKey>(ALL_PERMISSION_KEYS);

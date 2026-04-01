@@ -6,7 +6,7 @@ import { getUserRoles } from "@/lib/roles";
 
 export const POST = withApiContract(async function POST(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, "delete_user");
+    const auth = await requirePermission(request, "manage_users");
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

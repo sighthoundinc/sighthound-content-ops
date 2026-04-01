@@ -130,7 +130,7 @@ function NewBlogPageContent() {
     void loadIdeaPrefill();
   }, [sourceIdeaId]);
 
-  // Initialize defaults: today's date for scheduled, sync display to scheduled, and writer assignment
+  // Initialize defaults: today's date for scheduled, sync display to scheduled, and assignments
   useEffect(() => {
     if (isInitialized) return;
     setIsInitialized(true);
@@ -145,7 +145,15 @@ function NewBlogPageContent() {
     if (!isAdmin && user?.id) {
       setWriterId(user.id);
     }
-  }, [isInitialized, isAdmin, user?.id]);
+    
+    // Auto-select closest available publisher (user with 'publisher' role)
+    if (users.length > 0) {
+      const publisherUser = users.find((u) => u.role === 'publisher');
+      if (publisherUser) {
+        setPublisherId(publisherUser.id);
+      }
+    }
+  }, [isInitialized, isAdmin, user?.id, users]);
 
   // Handle requested scheduled date from query params
   useEffect(() => {

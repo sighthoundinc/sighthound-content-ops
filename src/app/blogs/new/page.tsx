@@ -56,6 +56,7 @@ function NewBlogPageContent() {
   const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
   const [convertedIdeaBlogId, setConvertedIdeaBlogId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [lastPublisherName, setLastPublisherName] = useState<string | null>(null);
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -146,11 +147,19 @@ function NewBlogPageContent() {
       setWriterId(user.id);
     }
     
-    // Auto-select closest available publisher (user with 'publisher' role)
-    if (users.length > 0) {
-      const publisherUser = users.find((u) => u.role === 'publisher');
-      if (publisherUser) {
-        setPublisherId(publisherUser.id);
+    // Remember last publisher selection from localStorage
+    // Validate that the saved publisher still exists in current users list
+    if (typeof window !== 'undefined') {
+      const savedPublisherId = localStorage.getItem('last_publisher_id');
+      if (savedPublisherId && users.length > 0) {
+        const savedPublisherUser = users.find((u) => u.id === savedPublisherId);
+        if (savedPublisherUser) {
+          setPublisherId(savedPublisherId);
+          setLastPublisherName(savedPublisherUser.full_name);
+        } else {
+          // Saved publisher no longer exists, clear it
+          localStorage.removeItem('last_publisher_id');
+        }
       }
     }
   }, [isInitialized, isAdmin, user?.id, users]);
@@ -472,16 +481,37 @@ function NewBlogPageContent() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
-                  Publisher
+                <span className="mb-1 flex items-center gap-2">
+                  <span className="block text-sm font-medium text-slate-700">
+                    Publisher
+                  </span>
+                  {lastPublisherName && (
+                    <span className="text-xs text-slate-500">
+                      (Last used: {lastPublisherName})
+                    </span>
+                  )}
                 </span>
                 <select
                   disabled={!canManagePublisherAssignment}
                   value={publisherId}
                   onChange={(event) => {
-                    setPublisherId(event.target.value);
+                    const newPublisherId = event.target.value;
+                    setPublisherId(newPublisherId);
+                    // Save selection to localStorage if not empty
+                    if (newPublisherId && typeof window !== 'undefined') {
+                      localStorage.setItem('last_publisher_id', newPublisherId);
+                      // Update the last used name for UI
+                      const selectedUser = users.find((u) => u.id === newPublisherId);
+                      if (selectedUser) {
+                        setLastPublisherName(selectedUser.full_name);
+                      }
+                    } else if (!newPublisherId && typeof window !== 'undefined') {
+                      // Clear if unassigned
+                      localStorage.removeItem('last_publisher_id');
+                      setLastPublisherName(null);
+                    }
                   }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 >
                   <option value="">Unassigned</option>
                   {users.map((nextUser) => (

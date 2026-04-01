@@ -45,7 +45,7 @@ Role model:
 - `profiles.role` remains synchronized primary role
 
 Permission model:
-- **Total permissions**: 92 (76 delegable + 12 admin-locked)
+- **Total permissions**: 92 (79 delegable + 13 admin-locked)
 - **Default role access**:
   - Admin: All 92 permissions
   - Writer: 28 permissions (blog creation, writing workflow, ideas, social posts, collaboration, dashboard)
@@ -53,14 +53,19 @@ Permission model:
   - Editor: 17 permissions (blog editing, idea management, collaboration, dashboard)
 - canonical permission matrix by role defined in `public.permission_keys()` and `public.default_role_permissions()`
 - role templates + configurable subset for managed roles via `role_permissions` table
-- admin-locked permissions (9) not editable for non-admin roles:
-  - `manage_users`, `assign_roles`, `manage_permissions`
-  - `delete_blog`, `delete_idea`, `delete_social_post` (destructive operations)
-  - `reopen_social_post_brief` (approval override)
-  - `repair_workflow_state`, `override_writer_status`, `override_publisher_status`, `force_publish` (recovery operations)
-  - `edit_actual_publish_timestamp` (audit field)
+- admin-locked permissions (13 total) not editable for non-admin roles:
+  - User management: `manage_users`, `assign_roles`, `manage_permissions`
+  - Destructive: `delete_blog`, `delete_idea`, `delete_social_post`
+  - Overrides & Recovery: `reopen_social_post_brief`, `repair_workflow_state`, `override_writer_status`, `override_publisher_status`, `force_publish`
+  - System: `manage_environment_settings`, `edit_actual_publish_timestamp`
 - permission audit history for changes logged in `permission_audit_logs`
 - **Permission categories**: Blog management (15), Writing workflow (6), Publishing workflow (6), Assignment (6), Scheduling (5), Calendar (4), Collaboration (6), Ideas (5), Social Posts (8), Dashboard (8), Visibility (3), Admin tools (8)
+- **Critical fixes (April 1, 2026)**:
+  - ✅ Fixed `role_permissions` table population for all non-admin roles
+  - ✅ Removed `delete_user` permission (not in database schema)
+  - ✅ Added `manage_environment_settings` to locked admin permissions
+  - ✅ All 92 permissions synchronized between TypeScript and database
+  - See `docs/PERMISSION_FIXES_SUMMARY.md` and `docs/BLOG_CREATION_FIX.md` for details
 - **Workflow-critical fields follow ownership rules, not permission toggles**:
   - `google_doc_url`, `live_url` → always editable by assigned writer/publisher via RLS
   - `scheduled_publish_date`, `display_published_date` → editable by assigned writer/publisher or explicit permission

@@ -158,10 +158,35 @@ For every non-trivial UI or workflow change:
 - Existing custom role permissions preserved during migration
 - No breaking changes to API contracts or stored data
 
+**Admin-Locked Permissions** (13 total):
+- `manage_users` — User account management
+- `assign_roles` — Role assignment
+- `manage_permissions` — Permission matrix configuration
+- `delete_blog` — Hard delete blogs
+- `delete_idea` — Delete ideas
+- `delete_social_post` — Delete social posts
+- `reopen_social_post_brief` — Reopen social post brief for editing
+- `repair_workflow_state` — Force workflow state changes
+- `manage_environment_settings` — System settings configuration
+- `override_writer_status` — Force writer stage transitions
+- `override_publisher_status` — Force publisher stage transitions
+- `edit_actual_publish_timestamp` — Set actual publish timestamps
+- `force_publish` — Override publish checks
+
+**Critical Fixes** (April 1, 2026):
+- ✅ Fixed `role_permissions` table population via migration `20260401120000`
+- ✅ Removed `delete_user` permission (not in database schema)
+- ✅ Added `manage_environment_settings` to locked admin permissions array
+- ✅ Added missing permission definitions for ideas, social posts, visibility
+- ✅ All 92 permissions now synchronized between TypeScript and database
+
 **Reference**:
 - See `docs/PERMISSIONS.md` for complete permission reference
+- See `docs/PERMISSION_FIXES_SUMMARY.md` for critical fixes documentation
+- See `docs/BLOG_CREATION_FIX.md` for blog creation failure analysis
 - See `src/lib/permissions.ts` for frontend helpers
-- See `supabase/migrations/20260401110000_add_explicit_permission_coverage.sql` for schema
+- See `supabase/migrations/20260401110000_add_explicit_permission_coverage.sql` for expanded schema
+- See `supabase/migrations/20260401120000_fix_role_permissions_population.sql` for role permissions fix
 
 ## Workflow-Critical Field Ownership (MUST)
 

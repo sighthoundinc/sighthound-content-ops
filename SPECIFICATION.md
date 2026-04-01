@@ -106,7 +106,11 @@ Rules:
 - assignee must exist for non-default stage progression
 - `overall_status` is derived from stage statuses
 - `status_updated_at` advances with stage transitions
-- Social record-level activity history readers and writers use canonical history keys (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `changed_at`) for consistent formatting across UI surfaces.
+|- Social record-level activity history readers and writers use canonical history keys (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `changed_at`) for consistent formatting across UI surfaces.
+|- Blog creation assignment rules:
+  - self-assignment on insert does not require assignment-change permissions
+  - assigning another user on insert still requires the corresponding assignment permission
+  - non-admin creators can set a publisher during blog creation
 
 ## 5) Date model
 Primary fields:
@@ -137,7 +141,12 @@ Behavior:
   - on INSERT: if `display_published_date` is NULL, silently set to `scheduled_publish_date` or today
   - on UPDATE: if user attempts to set NULL, silently reset to `scheduled_publish_date` instead of rejecting
   - activity logging: silent fallback on default creation; explicit event logged if user manually sets display ≠ scheduled
-- edge case: if `display_published_date` is already set and `scheduled_publish_date` changes, the display date **remains unchanged** (user's explicit choice is respected)
+|- edge case: if `display_published_date` is already set and `scheduled_publish_date` changes, the display date **remains unchanged** (user's explicit choice is respected)
+|- blog creation assignment UX behavior:
+  - writer defaults to the current user in the create form
+  - publisher remains editable and may be restored from client-side localStorage memory
+  - remembered publisher must be validated against the current selectable users list before applying
+  - if the remembered publisher no longer exists or is no longer selectable, the stored value is discarded and the field falls back safely
 
 ## 6) Core UX and pages
 ### Workspace Home (`/`)

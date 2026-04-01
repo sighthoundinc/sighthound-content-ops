@@ -78,6 +78,9 @@ Use `My Tasks` as your first stop each day.
   - Display Published Date can never be empty; if not explicitly set, it always defaults to Scheduled Publish Date
   - This behavior is automatic and handled by the database, so you don't need to worry about missing dates
   - After creation, assigned writers and publishers can keep editing workflow dates on their assigned blogs
+  - Writer defaults to your own user automatically when opening the form
+  - Publisher stays editable and remembers your last selected publisher for the next new blog when that user is still available
+  - If you choose `Unassigned` or the remembered publisher no longer exists, the saved publisher preference is cleared automatically
 - Workflow-critical blog fields follow ownership:
   - Assigned writers and publishers can edit Google Doc URL and Live URL on blogs they own in the workflow
   - Assigned writers and publishers can edit scheduled and display publish dates on blogs they own in the workflow

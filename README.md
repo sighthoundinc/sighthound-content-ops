@@ -80,7 +80,11 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - Display Publish Date checkbox ("Same as Scheduled Publish Date") is checked by default
   - Uncheck to set a different display date (allowed for all users, no permissions required)
   - Changing scheduled date auto-syncs display date when checkbox is checked
-|- Both dates can be set by any user with `create_blog` permission
+- Both dates can be set by any user with `create_blog` permission
+- Assignment defaults:
+  - Writer defaults to the current user and remains editable
+  - Publisher remembers the last selected publisher from localStorage when that user still exists
+  - Saved publisher memory clears automatically when the user chooses `Unassigned` or the saved publisher is no longer available
 
 ### Blog Library (`/blogs`)
 |- Dedicated reference-first page for title/URL lookup

@@ -21,7 +21,11 @@ For end-user manual instructions, see `HOW_TO_USE_APP.md`.
   - clicking the top-left Sighthound brand in the app shell routes to `/`
 
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
-Workflow-critical blog status/assignment/date edits from Dashboard and My Tasks are API-authoritative through `POST /api/blogs/[id]/transition` (not direct client `blogs.update(...)` mutations).
+|Workflow-critical blog status/assignment/date edits from Dashboard and My Tasks are API-authoritative through `POST /api/blogs/[id]/transition` (not direct client `blogs.update(...)` mutations).
+|Blog creation is trigger-authoritative for insert permission validation:
+|- self-assignment on writer/publisher fields is allowed without `change_*_assignment` permissions
+|- assigning another user on insert still requires the matching assignment permission
+|- create-form publisher memory is client-only localStorage state and must always be validated against the current selectable users list before prefill
 For social execution-stage completion, live links are entered from `/social-posts/[id]` Step 4 (`Review & Publish` → `Live Links`) and persisted in `social_post_links`.
 - Social status transition API writes record-level activity using canonical fields (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `metadata`) to avoid schema drift between activity writers and readers.
 - Record-level assignment/comments/activity visibility in drawers and full pages is available to all authenticated users; admin-only restrictions apply only to global Settings activity pages.

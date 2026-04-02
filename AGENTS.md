@@ -539,6 +539,9 @@ These rules apply to all table implementations (DataTable, DashboardTable, etc.)
 4. Grouping logic must remain aligned with the same action-state ownership model used by `/tasks`.
 5. Blog items must be deduplicated to one snapshot row per blog even when the logged-in user has multiple associations (for example writer + publisher + reviewer assignment).
 6. If multiple blog associations exist, selection precedence must favor `action_required` over `waiting_on_others`.
+7. Blog publishing action-state ownership is stage-specific:
+   - `publisher_review` admin assignments are actionable only at `publisher_status = pending_review`.
+   - `publisher_status = publisher_approved` is actionable for the assigned publisher and must classify as `waiting_on_others` for admin review assignments.
 
 ## Ideas Page Interaction Invariants (MUST)
 

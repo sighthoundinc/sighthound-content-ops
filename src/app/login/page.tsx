@@ -14,6 +14,12 @@ const LOGIN_HIGHLIGHTS = [
   "Coordinate social post creation, captioning, scheduling, and live links",
 ] as const;
 
+const LOGIN_LOGO_SEQUENCE = [
+  { src: "/sighthound-logo-with-text.svg", width: 212, height: 48, alt: "Sighthound" },
+  { src: "/sighthound-logo-with-text.png", width: 212, height: 48, alt: "Sighthound" },
+  { src: "/sighthound-badge-mark.svg", width: 48, height: 48, alt: "Sighthound badge mark" },
+] as const;
+
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,7 +30,11 @@ function LoginPageContent() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logoSourceIndex, setLogoSourceIndex] = useState(0);
+  const [logoLoaded, setLogoLoaded] = useState(false);
   const reconnectService = searchParams.get("reconnect");
+  const activeLogo = LOGIN_LOGO_SEQUENCE[logoSourceIndex] ?? null;
+  const isCompactLogo = activeLogo?.width === 48;
 
   useEffect(() => {
     if (session) {
@@ -83,6 +93,11 @@ function LoginPageContent() {
     }
   };
 
+  const handleLogoError = () => {
+    setLogoLoaded(false);
+    setLogoSourceIndex((currentIndex) => currentIndex + 1);
+  };
+
   const handleSlackSignIn = async () => {
     const supabase = getSupabaseBrowserClient();
     setError(null);
@@ -107,16 +122,48 @@ function LoginPageContent() {
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white px-4 py-10 sm:px-6 lg:py-16">
       <div className="mx-auto grid w-full max-w-6xl items-stretch gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-sm backdrop-blur-sm sm:p-10">
-          <Image
-            src="/sighthound-logo-with-text.png"
-            alt="Sighthound"
-            width={212}
-            height={48}
-            className="mb-6 h-12 w-auto"
-            priority
-          />
+          <div className="mb-6 flex min-h-12 items-center">
+            {activeLogo ? (
+              <div className="relative h-12">
+                {!logoLoaded ? (
+                  <div
+                    aria-hidden="true"
+                    className={`h-12 animate-pulse rounded-md bg-slate-200/70 ${
+                      isCompactLogo ? "w-12" : "w-[212px]"
+                    }`}
+                  />
+                ) : null}
+                <Image
+                  src={activeLogo.src}
+                  alt={activeLogo.alt}
+                  width={activeLogo.width}
+                  height={activeLogo.height}
+                  priority
+                  unoptimized
+                  onLoad={() => {
+                    setLogoLoaded(true);
+                  }}
+                  onError={handleLogoError}
+                  className={`h-12 ${isCompactLogo ? "w-12" : "w-auto"} transition-opacity ${
+                    logoLoaded
+                      ? "opacity-100"
+                      : "pointer-events-none absolute left-0 top-0 opacity-0"
+                  }`}
+                />
+              </div>
+            ) : (
+              <div className="inline-flex h-12 items-center gap-3">
+                <span className="inline-flex h-10 min-w-10 items-center justify-center rounded-md bg-slate-900 px-2 text-xs font-semibold uppercase tracking-wide text-white">
+                  SH
+                </span>
+                <span className="text-lg font-semibold tracking-tight text-slate-900">
+                  Sighthound
+                </span>
+              </div>
+            )}
+          </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-            Content Ops Dashboard
+            Sighthound Content Relay
           </h1>
           <p className="mt-3 max-w-xl text-base text-slate-600 sm:text-lg">
             Manage your content calendar across blogs and social posts from one place,

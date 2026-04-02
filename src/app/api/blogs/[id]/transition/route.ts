@@ -231,10 +231,20 @@ export const POST = withApiContract(async function POST(
     payload.publisher_id !== undefined ? payload.publisher_id : blog.publisher_id;
   const nextWriterStatus: WriterStageStatus =
     payload.writer_status !== undefined ? payload.writer_status : blog.writer_status;
+  const writerJustCompleted =
+    payload.writer_status === "completed" && blog.writer_status !== "completed";
+  const shouldAutoJogPublisher =
+    payload.publisher_status === undefined &&
+    blog.publisher_status === "not_started" &&
+    nextWriterStatus === "completed" &&
+    nextPublisherId !== null &&
+    (writerJustCompleted || requestedPublisherAssignmentChange);
   const nextPublisherStatus: PublisherStageStatus =
     payload.publisher_status !== undefined
       ? payload.publisher_status
-      : blog.publisher_status;
+      : shouldAutoJogPublisher
+        ? "in_progress"
+        : blog.publisher_status;
 
   if (nextWriterStatus !== "not_started" && !nextWriterId) {
     return NextResponse.json(
@@ -273,6 +283,8 @@ export const POST = withApiContract(async function POST(
   }
   if (payload.publisher_status !== undefined) {
     updatePayload.publisher_status = payload.publisher_status;
+  } else if (shouldAutoJogPublisher) {
+    updatePayload.publisher_status = nextPublisherStatus;
   }
   if (payload.google_doc_url !== undefined) {
     updatePayload.google_doc_url = payload.google_doc_url;
@@ -340,11 +352,7 @@ export const POST = withApiContract(async function POST(
       targetUserId: payload.publisher_id,
     });
   }
-  if (
-    payload.writer_status !== undefined &&
-    payload.writer_status === "completed" &&
-    payload.writer_status !== blog.writer_status
-  ) {
+  if (writerJustCompleted) {
     slackEmissions.push({
       eventType: "ready_to_publish",
       targetUserId: nextPublisherId,

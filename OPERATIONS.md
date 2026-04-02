@@ -2,12 +2,17 @@
 - If a writer or publisher owns a blog in the workflow, they can edit workflow-critical URLs and dates without needing separate permission toggles.
 - Keep permission toggles focused on optional or privileged actions (exports, archive, admin overrides), not core workflow completion fields.
 - Task assignment rows are readable by all authenticated users to improve coordination; mutation remains limited to the assigned user and admins.
-# Sighthound Content Ops — Operations Runbook
+# Sighthound Content Relay — Operations Runbook
 This runbook is for maintainers and operators.  
 It describes how the system runs in practice today (deployment, monitoring, incident response, and admin maintenance).  
 For product behavior, see `SPECIFICATION.md`.  
 For implementation/build rules, see `AGENTS.md`.  
 For end-user manual instructions, see `HOW_TO_USE_APP.md`.
+
+## Vision alignment
+- **Company vision**: run content delivery as a predictable relay with explicit handoffs and accountability.
+- **App vision**: keep operations observable and actionable with authoritative workflow state, ownership, and audit visibility.
+- **Operator objective**: maintain reliability and clarity so teams can move from idea to publication without handoff ambiguity.
 
 ## Role-oriented documentation quick links
 - In-app user manual: `/resources`
@@ -25,11 +30,14 @@ For end-user manual instructions, see `HOW_TO_USE_APP.md`.
 - Entry routing:
   - signed-out traffic to protected routes is redirected to `/login` by middleware
   - `/login` presents a premium split sign-in layout (brand context + focused auth card)
+  - login brand rendering is resilient to asset failures via fallback sequence (`text-logo SVG` → `text-logo PNG` → `badge SVG` → text lockup)
+  - app-shell header badge rendering is resilient via fallback sequence (`animated GIF` → `badge SVG` → `SH` lockup)
   - successful login routes authenticated users to `/` workspace home
   - clicking the top-left Sighthound brand in the app shell routes to `/`
 
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
 |Workflow-critical blog status/assignment/date edits from Dashboard and My Tasks are API-authoritative through `POST /api/blogs/[id]/transition` (not direct client `blogs.update(...)` mutations).
+|- writer completion handoff: if writing transitions to `completed` and a publisher is assigned (including assignment updates after writing is already complete), the route auto-jogs `publisher_status` from `not_started` to `in_progress` unless an explicit `publisher_status` is provided in the same payload.
 |Blog creation is trigger-authoritative for insert permission validation:
 |- self-assignment on writer/publisher fields is allowed without `change_*_assignment` permissions
 |- assigning another user on insert still requires the matching assignment permission
@@ -137,6 +145,7 @@ For social execution-stage completion, live links are entered from `/social-post
   - mixed queue content filtering supports umbrella and subtype scopes: `Blog`, `Social Post (All)`, `Social: Image|Carousel|Video|Link`
   - social rows derive site from associated blog and fall back to canonical Sighthound site when no associated blog site is present
   - social `Action State` is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` → worker-owned, `in_review/creative_approved` → reviewer-owned) so handoff stages classify consistently even if assignment metadata lags
+  - blog publishing `Action State` is stage-specific: admin `publisher_review` assignments are actionable only at `pending_review`; `publisher_approved` is actionable for the assigned publisher
   - `Next Tasks` priority list is computed across both blog and social datasets (not blog-only)
   - provides `Action State` filtering (`Required by: <username>` / `Waiting on Others`) for triage
 - `/` home page includes `My Tasks Snapshot`:
@@ -144,6 +153,7 @@ For social execution-stage completion, live links are entered from `/social-post
   - grouped as `Required by: <username>` and `Waiting on Others`
   - blogs are deduplicated to one row per blog even when a user has multiple associations
   - when multiple associations exist on one blog, `action_required` classification takes precedence
+  - same publishing ownership rule as `/tasks`: `publisher_approved` maps to publisher action-required and admin review assignments as waiting-on-others
   - uses the same stage-derived social ownership model as `/tasks` so handoff visibility stays aligned across both surfaces
   - summary buckets include writer-facing social handoff stage `ready_to_publish` in addition to review/live-link stages
 - notification bell panel includes actionable task shortcuts sourced from `/api/dashboard/tasks-snapshot` (`requiredByMe` group), keeping navigation shortcuts aligned with the same ownership/action-state contract

@@ -10,15 +10,16 @@ import {
   SOCIAL_POST_STATUS_LABELS,
   WRITER_STATUS_LABELS,
 } from "@/lib/status";
-import { getSocialTaskActionState, type TaskActionState } from "@/lib/task-action-state";
+import {
+  getAdminAssignmentTaskActionState,
+  getPublisherTaskActionState,
+  getSocialTaskActionState,
+  getWriterTaskActionState,
+  type TaskActionState,
+} from "@/lib/task-action-state";
 import { ACTIVE_SOCIAL_STATUSES, assertValidStatus } from "@/lib/task-logic";
 import { requirePermission } from "@/lib/server-permissions";
-import type {
-  BlogRecord,
-  PublisherStageStatus,
-  SocialPostStatus,
-  WriterStageStatus,
-} from "@/lib/types";
+import type { BlogRecord, SocialPostStatus } from "@/lib/types";
 
 
 type SnapshotTask = {
@@ -56,42 +57,6 @@ function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
 }
 
 
-function getWriterTaskActionState(writerStatus: WriterStageStatus): TaskActionState {
-  if (
-    writerStatus === "not_started" ||
-    writerStatus === "in_progress" ||
-    writerStatus === "needs_revision"
-  ) {
-    return "action_required";
-  }
-  return "waiting_on_others";
-}
-
-function getPublisherTaskActionState(
-  writerStatus: WriterStageStatus,
-  publisherStatus: PublisherStageStatus
-): TaskActionState {
-  if (writerStatus !== "completed") {
-    return "waiting_on_others";
-  }
-  if (publisherStatus === "not_started" || publisherStatus === "in_progress") {
-    return "action_required";
-  }
-  return "waiting_on_others";
-}
-
-function getAdminAssignmentTaskActionState(
-  taskType: "writer_review" | "publisher_review",
-  writerStatus: WriterStageStatus,
-  publisherStatus: PublisherStageStatus
-): TaskActionState {
-  if (taskType === "writer_review") {
-    return writerStatus === "pending_review" ? "action_required" : "waiting_on_others";
-  }
-  return publisherStatus === "pending_review" || publisherStatus === "publisher_approved"
-    ? "action_required"
-    : "waiting_on_others";
-}
 function compareBlogCandidatePriority(left: BlogTaskCandidate, right: BlogTaskCandidate) {
   const actionPriority: Record<TaskActionState, number> = {
     action_required: 2,

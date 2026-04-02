@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Content Ops Dashboard uses a comprehensive permission system with **92 total permissions** across 4 roles:
+Sighthound Content Relay uses a comprehensive permission system with **92 total permissions** across 4 roles:
 - **Admin**: All permissions (76 delegable + 9 admin-locked = 85 total)
 - **Writer**: 28 permissions by default
 - **Publisher**: 23 permissions by default

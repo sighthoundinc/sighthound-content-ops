@@ -53,6 +53,10 @@ const SECONDARY_NAV_ITEMS: NavItem[] = [
   { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/blogs/cardboard", label: "CardBoard", icon: "kanban" },
 ];
+const APP_SHELL_LOGO_SEQUENCE = [
+  { src: "/sighthound-badge-animated.gif", width: 64, height: 36, alt: "Sighthound badge" },
+  { src: "/sighthound-badge-mark.svg", width: 36, height: 36, alt: "Sighthound badge mark" },
+] as const;
 type ShortcutDefinition = {
   id: string;
   label: string;
@@ -134,6 +138,8 @@ export function AppShell({
   const [requiredTaskShortcuts, setRequiredTaskShortcuts] = useState<TaskShortcutItem[]>(
     []
   );
+  const [headerLogoSourceIndex, setHeaderLogoSourceIndex] = useState(0);
+  const [headerLogoLoaded, setHeaderLogoLoaded] = useState(false);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
@@ -150,6 +156,7 @@ export function AppShell({
   const canManagePermissions = isAdmin;
   const canManageSocialPosts =
     permissionContract.canViewDashboard || permissionContract.canOverrideWorkflow;
+  const activeHeaderLogo = APP_SHELL_LOGO_SEQUENCE[headerLogoSourceIndex] ?? null;
   const globalShortcuts = useMemo(() => {
     const shortcuts: ShortcutDefinition[] = [
       {
@@ -591,6 +598,10 @@ export function AppShell({
       }
     });
   }, [setCollapsed]);
+  const handleHeaderLogoError = useCallback(() => {
+    setHeaderLogoLoaded(false);
+    setHeaderLogoSourceIndex((currentIndex) => currentIndex + 1);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -599,19 +610,49 @@ export function AppShell({
           <Link
             href="/"
             className="flex items-center gap-3 rounded-md px-1 py-1 hover:bg-slate-50"
-            aria-label="Sighthound Content Ops"
+            aria-label="Sighthound Content Relay"
           >
-            <Image
-              src="/sighthound-badge-animated.gif"
-              alt="Sighthound badge"
-              width={64}
-              height={36}
-              className="h-9 w-auto object-contain"
-              priority
-            />
+            <div className="relative flex h-9 w-16 shrink-0 items-center">
+              {activeHeaderLogo ? (
+                <>
+                  {!headerLogoLoaded ? (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "absolute left-0 top-0 h-9 animate-pulse rounded-md bg-slate-200/70",
+                        activeHeaderLogo.width === 64 ? "w-16" : "w-9"
+                      )}
+                    />
+                  ) : null}
+                  <Image
+                    src={activeHeaderLogo.src}
+                    alt={activeHeaderLogo.alt}
+                    width={activeHeaderLogo.width}
+                    height={activeHeaderLogo.height}
+                    className={cn(
+                      "h-9 object-contain transition-opacity",
+                      activeHeaderLogo.width === 64 ? "w-auto" : "w-9",
+                      headerLogoLoaded
+                        ? "opacity-100"
+                        : "pointer-events-none absolute left-0 top-0 opacity-0"
+                    )}
+                    priority
+                    unoptimized
+                    onLoad={() => {
+                      setHeaderLogoLoaded(true);
+                    }}
+                    onError={handleHeaderLogoError}
+                  />
+                </>
+              ) : (
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-slate-900 text-[10px] font-semibold uppercase tracking-wide text-white">
+                  SH
+                </span>
+              )}
+            </div>
             <span className="leading-tight">
               <span className="block text-sm font-semibold text-slate-900">Sighthound</span>
-              <span className="block text-xs text-slate-600">Content Ops</span>
+              <span className="block text-xs text-slate-600">Content Relay</span>
             </span>
           </Link>
 

@@ -52,7 +52,13 @@ import {
   WRITER_STATUS_LABELS,
   getNextActor,
 } from "@/lib/status";
-import { getSocialTaskActionState, type TaskActionState } from "@/lib/task-action-state";
+import {
+  getAdminAssignmentTaskActionState,
+  getPublisherTaskActionState,
+  getSocialTaskActionState,
+  getWriterTaskActionState,
+  type TaskActionState,
+} from "@/lib/task-action-state";
 import { ACTIVE_SOCIAL_STATUSES } from "@/lib/task-logic";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getUserRoles } from "@/lib/roles";
@@ -305,45 +311,6 @@ function getTaskReason({
   return "Due Soon";
 }
 
-function getWriterTaskActionState(writerStatus: WriterStageStatus): TaskActionState {
-  if (
-    writerStatus === "not_started" ||
-    writerStatus === "in_progress" ||
-    writerStatus === "needs_revision"
-  ) {
-    return "action_required";
-  }
-  return "waiting_on_others";
-}
-
-function getPublisherTaskActionState(
-  writerStatus: WriterStageStatus,
-  publisherStatus: PublisherStageStatus
-): TaskActionState {
-  if (writerStatus !== "completed") {
-    return "waiting_on_others";
-  }
-  if (
-    publisherStatus === "not_started" ||
-    publisherStatus === "in_progress"
-  ) {
-    return "action_required";
-  }
-  return "waiting_on_others";
-}
-
-function getAdminAssignmentTaskActionState(
-  taskType: "writer_review" | "publisher_review",
-  writerStatus: WriterStageStatus,
-  publisherStatus: PublisherStageStatus
-): TaskActionState {
-  if (taskType === "writer_review") {
-    return writerStatus === "pending_review" ? "action_required" : "waiting_on_others";
-  }
-  return publisherStatus === "pending_review" || publisherStatus === "publisher_approved"
-    ? "action_required"
-    : "waiting_on_others";
-}
 
 function MyTasksPageContent() {
   const searchParams = useSearchParams();

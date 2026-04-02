@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { DataPageHeader } from "@/components/data-page";
@@ -31,6 +32,20 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
+function InternalPageLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link href={href} className="font-medium text-sky-700 underline underline-offset-2">
+      {children}
+    </Link>
+  );
+}
+
 export default function ResourcesPage() {
   return (
     <ProtectedPage>
@@ -40,16 +55,30 @@ export default function ResourcesPage() {
             title="User Manual"
             description="Role-based manual with quick links for Writers, Publishers, Editors/Reviewers, and Admins."
           />
-          <Section id="start-here" title="1. Start here">
-            <p>This workspace helps you run blog and social-post work from draft to completion.</p>
+          <Section id="vision" title="Vision">
+            <p>
+              Sighthound Content Relay is built to turn content execution into a reliable handoff
+              system from idea to live publish.
+            </p>
             <BulletList
               items={[
-                "Open My Tasks first to see what needs action now.",
-                "Use clear status steps to avoid skipped handoffs.",
-                "Use filters and imports to keep large queues manageable.",
-                "Use notifications to track assignments and stage changes.",
+                "Company vision: make planning, review, and publishing coordination predictable across every campaign.",
+                "App vision: every record has clear ownership, clear next action, and full workflow visibility.",
+                "Execution standard: reduce dropped handoffs and unclear priorities by keeping one shared source of truth.",
               ]}
             />
+          </Section>
+          <Section id="start-here" title="1. Start here">
+            <p>This workspace helps you run blog and social-post work from draft to completion.</p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink> first to see what
+                needs action now.
+              </li>
+              <li>Use clear status steps to avoid skipped handoffs.</li>
+              <li>Use filters and imports to keep large queues manageable.</li>
+              <li>Use notifications to track assignments and stage changes.</li>
+            </ul>
             <p className="font-medium text-slate-900">
               Keep this page as your day-to-day reference while operating the workflow.
             </p>
@@ -95,22 +124,44 @@ export default function ResourcesPage() {
           </Section>
 
           <Section id="shared-navigation-map" title="Shared navigation map">
-            <BulletList
-              items={[
-                "Dashboard (/dashboard): cross-content queue view with filters and sort controls.",
-                "My Tasks (/tasks): assignment-first execution queue.",
-                "Blogs (/blogs): published/reference lookup and copy/export actions.",
-                "Social Posts (/social-posts): social workflow list plus full editor.",
-                "Ideas (/ideas): intake and conversion into blogs or social posts.",
-                "Calendar (/calendar): scheduling and capacity planning.",
-                "Settings (/settings): profile, connectors, notifications, and admin tools.",
-              ]}
-            />
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                <InternalPageLink href="/dashboard">Dashboard</InternalPageLink>: cross-content
+                queue view with filters and sort controls.
+              </li>
+              <li>
+                <InternalPageLink href="/tasks">My Tasks</InternalPageLink>: assignment-first
+                execution queue.
+              </li>
+              <li>
+                <InternalPageLink href="/blogs">Blogs</InternalPageLink>: published/reference
+                lookup and copy/export actions.
+              </li>
+              <li>
+                <InternalPageLink href="/social-posts">Social Posts</InternalPageLink>: social
+                workflow list plus full editor.
+              </li>
+              <li>
+                <InternalPageLink href="/ideas">Ideas</InternalPageLink>: intake and conversion
+                into blogs or social posts.
+              </li>
+              <li>
+                <InternalPageLink href="/calendar">Calendar</InternalPageLink>: scheduling and
+                capacity planning.
+              </li>
+              <li>
+                <InternalPageLink href="/settings">Settings</InternalPageLink>: profile,
+                connectors, notifications, and admin tools.
+              </li>
+            </ul>
           </Section>
 
           <Section id="writer-quick-start" title="Writer quick start">
             <ol className="list-decimal space-y-1 pl-5">
-              <li>Start in My Tasks (`/tasks`) and focus on `Required by: &lt;username&gt;`.</li>
+              <li>
+                Start in <InternalPageLink href="/tasks">My Tasks</InternalPageLink> and focus on{" "}
+                `Required by: &lt;username&gt;`.
+              </li>
               <li>Open assigned records and complete required fields/checklist items.</li>
               <li>For social posts, ensure Product, Type, and Canva link are complete before review submission.</li>
               <li>Move stages forward only when validation is complete and handoff context is clear.</li>
@@ -120,17 +171,27 @@ export default function ResourcesPage() {
 
           <Section id="publisher-quick-start" title="Publisher quick start">
             <ol className="list-decimal space-y-1 pl-5">
-              <li>Start in My Tasks (`/tasks`) and focus on publishing-stage records.</li>
+              <li>
+                Start in <InternalPageLink href="/tasks">My Tasks</InternalPageLink> and focus on
+                publishing-stage records.
+              </li>
+              <li>Blogs auto-move to `Publishing in Progress` when writing is marked complete and a publisher is assigned.</li>
               <li>Confirm publish date readiness and required publishing fields.</li>
               <li>Complete publishing steps only after upstream approvals are complete.</li>
               <li>Add/update required links (blog live URL or social live links).</li>
-              <li>Use Calendar (`/calendar`) for near-term schedule conflict checks.</li>
+              <li>
+                Use <InternalPageLink href="/calendar">Calendar</InternalPageLink> for near-term
+                schedule conflict checks.
+              </li>
             </ol>
           </Section>
 
           <Section id="editor-reviewer-quick-start" title="Editor/Reviewer quick start">
             <ol className="list-decimal space-y-1 pl-5">
-              <li>Open My Tasks (`/tasks`) for review-stage records.</li>
+              <li>
+                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink> for review-stage
+                records.
+              </li>
               <li>Review quality and required field completeness.</li>
               <li>Use `Changes Requested` for actionable revision guidance when needed.</li>
               <li>Approve only when the next owner can execute without missing context.</li>
@@ -140,8 +201,15 @@ export default function ResourcesPage() {
 
           <Section id="admin-quick-start" title="Admin quick start">
             <ol className="list-decimal space-y-1 pl-5">
-              <li>Use Dashboard and My Tasks to spot workflow bottlenecks.</li>
-              <li>Use Settings (`/settings`) to manage users, permissions, and connectors.</li>
+              <li>
+                Use <InternalPageLink href="/dashboard">Dashboard</InternalPageLink> and{" "}
+                <InternalPageLink href="/tasks">My Tasks</InternalPageLink> to spot workflow
+                bottlenecks.
+              </li>
+              <li>
+                Use <InternalPageLink href="/settings">Settings</InternalPageLink> to manage
+                users, permissions, and connectors.
+              </li>
               <li>Use Activity History for audit review and troubleshooting.</li>
               <li>Use quick-view to validate non-admin experience when triaging user reports.</li>
               <li>Use destructive actions (cleanup, wipe) only after confirming scope and impact.</li>
@@ -184,11 +252,17 @@ export default function ResourcesPage() {
 
           <Section id="daily-workflow" title="2. Daily workflow (recommended order)">
             <ol className="list-decimal space-y-1 pl-5">
-              <li>Open My Tasks and review what is assigned and due.</li>
+              <li>
+                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink> and review what is
+                assigned and due.
+              </li>
               <li>Open each item and complete required fields/checklist items.</li>
               <li>Move status forward only when the current stage is complete.</li>
               <li>Use filters to focus on one queue (status, product, type, owner).</li>
-              <li>For social posts, add at least one public live link before final completion.</li>
+              <li>
+                For <InternalPageLink href="/social-posts">Social Posts</InternalPageLink>, add at
+                least one public live link before final completion.
+              </li>
             </ol>
           </Section>
 
@@ -197,7 +271,7 @@ export default function ResourcesPage() {
             <BulletList
               items={[
                 "Writer labels: Awaiting Editorial Review, Writing Approved.",
-                "Publisher flow: Not Started → Publishing in Progress → Waiting for Approval → Publishing Approved → Published.",
+                "Publisher flow: Not Started → Publishing in Progress → Awaiting Publishing Approval → Publishing Approved → Published.",
               ]}
             />
             <p className="font-semibold text-slate-900">Social post status model:</p>
@@ -228,6 +302,8 @@ export default function ResourcesPage() {
             <BulletList
               items={[
                 "Social editors can collaborate on the same post concurrently.",
+                "When writing is approved on a blog, assigned publishing work is auto-jogged from Not Started to Publishing in Progress unless an explicit publishing stage is sent in the same update.",
+                "At Publishing Approved, the assigned publisher remains the next actor; admin publisher-review assignments are no longer actionable at that stage.",
                 "Execution stages keep brief fields read-only for stable handoff.",
                 "Returning from execution to Changes Requested requires a reason.",
                 "Published requires at least one valid live link (LinkedIn, Facebook, or Instagram).",
@@ -302,13 +378,14 @@ export default function ResourcesPage() {
               ]}
             />
             <p className="font-semibold text-slate-900">Notification preferences:</p>
-            <BulletList
-              items={[
-                "Settings → Notification Preferences controls all notification types.",
-                "Use global on/off plus per-type toggles.",
-                "Slack delivery follows the same preference toggles.",
-              ]}
-            />
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                <InternalPageLink href="/settings">Settings</InternalPageLink> → Notification
+                Preferences controls all notification types.
+              </li>
+              <li>Use global on/off plus per-type toggles.</li>
+              <li>Slack notifications route to the shared `#content-ops-alerts` channel.</li>
+            </ul>
             <p className="font-semibold text-slate-900">Action feedback:</p>
             <BulletList
               items={[
@@ -325,7 +402,8 @@ export default function ResourcesPage() {
                 "Social post stuck before completion: add at least one valid public live link.",
                 "Missing results: clear filters/search and reapply one by one.",
                 "Import errors: unselect invalid rows, verify required columns, then retry.",
-                "Missing notifications: verify notification toggles and connector status in Settings.",
+                "If branding assets fail, fallback order is automatic: login (text-logo SVG → text-logo PNG → badge SVG → text lockup) and app header badge (animated GIF → badge SVG → SH lockup).",
+                "Missing notifications: verify notification toggles and connector status in Settings (/settings).",
                 "Unexpected UI state: refresh once, retry action, then report with item ID and step where it failed.",
               ]}
             />

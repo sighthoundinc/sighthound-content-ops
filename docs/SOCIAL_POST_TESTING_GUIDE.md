@@ -399,7 +399,7 @@ Verify Slack notifications are sent and respect preferences.
 
 1. Ensure test user's email matches their Slack account email
 2. Assign social post to that user or trigger notification targeting them
-3. Check Slack DMs for message from Content Ops bot
+- Check Slack DMs for message from Content Relay bot
 
 **Expected Result**: Direct message appears with similar content to channel message
 

@@ -1,4 +1,4 @@
-# Sighthound Content Ops — Governance Audit Checklist
+# Sighthound Content Relay — Governance Audit Checklist
 
 **Purpose**: Verify each module complies with 5 governance rules from AGENTS.md
 **Duration**: ~30 minutes total (5 min per module)

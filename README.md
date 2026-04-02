@@ -7,7 +7,12 @@
   - Display Publish Date
 - These fields are treated as core workflow controls and are not intended to be blocked by separate permission toggles.
 # sighthound-content-ops
-Content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
+Sighthound Content Relay: content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
+
+## Company & app vision
+- **Company vision**: turn content execution into a reliable relay where strategy, drafting, review, and publishing stay synchronized.
+- **App vision**: provide one operational source of truth for blogs and social posts, with explicit ownership and clear next actions.
+- **Execution goal**: help teams ship more consistently by reducing handoff confusion, hidden blockers, and status ambiguity.
 
 ## Product snapshot
 - Blog and social-post workflow operations
@@ -19,6 +24,9 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Workspace home with full associated task snapshot (`Required by: <username>` / `Waiting on Others`)
 - Workspace snapshot deduplicates multi-role same-blog associations and prioritizes actionable ownership
 - OAuth login and connected-service management for Google and Slack
+- Login and app-shell branding use resilient fallbacks to avoid broken logo states on failed loads:
+  - login: `text-logo SVG` → `text-logo PNG` → `badge SVG` → text lockup
+  - app header badge: `animated GIF` → `badge SVG` → `SH` lockup
 - Unified notifications across activity history, in-app notifications, and Slack
 - Centralized workflow Slack emission layer for create/transition/reminder paths via `src/lib/server-slack-emitter.ts`
   - create routes: `POST /api/blogs`, `POST /api/social-posts`
@@ -148,6 +156,7 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - `Social Post (All)` umbrella
   - `Social: Image`, `Social: Carousel`, `Social: Video`, `Social: Link`
 - Social action-state classification is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` worker-owned; `in_review/creative_approved` reviewer-owned) so handoff items appear in the correct bucket
+- Blog publishing action-state ownership is stage-specific: admin `publisher_review` assignments are actionable only at `pending_review`, while `publisher_approved` remains actionable for the assigned publisher
 - Action-state filtering for `Required by: <username>` vs `Waiting on Others`
 
 ### Calendar
@@ -285,7 +294,7 @@ npm run dev
     - missing selected `actualPublishDate` copies `displayPublishDate`
   - for existing rows, selected optional fields are also updated from import values/fallbacks
   - writer/publisher resolution uses exact + loose contains/token-overlap matching across full/display/username/first/last/email signals with confidence scoring
-- `/api/blogs/[id]/transition` — canonical blog workflow transition endpoint (writer/publisher status, assignment, scheduled/display dates) with optimistic concurrency guard on `updated_at` to prevent stale writes
+- `/api/blogs/[id]/transition` — canonical blog workflow transition endpoint (writer/publisher status, assignment, scheduled/display dates) with optimistic concurrency guard on `updated_at` to prevent stale writes; auto-jogs publishing from `not_started` to `in_progress` when writing is marked complete and a publisher is assigned (unless `publisher_status` is explicitly provided)
 - `/api/blogs` — canonical blog creation endpoint (schema-validated create payload + centralized `blog_created` Slack emission)
 - `/api/social-posts` — canonical social post creation endpoint (schema-validated create payload + centralized `social_post_created` Slack emission)
 - `/api/social-posts/[postId]/transition` — canonical social status transitions with concurrency conflict handling when status changes mid-request

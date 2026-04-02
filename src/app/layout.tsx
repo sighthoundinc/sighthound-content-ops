@@ -20,8 +20,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sighthound Content Ops",
-  description: "Editorial operations dashboard for Sighthound and Redactor workflows",
+  title: "Sighthound Content Relay",
+  description: "Content workflow relay for Sighthound and Redactor publishing teams",
 };
 
 export default function RootLayout({

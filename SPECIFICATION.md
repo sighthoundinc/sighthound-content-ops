@@ -1,10 +1,15 @@
-# Sighthound Content Operations — Product Specification
+# Sighthound Content Relay — Product Specification
 ## 1) Product purpose
-Sighthound Content Operations is a workflow application for managing content production across:
+Sighthound Content Relay is a workflow application for managing content production across:
 - `sighthound.com`
 - `redactor.com`
 
 It is an operations system (not a CMS). It tracks ownership, workflow stage, scheduling, publication metadata, comments, and audit history.
+
+### Vision
+- **Company vision**: coordinate content execution as a dependable relay from idea to publication.
+- **App vision**: make every handoff explicit through clear ownership, next actions, and stage-aware workflow controls.
+- **Product outcome**: reduce operational friction while increasing publishing predictability and cross-team visibility.
 
 ### Record-level visibility contract
 - Blogs and social posts expose assignment, comments, and record-level activity history to all authenticated users in:
@@ -122,6 +127,10 @@ Rules:
 - assignee must exist for non-default stage progression
 - `overall_status` is derived from stage statuses
 - `status_updated_at` advances with stage transitions
+- when writing transitions to `completed` and a publisher is assigned (including assignment updates made after writing is already complete), transition API auto-jogs publisher work from `not_started` to `in_progress` unless an explicit `publisher_status` is included in the same request
+- blog publishing action-state ownership is stage-specific:
+  - admin `publisher_review` assignments are actionable only at `publisher_status = pending_review`
+  - `publisher_status = publisher_approved` remains actionable for the assigned publisher and should classify as waiting-on-others for admin review assignments
 |- Social record-level activity history readers and writers use canonical history keys (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `changed_at`) for consistent formatting across UI surfaces.
 |- Blog creation assignment rules:
   - self-assignment on insert does not require assignment-change permissions
@@ -222,6 +231,8 @@ Key behavior:
 - **Access restriction**: Login copy clearly states "Use your @sighthound.com account to get started"
 - **User provisioning**: First-time OAuth users are auto-created in profiles table with default role `writer`
 - **Layout**: Premium split layout with Sighthound logo on left, focused authentication card on right
+- **Branding resilience**: login logo must degrade gracefully using fallback order (`text-logo SVG` → `text-logo PNG` → `badge SVG` → text lockup) when asset loading fails
+- **Header branding resilience**: app-shell badge logo must degrade gracefully using fallback order (`animated GIF` → `badge SVG` → `SH` lockup) when asset loading fails
 - **Redirect behavior**:
   - unauthenticated requests to protected routes → /login (via middleware)
   - successful sign-in → workspace home (`/`)

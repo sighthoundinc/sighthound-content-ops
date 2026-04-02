@@ -1,7 +1,7 @@
 // @deprecated - REMOVAL PLANNED
 // Added: 2025-03-29
 // Removal target: v2.0 (after 2 releases)
-// Owner: Content Ops Team
+// Owner: Content Relay Team
 // Reason: Legacy endpoint. Use DELETE /api/ideas/[id] instead.
 // Migration: Client should call DELETE /api/ideas/{id} directly
 // Tracking: Monitor console.warn logs for usage patterns

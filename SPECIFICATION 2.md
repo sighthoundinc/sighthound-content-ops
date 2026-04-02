@@ -1,6 +1,6 @@
 SPECIFICATION.md
 PROJECT NAME
-Sighthound Content Operations Dashboard
+Sighthound Content Relay
 PROJECT PURPOSE
 Build a lightweight internal dashboard to manage blog production workflows for two websites:
 - sighthound.com

@@ -1,4 +1,9 @@
-# Content Ops Dashboard — User Manual
+# Sighthound Content Relay — User Manual
+
+## Vision
+- **Company vision**: build a predictable content execution engine where planning, review, and publishing handoffs stay clear across every campaign.
+- **App vision**: make each record actionable with one owner, one next step, and complete stage visibility from draft to live.
+- **Operational promise**: reduce missed handoffs and scheduling drift by keeping teams aligned in one shared workflow system.
 
 ## 1. Start here
 This workspace helps you run blog and social-post work from draft to completion.
@@ -9,7 +14,9 @@ Use it to:
 - apply filters and imports to keep work queues clean
 - stay up to date through notifications
 
-Use `My Tasks` as your first stop each day.
+Use [My Tasks](/tasks) as your first stop each day.
+
+Quick app links: [Home](/) · [Dashboard](/dashboard) · [My Tasks](/tasks) · [Blogs](/blogs) · [Social Posts](/social-posts) · [Ideas](/ideas) · [Calendar](/calendar) · [Settings](/settings)
 
 ## Role-based quick navigation
 Start with the role you are actively working as right now:
@@ -21,38 +28,39 @@ Start with the role you are actively working as right now:
 - [When you are stuck](#when-you-are-stuck)
 
 ### Shared navigation map
-- `Dashboard` (`/dashboard`): cross-content queue view with filtering and sorting.
-- `My Tasks` (`/tasks`): your assignment-first execution queue.
-- `Blogs` (`/blogs`): published/reference lookup and copy/export utilities.
-- `Social Posts` (`/social-posts`): social workflow list, board, calendar, and full editor.
-- `Ideas` (`/ideas`): intake and conversion into blog/social records.
-- `Calendar` (`/calendar`): scheduling and capacity planning across content.
-- `Settings` (`/settings`): profile, connectors, notifications, and admin tools.
+- [`Dashboard`](/dashboard): cross-content queue view with filtering and sorting.
+- [`My Tasks`](/tasks): your assignment-first execution queue.
+- [`Blogs`](/blogs): published/reference lookup and copy/export utilities.
+- [`Social Posts`](/social-posts): social workflow list, board, calendar, and full editor.
+- [`Ideas`](/ideas): intake and conversion into blog/social records.
+- [`Calendar`](/calendar): scheduling and capacity planning across content.
+- [`Settings`](/settings): profile, connectors, notifications, and admin tools.
 
 ### Writer quick start
-1. Go to `My Tasks` (`/tasks`) and focus on `Required by: <username>`.
+1. Go to [My Tasks](/tasks) and focus on `Required by: <username>`.
 2. Open each assigned record and complete required fields/checklist items.
 3. For social posts, ensure Product, Type, and Canva link are complete before submitting for review.
 4. Move records forward only when validation/checklist signals are clear.
 5. Use `Waiting on Others` to track handoffs blocked on reviewers or publishers.
 
 ### Publisher quick start
-1. Start in `My Tasks` (`/tasks`) and filter to publishing-stage work.
-2. Confirm schedule, caption/platform requirements (social), and publishing readiness.
-3. Publish only when stage prerequisites are complete and approvals are in place.
-4. Add/update required links (`Live URL` for blogs, social live links for social posts).
-5. Use `Calendar` for near-term scheduling conflicts and rescheduling context.
+1. Start in [My Tasks](/tasks) and filter to publishing-stage work.
+2. Blogs move into `Publishing in Progress` automatically once writing is marked complete and a publisher is assigned.
+3. Confirm schedule, caption/platform requirements (social), and publishing readiness.
+4. Publish only when stage prerequisites are complete and approvals are in place.
+5. Add/update required links (`Live URL` for blogs, social live links for social posts).
+6. Use [Calendar](/calendar) for near-term scheduling conflicts and rescheduling context.
 
 ### Editor/Reviewer quick start
-1. Open `My Tasks` (`/tasks`) for items in review-facing stages.
+1. Open [My Tasks](/tasks) for items in review-facing stages.
 2. Review quality and required fields before approval.
 3. If revisions are needed, send clear `Changes Requested` guidance.
 4. Approve only when the next owner can execute without missing context.
 5. Use record activity history to verify what changed and who changed it.
 
 ### Admin quick start
-1. Use `Dashboard` and `My Tasks` for workflow health and bottlenecks.
-2. Use `Settings` (`/settings`) to manage users, roles, permissions, and connectors.
+1. Use [Dashboard](/dashboard) and [My Tasks](/tasks) for workflow health and bottlenecks.
+2. Use [Settings](/settings) to manage users, roles, permissions, and connectors.
 3. Use `Activity History` for audit review and operational troubleshooting.
 4. Use quick-view to validate non-admin experience from the target user's perspective.
 5. Use destructive tools (cleanup, wipe) only after confirming scope and impact.
@@ -65,8 +73,8 @@ Start with the role you are actively working as right now:
 - Use fallback fixes: [Troubleshooting quick fixes](#10-troubleshooting-quick-fixes).
 
 ## 2. Daily workflow (recommended order)
-1. Open `/` and review the `My Tasks Snapshot` groups (`Required by: <username>` and `Waiting on Others`).
-2. Open `My Tasks` and review assigned and due work.
+1. Open [Home](/) and review the `My Tasks Snapshot` groups (`Required by: <username>` and `Waiting on Others`).
+2. Open [My Tasks](/tasks) and review assigned and due work.
 3. Open each item and complete required fields/checklist items.
 4. Move status forward only when the current stage is complete.
 5. Use filters to focus on one queue at a time (status/product/type/owner).
@@ -87,17 +95,20 @@ Start with the role you are actively working as right now:
 - Use `Action State` filter to switch between:
   - `Required by: <username>` (actionable now)
   - `Waiting on Others` (assigned to you but blocked on another actor)
-- The home page uses the same model for `My Tasks Snapshot`, showing all associated active items grouped by those two states.
+- Blog publishing ownership at approval stage:
+  - `Publishing Approved` is still actionable for the assigned publisher and appears under `Required by: <username>` for that publisher.
+  - Admin review assignments are actionable only during `Awaiting Publishing Approval`; once a blog reaches `Publishing Approved`, those admin-assignment rows move to `Waiting on Others`.
+- The [Home](/) page uses the same model for `My Tasks Snapshot`, showing all associated active items grouped by those two states.
 - If you are associated to the same blog in multiple ways (for example writer + publisher), it appears once in the snapshot.
 - For multi-association blog rows, `Required by: <username>` wins over `Waiting on Others` when any associated role is actionable.
 - Home summary cards also include writer-relevant social handoff stage `Ready to Publish`.
 - Notification panel includes `Required by: <username>` shortcuts (top actionable items) that deep-link directly to the relevant blog/social record.
-- Admin quick-view mode opens on `My Tasks` with `Required by Me` filter intent so impersonated sessions start on actionable work.
+- Admin quick-view mode opens on [My Tasks](/tasks) with `Required by Me` filter intent so impersonated sessions start on actionable work.
 
 ## 3. Workflow rules and statuses
 ### Blog status language
 - Writer labels: `Awaiting Editorial Review`, `Writing Approved`
-- Publisher flow: `Not Started` → `Publishing in Progress` → `Waiting for Approval` → `Publishing Approved` → `Published`
+- Publisher flow: `Not Started` → `Publishing in Progress` → `Awaiting Publishing Approval` → `Publishing Approved` → `Published`
 
 ### Social post status model
 - `Draft`
@@ -127,7 +138,7 @@ Start with the role you are actively working as right now:
 - Snapshot panel shows `Assigned to`, `Reviewer`, `Current owner`, and `Next owner` so handoffs stay explicit.
 - When sending a post to `Changes Requested`, complete the structured template (category + checklist + optional context) instead of writing only free text.
 - In `New Social Post`, use quick presets for common combinations and rely on remembered last-used `product`, `type`, and `platforms`.
-- From the social post list panel, use `Work in Full View` to open the editor at the most relevant section for the post's current stage.
+- From the [Social Posts](/social-posts) list panel, use `Work in Full View` to open the editor at the most relevant section for the post's current stage.
 - Keyboard-first actions in full editor:
   - `Alt+Shift+J`: jump to the next missing required field in transition preflight
   - `Alt+Shift+Enter`: run the primary sidebar action
@@ -163,6 +174,8 @@ Start with the role you are actively working as right now:
   - Assigned writers and publishers can edit Google Doc URL and Live URL on blogs they own in the workflow
   - Assigned writers and publishers can edit scheduled and display publish dates on blogs they own in the workflow
   - These core workflow fields are not meant to be blocked by separate permission toggles
+- When writing is marked `Writing Approved`, assigned publisher work is auto-jogged from `Not Started` to `Publishing in Progress` (unless an explicit publishing stage is submitted in the same transition).
+- At `Publishing Approved`, the assigned publisher remains the next actor for completion; admin review assignments are no longer actionable at that stage.
 - Non-admin writers can edit brief fields in Draft and Changes Requested.
 - Admin/reviewer can edit brief fields at any stage when needed.
 - In `Awaiting Live Link`, non-admin users can only add/update live links.
@@ -213,7 +226,7 @@ Start with the role you are actively working as right now:
 - Click table headers to sort ascending/descending.
 - Sort indicators: `↕` (unsorted), `↑` (ascending), `↓` (descending).
 - Global action order: `Copy` → `Customize` → `Import` → `Export`.
-- Primary table surfaces (`Dashboard`, `My Tasks`, `Blogs`, `Social Posts` list view) use the same control layout:
+- Primary table surfaces ([Dashboard](/dashboard), [My Tasks](/tasks), [Blogs](/blogs), [Social Posts](/social-posts) list view) use the same control layout:
   - top strip: results summary + actions
   - bottom strip: `Rows per page` + pagination
 - Default table settings on those surfaces:
@@ -274,9 +287,9 @@ Name resolution behavior:
 - Placeholder-user creation during import uses hardened auth triggers so integration bootstrap failures do not block import completion.
 
 ## 6. Calendar workflow and navigation
-- Use `Month` view for planning density and `Week` view for detailed daily execution.
+- Use [Calendar](/calendar) with `Month` view for planning density and `Week` view for detailed daily execution.
 - Month tiles intentionally show a compact list; when a day has many items, click `+N more` to jump directly to that week.
-- `Social Posts` calendar view follows the same month/week behavior and overflow pattern as the main calendar.
+- [`Social Posts`](/social-posts) calendar view follows the same month/week behavior and overflow pattern as the main calendar.
 - In social calendar month mode, each day shows up to 3 posts; `+N more` switches to week mode focused on that date for full-day detail.
 - Drag-and-drop rescheduling on blogs is permission-based and unavailable for published blogs.
 - Use the `+` button on a day to quick-create a blog or social post prefilled with that date.
@@ -288,8 +301,8 @@ Name resolution behavior:
 - Command palette: `⌘K` (Mac) or `Ctrl+K` (Windows).
 - `Esc` closes open dropdowns and modals.
 - Quick Create: `↑/↓` to move, `Enter` to select, `Esc` to close.
-- Social Post editor (`/social-posts/[id]`): `Alt+Shift+J` (next required field), `Alt+Shift+Enter` (primary action).
-- Calendar keyboard navigation (`/calendar` and `/social-posts?view=calendar`): `Arrow` keys or `J/K` to move day focus, `Enter` to open first item in focused day, `Esc` to close open side panels.
+- Social Post editor ([Social Posts](/social-posts) detail view): `Alt+Shift+J` (next required field), `Alt+Shift+Enter` (primary action).
+- Calendar keyboard navigation ([Calendar](/calendar) and [Social Posts Calendar](/social-posts?view=calendar)): `Arrow` keys or `J/K` to move day focus, `Enter` to open first item in focused day, `Esc` to close open side panels.
 - Navigation behavior: internal app links open in the same tab; external links open in a new tab.
 
 ## 8. Notifications and feedback
@@ -300,13 +313,12 @@ Name resolution behavior:
 - Activity items use plain-language titles and change summaries (for example, "Publishing Stage Updated" instead of raw status keys).
 
 ### Notification preferences
-- `Settings → Notification Preferences` controls all notification types.
+- [`Settings`](/settings) → `Notification Preferences` controls all notification types.
 - **Global toggle**: Master switch to enable or disable all notifications.
 - **Per-type toggles**: Enable/disable specific notification types (task assignments, stage changes, submissions, etc.).
 - **In-app**: Always available when enabled.
-- **Slack**: Only sends if Slack is connected and that notification type is enabled.
-- **Slack delivery method**: Choose between direct messages (coming soon, pending approval) or #content-ops-alerts channel.
-- **Slack delivery fallback**: If channel delivery fails, the system still attempts DM/webhook paths when configured.
+- **Slack**: Sends workspace-level workflow notifications to `#content-ops-alerts` when Slack notifications are enabled.
+- **No personal Slack DMs**: Direct-message workflow notifications are not used.
 
 ### Unified notification behavior
 - Workflow actions use a shared event system so the same action can update activity history, in-app notifications, and Slack together.
@@ -346,14 +358,14 @@ This format enables quick scanning in busy channels and shows exactly who is res
 
 ## 9. Connected services (Google and Slack)
 ### Connect a provider
-1. Open Settings → Connected Services
+1. Open [Settings](/settings) → Connected Services
 2. Find the service (Google or Slack) and click `Connect`
 3. Complete the provider's sign-in flow in the browser
-4. You'll be returned to Settings; the service now shows `Connected`
+4. You'll be returned to [Settings](/settings); the service now shows `Connected`
 5. Reconnect callbacks are idempotent: if the provider is already marked connected, status remains connected without creating duplicate records
 
 ### Disconnect a provider
-1. Open Settings → Connected Services
+1. Open [Settings](/settings) → Connected Services
 2. Find the service and click `Disconnect`
 3. Confirm the action
 
@@ -364,10 +376,13 @@ This format enables quick scanning in busy channels and shows exactly who is res
 - Social post stuck before completion: add at least one valid public live link.
 - Missing results: clear filters/search and reapply one by one.
 - Import errors: unselect invalid rows, verify required columns, then retry.
+- If branding assets fail, the app now falls back automatically and remains usable:
+  - login logo: `text-logo SVG` → `text-logo PNG` → `badge SVG` → text lockup
+  - app header badge: `animated GIF` → `badge SVG` → `SH` lockup
 - Wipe App Clean behavior: this action deletes all content/history and all other user accounts (including other admins); only your currently signed-in admin account is preserved.
 - Add User or import fails with `Database error creating new user`: ask an admin to run latest Supabase migrations (including `20260326103000_harden_auth_user_integrations_trigger.sql`) and retry.
-- Missing notifications: verify notification toggles and connector status in `Settings`.
-- Provider connect failed: ensure you have an active session, then retry from Settings → Connected Services.
+- Missing notifications: verify notification toggles and connector status in [Settings](/settings).
+- Provider connect failed: ensure you have an active session, then retry from [Settings](/settings) → Connected Services.
 - If you briefly see “Failed to update connected service status” but the badge later turns connected, refresh Settings once to confirm the persisted state.
 - If you see “Concurrent modification detected. Refresh and retry.” while changing workflow state, another update landed first—refresh the page and retry your change.
 - Cannot access Activity History or system/import log views: confirm your account has admin access and required permissions.

@@ -1,6 +1,6 @@
 -- Create RPC function for blog import to handle dates without client-side parsing
 create or replace function public.upsert_blog_import(
-  p_id uuid DEFAULT NULL,
+  p_id uuid,
   p_site text,
   p_title text,
   p_live_url text,
@@ -71,7 +71,8 @@ begin
       p_scheduled_publish_date::date,
       p_display_published_date::date,
       case when p_actual_published_at is not null then p_actual_published_at::timestamptz else null end,
-      case when p_actual_published_at is not null then p_actual_published_at::timestamptz else null end
+      case when p_actual_published_at is not null then p_actual_published_at::timestamptz else null end,
+      p_created_by
     )
     returning blogs.id into new_id;
     return query select new_id, true;

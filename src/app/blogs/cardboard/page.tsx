@@ -23,7 +23,11 @@ import {
   normalizeBlogRow,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
-import { notifySlack } from "@/lib/notifications";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import {
   canTransitionPublisherStatus,
   canTransitionWriterStatus,
@@ -191,7 +195,7 @@ function getStageUpdatePayload(blog: BlogRecord, targetStage: BoardStage): Stage
 
 export default function BlogCardBoardPage() {
   const router = useRouter();
-  const { hasPermission, user, profile } = useAuth();
+  const { hasPermission, session, user } = useAuth();
   const { showSaving, showSuccess, showError, updateAlert: updateStatus } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
@@ -560,13 +564,16 @@ export default function BlogCardBoardPage() {
       showError("You must be logged in.");
       return;
     }
+    if (!session?.access_token) {
+      showError("Session expired. Refresh and try again.");
+      return;
+    }
     if (quickAddAuthorId && !canAssignWriter) {
       showError("You do not have permission to assign an author.");
       return;
     }
 
     setIsCreatingIdea(true);
-    const supabase = getSupabaseBrowserClient();
     const generatedSlug = slugify(quickAddTitle) || `blog-${Date.now()}`;
 
     const payload = {
@@ -577,32 +584,40 @@ export default function BlogCardBoardPage() {
       publisher_id: null,
       writer_status: "not_started" as WriterStageStatus,
       publisher_status: "not_started" as PublisherStageStatus,
-      created_by: user.id,
     };
+    const createResponse = await fetch("/api/blogs", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }).catch(() => null);
 
-    const { data, error: insertError } = await supabase
-      .from("blogs")
-      .insert(payload)
-      .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
-      .single();
-
-    if (insertError) {
-      showError(insertError.message);
+    if (!createResponse) {
+      showError("Couldn't create blog. Please try again.");
+      setIsCreatingIdea(false);
+      return;
+    }
+    const createPayload = await parseApiResponseJson<Record<string, unknown>>(
+      createResponse
+    );
+    if (isApiFailure(createResponse, createPayload)) {
+      showError(getApiErrorMessage(createPayload, "Couldn't create blog. Please try again."));
+      setIsCreatingIdea(false);
+      return;
+    }
+    const createdBlogRow =
+      typeof createPayload.blog === "object" && createPayload.blog !== null
+        ? (createPayload.blog as Record<string, unknown>)
+        : null;
+    if (!createdBlogRow) {
+      showError("Couldn't create blog. Please try again.");
       setIsCreatingIdea(false);
       return;
     }
 
-    const createdBlog = normalizeBlogRow((data ?? {}) as Record<string, unknown>) as BlogRecord;
-    const selectedAuthor = authors.find((author) => author.id === quickAddAuthorId) ?? null;
-    await notifySlack({
-      eventType: "blog_created",
-      blogId: createdBlog.id,
-      title: createdBlog.title,
-      site: createdBlog.site,
-      actorName: profile?.full_name ?? "Team",
-      targetUserName: selectedAuthor?.full_name || "Team",
-      targetEmail: selectedAuthor?.email ?? null,
-    });
+    const createdBlog = normalizeBlogRow(createdBlogRow) as BlogRecord;
     setBlogs((previous) => [createdBlog, ...previous]);
     setQuickAddTitle("");
     setQuickAddSite("sighthound.com");

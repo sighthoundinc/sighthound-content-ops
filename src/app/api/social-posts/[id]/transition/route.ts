@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authenticateRequest } from "@/lib/server-permissions";
 import { emitEvent } from "@/lib/emit-event";
 import { withApiContract } from "@/lib/api-contract";
+import { emitWorkflowSlackEvent } from "@/lib/server-slack-emitter";
 import {
   TRANSITION_GRAPH,
   isBackwardTransition,
@@ -397,21 +398,22 @@ export const POST = withApiContract(async function POST(
 
     const slackEventType = TRANSITION_TO_SLACK_EVENT[nextStatus];
     if (slackEventType) {
-      auth.context.adminClient.functions
-        .invoke("slack-notify", {
-          body: {
-            eventType: slackEventType,
-            socialPostId: id,
-            title: socialPost.title,
-            site: socialPost.product ?? "general_company",
-            actorName: actorName ?? "Team",
-            targetUserName: targetUserName ?? "Team",
-            appUrl: process.env.NEXT_PUBLIC_APP_URL,
-          },
-        })
-        .catch((err) => {
-          console.warn("[social-post transition] Slack notify failed (non-critical)", err);
-        });
+      void emitWorkflowSlackEvent(auth.context.adminClient, {
+        eventType: slackEventType as
+          | "social_submitted_for_review"
+          | "social_changes_requested"
+          | "social_creative_approved"
+          | "social_ready_to_publish"
+          | "social_awaiting_live_link"
+          | "social_published",
+        socialPostId: id,
+        title: socialPost.title,
+        site: socialPost.product ?? "general_company",
+        actorName: actorName ?? "Team",
+        actorUserId: auth.context.userId,
+        targetUserId: targetUserId ?? undefined,
+        targetUserName: targetUserName ?? undefined,
+      });
     }
 
     return NextResponse.json({

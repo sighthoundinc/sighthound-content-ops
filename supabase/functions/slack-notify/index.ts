@@ -7,6 +7,7 @@ type EventType =
   | "writer_completed"
   | "ready_to_publish"
   | "published"
+  | "blog_publish_overdue"
   | "social_post_created"
   | "social_submitted_for_review"
   | "social_changes_requested"
@@ -14,7 +15,9 @@ type EventType =
   | "social_ready_to_publish"
   | "social_awaiting_live_link"
   | "social_published"
-  | "social_live_link_reminder";
+  | "social_live_link_reminder"
+  | "social_review_overdue"
+  | "social_publish_overdue";
 
 interface NotifyPayload {
   eventType: EventType;
@@ -40,6 +43,7 @@ const EVENT_CONTENT_TYPE: Record<EventType, string> = {
   writer_completed: "Blog",
   ready_to_publish: "Blog",
   published: "Blog",
+  blog_publish_overdue: "Blog",
   social_post_created: "Social",
   social_submitted_for_review: "Social",
   social_changes_requested: "Social",
@@ -48,6 +52,8 @@ const EVENT_CONTENT_TYPE: Record<EventType, string> = {
   social_awaiting_live_link: "Social",
   social_published: "Social",
   social_live_link_reminder: "Social",
+  social_review_overdue: "Social",
+  social_publish_overdue: "Social",
 };
 
 
@@ -57,6 +63,7 @@ const EVENT_ACTION: Record<EventType, string> = {
   writer_completed: "Writing complete - awaiting publishing review",
   ready_to_publish: "Ready to publish - awaiting publishing action",
   published: "Published",
+  blog_publish_overdue: "Publish overdue - immediate action required",
   social_post_created: "Created - draft is ready for work",
   social_submitted_for_review: "Submitted for review - awaiting editorial approval",
   social_changes_requested: "Changes requested - awaiting revision",
@@ -65,6 +72,8 @@ const EVENT_ACTION: Record<EventType, string> = {
   social_awaiting_live_link: "Awaiting live link - awaiting submission",
   social_published: "Published",
   social_live_link_reminder: "Live link reminder - awaiting submission",
+  social_review_overdue: "Review overdue - immediate action required",
+  social_publish_overdue: "Publish overdue - immediate action required",
 };
 
 const ROLE_LABELS = new Set(["writer", "publisher", "editor", "social editor", "admin"]);

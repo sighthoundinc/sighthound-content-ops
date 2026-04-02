@@ -77,6 +77,13 @@ import {
   type SortDirection,
   type TableRowLimit,
 } from "@/lib/table";
+import {
+  getMixedContentLabel,
+  MIXED_CONTENT_FILTER_LABELS,
+  MIXED_CONTENT_FILTER_OPTIONS,
+  matchesMixedContentFilters,
+  type MixedContentFilterValue,
+} from "@/lib/content-classification";
 import { getSiteBadgeClasses, getSiteLabel, getSiteShortLabel } from "@/lib/site";
 import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
 import type {
@@ -86,6 +93,7 @@ import type {
   OverallBlogStatus,
   ProfileRecord,
   PublisherStageStatus,
+  SocialPostType,
   SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
@@ -190,6 +198,7 @@ type DashboardSocialPostMetric = {
   id: string;
   title: string;
   product: string | null;
+  type: SocialPostType | null;
   status: SocialPostStatus;
   scheduled_date: string | null;
   created_at: string;
@@ -208,6 +217,7 @@ type DashboardLifecycleBucket =
   | "published";
 type DashboardContentRow = {
   content_type: DashboardContentType;
+  content_label: string;
   site: string;
   id: string;
   title: string;
@@ -223,7 +233,7 @@ type DashboardContentRow = {
 };
 
 const DASHBOARD_COLUMN_LABELS: Record<DashboardColumnKey, string> = {
-  content_type: "Content Type",
+  content_type: "Content",
   site: "Site",
   id: "ID",
   title: "Title",
@@ -338,7 +348,7 @@ type CrossContentWorkflowFilter =
   | "ready_to_publish"
   | "published_recent";
 type CrossContentDeliveryFilter = "scheduled" | "unscheduled" | "overdue";
-type DashboardContentTypeFilter = DashboardContentType;
+type DashboardContentTypeFilter = MixedContentFilterValue;
 const METRIC_FILTER_LABELS: Record<MetricFilterKey, string> = {
   open_work: "Open Work",
   scheduled_next_7_days: "Scheduled Next 7 Days",
@@ -400,10 +410,9 @@ const buildUserScopedStorageKey = (baseKey: string, userId: string | null | unde
   `${baseKey}:${userId ?? "anonymous"}`;
 
 const DASHBOARD_SORT_FIELD_SET = new Set<DashboardSortField>(DASHBOARD_SORT_FIELDS);
-const CONTENT_TYPE_FILTER_SET = new Set<DashboardContentTypeFilter>([
-  "blog",
-  "social_post",
-]);
+const CONTENT_TYPE_FILTER_SET = new Set<DashboardContentTypeFilter>(
+  MIXED_CONTENT_FILTER_OPTIONS.map((option) => option.value)
+);
 const SITE_SET = new Set<BlogSite>(SITES);
 const OVERALL_STATUS_SET = new Set<OverallBlogStatus>(OVERALL_STATUSES);
 const WRITER_STATUS_SET = new Set<WriterStageStatus>(WRITER_STATUSES);
@@ -836,7 +845,7 @@ export default function DashboardPage() {
       const { data, error } = await supabase
         .from("social_posts")
         .select(
-          "id,title,product,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)"
+          "id,title,product,type,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)"
         );
       return { data, error };
     };
@@ -878,10 +887,18 @@ export default function DashboardPage() {
           ) {
             return null;
           }
+          const normalizedSocialType =
+            row.type === "image" ||
+            row.type === "carousel" ||
+            row.type === "video" ||
+            row.type === "link"
+              ? (row.type as SocialPostType)
+              : null;
           return {
             id: typeof row.id === "string" ? row.id : "",
             title: typeof row.title === "string" ? row.title : "Untitled social post",
             product: typeof row.product === "string" ? row.product : null,
+            type: normalizedSocialType,
             status: row.status as SocialPostStatus,
             scheduled_date:
               typeof row.scheduled_date === "string" ? row.scheduled_date : null,
@@ -1184,7 +1201,11 @@ export default function DashboardPage() {
   );
 
   const siteFilterOptions = useMemo(
-    () => SITES.map((site) => ({ value: site, label: getSiteShortLabel(site) })),
+    () =>
+      SITES.map((site) => ({
+        value: site,
+        label: `${getSiteLabel(site)} (${getSiteShortLabel(site)})`,
+      })),
     []
   );
 
@@ -1238,10 +1259,11 @@ export default function DashboardPage() {
     []
   );
   const contentTypeFilterOptions = useMemo(
-    () => [
-      { value: "blog", label: "Blogs" },
-      { value: "social_post", label: "Social Posts" },
-    ],
+    () =>
+      MIXED_CONTENT_FILTER_OPTIONS.map((option) => ({
+        value: option.value,
+        label: option.label,
+      })),
     []
   );
   const socialStatusFilterOptions = useMemo(
@@ -1333,6 +1355,7 @@ export default function DashboardPage() {
             : blog.publisher?.full_name ?? "Unassigned";
       return {
         content_type: "blog",
+        content_label: getMixedContentLabel({ contentType: "blog" }),
         site: getSiteShortLabel(blog.site),
         id: blog.id,
         title: blog.title,
@@ -1357,6 +1380,10 @@ export default function DashboardPage() {
           : post.worker_name ?? post.creator_name ?? "Unassigned";
       return {
         content_type: "social_post",
+        content_label: getMixedContentLabel({
+          contentType: "social_post",
+          socialType: post.type,
+        }),
         site: getSiteShortLabel((post.associated_blog_site as BlogSite | null) ?? "sighthound.com"),
         id: post.id,
         title: post.title,
@@ -1481,6 +1508,7 @@ export default function DashboardPage() {
       const searchHaystack = [
         row.title,
         row.site,
+        row.content_label,
         row.owner_display,
         row.status_display,
         row.id,
@@ -1492,7 +1520,11 @@ export default function DashboardPage() {
         normalizedSearch.length === 0 || searchHaystack.includes(normalizedSearch);
       const matchesContentType =
         contentTypeFilters.length === 0 ||
-        contentTypeFilters.includes(row.content_type);
+        matchesMixedContentFilters({
+          selectedFilters: contentTypeFilters,
+          contentType: row.content_type,
+          socialType: row.social_post?.type ?? null,
+        });
       // Blog-scoped filters: site and status apply only to blog rows; social rows pass through
       const matchesSite =
         siteFilters.length === 0 ||
@@ -1597,7 +1629,7 @@ export default function DashboardPage() {
       } else if (sortField === "site") {
         compareResult = collator.compare(left.site, right.site);
       } else if (sortField === "content_type") {
-        compareResult = collator.compare(left.content_type, right.content_type);
+        compareResult = collator.compare(left.content_label, right.content_label);
       } else if (sortField === "id") {
         compareResult = collator.compare(left.id, right.id);
       } else if (sortField === "status_display") {
@@ -2070,7 +2102,7 @@ export default function DashboardPage() {
         })),
         ...contentTypeFilters.map((value) => ({
           id: `content-type-${value}`,
-          label: `Type: ${value === "blog" ? "Blogs" : "Social Posts"}`,
+          label: `Type: ${MIXED_CONTENT_FILTER_LABELS[value]}`,
           onRemove: () => {
             setContentTypeFilters((previous) =>
               previous.filter((entry) => entry !== value)
@@ -2222,7 +2254,7 @@ export default function DashboardPage() {
   const getExportCellValue = useCallback(
     (row: DashboardContentRow, column: DashboardColumnKey) => {
       if (column === "content_type") {
-        return row.content_type === "blog" ? "Blog" : "Social Post";
+        return row.content_label;
       }
       if (column === "site") {
         return row.site;

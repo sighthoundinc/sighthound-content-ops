@@ -136,6 +136,29 @@ async function validateNotificationEvent(event: UnifiedEvent): Promise<boolean> 
   }
 }
 
+function getRecordActivityEndpoint() {
+  if (typeof window !== "undefined") {
+    return "/api/events/record-activity";
+  }
+
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configuredAppUrl) {
+    return `${configuredAppUrl.replace(/\/$/, "")}/api/events/record-activity`;
+  }
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) {
+    const absoluteVercelUrl =
+      vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://")
+        ? vercelUrl
+        : `https://${vercelUrl}`;
+    return `${absoluteVercelUrl.replace(/\/$/, "")}/api/events/record-activity`;
+  }
+
+  const port = process.env.PORT?.trim() || "3000";
+  return `http://127.0.0.1:${port}/api/events/record-activity`;
+}
+
 /**
  * Get notification payload from unified event.
  * Callers in React components should use pushNotification() with the returned object.
@@ -171,9 +194,10 @@ export function getNotificationFromEvent(event: UnifiedEvent): NotificationInput
 async function recordActivityHistory(event: UnifiedEvent): Promise<boolean> {
   try {
     const record = unifiedEventToActivityRecord(event);
+    const endpoint = getRecordActivityEndpoint();
 
     // Call API to record activity history
-    const response = await fetch("/api/events/record-activity", {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

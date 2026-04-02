@@ -11,6 +11,7 @@ import {
   canTransitionWriterStatus,
 } from "@/lib/permissions";
 import { authenticateRequest, hasPermission } from "@/lib/server-permissions";
+import { emitWorkflowSlackEvent } from "@/lib/server-slack-emitter";
 import type { BlogRecord, PublisherStageStatus, WriterStageStatus } from "@/lib/types";
 
 const WRITER_STAGE_STATUSES = [
@@ -30,25 +31,37 @@ const PUBLISHER_STAGE_STATUSES = [
 
 const transitionPayloadSchema = z
   .object({
+    title: z.string().trim().min(1).optional(),
+    site: z.enum(["sighthound.com", "redactor.com"]).optional(),
     writer_id: z.string().uuid().nullable().optional(),
     publisher_id: z.string().uuid().nullable().optional(),
     writer_status: z.enum(WRITER_STAGE_STATUSES).optional(),
     publisher_status: z.enum(PUBLISHER_STAGE_STATUSES).optional(),
+    google_doc_url: z.string().url().nullable().optional(),
+    live_url: z.string().url().nullable().optional(),
     scheduled_publish_date: z.string().date().nullable().optional(),
     display_published_date: z.string().date().nullable().optional(),
     target_publish_date: z.string().date().nullable().optional(),
+    actual_published_at: z.string().nullable().optional(),
+    is_archived: z.boolean().optional(),
   })
   .strict();
 
 function hasAnyUpdate(payload: z.infer<typeof transitionPayloadSchema>) {
   return (
+    payload.title !== undefined ||
+    payload.site !== undefined ||
     payload.writer_id !== undefined ||
     payload.publisher_id !== undefined ||
     payload.writer_status !== undefined ||
     payload.publisher_status !== undefined ||
+    payload.google_doc_url !== undefined ||
+    payload.live_url !== undefined ||
     payload.scheduled_publish_date !== undefined ||
     payload.display_published_date !== undefined ||
-    payload.target_publish_date !== undefined
+    payload.target_publish_date !== undefined ||
+    payload.actual_published_at !== undefined ||
+    payload.is_archived !== undefined
   );
 }
 
@@ -104,10 +117,31 @@ export const POST = withApiContract(async function POST(
     payload.writer_id !== undefined && payload.writer_id !== blog.writer_id;
   const requestedPublisherAssignmentChange =
     payload.publisher_id !== undefined && payload.publisher_id !== blog.publisher_id;
+  const requestedMetadataChange =
+    (payload.title !== undefined && payload.title !== blog.title) ||
+    (payload.site !== undefined && payload.site !== blog.site);
+  const requestedGoogleDocChange =
+    payload.google_doc_url !== undefined && payload.google_doc_url !== blog.google_doc_url;
+  const requestedLiveUrlChange =
+    payload.live_url !== undefined && payload.live_url !== blog.live_url;
   const requestedScheduledDateChange =
     payload.scheduled_publish_date !== undefined ||
     payload.target_publish_date !== undefined;
   const requestedDisplayDateChange = payload.display_published_date !== undefined;
+  const requestedActualPublishedAtChange =
+    payload.actual_published_at !== undefined &&
+    payload.actual_published_at !== blog.actual_published_at;
+  const requestedArchiveChange =
+    payload.is_archived !== undefined && payload.is_archived !== blog.is_archived;
+  const isWorkflowOwner =
+    blog.writer_id === auth.context.userId || blog.publisher_id === auth.context.userId;
+
+  if (requestedMetadataChange && !has("edit_blog_metadata") && !has("edit_blog_title")) {
+    return NextResponse.json(
+      { error: "Permission denied for blog metadata changes" },
+      { status: 403 }
+    );
+  }
 
   if (requestedWriterAssignmentChange && !has("change_writer_assignment")) {
     return NextResponse.json(
@@ -139,15 +173,55 @@ export const POST = withApiContract(async function POST(
       { status: 403 }
     );
   }
-  if (requestedScheduledDateChange && !has("edit_scheduled_publish_date")) {
+  if (
+    requestedGoogleDocChange &&
+    !has("edit_google_doc_link") &&
+    !isWorkflowOwner
+  ) {
+    return NextResponse.json(
+      { error: "Permission denied for Google Doc URL changes" },
+      { status: 403 }
+    );
+  }
+  if (requestedLiveUrlChange && !has("edit_live_url") && !isWorkflowOwner) {
+    return NextResponse.json(
+      { error: "Permission denied for Live URL changes" },
+      { status: 403 }
+    );
+  }
+  if (
+    requestedScheduledDateChange &&
+    !has("edit_scheduled_publish_date") &&
+    !isWorkflowOwner
+  ) {
     return NextResponse.json(
       { error: "Permission denied for scheduled publish date changes" },
       { status: 403 }
     );
   }
-  if (requestedDisplayDateChange && !has("edit_display_publish_date")) {
+  if (
+    requestedDisplayDateChange &&
+    !has("edit_display_publish_date") &&
+    !isWorkflowOwner
+  ) {
     return NextResponse.json(
       { error: "Permission denied for display publish date changes" },
+      { status: 403 }
+    );
+  }
+  if (requestedActualPublishedAtChange && !has("edit_actual_publish_timestamp")) {
+    return NextResponse.json(
+      { error: "Permission denied for actual publish timestamp changes" },
+      { status: 403 }
+    );
+  }
+  if (
+    requestedArchiveChange &&
+    !has("archive_blog") &&
+    !has("restore_archived_blog")
+  ) {
+    return NextResponse.json(
+      { error: "Permission denied for archive state changes" },
       { status: 403 }
     );
   }
@@ -181,7 +255,13 @@ export const POST = withApiContract(async function POST(
     );
   }
 
-  const updatePayload: Record<string, string | null> = {};
+  const updatePayload: Record<string, string | boolean | null> = {};
+  if (payload.title !== undefined) {
+    updatePayload.title = payload.title;
+  }
+  if (payload.site !== undefined) {
+    updatePayload.site = payload.site;
+  }
   if (payload.writer_id !== undefined) {
     updatePayload.writer_id = payload.writer_id;
   }
@@ -194,6 +274,12 @@ export const POST = withApiContract(async function POST(
   if (payload.publisher_status !== undefined) {
     updatePayload.publisher_status = payload.publisher_status;
   }
+  if (payload.google_doc_url !== undefined) {
+    updatePayload.google_doc_url = payload.google_doc_url;
+  }
+  if (payload.live_url !== undefined) {
+    updatePayload.live_url = payload.live_url;
+  }
   if (payload.scheduled_publish_date !== undefined) {
     updatePayload.scheduled_publish_date = payload.scheduled_publish_date;
     if (payload.target_publish_date === undefined) {
@@ -205,6 +291,12 @@ export const POST = withApiContract(async function POST(
   }
   if (payload.target_publish_date !== undefined) {
     updatePayload.target_publish_date = payload.target_publish_date;
+  }
+  if (payload.actual_published_at !== undefined) {
+    updatePayload.actual_published_at = payload.actual_published_at;
+  }
+  if (payload.is_archived !== undefined) {
+    updatePayload.is_archived = payload.is_archived;
   }
 
   const { data: updatedRow, error: updateError } = await auth.context.adminClient
@@ -228,5 +320,57 @@ export const POST = withApiContract(async function POST(
   }
 
   const updatedBlog = normalizeBlogRow(updatedRow as Record<string, unknown>);
+
+  const slackEmissions: Array<{
+    eventType:
+      | "writer_assigned"
+      | "ready_to_publish"
+      | "published";
+    targetUserId?: string | null;
+  }> = [];
+  if (requestedWriterAssignmentChange && payload.writer_id) {
+    slackEmissions.push({
+      eventType: "writer_assigned",
+      targetUserId: payload.writer_id,
+    });
+  }
+  if (requestedPublisherAssignmentChange && payload.publisher_id) {
+    slackEmissions.push({
+      eventType: "writer_assigned",
+      targetUserId: payload.publisher_id,
+    });
+  }
+  if (
+    payload.writer_status !== undefined &&
+    payload.writer_status === "completed" &&
+    payload.writer_status !== blog.writer_status
+  ) {
+    slackEmissions.push({
+      eventType: "ready_to_publish",
+      targetUserId: nextPublisherId,
+    });
+  }
+  if (
+    payload.publisher_status !== undefined &&
+    payload.publisher_status === "completed" &&
+    payload.publisher_status !== blog.publisher_status
+  ) {
+    slackEmissions.push({
+      eventType: "published",
+    });
+  }
+
+  await Promise.all(
+    slackEmissions.map((emission) =>
+      emitWorkflowSlackEvent(auth.context.adminClient, {
+        eventType: emission.eventType,
+        blogId: id,
+        title: updatedBlog.title,
+        site: updatedBlog.site,
+        actorUserId: auth.context.userId,
+        targetUserId: emission.targetUserId ?? undefined,
+      })
+    )
+  );
   return NextResponse.json({ blog: updatedBlog }, { status: 200 });
 });

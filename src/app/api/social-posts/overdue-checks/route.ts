@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/server-permissions";
 import { getUserRoles } from "@/lib/roles";
 import { withApiContract } from "@/lib/api-contract";
+import { emitWorkflowSlackEvent } from "@/lib/server-slack-emitter";
 
 const OVERDUE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -27,7 +28,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
   // Check for social posts stuck in in_review status (overdue for review)
   const { data: reviewDuePost, error: reviewError } = await auth.context.adminClient
     .from("social_posts")
-    .select("id,title,product,status,last_review_overdue_notification_at")
+    .select("id,title,product,status,reviewer_user_id,last_review_overdue_notification_at")
     .eq("status", "in_review")
     .gte("updated_at", oneDayAgo);
 
@@ -42,7 +43,9 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
   // Check for social posts stuck in ready_to_publish status (overdue for publishing)
   const { data: publishDuePost, error: publishError } = await auth.context.adminClient
     .from("social_posts")
-    .select("id,title,product,status,scheduled_date,last_publish_overdue_notification_at")
+    .select(
+      "id,title,product,status,scheduled_date,worker_user_id,last_publish_overdue_notification_at"
+    )
     .eq("status", "ready_to_publish")
     .not("scheduled_date", "is", null)
     .gte("updated_at", oneDayAgo);
@@ -119,6 +122,14 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     if (emitSuccess) {
       reviewOverdueNotificationsSent += 1;
     }
+    void emitWorkflowSlackEvent(auth.context.adminClient, {
+      eventType: "social_review_overdue",
+      socialPostId: post.id,
+      title: post.title ?? "Social Post",
+      site: post.product ?? "general_company",
+      actorName: "System",
+      targetUserId: post.reviewer_user_id ?? undefined,
+    });
   }
 
   // Process publish overdue posts
@@ -153,6 +164,14 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     if (emitSuccess) {
       publishOverdueNotificationsSent += 1;
     }
+    void emitWorkflowSlackEvent(auth.context.adminClient, {
+      eventType: "social_publish_overdue",
+      socialPostId: post.id,
+      title: post.title ?? "Social Post",
+      site: post.product ?? "general_company",
+      actorName: "System",
+      targetUserId: post.worker_user_id ?? undefined,
+    });
   }
 
 

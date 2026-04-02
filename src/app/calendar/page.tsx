@@ -30,6 +30,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
+import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
 import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import {
@@ -52,6 +53,7 @@ import {
   canViewAllTaskScope,
   createUiPermissionContract,
 } from "@/lib/permissions/uiPermissions";
+import { getDateKeyInTimezone, getWeekdayLabels, normalizeWeekStart } from "@/lib/calendar";
 import {
   SEGMENTED_CONTROL_CLASS,
   segmentedControlItemClass,
@@ -353,7 +355,7 @@ export default function CalendarPage() {
   const [writerFilter, setWriterFilter] = useState<string>("all");
   const [cursorDate, setCursorDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(1);
-  const [timezone, setTimezone] = useState("America/Chicago");
+  const [timezone, setTimezone] = useState("America/New_York");
   const [noDateRowLimit, setNoDateRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [noDateCurrentPage, setNoDateCurrentPage] = useState(1);
   const [draggingBlogId, setDraggingBlogId] = useState<string | null>(null);
@@ -372,8 +374,11 @@ export default function CalendarPage() {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Fixed: Capture today's date once at mount, don't recalculate each render
-  const todayDateKey = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
+  const normalizedWeekStart = useMemo(() => normalizeWeekStart(weekStart), [weekStart]);
+  const todayDateKey = useMemo(
+    () => getDateKeyInTimezone(new Date(), timezone),
+    [timezone]
+  );
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -385,19 +390,17 @@ export default function CalendarPage() {
   useEffect(() => {
     setViewScope(canViewAllTasks ? "all" : "mine");
   }, [canViewAllTasks]);
-  // Initialize calendar to current week on page load
   useEffect(() => {
     setCursorDate((prev) => {
       const currentWeekStart = startOfWeek(new Date(), {
-        weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+        weekStartsOn: normalizedWeekStart,
       });
-      // Only update if we haven't loaded yet or if cursor is in the future
       if (prev < currentWeekStart) {
         return currentWeekStart;
       }
       return prev;
     });
-  }, [weekStart]);
+  }, [normalizedWeekStart]);
   const loadData = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     setIsLoading(true);
@@ -514,30 +517,30 @@ export default function CalendarPage() {
     if (mode === "month") {
       const monthStart = startOfMonth(cursorDate);
       return {
-        start: startOfWeek(monthStart, { weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6 }),
+        start: startOfWeek(monthStart, { weekStartsOn: normalizedWeekStart }),
         end: endOfWeek(endOfMonth(cursorDate), {
-          weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+          weekStartsOn: normalizedWeekStart,
         }),
       };
     }
 
     const start = startOfWeek(cursorDate, {
-      weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+      weekStartsOn: normalizedWeekStart,
     });
     return {
       start,
-      end: endOfWeek(start, { weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6 }),
+      end: endOfWeek(start, { weekStartsOn: normalizedWeekStart }),
     };
-  }, [cursorDate, mode, weekStart]);
+  }, [cursorDate, mode, normalizedWeekStart]);
   const currentWeekRange = useMemo(() => {
-    const start = startOfWeek(new Date(), {
-      weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+    const start = startOfWeek(new Date(`${todayDateKey}T00:00:00`), {
+      weekStartsOn: normalizedWeekStart,
     });
     return {
       start,
-      end: endOfWeek(start, { weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6 }),
+      end: endOfWeek(start, { weekStartsOn: normalizedWeekStart }),
     };
-  }, [weekStart]);
+  }, [normalizedWeekStart, todayDateKey]);
   const days = useMemo(
     () =>
       eachDayOfInterval({
@@ -550,7 +553,7 @@ export default function CalendarPage() {
     if (days.length === 0) {
       return;
     }
-    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const todayKey = todayDateKey;
     const isTodayVisible = days.some((day) => format(day, "yyyy-MM-dd") === todayKey);
     setFocusedDateKey((previous) => {
       if (previous && days.some((day) => format(day, "yyyy-MM-dd") === previous)) {
@@ -558,17 +561,15 @@ export default function CalendarPage() {
       }
       return isTodayVisible ? todayKey : format(days[0], "yyyy-MM-dd");
     });
-  }, [days]);
-  const weekdayLabels = useMemo(() => {
-    const baseStart = startOfWeek(new Date(), {
-      weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
-    });
-    return Array.from({ length: 7 }, (_, index) => format(addDays(baseStart, index), "EEE"));
-  }, [weekStart]);
-  const todayWeekdayColumnIndex = useMemo(
-    () => (new Date().getDay() - weekStart + 7) % 7,
-    [weekStart]
+  }, [days, todayDateKey]);
+  const weekdayLabels = useMemo(
+    () => getWeekdayLabels(normalizedWeekStart),
+    [normalizedWeekStart]
   );
+  const todayWeekdayColumnIndex = useMemo(() => {
+    const todayDate = new Date(`${todayDateKey}T00:00:00`);
+    return (todayDate.getDay() - normalizedWeekStart + 7) % 7;
+  }, [normalizedWeekStart, todayDateKey]);
 
   const calendarItemsByDate = useMemo(() => {
     const byDate: Record<
@@ -698,10 +699,10 @@ export default function CalendarPage() {
           }
         } else {
           const weekStart_ = startOfWeek(prev, {
-            weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+            weekStartsOn: normalizedWeekStart,
           });
           const weekEnd_ = endOfWeek(weekStart_, {
-            weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+            weekStartsOn: normalizedWeekStart,
           });
           if (!isWithinInterval(nextDate, { start: weekStart_, end: weekEnd_ })) {
             return nextDate;
@@ -714,7 +715,7 @@ export default function CalendarPage() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [focusedDateKey, mode, weekStart, calendarItemsByDate]);
+  }, [focusedDateKey, mode, normalizedWeekStart, calendarItemsByDate]);
   const noPublishDateBlogs = useMemo(
     () => filteredBlogs.filter((blog) => !getBlogScheduledDate(blog)),
     [filteredBlogs]
@@ -967,7 +968,7 @@ export default function CalendarPage() {
           <DataPageHeader
             title="Calendar"
             description={`${timezone} timezone • week starts on ${
-              ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][weekStart]
+              ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][normalizedWeekStart]
             }`}
           />
           <DataPageToolbar
@@ -993,12 +994,11 @@ export default function CalendarPage() {
                   type="button"
                   className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm"
                   onClick={() => {
-                    // Navigate to current week (not just today's date)
-                    const currentWeekStart = startOfWeek(new Date(), {
-                      weekStartsOn: weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+                    const todayDate = new Date(`${todayDateKey}T00:00:00`);
+                    const currentWeekStart = startOfWeek(todayDate, {
+                      weekStartsOn: normalizedWeekStart,
                     });
                     setCursorDate(currentWeekStart);
-                    // Schedule scroll after render
                     setTimeout(() => {
                       const todayTile = calendarGridRef.current?.querySelector(
                         '[data-is-today="true"]'
@@ -1193,23 +1193,10 @@ export default function CalendarPage() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {weekdayLabels.map((label, index) => (
-                    <div
-                      key={label}
-                      className="flex flex-col items-center justify-center gap-1"
-                    >
-                      {index === todayWeekdayColumnIndex ? (
-                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                      ) : (
-                        <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
-                      )}
-                      <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {label}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <CalendarWeekdayHeaderRow
+                  labels={weekdayLabels}
+                  todayColumnIndex={todayWeekdayColumnIndex}
+                />
                 {!hasBlogsEnabled && !hasSocialPostsEnabled ? (
                   <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
                     Enable <span className="font-semibold">Blogs</span> or{" "}
@@ -1228,15 +1215,11 @@ export default function CalendarPage() {
                       setDragOverDateKey(null);
                     }}
                   >
-                    <div
-                      className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+                    <CalendarGridSurface
+                      gridRef={calendarGridRef}
+                      containLayout
                     >
-                      <div
-                        className="grid grid-cols-7 gap-2"
-                        ref={calendarGridRef}
-                        style={{ contain: "layout" }}
-                      >
-                        {days.map((day) => {
+                      {days.map((day) => {
                           const key = format(day, "yyyy-MM-dd");
                           const items = calendarItemsByDate[key] ?? [];
                           const compact = mode === "month";
@@ -1356,9 +1339,8 @@ export default function CalendarPage() {
                               </CalendarTile>
                             </DroppableDayCell>
                           );
-                        })}
-                      </div>
-                    </div>
+                      })}
+                    </CalendarGridSurface>
                   </DndContext>
                 )}
               </section>

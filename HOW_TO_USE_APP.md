@@ -78,6 +78,12 @@ Start with the role you are actively working as right now:
 - For social posts, task ownership is derived from workflow stage ownership (`draft/changes_requested/ready_to_publish/awaiting_live_link` → worker, `in_review/creative_approved` → reviewer) so handoff items appear in the correct action bucket.
 - `Next Tasks` is mixed and prioritized across both blogs and social posts so actionable social handoffs (for example `Ready to Publish`) are not hidden behind blog-only ordering.
 - The main tasks table is a single mixed list (blogs + social), not split into separate blog/social sections.
+- The `Content` column/filter supports:
+  - `Blog`
+  - `Social Post (All)`
+  - `Social: Image`, `Social: Carousel`, `Social: Video`, `Social: Link`
+- Choose `Social Post (All)` to see every social row regardless of subtype; choose a social subtype to narrow to only that subtype.
+- Site filtering on mixed task rows is standardized to two options only: `Sighthound (SH)` and `Redactor (RED)`.
 - Use `Action State` filter to switch between:
   - `Required by: <username>` (actionable now)
   - `Waiting on Others` (assigned to you but blocked on another actor)
@@ -183,6 +189,12 @@ Start with the role you are actively working as right now:
   - Group 1 (Cross-Content Scope): `Sites`, `Content Type`, `Workflow (All Content)`, `Delivery (All Content)`
   - Group 2 (Blog Filters): `Blog Stage`, `Blog Writers`, `Blog Publishers`, `Blog Writer Status`, `Blog Publisher Status`
   - Group 3 (Social Filters): `Social Status`, `Social Product`
+- `Sites` in mixed views is constrained to `Sighthound (SH)` and `Redactor (RED)`.
+- `Content Type` supports both umbrella and subtype scopes:
+  - `Blog`
+  - `Social Post (All)`
+  - `Social: Image`, `Social: Carousel`, `Social: Video`, `Social: Link`
+- `Social Post (All)` includes all social subtypes; subtype options narrow to only the selected subtype.
 - Scope-safe behavior:
   - Blog-only filters do not hide social rows.
   - Social-only filters do not hide blog rows.
@@ -215,7 +227,8 @@ Start with the role you are actively working as right now:
   - `Ready to Publish` rows use sky tones
   - `Awaiting Live Link` rows use amber tones
   - `In Progress` rows use blue tones
-- Dashboard list is now a unified content table for blogs + social posts using core columns: `Type`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated` (with optional `Product`).
+- Dashboard list is now a unified content table for blogs + social posts using core columns: `Content`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated` (with optional `Product`).
+- `Content` labels can include social subtype context (for example `Social Post · Carousel`) while filters keep an umbrella `Social Post (All)` option.
 - In Dashboard, blog `Published` date reflects the blog's **Actual Published Date** (actual published timestamp date), not display/scheduled fallback dates.
 - Clicking a blog row opens the blog detail drawer; clicking a social row opens its dedicated page.
 - Phase A selection behavior: both blog and social rows can be selected in-table.
@@ -227,7 +240,9 @@ Start with the role you are actively working as right now:
 - Core table behavior is standardized across pages (sorting, truncation, row density, pagination controls).
 - Drawers and action feedback follow shared patterns; behavior should feel the same regardless of module.
 - Workflow actions are validated before they are accepted, so invalid transitions are blocked consistently.
-- My Tasks and Dashboard inline blog updates use the same transition API validation path, so permission and workflow errors are consistent across both surfaces.
+- Blog detail, My Tasks, and Dashboard blog workflow edits use the same transition API path, so permission checks and transition alerts stay consistent across surfaces.
+- Blog and social post create actions now use canonical create API routes (`POST /api/blogs`, `POST /api/social-posts`), so create-time Slack alerts are emitted consistently across creation surfaces.
+- Automated reminder sweeps (awaiting live link + overdue review/publish checks) send Slack alerts through the same centralized workflow notification path.
 - When an action fails, feedback uses standardized error wording (and may include a short error code) for easier troubleshooting.
 
 ## 5. Import workflow
@@ -261,9 +276,12 @@ Name resolution behavior:
 ## 6. Calendar workflow and navigation
 - Use `Month` view for planning density and `Week` view for detailed daily execution.
 - Month tiles intentionally show a compact list; when a day has many items, click `+N more` to jump directly to that week.
+- `Social Posts` calendar view follows the same month/week behavior and overflow pattern as the main calendar.
+- In social calendar month mode, each day shows up to 3 posts; `+N more` switches to week mode focused on that date for full-day detail.
 - Drag-and-drop rescheduling on blogs is permission-based and unavailable for published blogs.
 - Use the `+` button on a day to quick-create a blog or social post prefilled with that date.
 - Unscheduled work appears below the grid so no content is hidden from operational review.
+- In both calendar surfaces, weekday ordering and “today” markers follow your personal `week start` + `timezone` settings.
 
 ## 7. Shortcuts and fast navigation
 - Use the clickable `Shortcut` label to open the shortcuts modal.
@@ -271,6 +289,7 @@ Name resolution behavior:
 - `Esc` closes open dropdowns and modals.
 - Quick Create: `↑/↓` to move, `Enter` to select, `Esc` to close.
 - Social Post editor (`/social-posts/[id]`): `Alt+Shift+J` (next required field), `Alt+Shift+Enter` (primary action).
+- Calendar keyboard navigation (`/calendar` and `/social-posts?view=calendar`): `Arrow` keys or `J/K` to move day focus, `Enter` to open first item in focused day, `Esc` to close open side panels.
 - Navigation behavior: internal app links open in the same tab; external links open in a new tab.
 
 ## 8. Notifications and feedback

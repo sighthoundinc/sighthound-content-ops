@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   DndContext,
@@ -12,20 +12,24 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
+  addDays,
   addMonths,
+  addWeeks,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
   format,
   formatDistanceToNow,
-  isSameDay,
+  isWithinInterval,
   startOfMonth,
   startOfWeek,
   subMonths,
+  subWeeks,
 } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
+import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
 import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
@@ -62,7 +66,6 @@ import {
 } from "@/lib/status";
 import { canUserActOnStatus } from "@/lib/social-post-workflow";
 import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
-import { notifySlack } from "@/lib/notifications";
 import { getUserRoles } from "@/lib/roles";
 import {
   CHANGE_REQUEST_CATEGORY_OPTIONS,
@@ -77,6 +80,11 @@ import {
   isApiFailure,
   parseApiResponseJson,
 } from "@/lib/api-response";
+import {
+  getDateKeyInTimezone,
+  getWeekdayLabels,
+  normalizeWeekStart,
+} from "@/lib/calendar";
 import {
   SEGMENTED_CONTROL_CLASS,
   segmentedControlItemClass,
@@ -111,6 +119,7 @@ import { useAlerts } from "@/providers/alerts-provider";
 import { useNotifications } from "@/providers/notifications-provider";
 
 type SocialPostsView = "board" | "list" | "calendar";
+type SocialCalendarMode = "month" | "week";
 
 type BlogLookupResult = {
   id: string;
@@ -620,6 +629,9 @@ function SocialPostsPageContent() {
   const [statusFilter, setStatusFilter] = useState<SocialPostStatus | "all">("all");
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeMonth, setActiveMonth] = useState(new Date());
+  const [calendarMode, setCalendarMode] = useState<SocialCalendarMode>("month");
+  const [focusedCalendarDateKey, setFocusedCalendarDateKey] = useState<string | null>(null);
+  const calendarGridRef = useRef<HTMLDivElement | null>(null);
   const [listRowLimit, setListRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [listCurrentPage, setListCurrentPage] = useState(1);
   const [listSortField, setListSortField] = useState<string>("updated");
@@ -677,6 +689,15 @@ function SocialPostsPageContent() {
   const [blogSearchResults, setBlogSearchResults] = useState<BlogLookupResult[]>([]);
   const [isBlogSearchOpen, setIsBlogSearchOpen] = useState(false);
   const [isBlogSearchLoading, setIsBlogSearchLoading] = useState(false);
+  const calendarWeekStart = useMemo(
+    () => normalizeWeekStart(profile?.week_start),
+    [profile?.week_start]
+  );
+  const calendarTimezone = profile?.timezone ?? "America/New_York";
+  const todayCalendarDateKey = useMemo(
+    () => getDateKeyInTimezone(new Date(), calendarTimezone),
+    [calendarTimezone]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1227,12 +1248,19 @@ function SocialPostsPageContent() {
   }, [blogSearchQuery, isBlogSearchOpen]);
 
   const calendarRange = useMemo(() => {
-    const monthStart = startOfMonth(activeMonth);
+    if (calendarMode === "month") {
+      const monthStart = startOfMonth(activeMonth);
+      return {
+        start: startOfWeek(monthStart, { weekStartsOn: calendarWeekStart }),
+        end: endOfWeek(endOfMonth(activeMonth), { weekStartsOn: calendarWeekStart }),
+      };
+    }
+    const start = startOfWeek(activeMonth, { weekStartsOn: calendarWeekStart });
     return {
-      start: startOfWeek(monthStart, { weekStartsOn: 1 }),
-      end: endOfWeek(endOfMonth(activeMonth), { weekStartsOn: 1 }),
+      start,
+      end: endOfWeek(start, { weekStartsOn: calendarWeekStart }),
     };
-  }, [activeMonth]);
+  }, [activeMonth, calendarMode, calendarWeekStart]);
 
   const calendarDays = useMemo(
     () =>
@@ -1242,19 +1270,142 @@ function SocialPostsPageContent() {
       }),
     [calendarRange.end, calendarRange.start]
   );
+  useEffect(() => {
+    if (view !== "calendar" || calendarDays.length === 0) {
+      return;
+    }
+    const todayKey = todayCalendarDateKey;
+    const isTodayVisible = calendarDays.some((day) => format(day, "yyyy-MM-dd") === todayKey);
+    setFocusedCalendarDateKey((previous) => {
+      if (
+        previous &&
+        calendarDays.some((day) => format(day, "yyyy-MM-dd") === previous)
+      ) {
+        return previous;
+      }
+      return isTodayVisible ? todayKey : format(calendarDays[0], "yyyy-MM-dd");
+    });
+  }, [calendarDays, todayCalendarDateKey, view]);
+  const weekdayLabels = useMemo(
+    () => getWeekdayLabels(calendarWeekStart),
+    [calendarWeekStart]
+  );
+  const todayWeekdayColumnIndex = useMemo(() => {
+    const todayDate = new Date(`${todayCalendarDateKey}T00:00:00`);
+    return (todayDate.getDay() - calendarWeekStart + 7) % 7;
+  }, [calendarWeekStart, todayCalendarDateKey]);
 
   const calendarPostsByDate = useMemo(() => {
-    return filteredPosts.reduce<Record<string, SocialPostWithRelations[]>>((acc, post) => {
-      if (!post.scheduled_date) {
+    const postsByDate = filteredPosts.reduce<Record<string, SocialPostWithRelations[]>>(
+      (acc, post) => {
+        if (!post.scheduled_date) {
+          return acc;
+        }
+        if (!acc[post.scheduled_date]) {
+          acc[post.scheduled_date] = [];
+        }
+        acc[post.scheduled_date].push(post);
         return acc;
-      }
-      if (!acc[post.scheduled_date]) {
-        acc[post.scheduled_date] = [];
-      }
-      acc[post.scheduled_date].push(post);
-      return acc;
-    }, {});
+      },
+      {}
+    );
+    for (const [dateKey, postsForDay] of Object.entries(postsByDate)) {
+      postsByDate[dateKey] = [...postsForDay].sort((left, right) =>
+        left.title.localeCompare(right.title)
+      );
+    }
+    return postsByDate;
   }, [filteredPosts]);
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (view !== "calendar") {
+        return;
+      }
+      if (event.key === "Escape") {
+        setActivePostId(null);
+        return;
+      }
+      const eventTarget = event.target as HTMLElement | null;
+      if (
+        eventTarget &&
+        (eventTarget.tagName === "INPUT" ||
+          eventTarget.tagName === "TEXTAREA" ||
+          eventTarget.tagName === "SELECT" ||
+          eventTarget.isContentEditable)
+      ) {
+        return;
+      }
+      if (!focusedCalendarDateKey || calendarGridRef.current === null) {
+        return;
+      }
+      const isNavigationKey =
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight" ||
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown" ||
+        event.key === "j" ||
+        event.key === "J" ||
+        event.key === "k" ||
+        event.key === "K" ||
+        event.key === "Enter";
+      if (!isNavigationKey) {
+        return;
+      }
+      event.preventDefault();
+      const currentDate = new Date(`${focusedCalendarDateKey}T00:00:00`);
+      let nextDate: Date;
+      if (event.key === "ArrowLeft" || event.key === "k" || event.key === "K") {
+        nextDate = addDays(currentDate, -1);
+      } else if (event.key === "ArrowRight" || event.key === "j" || event.key === "J") {
+        nextDate = addDays(currentDate, 1);
+      } else if (event.key === "ArrowUp") {
+        nextDate = addDays(currentDate, -7);
+      } else if (event.key === "ArrowDown") {
+        nextDate = addDays(currentDate, 7);
+      } else if (event.key === "Enter") {
+        const dayItems = calendarPostsByDate[focusedCalendarDateKey] ?? [];
+        if (dayItems.length > 0) {
+          setActivePostId(dayItems[0].id);
+        }
+        return;
+      } else {
+        return;
+      }
+      const nextKey = format(nextDate, "yyyy-MM-dd");
+      setFocusedCalendarDateKey(nextKey);
+      setActiveMonth((previous) => {
+        if (calendarMode === "month") {
+          if (
+            nextDate.getMonth() !== previous.getMonth() ||
+            nextDate.getFullYear() !== previous.getFullYear()
+          ) {
+            return nextDate;
+          }
+        } else {
+          const weekStartDate = startOfWeek(previous, {
+            weekStartsOn: calendarWeekStart,
+          });
+          const weekEndDate = endOfWeek(weekStartDate, {
+            weekStartsOn: calendarWeekStart,
+          });
+          if (!isWithinInterval(nextDate, { start: weekStartDate, end: weekEndDate })) {
+            return nextDate;
+          }
+        }
+        return previous;
+      });
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    calendarMode,
+    calendarPostsByDate,
+    calendarWeekStart,
+    focusedCalendarDateKey,
+    view,
+  ]);
 
   const unscheduledPosts = useMemo(
     () => filteredPosts.filter((post) => !post.scheduled_date),
@@ -1317,6 +1468,10 @@ function SocialPostsPageContent() {
       setError("You must be logged in.");
       return;
     }
+    if (!session?.access_token) {
+      setError("Session expired. Refresh and try again.");
+      return;
+    }
 
     const trimmedTitle = newTitle.trim();
     const normalizedPlatforms = Array.from(new Set(newPlatforms));
@@ -1334,48 +1489,47 @@ function SocialPostsPageContent() {
 
     setIsCreating(true);
     setError(null);
-
-    const supabase = getSupabaseBrowserClient();
-    const { data, error: insertError } = await supabase
-      .from("social_posts")
-      .insert({
+    const createResponse = await fetch("/api/social-posts", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
         title: trimmedTitle,
         product: newProduct,
         type: newType,
-        scheduled_date: newScheduledDate || null,
-        status: "draft",
         platforms: normalizedPlatforms,
-        created_by: user.id,
+        scheduled_date: newScheduledDate || null,
         worker_user_id: workerUserId,
         reviewer_user_id: reviewerUserId,
-      })
-      .select(
-        "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,created_by,worker_user_id,reviewer_user_id,created_at,updated_at,associated_blog_id,associated_blog:associated_blog_id(id,title,slug,site),creator:created_by(id,full_name,email),worker:worker_user_id(id,full_name,email),reviewer:reviewer_user_id(id,full_name,email)"
-      )
-      .single();
+      }),
+    }).catch(() => null);
 
-    if (insertError) {
-      console.error("Social post insert failed:", insertError);
+    if (!createResponse) {
+      setError("Couldn't create post. Please try again.");
+      setIsCreating(false);
+      return;
+    }
+    const createPayload = await parseApiResponseJson<Record<string, unknown>>(
+      createResponse
+    );
+    if (isApiFailure(createResponse, createPayload)) {
+      setError(getApiErrorMessage(createPayload, "Couldn't create post. Please try again."));
+      setIsCreating(false);
+      return;
+    }
+    const createdPostRow =
+      typeof createPayload.post === "object" && createPayload.post !== null
+        ? (createPayload.post as Record<string, unknown>)
+        : null;
+    if (!createdPostRow) {
       setError("Couldn't create post. Please try again.");
       setIsCreating(false);
       return;
     }
 
-    const [createdPost] = normalizeSocialPostRows([
-      (data ?? {}) as Record<string, unknown>,
-    ]);
-    const selectedWorker =
-      createdPost?.worker ??
-      (availableUsers.find((entry) => entry.id === workerUserId) ?? null);
-    await notifySlack({
-      eventType: "social_post_created",
-      socialPostId: String(data.id),
-      title: String((data.title ?? trimmedTitle) || "Untitled social post"),
-      site: String(data.product ?? newProduct),
-      actorName: profile?.full_name ?? "Team",
-      targetUserName: selectedWorker?.full_name || getUserDisplayNameById(workerUserId),
-      targetEmail: selectedWorker?.email ?? null,
-    });
+    const [createdPost] = normalizeSocialPostRows([createdPostRow]);
     if (createdPost) {
       setPosts((previous) => [createdPost, ...previous]);
       router.push(`/social-posts/${createdPost.id}`);
@@ -2486,15 +2640,24 @@ function SocialPostsPageContent() {
             <section className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-medium text-slate-700">
-                  {format(activeMonth, "MMMM yyyy")}
+                  {calendarMode === "month"
+                    ? format(activeMonth, "MMMM yyyy")
+                    : `${format(calendarRange.start, "MMM d")} – ${format(
+                        calendarRange.end,
+                        "MMM d, yyyy"
+                      )}`}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
                     variant="secondary"
                     size="md"
                     onClick={() => {
-                      setActiveMonth((previous) => subMonths(previous, 1));
+                      setActiveMonth((previous) =>
+                        calendarMode === "month"
+                          ? subMonths(previous, 1)
+                          : subWeeks(previous, 1)
+                      );
                     }}
                   >
                     Prev
@@ -2504,7 +2667,17 @@ function SocialPostsPageContent() {
                     variant="secondary"
                     size="md"
                     onClick={() => {
-                      setActiveMonth(new Date());
+                      const todayDate = new Date(`${todayCalendarDateKey}T00:00:00`);
+                      setActiveMonth(todayDate);
+                      setFocusedCalendarDateKey(todayCalendarDateKey);
+                      setTimeout(() => {
+                        const todayTile = calendarGridRef.current?.querySelector(
+                          '[data-is-today="true"]'
+                        );
+                        if (todayTile) {
+                          todayTile.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        }
+                      }, 0);
                     }}
                   >
                     Today
@@ -2514,44 +2687,71 @@ function SocialPostsPageContent() {
                     variant="secondary"
                     size="md"
                     onClick={() => {
-                      setActiveMonth((previous) => addMonths(previous, 1));
+                      setActiveMonth((previous) =>
+                        calendarMode === "month"
+                          ? addMonths(previous, 1)
+                          : addWeeks(previous, 1)
+                      );
                     }}
                   >
                     Next
                   </Button>
+                  <div className={SEGMENTED_CONTROL_CLASS}>
+                    <button
+                      type="button"
+                      className={segmentedControlItemClass({ isActive: calendarMode === "month" })}
+                      onClick={() => {
+                        setCalendarMode("month");
+                      }}
+                    >
+                      Month
+                    </button>
+                    <button
+                      type="button"
+                      className={segmentedControlItemClass({ isActive: calendarMode === "week" })}
+                      onClick={() => {
+                        setCalendarMode("week");
+                      }}
+                    >
+                      Week
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-7 gap-2">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
-                  <p
-                    key={label}
-                    className="text-center text-xs font-semibold uppercase tracking-wide text-slate-500"
-                  >
-                    {label}
-                  </p>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-2">
+              <CalendarWeekdayHeaderRow
+                labels={weekdayLabels}
+                todayColumnIndex={todayWeekdayColumnIndex}
+              />
+              <CalendarGridSurface gridRef={calendarGridRef} containLayout>
                 {calendarDays.map((day) => {
                   const key = format(day, "yyyy-MM-dd");
                   const items = calendarPostsByDate[key] ?? [];
+                  const compact = calendarMode === "month";
+                  const visiblePosts = compact ? items.slice(0, 3) : items;
+                  const hiddenItemCount = compact
+                    ? Math.max(0, items.length - visiblePosts.length)
+                    : 0;
                   const isCurrentMonth = day.getMonth() === activeMonth.getMonth();
-                  const isToday = isSameDay(day, new Date());
+                  const isToday = key === todayCalendarDateKey;
                   return (
-                    <CalendarTile
-                      key={key}
-                      dayLabel={format(day, "d")}
-                      isToday={isToday}
-                      isCurrentMonth={isCurrentMonth}
-                      todayContainerClassName="border-blue-300 bg-blue-50"
-                      todayDayLabelClassName="font-semibold text-blue-700"
-                      dayLabelClassName={!isToday ? "text-slate-700" : undefined}
-                    >
-                      <div className="mt-2 space-y-1">
-                        {items.length === 0 ? (
-                          <p className="text-xs text-slate-400">No posts</p>
-                        ) : (
-                          items.map((post) => (
+                    <div key={key} data-is-today={isToday}>
+                      <CalendarTile
+                        dayLabel={format(day, "d")}
+                        isToday={isToday}
+                        isCurrentMonth={isCurrentMonth}
+                        isFocused={focusedCalendarDateKey === key}
+                        className={compact ? "" : "min-h-[18rem]"}
+                        bodyScrollable={!compact}
+                        bodyClassName="space-y-1"
+                        todayContainerClassName="border-blue-300 bg-blue-50"
+                        todayDayLabelClassName="font-semibold text-blue-700"
+                        dayLabelClassName={!isToday ? "text-slate-700" : undefined}
+                      >
+                        <div className="space-y-1">
+                          {!compact && visiblePosts.length === 0 ? (
+                            <p className="text-xs text-slate-400">No posts</p>
+                          ) : null}
+                          {visiblePosts.map((post) => (
                             <button
                               key={post.id}
                               type="button"
@@ -2569,13 +2769,26 @@ function SocialPostsPageContent() {
                                 {SOCIAL_POST_STATUS_LABELS[post.status]}
                               </p>
                             </button>
-                          ))
-                        )}
-                      </div>
-                    </CalendarTile>
+                          ))}
+                          {hiddenItemCount > 0 ? (
+                            <button
+                              type="button"
+                              className="w-full rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-100"
+                              onClick={() => {
+                                setCalendarMode("week");
+                                setActiveMonth(day);
+                                setFocusedCalendarDateKey(key);
+                              }}
+                            >
+                              +{hiddenItemCount} more
+                            </button>
+                          ) : null}
+                        </div>
+                      </CalendarTile>
+                    </div>
                   );
                 })}
-              </div>
+              </CalendarGridSurface>
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                   Unscheduled

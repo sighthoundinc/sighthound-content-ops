@@ -7,7 +7,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
 import { isMissingBlogCommentsTableError } from "@/lib/blog-schema";
-import { notifySlack } from "@/lib/notifications";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -36,7 +40,7 @@ function slugify(value: string) {
 function NewBlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { hasPermission, user, profile } = useAuth();
+  const { hasPermission, session, user } = useAuth();
   const { showError } = useAlerts();
   const sourceIdeaId = searchParams.get("ideaId");
   const requestedScheduledPublishDate = searchParams.get("scheduled_publish_date");
@@ -193,10 +197,6 @@ function NewBlogPageContent() {
     showError(error);
   }, [error, showError]);
 
-  const selectedWriter = useMemo(
-    () => users.find((nextUser) => nextUser.id === writerId) ?? null,
-    [users, writerId]
-  );
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -212,11 +212,13 @@ function NewBlogPageContent() {
       setError("You must be logged in.");
       return;
     }
+    if (!session?.access_token) {
+      setError("Session expired. Refresh and try again.");
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
-
-    const supabase = getSupabaseBrowserClient();
     // For blog creation, both admin and non-admin users can set display date
     // Client-side: display_published_date always has a value (never NULL)
     // Fallback: display_published_date = displayPublishDate || scheduledPublishDate || today
@@ -245,24 +247,39 @@ function NewBlogPageContent() {
       scheduled_publish_date: scheduledPublishDate || null,
       display_published_date: finalDisplayPublishDate || null,
       target_publish_date: scheduledPublishDate || null,
-      created_by: user.id,
     };
+    const createResponse = await fetch("/api/blogs", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }).catch(() => null);
 
-    const { data, error: insertError } = await supabase
-      .from("blogs")
-      .insert(payload)
-      .select("id,title,site")
-      .single();
-
-    if (insertError) {
-      console.error("Blog insert failed:", insertError);
-      const errorMsg = insertError.message || 'Unknown error';
-      setError(`Couldn't create blog: ${errorMsg}`);
+    if (!createResponse) {
+      setError("Couldn't create blog. Please try again.");
       setIsSubmitting(false);
       return;
     }
-    if (!data) {
-      setError("Failed to create blog.");
+    const supabase = getSupabaseBrowserClient();
+    const createPayload = await parseApiResponseJson<Record<string, unknown>>(
+      createResponse
+    );
+    if (isApiFailure(createResponse, createPayload)) {
+      setError(getApiErrorMessage(createPayload, "Couldn't create blog. Please try again."));
+      setIsSubmitting(false);
+      return;
+    }
+
+    const createdBlog =
+      typeof createPayload.blog === "object" && createPayload.blog !== null
+        ? (createPayload.blog as Record<string, unknown>)
+        : null;
+    const createdBlogId =
+      createdBlog && typeof createdBlog.id === "string" ? createdBlog.id : null;
+    if (!createdBlogId) {
+      setError("Couldn't create blog. Please try again.");
       setIsSubmitting(false);
       return;
     }
@@ -278,7 +295,7 @@ function NewBlogPageContent() {
         .schema("public")
         .from("blog_comments")
         .insert({
-          blog_id: data.id,
+          blog_id: createdBlogId,
           comment: trimmedInitialComment,
           user_id: user.id,
         });
@@ -297,22 +314,12 @@ function NewBlogPageContent() {
       }
     }
 
-    await notifySlack({
-      eventType: "blog_created",
-      blogId: data.id,
-      title: data.title,
-      site: data.site,
-      actorName: profile?.full_name ?? "Team",
-      targetUserName: selectedWriter?.full_name || "Team",
-      targetEmail: selectedWriter?.email ?? null,
-    });
-
     if (prefilledIdeaId) {
       const { error: ideaUpdateError } = await supabase
         .from("blog_ideas")
         .update({
           is_converted: true,
-          converted_blog_id: data.id,
+          converted_blog_id: createdBlogId,
         })
         .eq("id", prefilledIdeaId)
         .eq("is_converted", false);
@@ -323,7 +330,7 @@ function NewBlogPageContent() {
     }
 
     setIsSubmitting(false);
-    router.push(`/blogs/${data.id}`);
+    router.push(`/blogs/${createdBlogId}`);
   };
 
   return (

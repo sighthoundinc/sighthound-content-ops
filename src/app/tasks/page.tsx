@@ -69,10 +69,18 @@ import {
   getTablePageRows,
   type TableRowLimit,
 } from "@/lib/table";
+import {
+  getMixedContentLabel,
+  MIXED_CONTENT_FILTER_LABELS,
+  MIXED_CONTENT_FILTER_OPTIONS,
+  matchesMixedContentFilters,
+  type MixedContentFilterValue,
+} from "@/lib/content-classification";
 import type {
   BlogRecord,
   BlogSite,
   PublisherStageStatus,
+  SocialPostType,
   SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
@@ -109,6 +117,8 @@ type TaskItem = {
 type SocialTaskItem = {
   id: string;
   title: string;
+  site: BlogSite;
+  socialType: SocialPostType | null;
   status: SocialPostStatus;
   scheduledDate: string | null;
   createdAt: string;
@@ -133,13 +143,15 @@ type UnifiedTaskRow = {
   scheduledDate: string | null;
   createdAt: string;
   actionState: TaskActionState;
-  site: BlogSite | null;
+  site: BlogSite;
+  contentLabel: string;
   blogTask: TaskItem | null;
   socialTask: SocialTaskItem | null;
 };
 
 type TaskTableColumnKey =
   | "site"
+  | "content"
   | "task"
   | "writer_status"
   | "publisher_status"
@@ -148,6 +160,7 @@ type TaskTableColumnKey =
 const TASK_TABLE_COLUMN_VIEW_STORAGE_KEY = "tasks-column-view:v1";
 const TASK_TABLE_SORT_FIELDS = [
   "site",
+  "content",
   "task",
   "writer_status",
   "publisher_status",
@@ -158,6 +171,7 @@ const isTaskTableSortField = (value: unknown): value is (typeof TASK_TABLE_SORT_
   TASK_TABLE_SORT_FIELDS.includes(value as (typeof TASK_TABLE_SORT_FIELDS)[number]);
 const DEFAULT_TASK_TABLE_COLUMN_ORDER: TaskTableColumnKey[] = [
   "site",
+  "content",
   "task",
   "writer_status",
   "publisher_status",
@@ -167,6 +181,7 @@ const DEFAULT_TASK_TABLE_COLUMN_ORDER: TaskTableColumnKey[] = [
 const DEFAULT_TASK_TABLE_HIDDEN_COLUMNS: TaskTableColumnKey[] = [];
 const TASK_TABLE_COLUMN_LABELS: Record<TaskTableColumnKey, string> = {
   site: "Site",
+  content: "Content",
   task: "Task",
   writer_status: "Status",
   publisher_status: "Next Action",
@@ -218,6 +233,12 @@ function getDateDifferenceInDays(dateKey: string, todayDateKey: string) {
     (parseISO(dateKey).getTime() - parseISO(todayDateKey).getTime()) /
       (24 * 60 * 60 * 1000)
   );
+}
+function normalizeRelationObject<T>(value: unknown): T | null {
+  if (Array.isArray(value)) {
+    return (value[0] ?? null) as T | null;
+  }
+  return (value ?? null) as T | null;
 }
 
 export default function MyTasksPage() {
@@ -354,6 +375,7 @@ function MyTasksPageContent() {
     "all" | SocialPostStatus
   >("all");
   const [siteFilter, setSiteFilter] = useState<"all" | "sighthound.com" | "redactor.com">("all");
+  const [contentFilter, setContentFilter] = useState<"all" | MixedContentFilterValue>("all");
   const [taskSortField, setTaskSortField] = useState<string>("publish_date");
   const [taskSortDirection, setTaskSortDirection] = useState<"asc" | "desc">("asc");
   const [copiedCell, setCopiedCell] = useState<{
@@ -438,16 +460,18 @@ function MyTasksPageContent() {
     setBlogs(normalizeBlogRows((data ?? []) as Array<Record<string, unknown>>) as BlogRecord[]);
 
     const socialSelectWithOwnership =
-      "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id";
+      "id,title,type,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,associated_blog:associated_blog_id(site)";
     const socialSelectLegacy =
-      "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id";
+      "id,title,type,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,associated_blog:associated_blog_id(site)";
     const fetchSocialRows = async (includeOwnershipColumn: boolean) => {
       let query = supabase
         .from("social_posts")
         .select(includeOwnershipColumn ? socialSelectWithOwnership : socialSelectLegacy)
         .in("status", ACTIVE_SOCIAL_STATUSES);
       query = query.or(
-        `worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
+        includeOwnershipColumn
+          ? `assigned_to_user_id.eq.${user.id},worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
+          : `worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
       );
       return query.order("scheduled_date", {
         ascending: true,
@@ -499,6 +523,20 @@ function MyTasksPageContent() {
         if (!(status in SOCIAL_POST_STATUS_LABELS)) {
           return null;
         }
+        const normalizedSocialType =
+          row.type === "image" ||
+          row.type === "carousel" ||
+          row.type === "video" ||
+          row.type === "link"
+            ? (row.type as SocialPostType)
+            : null;
+        const associatedBlog = normalizeRelationObject<{ site?: unknown }>(
+          row.associated_blog
+        );
+        const socialSite: BlogSite =
+          associatedBlog?.site === "redactor.com" || associatedBlog?.site === "sighthound.com"
+            ? associatedBlog.site
+            : "sighthound.com";
         const nextActor = getNextActor(status);
         const createdBy = typeof row.created_by === "string" ? row.created_by : null;
         const workerUserId =
@@ -521,6 +559,8 @@ function MyTasksPageContent() {
         return {
           id: String(row.id ?? ""),
           title: String(row.title ?? "Untitled social post"),
+          site: socialSite,
+          socialType: normalizedSocialType,
           status,
           scheduledDate:
             typeof row.scheduled_date === "string" ? row.scheduled_date : null,
@@ -905,6 +945,9 @@ function MyTasksPageContent() {
       if (actionFilter !== "all" && task.actionState !== actionFilter) {
         return false;
       }
+      if (contentFilter !== "all" && contentFilter !== "blog") {
+        return false;
+      }
       
       if (kindFilter !== "all" && task.kind !== kindFilter) {
         return false;
@@ -921,15 +964,28 @@ function MyTasksPageContent() {
       const searchText = `${task.title} ${task.liveUrl ?? ""}`.toLowerCase();
       return searchText.includes(normalizedSearch);
     });
-  }, [actionFilter, assignmentFilter, kindFilter, searchQuery, siteFilter, statusFilter, taskItems]);
+  }, [actionFilter, assignmentFilter, contentFilter, kindFilter, searchQuery, siteFilter, statusFilter, taskItems]);
 
   const filteredSocialTasks = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
     return socialTasks.filter((task) => {
+      if (siteFilter !== "all" && task.site !== siteFilter) {
+        return false;
+      }
       if (socialStatusFilter !== "all" && task.status !== socialStatusFilter) {
         return false;
       }
       if (actionFilter !== "all" && task.actionState !== actionFilter) {
+        return false;
+      }
+      if (
+        contentFilter !== "all" &&
+        !matchesMixedContentFilters({
+          selectedFilters: [contentFilter],
+          contentType: "social_post",
+          socialType: task.socialType,
+        })
+      ) {
         return false;
       }
       if (!normalizedSearch) {
@@ -938,7 +994,7 @@ function MyTasksPageContent() {
       const haystack = `${task.title} ${task.nextAction}`.toLowerCase();
       return haystack.includes(normalizedSearch);
     });
-  }, [actionFilter, searchQuery, socialStatusFilter, socialTasks]);
+  }, [actionFilter, contentFilter, searchQuery, siteFilter, socialStatusFilter, socialTasks]);
   const combinedTaskRows = useMemo(() => {
     const blogRows: UnifiedTaskRow[] = filteredTaskItems.map((task) => ({
       id: task.id,
@@ -949,6 +1005,7 @@ function MyTasksPageContent() {
       createdAt: task.createdAt,
       actionState: task.actionState,
       site: task.site,
+      contentLabel: getMixedContentLabel({ contentType: "blog" }),
       blogTask: task,
       socialTask: null,
     }));
@@ -960,7 +1017,11 @@ function MyTasksPageContent() {
       scheduledDate: task.scheduledDate,
       createdAt: task.createdAt,
       actionState: task.actionState,
-      site: null,
+      site: task.site,
+      contentLabel: getMixedContentLabel({
+        contentType: "social_post",
+        socialType: task.socialType,
+      }),
       blogTask: null,
       socialTask: task,
     }));
@@ -968,13 +1029,12 @@ function MyTasksPageContent() {
     const collator = new Intl.Collator(undefined, { sensitivity: "base" });
     const compareBySortField = (left: UnifiedTaskRow, right: UnifiedTaskRow) => {
       if (taskSortField === "site") {
-        const leftSite =
-          left.contentType === "blog" && left.site ? getSiteShortLabel(left.site) : "Social";
-        const rightSite =
-          right.contentType === "blog" && right.site
-            ? getSiteShortLabel(right.site)
-            : "Social";
+        const leftSite = getSiteShortLabel(left.site);
+        const rightSite = getSiteShortLabel(right.site);
         return collator.compare(leftSite, rightSite);
+      }
+      if (taskSortField === "content") {
+        return collator.compare(left.contentLabel, right.contentLabel);
       }
       if (taskSortField === "task") {
         return collator.compare(left.title, right.title);
@@ -1090,9 +1150,10 @@ function MyTasksPageContent() {
   const getTaskExportCellValue = useCallback(
     (task: UnifiedTaskRow, column: TaskTableColumnKey) => {
       if (column === "site") {
-        return task.contentType === "blog" && task.site
-          ? getSiteShortLabel(task.site)
-          : "Social";
+        return getSiteShortLabel(task.site);
+      }
+      if (column === "content") {
+        return task.contentLabel;
       }
       if (column === "task") {
         return task.title;
@@ -1129,6 +1190,7 @@ function MyTasksPageContent() {
   const resetTaskFilters = useCallback(() => {
     setSearchQuery("");
     setKindFilter("all");
+    setContentFilter("all");
     setStatusFilter("all");
     setSocialStatusFilter("all");
     setSiteFilter("all");
@@ -1370,6 +1432,15 @@ function MyTasksPageContent() {
               },
             }
           : null,
+        contentFilter !== "all"
+          ? {
+              id: "content",
+              label: `Content: ${MIXED_CONTENT_FILTER_LABELS[contentFilter]}`,
+              onRemove: () => {
+                setContentFilter("all");
+              },
+            }
+          : null,
         statusFilter !== "all"
           ? {
               id: "status",
@@ -1398,7 +1469,7 @@ function MyTasksPageContent() {
             }
           : null,
       ].filter((pill) => pill !== null),
-    [actionFilter, assignmentFilter, kindFilter, requiredByLabel, searchQuery, siteFilter, socialStatusFilter, statusFilter]
+    [actionFilter, assignmentFilter, contentFilter, kindFilter, requiredByLabel, searchQuery, siteFilter, socialStatusFilter, statusFilter]
   );
 
 
@@ -1483,7 +1554,7 @@ function MyTasksPageContent() {
       label: "Site",
       sortable: true,
       render: (task) => (
-        task.contentType === "blog" && task.site ? (
+        task.site ? (
           <span
             className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium ${
               getSiteBadgeClasses(task.site)
@@ -1492,11 +1563,15 @@ function MyTasksPageContent() {
             {getSiteShortLabel(task.site)}
           </span>
         ) : (
-          <span className="inline-flex items-center justify-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
-            Social
-          </span>
+          "—"
         )
       ),
+    },
+    {
+      id: "content",
+      label: "Content",
+      sortable: true,
+      render: (task) => <span className="text-xs text-slate-700">{task.contentLabel}</span>,
     },
     {
       id: "task",
@@ -1716,9 +1791,25 @@ function MyTasksPageContent() {
                   }}
                   className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
-                  <option value="all">Sites</option>
-                  <option value="sighthound.com">SH</option>
-                  <option value="redactor.com">RED</option>
+                  <option value="all">All Sites</option>
+                  <option value="sighthound.com">Sighthound (SH)</option>
+                  <option value="redactor.com">Redactor (RED)</option>
+                </select>
+                <select
+                  aria-label="Content Type"
+                  value={contentFilter}
+                  onChange={(event) => {
+                    setContentFilter(event.target.value as "all" | MixedContentFilterValue);
+                    setCurrentPage(1);
+                  }}
+                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Content</option>
+                  {MIXED_CONTENT_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </>
             }

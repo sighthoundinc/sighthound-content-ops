@@ -29,7 +29,7 @@ export type DashboardTableColumnKey =
   | "product";
 
 export const DASHBOARD_COLUMN_LABELS: Record<DashboardTableColumnKey, string> = {
-  content_type: "Type",
+  content_type: "Content",
   site: "Site",
   id: "ID",
   title: "Title",
@@ -50,6 +50,7 @@ const CENTER_ALIGNED_COLUMNS: DashboardTableColumnKey[] = [
 
 export interface DashboardTableRow {
   content_type: "blog" | "social_post";
+  content_label: string;
   site: string;
   id: string;
   title: string;
@@ -223,7 +224,9 @@ export function DashboardTable({
                     if (column === "content_type") {
                       return (
                         <td key={column} className={cn(bodyCellClass, "text-center")}>
-                          {row.content_type === "blog" ? "Blog" : "Social Post"}
+                          <span className="truncate text-slate-800" title={row.content_label}>
+                            {row.content_label}
+                          </span>
                         </td>
                       );
                     }

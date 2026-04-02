@@ -20,6 +20,10 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Workspace snapshot deduplicates multi-role same-blog associations and prioritizes actionable ownership
 - OAuth login and connected-service management for Google and Slack
 - Unified notifications across activity history, in-app notifications, and Slack
+- Centralized workflow Slack emission layer for create/transition/reminder paths via `src/lib/server-slack-emitter.ts`
+  - create routes: `POST /api/blogs`, `POST /api/social-posts`
+  - transition routes: `POST /api/blogs/[id]/transition`, `POST /api/social-posts/[id]/transition`
+  - reminder sweeps: social live-link + social/blog overdue routes
 
 ## Documentation map
 - Product behavior: `SPECIFICATION.md`
@@ -65,6 +69,11 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - Cross-Content Scope: `Sites`, `Content Type`, `Workflow (All Content)`, `Delivery (All Content)`
   - Blog Filters: `Blog Stage`, `Blog Writers`, `Blog Publishers`, `Blog Writer Status`, `Blog Publisher Status`
   - Social Filters: `Social Status`, `Social Product`
+- Canonical mixed-table site options: `Sighthound (SH)` and `Redactor (RED)`
+- Shared mixed-content filter taxonomy (`src/lib/content-classification.ts`):
+  - `Blog`
+  - `Social Post (All)` umbrella
+  - `Social: Image`, `Social: Carousel`, `Social: Video`, `Social: Link`
 - Scope-safe filtering ensures blog filters only constrain blog rows and social filters only constrain social rows.
 - Single canonical active-filter pills row (no duplicate chip bars)
 - Selection-driven bulk panel with visible permission-disabled mutation states
@@ -72,8 +81,9 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Home standup includes writer-facing social handoff visibility for `ready_to_publish`
 - Notification bell includes `Required by: <username>` task shortcuts using the same task snapshot contract
 - Unified content dashboard table (blogs + social posts) with core contract columns:
-  - `Type`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated`
+  - `Content`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated`
   - optional `Product` column via column customization
+  - content labels can include social subtype context (for example `Social Post · Carousel`) while filters preserve an umbrella `Social Post (All)` option
   - row click routing: blogs open drawer, social rows navigate to `/social-posts/[id]`
   - Phase A selection: mixed row selection enabled (blogs + social)
   - safety gate: blog mutation controls disable when any social row is selected
@@ -132,6 +142,11 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Priority sorting by schedule urgency and status state
 - Single unified tasks table across blogs + social posts with shared sorting, filters, pagination, and exports
 - Assignment-based visibility for non-published work tied to current user
+- Canonical mixed-table site filter options: `Sighthound (SH)` and `Redactor (RED)`
+- Shared mixed-content filtering and labels:
+  - `Blog`
+  - `Social Post (All)` umbrella
+  - `Social: Image`, `Social: Carousel`, `Social: Video`, `Social: Link`
 - Social action-state classification is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` worker-owned; `in_review/creative_approved` reviewer-owned) so handoff items appear in the correct bucket
 - Action-state filtering for `Required by: <username>` vs `Waiting on Others`
 
@@ -141,6 +156,8 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
 - Month day tiles show up to 3 items and expose overflow via `+N more`
 - `+N more` jumps directly to week view on that date
 - Month view avoids nested per-tile scroll regions for smoother page scroll
+- Calendar shell primitives are shared across `/calendar` and `/social-posts` calendar mode for consistent weekday headers and day-grid framing
+- Calendar weekday order and today highlighting are user-preference aware (`week_start`, `timezone`; fallback `America/New_York`)
 - Drag-and-drop scheduling (permission-gated)
 - Published entries are non-draggable
 
@@ -208,6 +225,10 @@ Content operations platform for Sighthound marketing workflows across `sighthoun
   - full editor shows assignment, comments, and activity history to all authenticated users
   - social detail drawer shows explicit assignment fields (`Assigned to`, `Reviewer`) and latest activity entries
   - blog library/detail drawers show latest comments and activity history for each record
+- `/social-posts` calendar mode now aligns with the main calendar UX:
+  - month/week toggle with compact month overflow (`+N more` → focused week)
+  - no nested month tile scrolling
+  - keyboard day navigation parity (`Arrow`/`J/K`, `Enter`, `Escape`)
 
 ## Tech stack
 - Next.js (App Router) + TypeScript + Tailwind
@@ -265,6 +286,8 @@ npm run dev
   - for existing rows, selected optional fields are also updated from import values/fallbacks
   - writer/publisher resolution uses exact + loose contains/token-overlap matching across full/display/username/first/last/email signals with confidence scoring
 - `/api/blogs/[id]/transition` — canonical blog workflow transition endpoint (writer/publisher status, assignment, scheduled/display dates) with optimistic concurrency guard on `updated_at` to prevent stale writes
+- `/api/blogs` — canonical blog creation endpoint (schema-validated create payload + centralized `blog_created` Slack emission)
+- `/api/social-posts` — canonical social post creation endpoint (schema-validated create payload + centralized `social_post_created` Slack emission)
 - `/api/social-posts/[postId]/transition` — canonical social status transitions with concurrency conflict handling when status changes mid-request
 - `/api/social-posts/[postId]/reopen-brief` — admin execution-stage brief reopen
 - `/api/social-posts/reminders` — awaiting-live-link reminder sweep with per-row atomic claim to avoid duplicate reminders during concurrent runs

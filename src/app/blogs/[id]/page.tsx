@@ -16,7 +16,6 @@ import {
   isMissingBlogCommentsTableError,
   normalizeBlogRow,
 } from "@/lib/blog-schema";
-import { notifySlack } from "@/lib/notifications";
 import {
   canTransitionPublisherStatus,
   canTransitionWriterStatus,
@@ -47,6 +46,11 @@ import {
   formatActivityChangeDescription,
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 
 type BlogFormState = {
   title: string;
@@ -115,7 +119,7 @@ function toIsoFromDateTimeLocalInput(value: string | null | undefined) {
 export default function BlogDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { hasPermission, user, profile } = useAuth();
+  const { hasPermission, user, profile, session } = useAuth();
   const { showError, showSuccess } = useAlerts();
   const { pushNotification } = useNotifications();
   const blogId = params.id;
@@ -323,22 +327,41 @@ export default function BlogDetailPage() {
       setIsSaving(false);
       return;
     }
-
-    const supabase = getSupabaseBrowserClient();
-    const { data, error: updateError } = await supabase
-      .from("blogs")
-      .update(updates)
-      .eq("id", blog.id)
-      .select(BLOG_SELECT_WITH_DATES_WITH_RELATIONS)
-      .single();
-
-    if (updateError) {
-      console.error("Blog update failed:", updateError);
+    if (!session?.access_token) {
+      setError("Session expired. Refresh and try again.");
+      setIsSaving(false);
+      return;
+    }
+    const response = await fetch(`/api/blogs/${blog.id}/transition`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(updates),
+    }).catch(() => null);
+    if (!response) {
+      setError("Couldn't save changes. Please try again.");
+      setIsSaving(false);
+      return;
+    }
+    const payload = await parseApiResponseJson<{ blog?: Record<string, unknown> }>(
+      response
+    );
+    if (isApiFailure(response, payload)) {
+      setError(getApiErrorMessage(payload, "Couldn't save changes. Please try again."));
+      setIsSaving(false);
+      return;
+    }
+    const data =
+      payload.blog && typeof payload.blog === "object" ? payload.blog : null;
+    if (!data) {
       setError("Couldn't save changes. Please try again.");
       setIsSaving(false);
       return;
     }
 
+    const supabase = getSupabaseBrowserClient();
     const nextBlog = normalizeBlogRow(
       (data ?? {}) as Record<string, unknown>
     ) as unknown as BlogRecord;
@@ -418,36 +441,6 @@ export default function BlogDetailPage() {
     }
 
     const notifyCallbacks: Array<() => Promise<void>> = [];
-
-    // Slack notification for writer assignment
-    if (writerChanged && form.writer_id && selectedWriter) {
-      notifyCallbacks.push(async () => {
-        await notifySlack({
-          eventType: "writer_assigned",
-          blogId: blog.id,
-          title: form.title,
-          site: form.site,
-          actorName: profile?.full_name ?? "Team",
-          targetUserName: selectedWriter.full_name || "Team",
-          targetEmail: selectedWriter.email,
-        });
-      });
-    }
-
-    // Slack notification for publisher assignment
-    if (publisherChanged && form.publisher_id && selectedPublisher) {
-      notifyCallbacks.push(async () => {
-        await notifySlack({
-          eventType: "writer_assigned",
-          blogId: blog.id,
-          title: form.title,
-          site: form.site,
-          actorName: profile?.full_name ?? "Team",
-          targetUserName: selectedPublisher.full_name || "Team",
-          targetEmail: selectedPublisher.email,
-        });
-      });
-    }
 
     // Push in-app notifications for assignments (using unified events)
     if (writerChanged) {
@@ -786,10 +779,6 @@ export default function BlogDetailPage() {
       return;
     }
 
-    const targetPublisher =
-      users.find((nextUser) => nextUser.id === form.publisher_id) ?? null;
-    const targetPublisherEmail = targetPublisher?.email ?? null;
-    const targetPublisherName = targetPublisher?.full_name || "Team";
 
     await updateBlog(
       {
@@ -807,16 +796,6 @@ export default function BlogDetailPage() {
             blog.id
           )
         );
-        // Only send "ready_to_publish" to publisher (writer_completed is redundant)
-        await notifySlack({
-          eventType: "ready_to_publish",
-          blogId: blog.id,
-          title: blog.title,
-          site: blog.site,
-          actorName: profile?.full_name ?? "Team",
-          targetUserName: targetPublisherName,
-          targetEmail: targetPublisherEmail,
-        });
       }
     );
   };
@@ -850,14 +829,6 @@ export default function BlogDetailPage() {
             blog.id
           )
         );
-        await notifySlack({
-          eventType: "published",
-          blogId: blog.id,
-          title: blog.title,
-          site: blog.site,
-          actorName: profile?.full_name ?? "Team",
-          targetEmail: null,
-        });
       }
     );
   };

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserRoles } from "@/lib/roles";
 import { authenticateRequest } from "@/lib/server-permissions";
 import { withApiContract } from "@/lib/api-contract";
+import { emitWorkflowSlackEvent } from "@/lib/server-slack-emitter";
 
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -25,7 +26,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
   const { data: awaitingPosts, error: postsError } = await auth.context.adminClient
     .from("social_posts")
-    .select("id,title,last_live_link_reminder_at")
+    .select("id,title,product,worker_user_id,last_live_link_reminder_at")
     .eq("status", "awaiting_live_link");
 
   if (postsError) {
@@ -61,7 +62,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       : claimQuery.is("last_live_link_reminder_at", null);
 
     const { data: claimedPost, error: claimError } = await claimQuery
-      .select("id,title")
+      .select("id,title,product,worker_user_id")
       .maybeSingle();
     if (claimError) {
       console.warn("Failed to claim social post reminder slot:", claimError);
@@ -88,6 +89,14 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     if (emitSuccess) {
       remindersSent += 1;
     }
+    void emitWorkflowSlackEvent(auth.context.adminClient, {
+      eventType: "social_live_link_reminder",
+      socialPostId: post.id,
+      title: post.title ?? "Social Post",
+      site: post.product ?? "general_company",
+      actorName: "System",
+      targetUserId: post.worker_user_id ?? undefined,
+    });
   }
 
   return NextResponse.json({

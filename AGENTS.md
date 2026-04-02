@@ -520,6 +520,16 @@ These rules apply to all table implementations (DataTable, DashboardTable, etc.)
    - Cross-Content Scope filters apply to both content types.
    - Blog filters apply only to blog rows (social rows pass through).
    - Social filters apply only to social rows (blog rows pass through).
+8. Dashboard and My Tasks must share one mixed-content classification helper (`src/lib/content-classification.ts`) for labels and filter matching semantics.
+9. Mixed-content filter values are canonical:
+   - `blog`
+   - `social_post` (umbrella value that matches all social subtypes)
+   - `social_image`, `social_carousel`, `social_video`, `social_link` (subtype slices)
+10. Content display labels on mixed tables are derived from shared classification helpers and may include subtype context (`Social Post · Image|Carousel|Video|Link`).
+11. Site filters on mixed-content tables must expose only canonical site options:
+   - `Sighthound (SH)` → `sighthound.com`
+   - `Redactor (RED)` → `redactor.com`
+   - social rows without an associated blog site resolve to canonical `Sighthound (SH)` fallback for deterministic filtering.
 
 ## Workspace Home Snapshot Contract (MUST)
 
@@ -761,7 +771,16 @@ Workflow authority invariants:
 Reminder + notification invariants:
 - Awaiting-live-link reminder sweeps use `POST /api/social-posts/reminders`.
 - Reminder dedupe is enforced with `social_posts.last_live_link_reminder_at` using a 24-hour cooldown.
-- Social transition and reminder Slack events are emitted by API routes, not direct ad-hoc client writes.
+- Social and blog workflow create/transition/reminder Slack events must emit through `emitWorkflowSlackEvent()` in `src/lib/server-slack-emitter.ts`.
+- Create/transition/reminder routes must not invoke `slack-notify` directly; use the centralized helper instead.
+- Covered centralized create/transition/reminder routes include:
+  - `POST /api/blogs`
+  - `POST /api/social-posts`
+  - `POST /api/blogs/[id]/transition`
+  - `POST /api/social-posts/[id]/transition`
+  - `POST /api/social-posts/reminders`
+  - `POST /api/social-posts/overdue-checks`
+  - `POST /api/blogs/overdue-checks`
 
 ## UI Label Standards (MUST)
 
@@ -836,6 +855,10 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 3. Clicking `+N more` transitions to week view focused on that date so hidden month items remain quickly accessible.
 4. Dense calendar cards must prefer lightweight hover behavior (native `title` metadata) over heavy inline hover popovers.
 5. Calendar visual polish should prioritize subtle depth (borders/shadows/gradients) without introducing motion-heavy effects (for example, backdrop blur in dense grids).
+6. `/calendar` and `/social-posts` calendar mode must share the same structural shell primitives (`src/components/calendar-shell.tsx`) for weekday headers and day-grid framing.
+7. `/social-posts` calendar mode must follow the same compact-month overflow contract as `/calendar` (max 3 visible cards per tile, `+N more` to focused week view).
+8. Calendar weekday ordering and “today” highlighting must use user preference inputs (`profiles.week_start`, `profiles.timezone`) with `America/New_York` fallback.
+9. `/social-posts` calendar mode must maintain keyboard parity with `/calendar` (`Arrow` keys or `J/K` day movement, `Enter` open first item, `Escape` close panel).
 
 ## Social Post Ownership & Transition Enforcement (MUST)
 

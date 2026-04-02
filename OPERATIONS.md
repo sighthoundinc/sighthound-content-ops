@@ -44,19 +44,23 @@ For social execution-stage completion, live links are entered from `/social-post
 - Record-level assignment/comments/activity visibility in drawers and full pages is available to all authenticated users; admin-only restrictions apply only to global Settings activity pages.
 
 ### Unified notification operations
-- Notification emission is centralized through `src/lib/emit-event.ts`.
-- Event definitions and notification-type mappings live in `src/lib/unified-events.ts`.
-- Slack delivery remains in `src/lib/notifications.ts` and `supabase/functions/slack-notify/index.ts`, but callers should route through unified events instead of direct Slack invokes.
-- Current non-status reminder/sweep routes using the unified pipeline:
+- Unified event emission (`src/lib/emit-event.ts`) remains the source for activity history writes and in-app notification coupling.
+- Workflow create/transition/reminder Slack delivery is centralized through `src/lib/server-slack-emitter.ts` and the `slack-notify` edge function.
+- Create/transition/reminder routes must call `emitWorkflowSlackEvent()` (not ad-hoc direct `slack-notify` invokes).
+- Centralized workflow Slack routes:
+  - `src/app/api/blogs/route.ts`
+  - `src/app/api/social-posts/route.ts`
+  - `src/app/api/blogs/[id]/transition/route.ts`
+  - `src/app/api/social-posts/[id]/transition/route.ts`
+  - `src/app/api/social-posts/reminders/route.ts`
   - `src/app/api/social-posts/overdue-checks/route.ts`
   - `src/app/api/blogs/overdue-checks/route.ts`
-  - `src/app/api/social-posts/reminders/route.ts`
-- Current reminder event coverage includes:
+- Reminder/overdue Slack event coverage:
+  - `social_live_link_reminder`
   - `social_review_overdue`
   - `social_publish_overdue`
   - `blog_publish_overdue`
-  - `social_post_live_link_reminder`
-- Operational expectation: one event should drive activity history, in-app notification eligibility, and Slack delivery. Do not add new direct Slack-only branches for workflow events.
+- Client direct workflow Slack emits are not used; create/transition/reminder paths are server-authoritative.
 - Slack display-layer contract for all Slack-enabled notifications:
   - `Assigned to` and `Assigned by` must use resolved user display names
   - role-only labels (`Writer`, `Editor`, `Publisher`, etc.) must not appear as assignee/actor values
@@ -129,6 +133,9 @@ For social execution-stage completion, live links are entered from `/social-post
   - shows all non-published work assigned to the current user (not only currently actionable rows)
   - includes rows waiting on another actor to preserve end-to-end assignment visibility
   - main table is a unified mixed queue (blogs + social) with shared sorting/pagination/export controls
+  - mixed queue site filtering is canonicalized to two options only: `Sighthound (SH)` and `Redactor (RED)`
+  - mixed queue content filtering supports umbrella and subtype scopes: `Blog`, `Social Post (All)`, `Social: Image|Carousel|Video|Link`
+  - social rows derive site from associated blog and fall back to canonical Sighthound site when no associated blog site is present
   - social `Action State` is stage-derived (`draft/changes_requested/ready_to_publish/awaiting_live_link` → worker-owned, `in_review/creative_approved` → reviewer-owned) so handoff stages classify consistently even if assignment metadata lags
   - `Next Tasks` priority list is computed across both blog and social datasets (not blog-only)
   - provides `Action State` filtering (`Required by: <username>` / `Waiting on Others`) for triage
@@ -150,8 +157,15 @@ For social execution-stage completion, live links are entered from `/social-post
   - `Published Last 7 Days`
 - `/dashboard` filter controls are intentionally role-agnostic and rendered as a denser 4-column grid on wide viewports
 - `/dashboard` filter groups are explicit:
-  - Row 1 (Search Context): `Sites`, `Writers`, `Publishers`, `Stage`
-  - Row 2 (Workflow State): `Writer Status`, `Publisher Status`, `Cross Workflow`, `Cross Delivery`
+  - Group 1 (Cross-Content Scope): `Sites`, `Content Type`, `Workflow (All Content)`, `Delivery (All Content)`
+  - Group 2 (Blog Filters): `Blog Stage`, `Blog Writers`, `Blog Publishers`, `Blog Writer Status`, `Blog Publisher Status`
+  - Group 3 (Social Filters): `Social Status`, `Social Product`
+- mixed content classification is shared across `/dashboard` and `/tasks` via `src/lib/content-classification.ts` to keep labels/filter semantics aligned.
+- canonical mixed-content filter values:
+  - `Blog`
+  - `Social Post (All)` umbrella
+  - `Social: Image`, `Social: Carousel`, `Social: Video`, `Social: Link`
+- mixed-table site filters expose only canonical site options: `Sighthound (SH)` and `Redactor (RED)`.
 - `/dashboard` uses a single active-filter pill surface and avoids duplicated chip bars
 - `/dashboard` bulk panel is selection-driven; permission-restricted mutation controls remain visible but disabled with helper text
 
@@ -318,7 +332,15 @@ Timezone formatting operations note:
   - day tiles render up to 3 visible event cards
   - overflow is represented by `+N more`
   - selecting `+N more` switches to week view on that date
+- Social Posts calendar mode mirrors the same compact month contract:
+  - month tiles render up to 3 visible posts
+  - overflow uses `+N more` and moves to focused week mode
 - Month tiles do not use nested per-tile scroll regions (reduces wheel-capture jitter/flicker in dense datasets).
+- Calendar day headers and “today” indicators derive from user preferences (`profiles.week_start`, `profiles.timezone`; fallback `America/New_York`).
+- Social Posts calendar keyboard parity contract:
+  - `Arrow` keys or `J/K` move focused day
+  - `Enter` opens first item for the focused day
+  - `Escape` closes open social side panel
 - Calendar event cards rely on native title metadata for hover detail to keep scroll performance stable.
 - Drag-reschedule remains permission-gated by `edit_scheduled_publish_date`; published blogs remain non-draggable.
 
@@ -932,15 +954,17 @@ Settings UI grouping (for operator orientation):
 ## 19) Slack integration behavior and debugging (detailed)
 
 ### Current behavior
-- Caller: `src/lib/notifications.ts` invokes Supabase function `slack-notify`
+- Caller: `src/lib/server-slack-emitter.ts` invokes Supabase function `slack-notify`
+- Route-level emitters: `POST /api/blogs`, `POST /api/social-posts`, transition routes, and reminder/overdue sweep routes
 - Events currently sent (with Slack event type mapping):
   | Event | Slack Event Type | Description |
   |-------|-----------------|-------------|
   | `blog_created` | `blog_created` | Blog created |
   | `writer_assigned` | `writer_assigned` | Writer assigned to blog |
-  | `writer_completed` | `writer_completed` | Writer finished draft |
+  | `writer_completed` | `writer_completed` | Legacy compatibility event (edge-function supported) |
   | `ready_to_publish` | `ready_to_publish` | Blog ready for publishing |
   | `published` | `published` | Blog went live |
+  | `blog_publish_overdue` | `blog_publish_overdue` | Blog publish overdue reminder |
   | `social_post_created` | `social_post_created` | Social post created |
   | `social_submitted_for_review` | `social_submitted_for_review` | Social post submitted |
   | `social_changes_requested` | `social_changes_requested` | Changes requested on social post |
@@ -949,6 +973,8 @@ Settings UI grouping (for operator orientation):
   | `social_awaiting_live_link` | `social_awaiting_live_link` | Waiting for live link |
   | `social_published` | `social_published` | Social post published |
   | `social_live_link_reminder` | `social_live_link_reminder` | Reminder to submit live link |
+  | `social_review_overdue` | `social_review_overdue` | Social review overdue reminder |
+  | `social_publish_overdue` | `social_publish_overdue` | Social publish overdue reminder |
 
 ### Channel and DM configuration
 

@@ -295,8 +295,15 @@ Key behavior:
 - filter surface is role-agnostic (all users get the same dashboard filters)
 - filter grid scales to a 4-column layout on large screens
 - filter groups are explicit:
-  - Row 1 (Search Context): `Sites`, `Writers`, `Publishers`, `Stage`
-  - Row 2 (Workflow State): `Writer Status`, `Publisher Status`, `Cross Workflow`, `Cross Delivery`
+  - Group 1 (Cross-Content Scope): `Sites`, `Content Type`, `Workflow (All Content)`, `Delivery (All Content)`
+  - Group 2 (Blog Filters): `Blog Stage`, `Blog Writers`, `Blog Publishers`, `Blog Writer Status`, `Blog Publisher Status`
+  - Group 3 (Social Filters): `Social Status`, `Social Product`
+- `Sites` in mixed dashboard views is constrained to canonical options only: `Sighthound (SH)` and `Redactor (RED)`.
+- `Content Type` uses a shared mixed-content classification model:
+  - `Blog`
+  - `Social Post (All)` umbrella
+  - `Social: Image`, `Social: Carousel`, `Social: Video`, `Social: Link`
+- Selecting `Social Post (All)` includes all social subtypes; selecting a social subtype narrows to that subtype only.
 - active filters are rendered via a single canonical pill surface (no duplicate chip bars)
 - bulk panel appears whenever rows are selected; mutation controls stay permission-gated but visible in disabled state with helper text
 - delayed definition: scheduled publish date passed while `overall_status != published`
@@ -356,6 +363,11 @@ Key behavior:
   - `Required by: <username>`
   - `Waiting on Others`
 - main table is a unified mixed queue containing both blog and social tasks
+- mixed-table site filter is canonicalized to two options only: `Sighthound (SH)` and `Redactor (RED)`
+- mixed-table content column/filter supports:
+  - `Blog`
+  - `Social Post (All)`
+  - `Social: Image`, `Social: Carousel`, `Social: Video`, `Social: Link`
 
 ### Calendar (`/calendar`)
 - month/week views
@@ -363,6 +375,8 @@ Key behavior:
 - month day tiles show up to 3 visible items and use a `+N more` overflow affordance
 - selecting `+N more` switches to week view focused on that date
 - month rendering avoids nested per-tile scroll regions to reduce wheel jitter/flicker
+- calendar grid chrome (weekday row + day-grid framing) is shared with social calendar mode via reusable shell primitives
+- weekday order and “today” highlighting derive from user preferences (`profiles.week_start`, `profiles.timezone`; fallback `America/New_York`)
 - drag-and-drop rescheduling (permission-gated)
 - published blogs non-draggable
 - unscheduled bucket with pagination
@@ -392,6 +406,12 @@ Key behavior:
   - `awaiting_live_link`
   - `published`
 - board drag/drop and side-panel status edits are restricted to valid stage transitions
+- calendar mode includes month/week surfaces with parity contracts:
+  - month tiles are compact (up to 3 visible posts)
+  - overflow uses `+N more` and switches to focused week mode
+  - month mode avoids nested per-day scroll regions
+  - weekday order and “today” state use user `week_start` + `timezone`
+  - keyboard day navigation parity: `Arrow`/`J/K` move focus, `Enter` opens first day item, `Escape` closes panel
 - status transitions are API-authoritative (`POST /api/social-posts/[postId]/transition`)
 - transition endpoint returns conflict when concurrent writes modify the same post before update commit
 - create modal remembers last-used `product`/`type`/`platforms` defaults and provides quick presets for common combinations
@@ -493,7 +513,15 @@ Key behavior:
 - Workflow events are defined in `src/lib/unified-events.ts`.
 - `emitEvent()` is the shared entry point for recording activity history and validating downstream notification generation.
 - Slack is a delivery channel, not a separate workflow source of truth.
-- Reminder and overdue APIs emit unified events rather than sending direct Slack-only notifications.
+- Workflow create/transition/reminder Slack emission is centralized in `src/lib/server-slack-emitter.ts`.
+- Create/transition/reminder routes emit Slack through `emitWorkflowSlackEvent()`:
+  - `POST /api/blogs`
+  - `POST /api/social-posts`
+  - `POST /api/blogs/[id]/transition`
+  - `POST /api/social-posts/[id]/transition`
+  - `POST /api/social-posts/reminders`
+  - `POST /api/social-posts/overdue-checks`
+  - `POST /api/blogs/overdue-checks`
 - Reminder/overdue routes claim target rows atomically before event emission to avoid duplicate notifications from overlapping runs.
 - User preference writes (`PATCH /api/users/notification-preferences`) are idempotent through atomic upsert on `user_id`.
 - Connector status writes (`PATCH /api/users/integrations`) are idempotent through atomic upsert on `user_id`.
@@ -506,7 +534,7 @@ Covered reminder/overdue events:
 
 Expected behavior:
 - activity history and notification delivery stay aligned for the same workflow event
-- user notification preferences apply consistently to in-app and Slack notifications
+- in-app notification preferences remain preference-gated; centralized workflow Slack transition/reminder alerts remain workflow-authoritative channel events
 - new workflow notifications should extend the unified event system instead of adding route-level Slack-specific logic
 
 ### Password Reset (Test-Only)
@@ -736,10 +764,12 @@ Event examples:
 - social submitted for review / changes requested / creative approved
 - social ready to publish / awaiting live link / published
 - social live-link reminder
+- social review overdue / social publish overdue
+- blog publish overdue
 
 Delivery:
 - configured channel (default `#content-ops-alerts` unless overridden by `SLACK_MARKETING_CHANNEL`)
-- optional DM resolution by email (attempted even if channel post fails)
+- no direct-message workflow path; channel delivery is authoritative
 - webhook fallback when bot-token deliveries do not succeed
 - connected-services bootstrap rows in `user_integrations` are created by an auth trigger path that must not block user provisioning
 - Slack display contract for all Slack-enabled notifications:
@@ -802,6 +832,7 @@ The dashboard list surface is a unified cross-content table driven by a shared r
 - `updated_at`
 ### Optional fields
 - `product` (social-focused, customizable column)
+- derived display-only fields (for example `content_label`) are allowed for UI labeling/sorting/export without changing the required core row contract.
 ### Interaction contract
 - Blog row click opens blog details drawer.
 - Social row click navigates to `/social-posts/[id]`.
@@ -812,6 +843,13 @@ The dashboard list surface is a unified cross-content table driven by a shared r
 - Stage 1 (UI + safety): explicit grouped headings and renamed scoped labels for cross-content/blog/social filter sets.
 - Stage 1 (scope safety): blog-only filters are pass-through for social rows, and social-only filters are pass-through for blog rows.
 - Stage 2 (social-aware wiring): social-specific predicates are active for `Social Status` and `Social Product` when filtering unified dashboard rows.
+- Content classification filter contract (shared with `/tasks`):
+  - `blog`
+  - `social_post` umbrella (matches all social subtypes)
+  - `social_image`, `social_carousel`, `social_video`, `social_link`
+- Mixed-content site filter contract:
+  - canonical values are only `sighthound.com` and `redactor.com`
+  - UI labels render as `Sighthound (SH)` and `Redactor (RED)`.
 ### Export/copy contract
 - CSV/PDF export runs on the unified visible column model.
 - URL copy is blog-only (social rows contribute no blog live URL values).

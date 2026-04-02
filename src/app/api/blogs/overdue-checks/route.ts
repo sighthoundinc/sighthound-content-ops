@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/server-permissions";
 import { getUserRoles } from "@/lib/roles";
 import { withApiContract } from "@/lib/api-contract";
+import { emitWorkflowSlackEvent } from "@/lib/server-slack-emitter";
 
 const OVERDUE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -30,7 +31,9 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
   const { data: publishDueBlogs, error: publishError } = await auth.context.adminClient
     .from("blogs")
-    .select("id,title,site,publisher_id,scheduled_publish_date,last_publish_overdue_notification_at")
+    .select(
+      "id,title,site,publisher_id,scheduled_publish_date,last_publish_overdue_notification_at"
+    )
     .eq("publisher_status", "pending_review")
     .lte("scheduled_publish_date", todayIso)
     .gte("updated_at", oneDayAgo);
@@ -101,6 +104,14 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     if (emitSuccess) {
       publishOverdueNotificationsSent += 1;
     }
+    void emitWorkflowSlackEvent(auth.context.adminClient, {
+      eventType: "blog_publish_overdue",
+      blogId: blog.id,
+      title: blog.title ?? "Blog",
+      site: blog.site ?? "sighthound.com",
+      actorName: "System",
+      targetUserId: blog.publisher_id ?? undefined,
+    });
   }
 
   return NextResponse.json({

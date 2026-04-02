@@ -41,27 +41,6 @@ type BlogTaskCandidate = {
   statusLabel: string;
   association: "writer" | "publisher" | "admin_assignment";
 };
-function isMissingAssignedOwnershipColumnError(
-  error:
-    | {
-        message?: string;
-        details?: string;
-        hint?: string;
-        code?: string;
-      }
-    | null
-    | undefined
-) {
-  if (!error) {
-    return false;
-  }
-  const combinedText = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`;
-  return (
-    error.code === "42703" ||
-    combinedText.includes("assigned_to_user_id") ||
-    combinedText.includes("Unexpected input: ,assigned_to_user_id")
-  );
-}
 
 function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
   if (leftDate && rightDate) {
@@ -204,28 +183,16 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       (blogRows ?? []) as Array<Record<string, unknown>>
     ) as BlogRecord[];
 
-    const fetchSocialRows = async (includeOwnershipColumn: boolean) => {
-      let query = adminClient
-        .from("social_posts")
-        .select(
-          includeOwnershipColumn
-            ? "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id"
-            : "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id"
-        )
-        .in("status", ACTIVE_SOCIAL_STATUSES);
-      query = query.or(
-        includeOwnershipColumn
-          ? `assigned_to_user_id.eq.${userId},worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
-          : `worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
-      );
-      return query.order("scheduled_date", { ascending: true, nullsFirst: false });
-    };
-    let { data: socialRows, error: socialError } = await fetchSocialRows(true);
-    if (isMissingAssignedOwnershipColumnError(socialError)) {
-      const fallback = await fetchSocialRows(false);
-      socialRows = fallback.data;
-      socialError = fallback.error;
-    }
+    const { data: socialRows, error: socialError } = await adminClient
+      .from("social_posts")
+      .select(
+        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id"
+      )
+      .in("status", ACTIVE_SOCIAL_STATUSES)
+      .or(
+        `worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
+      )
+      .order("scheduled_date", { ascending: true, nullsFirst: false });
 
     if (socialError) {
       return NextResponse.json({ error: "Failed to load social tasks." }, { status: 500 });
@@ -312,8 +279,6 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           typeof row.worker_user_id === "string" ? row.worker_user_id : null;
         const reviewerUserId =
           typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null;
-        const assignedToUserId =
-          typeof row.assigned_to_user_id === "string" ? row.assigned_to_user_id : null;
         const actionState = getSocialTaskActionState({
           status,
           userId,
@@ -321,7 +286,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           createdBy,
           workerUserId,
           reviewerUserId,
-          assignedToUserId,
+          assignedToUserId: null,
           editorUserId: null,
           adminOwnerId: null,
         });

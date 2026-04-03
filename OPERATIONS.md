@@ -165,6 +165,7 @@ For social execution-stage completion, live links are entered from `/social-post
   - `Ready to Publish`
   - `Awaiting Live Link`
   - `Published Last 7 Days`
+- Social dashboard ownership mapping should prefer `social_posts.assigned_to_user_id` and resolve names via the profiles cache/users list to avoid relation-select failures collapsing social counts.
 - `/dashboard` filter controls are intentionally role-agnostic and rendered as a denser 4-column grid on wide viewports
 - `/dashboard` filter groups are explicit:
   - Group 1 (Cross-Content Scope): `Sites`, `Content Type`, `Workflow (All Content)`, `Delivery (All Content)`

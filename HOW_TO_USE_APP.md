@@ -198,6 +198,7 @@ Start with the role you are actively working as right now:
 - If no results appear, clear one filter at a time to isolate the blocker.
 - Dashboard filter controls are available to all users regardless of role (same filter surface for everyone).
 - At wide breakpoints, dashboard filters render in a 4-column layout for denser control visibility.
+- Social ownership and dashboard social totals are stabilized from explicit assignee IDs, so assigned social work does not disappear when relation lookups fail.
 - Dashboard filters are grouped into explicit sections:
   - Group 1 (Cross-Content Scope): `Sites`, `Content Type`, `Workflow (All Content)`, `Delivery (All Content)`
   - Group 2 (Blog Filters): `Blog Stage`, `Blog Writers`, `Blog Publishers`, `Blog Writer Status`, `Blog Publisher Status`

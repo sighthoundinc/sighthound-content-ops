@@ -198,6 +198,7 @@ Behavior:
 Daily standup dashboard showing personalized work queue at a glance.
 
 Key behavior:
+- Social dashboard rows must resolve assignee identity from `assigned_to_user_id`; display-name lookup is a presentation concern and must not be a required relational join for row inclusion.
 - **Header**: personalized greeting with user name + role badge (top right)
 - **Main section**: actionable work buckets showing only items assigned to current user:
   - Writer queue items (not started, in progress, awaiting revision, approved)

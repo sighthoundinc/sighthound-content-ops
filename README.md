@@ -88,6 +88,7 @@ Sighthound Content Relay: content operations platform for Sighthound marketing w
 - Single canonical active-filter pills row (no duplicate chip bars)
 - Selection-driven bulk panel with visible permission-disabled mutation states
 - Home standup social counts are assignment-scoped to current user relevance (not global social totals)
+- Dashboard social counts and ownership resolve from `assigned_to_user_id` with profile lookup fallback to avoid relation-join dropouts.
 - Home standup includes writer-facing social handoff visibility for `ready_to_publish`
 - Notification bell includes `Required by: <username>` task shortcuts using the same task snapshot contract
 - Notification bell sections are deterministic: `Required by: <username>`, `Updates` (unread inbox), and de-duplicated `Recent Activity`

@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -17,29 +18,40 @@ export type { NotificationInput, NotificationType } from "@/lib/notification-typ
 
 type NotificationItem = {
   id: string;
+  sourceId: string | null;
   type: NotificationType;
   title: string;
   message: string;
   href: string | null;
   createdAt: number;
   read: boolean;
+  cleared: boolean;
 };
 
 interface NotificationsContextValue {
   notifications: NotificationItem[];
+  clearedNotifications: NotificationItem[];
+  allNotifications: NotificationItem[];
   unreadCount: number;
   pushNotification: (notification: NotificationInput) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotification: (id: string) => void;
   clearAll: () => void;
+  restoreNotification: (id: string) => void;
+  restoreAllCleared: () => void;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(
   null
 );
 
-const NOTIFICATION_LIMIT = 50;
+const NOTIFICATION_LIMIT = 200;
+const NOTIFICATION_STORAGE_KEY_PREFIX = "notifications:v2";
+
+function getStorageKey(userId: string) {
+  return `${NOTIFICATION_STORAGE_KEY_PREFIX}:${userId}`;
+}
 
 function createId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -55,6 +67,104 @@ export function NotificationsProvider({
 }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [userIdCache, setUserIdCache] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    const hydrate = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id ?? null;
+      setUserIdCache(userId);
+      if (!userId) {
+        setNotifications([]);
+        setIsHydrated(true);
+        return;
+      }
+      if (typeof window === "undefined") {
+        setIsHydrated(true);
+        return;
+      }
+      const stored = window.localStorage.getItem(getStorageKey(userId));
+      if (!stored) {
+        setNotifications([]);
+        setIsHydrated(true);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(stored) as NotificationItem[];
+        if (!Array.isArray(parsed)) {
+          setNotifications([]);
+          setIsHydrated(true);
+          return;
+        }
+        setNotifications(
+          parsed
+            .filter(
+              (item): item is NotificationItem =>
+                Boolean(item?.id) &&
+                typeof item.type === "string" &&
+                typeof item.title === "string" &&
+                typeof item.message === "string" &&
+                typeof item.createdAt === "number"
+            )
+            .slice(0, NOTIFICATION_LIMIT)
+        );
+      } catch {
+        setNotifications([]);
+      }
+      setIsHydrated(true);
+    };
+    void hydrate();
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated || !userIdCache || typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      getStorageKey(userIdCache),
+      JSON.stringify(notifications)
+    );
+  }, [isHydrated, notifications, userIdCache]);
+
+  const upsertNotification = useCallback(
+    (notification: NotificationInput) => {
+      const sourceId = notification.sourceId ?? notification.metadata?.sourceId ?? null;
+      const fallbackId = createId();
+      const nextNotification: NotificationItem = {
+        id: sourceId ?? fallbackId,
+        sourceId,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        href: notification.href ?? null,
+        createdAt: notification.timestamp ?? Date.now(),
+        read: false,
+        cleared: false,
+      };
+      setNotifications((previous) => {
+        const existingIndex = sourceId
+          ? previous.findIndex((item) => item.sourceId === sourceId)
+          : -1;
+        if (existingIndex === -1) {
+          return [nextNotification, ...previous].slice(0, NOTIFICATION_LIMIT);
+        }
+        const existing = previous[existingIndex];
+        const merged: NotificationItem = {
+          ...existing,
+          type: nextNotification.type,
+          title: nextNotification.title,
+          message: nextNotification.message,
+          href: nextNotification.href,
+          createdAt: nextNotification.createdAt,
+        };
+        const next = [...previous];
+        next.splice(existingIndex, 1);
+        return [merged, ...next].slice(0, NOTIFICATION_LIMIT);
+      });
+    },
+    []
+  );
 
   /**
    * Enhanced pushNotification with automatic preference enforcement.
@@ -94,37 +204,28 @@ export function NotificationsProvider({
         }
 
         // Create and emit notification
-        const next: NotificationItem = {
-          id: createId(),
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          href: notification.href ?? null,
-          createdAt: notification.timestamp ?? Date.now(),
-          read: false,
-        };
-        setNotifications((previous) =>
-          [next, ...previous].slice(0, NOTIFICATION_LIMIT)
-        );
+        upsertNotification(notification);
       } catch (error) {
         // If anything goes wrong with enforcement, still allow notification
         // (better to over-notify than under-notify)
         console.error("Error in notification enforcement, proceeding", error);
         const next: NotificationItem = {
           id: createId(),
+          sourceId: notification.sourceId ?? notification.metadata?.sourceId ?? null,
           type: notification.type,
           title: notification.title,
           message: notification.message,
           href: notification.href ?? null,
           createdAt: notification.timestamp ?? Date.now(),
           read: false,
+          cleared: false,
         };
         setNotifications((previous) =>
           [next, ...previous].slice(0, NOTIFICATION_LIMIT)
         );
       }
     },
-    [userIdCache]
+    [upsertNotification, userIdCache]
   );
 
   const markAsRead = useCallback((id: string) => {
@@ -135,35 +236,69 @@ export function NotificationsProvider({
     );
   }, []);
 
+  const restoreNotification = useCallback((id: string) => {
+    setNotifications((previous) =>
+      previous.map((notification) =>
+        notification.id === id ? { ...notification, cleared: false } : notification
+      )
+    );
+  }, []);
+
+  const restoreAllCleared = useCallback(() => {
+    setNotifications((previous) =>
+      previous.map((notification) => ({ ...notification, cleared: false }))
+    );
+  }, []);
+
+  const visibleNotifications = useMemo(
+    () => notifications.filter((notification) => !notification.cleared),
+    [notifications]
+  );
+  const clearedNotifications = useMemo(
+    () => notifications.filter((notification) => notification.cleared),
+    [notifications]
+  );
+
   const markAllAsRead = useCallback(() => {
     setNotifications((previous) =>
-      previous.map((notification) => ({ ...notification, read: true }))
+      previous.map((notification) =>
+        notification.cleared ? notification : { ...notification, read: true }
+      )
     );
   }, []);
 
   const clearNotification = useCallback((id: string) => {
     setNotifications((previous) =>
-      previous.filter((notification) => notification.id !== id)
+      previous.map((notification) =>
+        notification.id === id ? { ...notification, cleared: true } : notification
+      )
     );
   }, []);
 
   const clearAll = useCallback(() => {
-    setNotifications([]);
+    setNotifications((previous) =>
+      previous.map((notification) => ({ ...notification, cleared: true }))
+    );
   }, []);
 
   const unreadCount = useMemo(
-    () => notifications.filter((notification) => !notification.read).length,
-    [notifications]
+    () =>
+      visibleNotifications.filter((notification) => !notification.read).length,
+    [visibleNotifications]
   );
 
   const value: NotificationsContextValue = {
-    notifications,
+    notifications: visibleNotifications,
+    clearedNotifications,
+    allNotifications: notifications,
     unreadCount,
     pushNotification,
     markAsRead,
     markAllAsRead,
     clearNotification,
     clearAll,
+    restoreNotification,
+    restoreAllCleared,
   };
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
@@ -55,6 +55,8 @@ type UnifiedActivity = {
   event_description: string;
   created_at: string;
 };
+const ACCESS_LOGS_ACTIVITY_DROPDOWN_ID = "access-logs-activity-dropdown";
+const ACCESS_LOGS_USER_DROPDOWN_ID = "access-logs-user-dropdown";
 
 export default function AccessLogsPage() {
   const { session, profile } = useAuth();
@@ -79,7 +81,7 @@ export default function AccessLogsPage() {
     "dashboard_visit",
   ]);
   const [pendingUserIds, setPendingUserIds] = useState<string[]>(profile?.id ? [profile.id] : []);
-  const [isDropdownOpen, setIsDropdownOpen] = useState<{activity: boolean; user: boolean}>({activity: false, user: false});
+  const [activeDropdown, setActiveDropdown] = useState<"activity" | "user" | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -101,6 +103,8 @@ export default function AccessLogsPage() {
     social_post_status_changed: "Social Post Activity",
     social_post_assignment_changed: "Social Post Activity",
   });
+  const activityDropdownRef = useRef<HTMLDivElement | null>(null);
+  const userDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const loadActivityHistory = useCallback(async () => {
     if (!session?.access_token) {
@@ -182,17 +186,62 @@ export default function AccessLogsPage() {
     setIsLoadingUsers(false);
   }, [isAdmin]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => {
-      setIsDropdownOpen({activity: false, user: false});
+    const handleClickOutside = (event: MouseEvent) => {
+      const targetNode = event.target as Node;
+      const clickedInsideActivity = activityDropdownRef.current?.contains(targetNode) ?? false;
+      const clickedInsideUser = userDropdownRef.current?.contains(targetNode) ?? false;
+      if (!clickedInsideActivity && !clickedInsideUser) {
+        setActiveDropdown(null);
+      }
     };
-    
-    if (isDropdownOpen.activity || isDropdownOpen.user) {
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
-    }
-  }, [isDropdownOpen]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalPopoverClose = () => {
+      setActiveDropdown(null);
+    };
+    const handleOtherDropdownOpened = (
+      event: CustomEvent<{ id?: string }>
+    ) => {
+      if (
+        event.detail?.id === ACCESS_LOGS_ACTIVITY_DROPDOWN_ID ||
+        event.detail?.id === ACCESS_LOGS_USER_DROPDOWN_ID
+      ) {
+        return;
+      }
+      setActiveDropdown(null);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveDropdown(null);
+      }
+    };
+    window.addEventListener(
+      "app:close-popovers",
+      handleGlobalPopoverClose as EventListener
+    );
+    window.addEventListener(
+      "app:dropdown-opened",
+      handleOtherDropdownOpened as EventListener
+    );
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener(
+        "app:close-popovers",
+        handleGlobalPopoverClose as EventListener
+      );
+      window.removeEventListener(
+        "app:dropdown-opened",
+        handleOtherDropdownOpened as EventListener
+      );
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   useEffect(() => {
     if (isAdmin) {
@@ -285,9 +334,22 @@ export default function AccessLogsPage() {
                   {/* Activity Type Dropdown */}
                   <div className="min-w-[16rem] flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Activity Types</label>
-                    <div className="relative">
+                    <div className="relative" ref={activityDropdownRef}>
                       <button
-                        onClick={() => setIsDropdownOpen({...isDropdownOpen, activity: !isDropdownOpen.activity})}
+                        type="button"
+                        onClick={() => {
+                          setActiveDropdown((previous) => {
+                            const next = previous === "activity" ? null : "activity";
+                            if (next === "activity") {
+                              window.dispatchEvent(
+                                new CustomEvent("app:dropdown-opened", {
+                                  detail: { id: ACCESS_LOGS_ACTIVITY_DROPDOWN_ID },
+                                })
+                              );
+                            }
+                            return next;
+                          });
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-left text-sm text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-500"
                       >
                         <span className="block truncate">
@@ -296,7 +358,7 @@ export default function AccessLogsPage() {
                             : `${pendingActivityTypes.length} selected`}
                         </span>
                       </button>
-                      {isDropdownOpen.activity && (
+                      {activeDropdown === "activity" && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
                           <div className="max-h-48 overflow-y-auto p-2 space-y-2">
                             {Object.entries(activityTypeLabels).map(([type, label]) => (
@@ -325,9 +387,22 @@ export default function AccessLogsPage() {
                   {/* User Dropdown */}
                   <div className="min-w-[16rem] flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Users</label>
-                    <div className="relative">
+                    <div className="relative" ref={userDropdownRef}>
                       <button
-                        onClick={() => setIsDropdownOpen({...isDropdownOpen, user: !isDropdownOpen.user})}
+                        type="button"
+                        onClick={() => {
+                          setActiveDropdown((previous) => {
+                            const next = previous === "user" ? null : "user";
+                            if (next === "user") {
+                              window.dispatchEvent(
+                                new CustomEvent("app:dropdown-opened", {
+                                  detail: { id: ACCESS_LOGS_USER_DROPDOWN_ID },
+                                })
+                              );
+                            }
+                            return next;
+                          });
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-left text-sm text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-500"
                       >
                         <span className="block truncate">
@@ -336,7 +411,7 @@ export default function AccessLogsPage() {
                             : `${pendingUserIds.length} selected`}
                         </span>
                       </button>
-                      {isDropdownOpen.user && (
+                      {activeDropdown === "user" && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
                           <div className="max-h-48 overflow-y-auto p-2 space-y-2">
                             {isLoadingUsers ? (
@@ -378,7 +453,7 @@ export default function AccessLogsPage() {
                     setSelectedActivityTypes(pendingActivityTypes);
                     setSelectedUserIds(pendingUserIds);
                     setCurrentPage(1);
-                    setIsDropdownOpen({activity: false, user: false});
+                    setActiveDropdown(null);
                     setIsSaving(false);
                   }}
                   disabled={isSaving || (JSON.stringify(pendingActivityTypes) === JSON.stringify(selectedActivityTypes) && JSON.stringify(pendingUserIds) === JSON.stringify(selectedUserIds))}

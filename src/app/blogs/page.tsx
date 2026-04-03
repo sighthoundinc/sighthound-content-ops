@@ -544,29 +544,17 @@ function BlogLibraryPageContent() {
   }, []);
 
   useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
-      const targetNode = event.target as Node;
-      document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
-        if (!menu.contains(targetNode)) {
-          menu.open = false;
-        }
-      });
-    };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closeOpenDetailsMenus();
         setActiveBlogId(null);
       }
     };
-
-    document.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("keydown", handleEscape);
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [closeOpenDetailsMenus]);
+  }, []);
   useEffect(() => {
     if (!activeBlogId) {
       return;

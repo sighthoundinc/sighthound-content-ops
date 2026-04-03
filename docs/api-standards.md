@@ -1,172 +1,67 @@
 # API Standards
 
-**Effective**: 2025-03-29  
+**Effective**: 2026-04-03  
 **Scope**: All routes in `src/app/api/`  
-**Enforcement**: Code review + lint rules (future)
+**Enforcement**: Code review + contract helpers (`withApiContract`, `api-response` utilities)
 
----
+## Core principle: resource-oriented contracts
+Routes should follow REST semantics unless the operation is explicitly workflow/system oriented.
 
-## Core Principle: RESTful Endpoints
+Standard resource patterns:
+- `GET /api/resource` → list/fetch
+- `POST /api/resource` → create
+- `GET /api/resource/[id]` → fetch one
+- `PATCH /api/resource/[id]` → update
+- `DELETE /api/resource/[id]` → delete
 
-All API routes must follow standard REST semantics. **No action-based URLs allowed.**
+## Disallowed route patterns
+Avoid action suffixes for standard CRUD:
+- `/api/resource/[id]/delete`
+- `/api/resource/[id]/update`
+- `/api/resource/[id]/create`
 
-### Standard REST Patterns
+## Approved non-CRUD exceptions
+The following are valid specialized workflow/system actions:
+- `/api/social-posts/[id]/transition`
+- `/api/social-posts/[id]/reopen-brief`
+- `/api/social-posts/reminders`
+- `/api/social-posts/overdue-checks`
+- `/api/blogs/[id]/transition`
+- `/api/blogs/overdue-checks`
+- `/api/admin/wipe-app-clean`
+- `/api/events/record-activity`
 
-```
-GET    /api/resource              → List/fetch resource
-POST   /api/resource              → Create resource
-GET    /api/resource/[id]         → Fetch single resource
-PATCH  /api/resource/[id]         → Update resource
-DELETE /api/resource/[id]         → Delete resource
-```
+## Legacy compatibility endpoint
+Current temporary legacy proxy:
+- `DELETE /api/ideas/[id]/delete` → proxies to `DELETE /api/ideas/[id]`
 
-### Forbidden Patterns
+Rules for legacy endpoints:
+1. Mark as deprecated in-file.
+2. Log usage clearly for migration visibility.
+3. Keep migration target explicit in docs/comments.
+4. Remove once callers are migrated.
 
-❌ **Never use**:
-- `/api/resource/[id]/delete` → Use `DELETE /api/resource/[id]`
-- `/api/resource/[id]/update` → Use `PATCH /api/resource/[id]`
-- `/api/resource/[id]/create` → Use `POST /api/resource`
-- `/api/resource/action` → Use appropriate HTTP verb + resource path
-- `/api/resource/do-something` → Use appropriate HTTP verb + resource path
+## Route inventory note
+REST standards define target architecture; not every resource currently has full CRUD API parity.
 
-### Exception: RPC-Style Endpoints
+Current gap example:
+- `DELETE /api/blogs/[id]` is not implemented yet (blog deletes currently rely on direct client DB mutation paths + RLS safeguards).
 
-Some endpoints can deviate from REST if they represent non-CRUD operations:
+## Status code contract
+Use conventional codes, but keep response-shape consistency explicit:
+- `200 OK` — successful read/update/delete when returning JSON body
+- `201 Created` — successful create
+- `204 No Content` — allowed only when intentionally returning no body
+- `400 Bad Request` — validation failure
+- `403 Forbidden` — auth/permission failure
+- `404 Not Found` — resource missing
+- `409 Conflict` — state conflict or concurrency issue
+- `500 Internal Server Error` — unexpected failure
 
-✅ **Allowed special cases**:
-- `/api/social-posts/[id]/transition` — State machine transition (action on resource)
-- `/api/social-posts/[id]/reopen-brief` — Specialized workflow action
-- `/api/social-posts/reminders` — Batch reminder operation
-- `/api/admin/wipe-app-clean` — Admin system operation
-- `/api/events/record-activity` — Event recording
-
-**Rationale**: These are legitimate state-change or bulk operations that don't map cleanly to PATCH/POST. They should be:
-1. Clearly documented as special cases
-2. Scoped to admin or specialized workflows
-3. Not duplicated with REST equivalents
-
----
-
-## Directory Structure
-
-### Correct ✅
-
-```
-src/app/api/
-├── ideas/
-│   └── [id]/
-│       └── route.ts              ← GET, POST, PATCH, DELETE handlers
-└── social-posts/
-    └── [id]/
-        ├── route.ts              ← GET, PATCH, DELETE handlers
-        ├── transition/route.ts    ← Special case (state machine)
-        └── reopen-brief/route.ts  ← Special case (workflow action)
-```
-
-### Incorrect ❌
-
-```
-src/app/api/
-├── ideas/
-│   └── [id]/
-│       ├── delete/route.ts       ← WRONG: Use DELETE /api/ideas/[id]
-│       ├── update/route.ts       ← WRONG: Use PATCH /api/ideas/[id]
-│       └── route.ts
-└── blogs/
-    └── [id]/
-        └── delete/route.ts       ← WRONG: Use DELETE /api/blogs/[id]
-```
-
----
-
-## Deprecation & Migration
-
-### Existing Legacy Endpoints
-
-The following endpoints are **deprecated** and scheduled for removal:
-
-| Endpoint | Status | Migration | Removal Target |
-|----------|--------|-----------|-----------------|
-| `DELETE /api/ideas/[id]/delete` | Proxy | Use `DELETE /api/ideas/[id]` | v2.0 (2 releases) |
-
-### Deprecation Process
-
-1. **Add deprecation comment** with date, owner, and removal target
-2. **Add console.warn() log** with clear migration message
-3. **Wait 1–2 releases** for clients to migrate
-4. **Remove the endpoint** and verify logs show zero usage
-5. **Document removal** in CHANGELOG
-
----
-
-## Implementation Checklist
-
-When adding a new API route:
-
-- [ ] Route follows REST pattern (GET/POST/PATCH/DELETE on `[id]/route.ts`)
-- [ ] HTTP method correctly maps to operation (POST=create, PATCH=update, DELETE=delete)
-- [ ] Query parameters documented in endpoint comments
-- [ ] Error cases handled with appropriate status codes (400, 403, 404, 500)
-- [ ] RLS policies in place for authorization
-- [ ] TypeScript types for request/response defined
-- [ ] Integration with `withApiContract` for response normalization
-- [ ] Tested with TypeScript check and linting
-
----
-
-## Status Codes
-
-Use standard HTTP status codes:
-
-- `200 OK` — Successful GET/PATCH/DELETE
-- `201 Created` — Successful POST (resource created)
-- `204 No Content` — Successful DELETE with no response body
-- `400 Bad Request` — Validation error
-- `403 Forbidden` — Permission denied
-- `404 Not Found` — Resource not found
-- `409 Conflict` — Constraint violation (e.g., delete with linked data)
-- `500 Internal Server Error` — Unexpected server error
-
----
-
-## Examples
-
-### ✅ Correct: DELETE with proper pattern
-
-```typescript
-// src/app/api/ideas/[id]/route.ts
-export const DELETE = withApiContract(async function DELETE(request, { params }) {
-  const auth = await requirePermission(request, "delete_idea");
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  const { id } = await params;
-  // ... deletion logic
-  return NextResponse.json({ data: { deletedId: id }, message: "Deleted" }, { status: 200 });
-});
-```
-
-### ❌ Incorrect: Legacy `/delete` subdirectory
-
-```typescript
-// src/app/api/ideas/[id]/delete/route.ts ← WRONG
-// This pattern is deprecated and confuses REST semantics
-```
-
----
-
-## Future: Automated Enforcement
-
-Planned improvements:
-
-- ESLint rule to flag `/delete/`, `/update/`, `/create/` subdirectories
-- Pre-commit hook to validate HTTP methods against route patterns
-- API documentation generator from route structure
-
----
-
-## Questions?
-
-Refer to existing implementations:
-- Modern: `src/app/api/social-posts/[id]/route.ts` (DELETE handler at [id] level)
-- Legacy (deprecated): `src/app/api/ideas/[id]/delete/route.ts` (proxy, removal planned)
-
+## Implementation checklist for new endpoints
+- Route shape follows REST or documented exception pattern.
+- Input/output/error formats are validated and contract-normalized.
+- Permission and RLS boundaries are enforced.
+- No raw internal errors are leaked to callers.
+- Client parsing paths use `parseApiResponseJson()`, `isApiFailure()`, `getApiErrorMessage()`.
+- Docs are updated when route behavior changes.

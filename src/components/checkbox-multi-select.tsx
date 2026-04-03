@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 type MultiSelectOption = {
   value: string;
@@ -19,6 +19,7 @@ export function CheckboxMultiSelect({
   onChange: (nextValues: string[]) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownId = useId();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -33,6 +34,45 @@ export function CheckboxMultiSelect({
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, []);
+
+  useEffect(() => {
+    const handleGlobalPopoverClose = () => {
+      setIsOpen(false);
+    };
+    const handleOtherDropdownOpened = (
+      event: CustomEvent<{ id?: string }>
+    ) => {
+      if (event.detail?.id === dropdownId) {
+        return;
+      }
+      setIsOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener(
+      "app:close-popovers",
+      handleGlobalPopoverClose as EventListener
+    );
+    window.addEventListener(
+      "app:dropdown-opened",
+      handleOtherDropdownOpened as EventListener
+    );
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener(
+        "app:close-popovers",
+        handleGlobalPopoverClose as EventListener
+      );
+      window.removeEventListener(
+        "app:dropdown-opened",
+        handleOtherDropdownOpened as EventListener
+      );
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [dropdownId]);
 
   const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
   const selectedLabels = useMemo(
@@ -64,7 +104,17 @@ export function CheckboxMultiSelect({
         type="button"
         className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-700"
         onClick={() => {
-          setIsOpen((previous) => !previous);
+          setIsOpen((previous) => {
+            const nextIsOpen = !previous;
+            if (nextIsOpen) {
+              window.dispatchEvent(
+                new CustomEvent("app:dropdown-opened", {
+                  detail: { id: dropdownId },
+                })
+              );
+            }
+            return nextIsOpen;
+          });
         }}
       >
         <span className="truncate">{triggerText}</span>

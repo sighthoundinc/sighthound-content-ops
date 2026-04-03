@@ -311,6 +311,27 @@ Name resolution behavior:
 - Unread badge shows what still needs review.
 - Click a notification to jump to the related record.
 - Activity items use plain-language titles and change summaries (for example, "Publishing Stage Updated" instead of raw status keys).
+- Bell sections are split into:
+  - `Required by: <name>` (top actionable shortcuts)
+  - `Updates` (unread inbox items)
+  - `Recent Activity` (readable feed items not duplicated in inbox)
+- Bell actions:
+  - `View All` opens [`/updates`](/updates) for all authenticated users
+  - `Mark all read` marks inbox items as read
+  - `Clear my inbox` hides inbox items from active view without permanent deletion
+- Opening the bell does not trigger reminder jobs; it only reads feed/task data.
+
+### View All updates feed
+- Open from bell `View All` to access [`/updates`](/updates).
+- Feed behavior:
+  - `Recent activity` is capped to the latest 50 items.
+  - `Inbox updates` are your persistent per-user in-app notifications.
+  - `Cleared inbox updates` can be shown/hidden and restored.
+- Clear is reversible:
+  - `Clear` moves a single item to cleared
+  - `Clear my inbox` moves all inbox items to cleared
+  - `Restore` / `Restore all` moves cleared items back to inbox
+- This page is intended as a readable operational feed, not an admin-only audit tool.
 
 ### Notification preferences
 - [`Settings`](/settings) → `Notification Preferences` controls all notification types.

@@ -22,7 +22,6 @@ import {
 import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon, type AppIconName } from "@/lib/icons";
-import { socialPostAwaitingLiveLinkReminderNotification } from "@/lib/notification-helpers";
 import {
   getApiErrorMessage,
   isApiFailure,
@@ -78,6 +77,17 @@ type TaskShortcutItem = {
   scheduledDate: string | null;
   actionState: "action_required" | "waiting_on_others";
 };
+type ActivityFeedItem = {
+  id: string;
+  content_type: "blog" | "social_post";
+  content_id: string;
+  content_title: string;
+  event_type: string;
+  event_title: string;
+  event_summary: string | null;
+  changed_by_name: string | null;
+  changed_at: string;
+};
 
 function formatNotificationAge(createdAt: number) {
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - createdAt) / 1000));
@@ -108,13 +118,17 @@ export function AppShell({
   const { hasPermission, profile, session, signOut, user } = useAuth();
   const {
     notifications,
+    allNotifications,
     unreadCount,
     pushNotification,
     markAsRead,
+    markAllAsRead,
     clearAll,
   } = useNotifications();
   const { collapsed, setCollapsed } = useSidebarState();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [activeQuickCreateIndex, setActiveQuickCreateIndex] = useState(0);
   const [isShortcutModalOpen, setIsShortcutModalOpen] = useState(false);
@@ -122,25 +136,50 @@ export function AppShell({
     null
   );
   const [quickViewError, setQuickViewError] = useState<string | null>(null);
-  const [activityFeed, setActivityFeed] = useState<
-    Array<{
-      id: string;
-      content_type: "blog" | "social_post";
-      content_id: string;
-      content_title: string;
-      event_type: string;
-      event_title: string;
-      event_summary: string | null;
-      changed_by_name: string | null;
-      changed_at: string;
-    }>
-  >([]);
+  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
   const [requiredTaskShortcuts, setRequiredTaskShortcuts] = useState<TaskShortcutItem[]>(
     []
   );
+  const mapActivityToNotificationType = useCallback((eventType: string) => {
+    if (eventType.includes("assignment")) {
+      return "assignment_changed" as const;
+    }
+    if (eventType.includes("awaiting") || eventType.includes("reminder")) {
+      return "awaiting_action" as const;
+    }
+    if (eventType.includes("published")) {
+      return "published" as const;
+    }
+    return "stage_changed" as const;
+  }, []);
+  const syncActivityFeedToInbox = useCallback(
+    async (feedItems: ActivityFeedItem[]) => {
+      for (const activity of feedItems.slice(0, 10)) {
+        await pushNotification({
+          sourceId: `activity:${activity.id}`,
+          type: mapActivityToNotificationType(activity.event_type),
+          title: activity.event_title,
+          message:
+            activity.event_summary ??
+            `${activity.content_title}${activity.changed_by_name ? ` • ${activity.changed_by_name}` : ""}`,
+          href:
+            activity.content_type === "blog"
+              ? `/blogs/${activity.content_id}`
+              : `/social-posts/${activity.content_id}`,
+          timestamp: new Date(activity.changed_at).getTime(),
+        });
+      }
+    },
+    [mapActivityToNotificationType, pushNotification]
+  );
+  const broadcastGlobalPopoverClose = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("app:close-popovers"));
+  }, []);
   const [headerLogoSourceIndex, setHeaderLogoSourceIndex] = useState(0);
   const [headerLogoLoaded, setHeaderLogoLoaded] = useState(false);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
+  const helpMenuRef = useRef<HTMLDivElement | null>(null);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
   const sidebarNavScrollRef = useRef<HTMLDivElement | null>(null);
@@ -156,7 +195,37 @@ export function AppShell({
   const canManagePermissions = isAdmin;
   const canManageSocialPosts =
     permissionContract.canViewDashboard || permissionContract.canOverrideWorkflow;
+  const profileDisplayName = profile?.display_name || profile?.full_name || "Account";
+  const profileInitials = profileDisplayName
+    .split(" ")
+    .filter((segment) => segment.length > 0)
+    .slice(0, 2)
+    .map((segment) => segment[0]?.toUpperCase() ?? "")
+    .join("");
   const activeHeaderLogo = APP_SHELL_LOGO_SEQUENCE[headerLogoSourceIndex] ?? null;
+  const headerMenuTriggerClass =
+    "inline-flex min-h-10 items-center justify-center rounded-md px-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset";
+  const headerMenuItemClass =
+    "flex w-full items-center rounded-md px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset";
+  const closeOpenDetailsMenus = useCallback(
+    (excludeDetails: HTMLDetailsElement | null = null) => {
+      document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
+        if (!excludeDetails) {
+          menu.open = false;
+          return;
+        }
+        if (
+          menu === excludeDetails ||
+          menu.contains(excludeDetails) ||
+          excludeDetails.contains(menu)
+        ) {
+          return;
+        }
+        menu.open = false;
+      });
+    },
+    []
+  );
   const globalShortcuts = useMemo(() => {
     const shortcuts: ShortcutDefinition[] = [
       {
@@ -315,6 +384,15 @@ export function AppShell({
         return;
       }
       if (event.key === "Escape") {
+        broadcastGlobalPopoverClose();
+        closeOpenDetailsMenus();
+        if (isNotificationPanelOpen || isHelpMenuOpen || isProfileMenuOpen) {
+          event.preventDefault();
+          setIsNotificationPanelOpen(false);
+          setIsHelpMenuOpen(false);
+          setIsProfileMenuOpen(false);
+          return;
+        }
         if (isShortcutModalOpen) {
           event.preventDefault();
           setIsShortcutModalOpen(false);
@@ -423,10 +501,15 @@ export function AppShell({
     executeQuickCreateItem,
     activeQuickCreateIndex,
     isQuickCreateOpen,
+    isHelpMenuOpen,
+    isNotificationPanelOpen,
+    isProfileMenuOpen,
     isShortcutModalOpen,
     pathname,
     quickCreateItems,
     router,
+    broadcastGlobalPopoverClose,
+    closeOpenDetailsMenus,
   ]);
   useEffect(() => {
     const handleOpenShortcutModal = () => {
@@ -439,19 +522,74 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
-    if (!isNotificationPanelOpen) {
-      return;
-    }
     const handleOutsideClick = (event: MouseEvent) => {
-      if (!notificationPanelRef.current?.contains(event.target as Node)) {
+      const targetNode = event.target as Node;
+      const targetElement = targetNode instanceof Element ? targetNode : null;
+      const activeDetails = targetElement?.closest("details") ?? null;
+      closeOpenDetailsMenus(activeDetails);
+      if (
+        isNotificationPanelOpen &&
+        !notificationPanelRef.current?.contains(targetNode)
+      ) {
         setIsNotificationPanelOpen(false);
+      }
+      if (isHelpMenuOpen && !helpMenuRef.current?.contains(targetNode)) {
+        setIsHelpMenuOpen(false);
+      }
+      if (isProfileMenuOpen && !profileMenuRef.current?.contains(targetNode)) {
+        setIsProfileMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
-  }, [isNotificationPanelOpen]);
+  }, [
+    closeOpenDetailsMenus,
+    isHelpMenuOpen,
+    isNotificationPanelOpen,
+    isProfileMenuOpen,
+  ]);
+
+  useEffect(() => {
+    const handleDetailsToggle = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLDetailsElement)) {
+        return;
+      }
+      if (!target.open) {
+        return;
+      }
+      broadcastGlobalPopoverClose();
+      closeOpenDetailsMenus(target);
+      setIsNotificationPanelOpen(false);
+      setIsHelpMenuOpen(false);
+      setIsProfileMenuOpen(false);
+    };
+    document.addEventListener("toggle", handleDetailsToggle, true);
+    return () => {
+      document.removeEventListener("toggle", handleDetailsToggle, true);
+    };
+  }, [broadcastGlobalPopoverClose, closeOpenDetailsMenus]);
+
+  useEffect(() => {
+    const handleCustomDropdownOpened = () => {
+      closeOpenDetailsMenus();
+      setIsNotificationPanelOpen(false);
+      setIsHelpMenuOpen(false);
+      setIsProfileMenuOpen(false);
+    };
+    window.addEventListener(
+      "app:dropdown-opened",
+      handleCustomDropdownOpened as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "app:dropdown-opened",
+        handleCustomDropdownOpened as EventListener
+      );
+    };
+  }, [closeOpenDetailsMenus]);
 
   useLayoutEffect(() => {
     if (!sidebarNavScrollRef.current) {
@@ -465,85 +603,79 @@ export function AppShell({
     setQuickViewError(null);
   }, [user?.id]);
 
-  // Load activity feed when notification panel opens
+  const loadBellData = useCallback(async () => {
+    if (!session?.access_token) {
+      setRequiredTaskShortcuts([]);
+      setActivityFeed([]);
+      return;
+    }
+    try {
+      const [shortcutResponse, activityResponse] = await Promise.all([
+        fetch("/api/dashboard/tasks-snapshot", {
+          headers: {
+            authorization: `Bearer ${session.access_token}`,
+          },
+        }),
+        fetch("/api/activity-feed"),
+      ]);
+      const shortcutPayload = await parseApiResponseJson<{
+        requiredByMe?: TaskShortcutItem[];
+      }>(shortcutResponse);
+      if (!isApiFailure(shortcutResponse, shortcutPayload)) {
+        setRequiredTaskShortcuts(shortcutPayload.requiredByMe ?? []);
+      } else {
+        setRequiredTaskShortcuts([]);
+      }
+      const activityPayload = await parseApiResponseJson<{
+        data?: { activities?: ActivityFeedItem[] };
+      }>(activityResponse);
+      if (isApiFailure(activityResponse, activityPayload)) {
+        throw new Error(
+          getApiErrorMessage(activityPayload, "Failed to load activity feed.")
+        );
+      }
+      const nextActivityFeed = activityPayload.data?.activities ?? [];
+      setActivityFeed(nextActivityFeed);
+      await syncActivityFeedToInbox(nextActivityFeed);
+    } catch (error) {
+      console.error("Failed to load bell data:", error);
+      setRequiredTaskShortcuts([]);
+      setActivityFeed([]);
+    }
+  }, [session?.access_token, syncActivityFeedToInbox]);
+
   useEffect(() => {
     if (!isNotificationPanelOpen) {
       return;
     }
-    const loadActivityFeed = async () => {
-      try {
-        if (session?.access_token) {
-          const shortcutResponse = await fetch("/api/dashboard/tasks-snapshot", {
-            headers: {
-              authorization: `Bearer ${session.access_token}`,
-            },
-          });
-          const shortcutPayload = await parseApiResponseJson<{
-            requiredByMe?: TaskShortcutItem[];
-          }>(shortcutResponse);
-          if (!isApiFailure(shortcutResponse, shortcutPayload)) {
-            setRequiredTaskShortcuts(shortcutPayload.requiredByMe ?? []);
-          } else {
-            setRequiredTaskShortcuts([]);
-          }
-        } else {
-          setRequiredTaskShortcuts([]);
-        }
-        if (isAdmin && session?.access_token) {
-          const reminderResponse = await fetch("/api/social-posts/reminders", {
-            method: "POST",
-            headers: {
-              authorization: `Bearer ${session.access_token}`,
-            },
-          });
-          const reminderPayload = await parseApiResponseJson<{
-            posts?: Array<{ id: string; title: string }>;
-          }>(reminderResponse);
-          if (!isApiFailure(reminderResponse, reminderPayload)) {
-            for (const reminderPost of reminderPayload.posts ?? []) {
-              pushNotification(
-                socialPostAwaitingLiveLinkReminderNotification(
-                  reminderPost.title,
-                  reminderPost.id
-                )
-              );
-            }
-          } else {
-            console.warn(
-              getApiErrorMessage(
-                reminderPayload,
-                "Failed to run social reminder sweep."
-              )
-            );
-          }
-        }
-        const response = await fetch("/api/activity-feed");
-        const payload = await parseApiResponseJson<{
-          data?: {
-            activities?: Array<{
-              id: string;
-              content_type: "blog" | "social_post";
-              content_id: string;
-              content_title: string;
-              event_type: string;
-              event_title: string;
-              event_summary: string | null;
-              changed_by_name: string | null;
-              changed_at: string;
-            }>;
-          };
-        }>(response);
-        if (isApiFailure(response, payload)) {
-          throw new Error(getApiErrorMessage(payload, "Failed to load activity feed."));
-        }
-        setActivityFeed(payload.data?.activities || []);
-      } catch (error) {
-        console.error("Failed to load activity feed:", error);
-        setRequiredTaskShortcuts([]);
+    void loadBellData();
+  }, [isNotificationPanelOpen, loadBellData]);
+
+  useEffect(() => {
+    if (!session?.access_token) {
+      return;
+    }
+    const runRefresh = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+      void loadBellData();
+    };
+    runRefresh();
+    const intervalId = window.setInterval(runRefresh, 45_000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        runRefresh();
       }
     };
-    void loadActivityFeed();
-  }, [isAdmin, isNotificationPanelOpen, pushNotification, session?.access_token]);
+    window.addEventListener("focus", runRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", runRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [loadBellData, session?.access_token]);
 
   const returnToAdminFromQuickView = async () => {
     const snapshot = readQuickViewSnapshot();
@@ -602,6 +734,24 @@ export function AppShell({
     setHeaderLogoLoaded(false);
     setHeaderLogoSourceIndex((currentIndex) => currentIndex + 1);
   }, []);
+  const notificationSourceIds = useMemo(
+    () =>
+      new Set(
+        allNotifications.map((notification) => notification.sourceId).filter(Boolean)
+      ),
+    [allNotifications]
+  );
+  const recentActivityItems = useMemo(
+    () =>
+      activityFeed
+        .filter((activity) => !notificationSourceIds.has(`activity:${activity.id}`))
+        .slice(0, 10),
+    [activityFeed, notificationSourceIds]
+  );
+  const unreadNotificationItems = useMemo(
+    () => notifications.filter((notification) => !notification.read).slice(0, 5),
+    [notifications]
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -661,9 +811,16 @@ export function AppShell({
             <div className="relative" ref={notificationPanelRef}>
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-800"
+                className={cn(headerMenuTriggerClass, "relative px-1.5")}
                 aria-label="Notifications"
+                aria-haspopup="menu"
+                aria-expanded={isNotificationPanelOpen}
+                aria-controls="header-notifications-menu"
                 onClick={() => {
+                  broadcastGlobalPopoverClose();
+                  closeOpenDetailsMenus();
+                  setIsHelpMenuOpen(false);
+                  setIsProfileMenuOpen(false);
                   setIsNotificationPanelOpen((previous) => !previous);
                 }}
               >
@@ -675,7 +832,12 @@ export function AppShell({
                 ) : null}
               </button>
               {isNotificationPanelOpen ? (
-                <div className="absolute right-0 z-40 mt-2 w-[360px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                <div
+                  id="header-notifications-menu"
+                  className="absolute right-0 z-40 mt-2 w-[360px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                  role="menu"
+                  aria-label="Notifications menu"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
                     <div className="flex gap-2">
@@ -683,13 +845,23 @@ export function AppShell({
                         type="button"
                         onClick={() => {
                           setIsNotificationPanelOpen(false);
-                          router.push("/settings/access-logs");
+                          router.push("/updates");
                         }}
                         className="text-xs text-slate-600 transition hover:text-slate-900"
-                        title="View full activity history"
+                        title="View all updates"
                       >
-                        View History
+                        View All
                       </button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => {
+                          markAllAsRead();
+                        }}
+                      >
+                        Mark all read
+                      </Button>
                       <Button
                         type="button"
                         variant="secondary"
@@ -698,12 +870,12 @@ export function AppShell({
                           clearAll();
                         }}
                       >
-                        Clear All
+                        Clear my inbox
                       </Button>
                     </div>
                   </div>
-                  {notifications.length === 0 &&
-                  activityFeed.length === 0 &&
+                  {unreadNotificationItems.length === 0 &&
+                  recentActivityItems.length === 0 &&
                   requiredTaskShortcuts.length === 0 ? (
                     <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
                       No updates or activity.
@@ -740,11 +912,11 @@ export function AppShell({
                         </div>
                       ) : null}
                       {/* Real-time notifications */}
-                      {notifications.length > 0 && (
+                      {unreadNotificationItems.length > 0 && (
                         <div>
                           <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Updates</p>
                           <ul className="space-y-1">
-                            {notifications.slice(0, 5).map((notification) => (
+                            {unreadNotificationItems.map((notification) => (
                               <li key={notification.id}>
                                 <button
                                   type="button"
@@ -787,11 +959,11 @@ export function AppShell({
                       )}
 
                       {/* Activity history */}
-                      {activityFeed.length > 0 && (
+                      {recentActivityItems.length > 0 && (
                         <div>
                           <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Recent Activity</p>
                           <ul className="space-y-1">
-                            {activityFeed.slice(0, 10).map((activity) => {
+                            {recentActivityItems.map((activity) => {
                               const href =
                                 activity.content_type === "blog"
                                   ? `/blogs/${activity.content_id}`
@@ -849,51 +1021,128 @@ export function AppShell({
                 </div>
               ) : null}
             </div>
-
-            {/* Shortcuts - Plain text link */}
-            <button
-              type="button"
-              className="text-sm text-slate-700 transition hover:text-slate-900"
-              onClick={() => {
-                setIsShortcutModalOpen(true);
-              }}
-              aria-label="View keyboard shortcuts"
-            >
-              Shortcuts
-            </button>
-
-            {/* User Manual - Plain text link */}
-            <Link
-              href="/resources"
-              className="text-sm text-slate-700 transition hover:text-slate-900"
-              title="Go to User Manual"
-            >
-              User Manual
-            </Link>
-
-            {/* User name - Clickable link to settings */}
-            <Link
-              href="/settings"
-              className="text-sm text-slate-700 transition hover:text-slate-900"
-              title="Go to settings"
-            >
-              {profile?.display_name || profile?.full_name}
-            </Link>
-
-            {/* Sign out - Button */}
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              onClick={async () => {
-                clearQuickViewSnapshot();
-                setQuickViewSnapshot(null);
-                await signOut();
-                router.replace("/login");
-              }}
-            >
-              Sign out
-            </Button>
+            <div className="relative" ref={helpMenuRef}>
+              <button
+                type="button"
+                className={cn(headerMenuTriggerClass, "gap-1.5")}
+                aria-label="Help menu"
+                aria-haspopup="menu"
+                aria-expanded={isHelpMenuOpen}
+                aria-controls="header-help-menu"
+                onClick={() => {
+                  broadcastGlobalPopoverClose();
+                  closeOpenDetailsMenus();
+                  setIsNotificationPanelOpen(false);
+                  setIsProfileMenuOpen(false);
+                  setIsHelpMenuOpen((previous) => !previous);
+                }}
+              >
+                <span>Help</span>
+                <AppIcon
+                  name="chevronRight"
+                  boxClassName="h-4 w-4"
+                  size={12}
+                  className={cn(
+                    "text-slate-500 transition-transform",
+                    isHelpMenuOpen ? "rotate-90" : null
+                  )}
+                />
+              </button>
+              {isHelpMenuOpen ? (
+                <div
+                  id="header-help-menu"
+                  className="absolute right-0 z-40 mt-2 w-44 rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+                  role="menu"
+                  aria-label="Help menu"
+                >
+                  <button
+                    type="button"
+                    className={headerMenuItemClass}
+                    role="menuitem"
+                    onClick={() => {
+                      setIsHelpMenuOpen(false);
+                      setIsShortcutModalOpen(true);
+                    }}
+                  >
+                    Shortcuts
+                  </button>
+                  <Link
+                    href="/resources"
+                    className={headerMenuItemClass}
+                    role="menuitem"
+                    onClick={() => {
+                      setIsHelpMenuOpen(false);
+                    }}
+                  >
+                    User Manual
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+            <div className="relative" ref={profileMenuRef}>
+              <button
+                type="button"
+                className={cn(headerMenuTriggerClass, "gap-2")}
+                aria-label="Profile menu"
+                aria-haspopup="menu"
+                aria-expanded={isProfileMenuOpen}
+                aria-controls="header-profile-menu"
+                onClick={() => {
+                  broadcastGlobalPopoverClose();
+                  closeOpenDetailsMenus();
+                  setIsNotificationPanelOpen(false);
+                  setIsHelpMenuOpen(false);
+                  setIsProfileMenuOpen((previous) => !previous);
+                }}
+              >
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+                  {profileInitials || "U"}
+                </span>
+                <span className="max-w-[160px] truncate">{profileDisplayName}</span>
+                <AppIcon
+                  name="chevronRight"
+                  boxClassName="h-4 w-4"
+                  size={12}
+                  className={cn(
+                    "text-slate-500 transition-transform",
+                    isProfileMenuOpen ? "rotate-90" : null
+                  )}
+                />
+              </button>
+              {isProfileMenuOpen ? (
+                <div
+                  id="header-profile-menu"
+                  className="absolute right-0 z-40 mt-2 w-52 rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+                  role="menu"
+                  aria-label="Profile menu"
+                >
+                  <Link
+                    href="/settings"
+                    className={headerMenuItemClass}
+                    role="menuitem"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                    }}
+                  >
+                    Settings
+                  </Link>
+                  <button
+                    type="button"
+                    className={headerMenuItemClass}
+                    role="menuitem"
+                    onClick={async () => {
+                      setIsProfileMenuOpen(false);
+                      clearQuickViewSnapshot();
+                      setQuickViewSnapshot(null);
+                      await signOut();
+                      router.replace("/login");
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </header>

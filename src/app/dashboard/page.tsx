@@ -1148,18 +1148,26 @@ export default function DashboardPage() {
   }, [isEditColumnsOpen]);
 
   useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
-      const targetNode = event.target as Node;
-      document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
-        if (!menu.contains(targetNode)) {
-          menu.open = false;
-        }
-      });
+    const handleGlobalPopoverClose = () => {
+      setIsEditColumnsOpen(false);
     };
+    window.addEventListener(
+      "app:close-popovers",
+      handleGlobalPopoverClose as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "app:close-popovers",
+        handleGlobalPopoverClose as EventListener
+      );
+    };
+  }, []);
+
+  useEffect(() => {
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closeOpenDashboardMenus();
+        setIsEditColumnsOpen(false);
         if (activeBlogId) {
           setActiveBlogId(null);
           setPanelError(null);
@@ -1169,13 +1177,11 @@ export default function DashboardPage() {
       }
     };
 
-    document.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("keydown", handleEscape);
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [activeBlogId, closeOpenDashboardMenus]);
+  }, [activeBlogId]);
 
   const writerOptions = useMemo(
     () =>
@@ -3672,7 +3678,17 @@ export default function DashboardPage() {
                       type="button"
                       className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
                       onClick={() => {
-                        setIsEditColumnsOpen((previous) => !previous);
+                        setIsEditColumnsOpen((previous) => {
+                          const nextIsOpen = !previous;
+                          if (nextIsOpen) {
+                            window.dispatchEvent(
+                              new CustomEvent("app:dropdown-opened", {
+                                detail: { id: "dashboard-customize-columns" },
+                              })
+                            );
+                          }
+                          return nextIsOpen;
+                        });
                       }}
                     >
                       Customize

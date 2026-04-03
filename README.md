@@ -1,3 +1,5 @@
+# sighthound-content-ops
+Sighthound Content Relay: content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
 ## Workflow ownership defaults
 - Task assignment visibility is open to all authenticated users for collaboration clarity.
 - Assigned writers and publishers can edit workflow-critical blog fields by ownership:
@@ -6,8 +8,6 @@
   - Scheduled Publish Date
   - Display Publish Date
 - These fields are treated as core workflow controls and are not intended to be blocked by separate permission toggles.
-# sighthound-content-ops
-Sighthound Content Relay: content operations platform for Sighthound marketing workflows across `sighthound.com` and `redactor.com`.
 
 ## Company & app vision
 - **Company vision**: turn content execution into a reliable relay where strategy, drafting, review, and publishing stay synchronized.
@@ -28,6 +28,8 @@ Sighthound Content Relay: content operations platform for Sighthound marketing w
   - login: `text-logo SVG` → `text-logo PNG` → `badge SVG` → text lockup
   - app header badge: `animated GIF` → `badge SVG` → `SH` lockup
 - Unified notifications across activity history, in-app notifications, and Slack
+- Bell `View All` updates feed at `/updates` for all authenticated users
+- Persistent per-user inbox notifications with reversible clear/restore behavior
 - Centralized workflow Slack emission layer for create/transition/reminder paths via `src/lib/server-slack-emitter.ts`
   - create routes: `POST /api/blogs`, `POST /api/social-posts`
   - transition routes: `POST /api/blogs/[id]/transition`, `POST /api/social-posts/[id]/transition`
@@ -88,6 +90,9 @@ Sighthound Content Relay: content operations platform for Sighthound marketing w
 - Home standup social counts are assignment-scoped to current user relevance (not global social totals)
 - Home standup includes writer-facing social handoff visibility for `ready_to_publish`
 - Notification bell includes `Required by: <username>` task shortcuts using the same task snapshot contract
+- Notification bell sections are deterministic: `Required by: <username>`, `Updates` (unread inbox), and de-duplicated `Recent Activity`
+- Bell actions: `View All`, `Mark all read`, `Clear my inbox`
+- Bell open is read-only (no reminder side effects)
 - Unified content dashboard table (blogs + social posts) with core contract columns:
   - `Content`, `Site`, `ID`, `Title`, `Status`, `Lifecycle`, `Scheduled`, `Published`, `Assigned to`, `Updated`
   - optional `Product` column via column customization
@@ -108,7 +113,7 @@ Sighthound Content Relay: content operations platform for Sighthound marketing w
 - Edit Columns popover and bottom pagination controls
 
 ### Blog Creation (`/blogs/new`)
-|- New blog form with guided date input:
+- New blog form with guided date input:
   - Scheduled Publish Date defaults to today
   - Display Publish Date checkbox ("Same as Scheduled Publish Date") is checked by default
   - Uncheck to set a different display date (allowed for all users, no permissions required)
@@ -120,8 +125,8 @@ Sighthound Content Relay: content operations platform for Sighthound marketing w
   - Saved publisher memory clears automatically when the user chooses `Unassigned` or the saved publisher is no longer available
 
 ### Blog Library (`/blogs`)
-|- Dedicated reference-first page for title/URL lookup
-|- Default: published-only, newest-first by display publish date
+- Dedicated reference-first page for title/URL lookup
+- Default: published-only, newest-first by display publish date
 - Copy-first utilities:
   - row-level title/url copy (hover-revealed controls)
   - copy-all titles / copy-all URLs
@@ -300,7 +305,7 @@ npm run dev
 - `/api/social-posts/[postId]/transition` — canonical social status transitions with concurrency conflict handling when status changes mid-request
 - `/api/social-posts/[postId]/reopen-brief` — admin execution-stage brief reopen
 - `/api/social-posts/reminders` — awaiting-live-link reminder sweep with per-row atomic claim to avoid duplicate reminders during concurrent runs
-- `/api/ideas/[id]/delete` — creator/admin idea deletion
+- `/api/ideas/[id]` — creator/admin idea deletion (canonical DELETE route; `/api/ideas/[id]/delete` is legacy compatibility)
 - `/api/users/profile` — current user profile operations
 - `/api/users/integrations` — connected services read/update; PATCH is idempotent via atomic upsert on `user_id` to avoid duplicate-key races on repeated reconnect callbacks
 - `/api/users/notification-preferences` — normalized preference keys (`task_assigned` etc.) with legacy `notify_on_*` column compatibility; PATCH is idempotent via atomic upsert on `user_id`
@@ -329,39 +334,19 @@ npm run dev
 - Public-schema tables exposed to PostgREST must keep RLS enabled; admin maintenance endpoints use `service_role` server clients instead of disabling RLS.
 
 ## Supabase migrations
-Apply in timestamp order from `supabase/migrations/`.
+Treat `supabase/migrations/` as append-only and apply migrations in timestamp order.
+Avoid maintaining a static migration inventory in docs; use CLI output as source of truth.
 
-Current set:
-- `20260311191500_init.sql`
-- `20260311203000_calendar_model_alignment.sql`
-- `20260312000100_fix_blog_history_trigger_rls.sql`
-- `20260312114000_separate_publish_dates.sql`
-- `20260312124500_pipeline_status_model.sql`
-- `20260312125000_backfill_completion_links.sql`
-- `20260312125500_completion_link_requirements.sql`
-- `20260312131500_publish_timestamp_and_comments.sql`
-- `20260312203000_profile_names_multirole_and_comments_cache.sql`
-- `20260312214500_blog_comments_user_id_compat.sql`
-- `20260312221000_fix_status_trigger_enum_compat.sql`
-- `20260312224000_pipeline_fail_safes_and_import_hash.sql`
-- `20260313113000_blog_ideas.sql`
-- `20260313143000_social_posts_module.sql`
-- `20260313193000_shared_non_admin_role_model.sql`
-- `20260313200000_role_permissions_and_audit.sql`
-- `20260313213000_expand_permission_matrix.sql`
-- `20260320195000_add_activity_history_delete_policies.sql`
-- `20260320195100_fix_activity_history_rls.sql`
-- `20260321133000_social_workflow_authority_and_event_normalization.sql`
-- `20260325111500_enable_public_table_rls.sql`
-- `20260325201000_harden_auth_user_creation_trigger.sql`
-- `20260325202500_auth_user_creation_diagnostics.sql`
-- `20260326100000_enforce_comprehensive_rls_policies.sql`
-- `20260326103000_harden_auth_user_integrations_trigger.sql`
-- `20260326113000_guard_social_post_link_delete_audit.sql`
-- `20260326123000_fix_wipe_app_clean_preserve_current_admin.sql`
+Recommended migration sequence:
+```bash
+supabase --workdir "/absolute/path/to/sighthound-content-ops" migration list
+supabase --workdir "/absolute/path/to/sighthound-content-ops" db push --yes
+supabase --workdir "/absolute/path/to/sighthound-content-ops" migration list
+```
 
-Auth provisioning hardening note:
-- `20260326103000_harden_auth_user_integrations_trigger.sql` fixes auth user creation failures caused by unqualified trigger writes (`INSERT INTO user_integrations`) by enforcing `public.user_integrations`, `SECURITY DEFINER`, and exception-safe trigger behavior.
+Migration hygiene:
+- remove accidental duplicate local migration files before push (for example filenames ending in ` 2.sql`)
+- add new migrations with fresh timestamps instead of editing already-applied files
 
 ## Unified notification system
 Notifications no longer rely on ad-hoc Slack-only calls. The app uses a centralized event pipeline so activity history, in-app notifications, and Slack delivery stay in sync.

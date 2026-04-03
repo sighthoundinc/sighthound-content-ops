@@ -131,8 +131,8 @@ Rules:
 - blog publishing action-state ownership is stage-specific:
   - admin `publisher_review` assignments are actionable only at `publisher_status = pending_review`
   - `publisher_status = publisher_approved` remains actionable for the assigned publisher and should classify as waiting-on-others for admin review assignments
-|- Social record-level activity history readers and writers use canonical history keys (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `changed_at`) for consistent formatting across UI surfaces.
-|- Blog creation assignment rules:
+- Social record-level activity history readers and writers use canonical history keys (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `changed_at`) for consistent formatting across UI surfaces.
+- Blog creation assignment rules:
   - self-assignment on insert does not require assignment-change permissions
   - assigning another user on insert still requires the corresponding assignment permission
   - non-admin creators can set a publisher during blog creation
@@ -166,8 +166,8 @@ Behavior:
   - on INSERT: if `display_published_date` is NULL, silently set to `scheduled_publish_date` or today
   - on UPDATE: if user attempts to set NULL, silently reset to `scheduled_publish_date` instead of rejecting
   - activity logging: silent fallback on default creation; explicit event logged if user manually sets display ≠ scheduled
-|- edge case: if `display_published_date` is already set and `scheduled_publish_date` changes, the display date **remains unchanged** (user's explicit choice is respected)
-|- blog creation assignment UX behavior:
+- edge case: if `display_published_date` is already set and `scheduled_publish_date` changes, the display date **remains unchanged** (user's explicit choice is respected)
+- blog creation assignment UX behavior:
   - writer defaults to the current user in the create form
   - publisher remains editable and may be restored from client-side localStorage memory
   - remembered publisher must be validated against the current selectable users list before applying
@@ -488,9 +488,9 @@ Key behavior:
   - `Reassign User Work`
   - `User Directory` with role and status filters
 - `Activity History` page:
-  - Non-admins view their own dashboard visits only
-  - Admins can filter by event type (All/Login/Dashboard) and user (All Users or specific user)
-  - Timestamps shown in user timezone (non-admin) or UTC (admin)
+  - Admin-only access via `manage_users` permission
+  - Multi-select filters for activity types and users
+  - Timestamps shown in UTC for admin consistency
 - admin-only activity history cleanup (global or user-scoped)
 - optional comments cleanup during history purge
 - admin-only wipe app clean (full factory reset)
@@ -541,7 +541,7 @@ Covered reminder/overdue events:
 - `social_review_overdue`
 - `social_publish_overdue`
 - `blog_publish_overdue`
-- `social_post_live_link_reminder`
+- `social_live_link_reminder`
 
 Expected behavior:
 - activity history and notification delivery stay aligned for the same workflow event
@@ -756,13 +756,48 @@ Returns grouped mixed-task snapshot for the workspace home page (`requiredByMe`,
 **Result scope**: returns full grouped results for associated active tasks (no top-N truncation)
 **Deduplication + precedence**: one blog row per blog; if multiple associations exist, `action_required` takes precedence over `waiting_on_others`
 
+## 10.1) Notifications bell + View All feed contract (MUST)
+Bell is a lightweight operational inbox preview, and `/updates` is the full readable feed surface for all authenticated users.
+
+Bell contract:
+- Sections are ordered and stable:
+  1. `Required by: <user>` shortcuts (from `/api/dashboard/tasks-snapshot`)
+  2. `Updates` (unread in-app inbox items)
+  3. `Recent Activity` (feed items not already represented in inbox by source identity)
+- Badge count equals unread inbox count only.
+- Bell open is read-only and must not trigger workflow mutations/reminder sweeps.
+- Bell actions:
+  - `View All` routes to `/updates`
+  - `Mark all read` marks inbox items read
+  - `Clear my inbox` marks inbox items cleared (reversible)
+
+`/updates` contract:
+- Route: `/updates` (authenticated users).
+- Purpose: readable app-wide activity feed + personal inbox controls (not admin-only log management).
+- Sections:
+  - `Required by me`
+  - `Inbox updates`
+  - `Cleared inbox updates` (toggleable visibility + restore actions)
+  - `Recent activity (50 max)`
+- Clear model is reversible:
+  - single clear/restore per notification
+  - bulk clear/restore all cleared
+- Inbox persistence:
+  - local per-user storage key namespace `notifications:v2:<userId>`
+  - dedupe/upsert by `sourceId` when provided
+  - unread/read/cleared state retained across reloads for the same user session context
+
+Polling/refresh contract:
+- Bell data refreshes on panel open, then on a periodic interval (45s), and on focus/visibility resume when authenticated.
+- `/updates` supports explicit manual refresh action.
+
 ## 11) Admin control APIs (logical)
-|- `/api/admin/permissions` — permission matrix read/update/reset
-|- `/api/admin/reassign-assignments` — assignment transfer
-|- `/api/admin/activity-history` — activity cleanup, optional comments cleanup
-|- `/api/admin/quick-view` — admin quick-view token generation/session switch support
-|- `/api/admin/wipe-app-clean` — full factory reset preserving only the signed-in admin account
-## 11) Integrations
+- `/api/admin/permissions` — permission matrix read/update/reset
+- `/api/admin/reassign-assignments` — assignment transfer
+- `/api/admin/activity-history` — activity cleanup, optional comments cleanup
+- `/api/admin/quick-view` — admin quick-view token generation/session switch support
+- `/api/admin/wipe-app-clean` — full factory reset preserving only the signed-in admin account
+## 11.1) Integrations
 Slack via Supabase Edge Function:
 - `supabase/functions/slack-notify/index.ts`
 

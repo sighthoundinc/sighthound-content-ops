@@ -1,13 +1,13 @@
-## Workflow ownership and permissions
-- If a writer or publisher owns a blog in the workflow, they can edit workflow-critical URLs and dates without needing separate permission toggles.
-- Keep permission toggles focused on optional or privileged actions (exports, archive, admin overrides), not core workflow completion fields.
-- Task assignment rows are readable by all authenticated users to improve coordination; mutation remains limited to the assigned user and admins.
 # Sighthound Content Relay — Operations Runbook
 This runbook is for maintainers and operators.  
 It describes how the system runs in practice today (deployment, monitoring, incident response, and admin maintenance).  
 For product behavior, see `SPECIFICATION.md`.  
 For implementation/build rules, see `AGENTS.md`.  
 For end-user manual instructions, see `HOW_TO_USE_APP.md`.
+## Workflow ownership and permissions
+- If a writer or publisher owns a blog in the workflow, they can edit workflow-critical URLs and dates without needing separate permission toggles.
+- Keep permission toggles focused on optional or privileged actions (exports, archive, admin overrides), not core workflow completion fields.
+- Task assignment rows are readable by all authenticated users to improve coordination; mutation remains limited to the assigned user and admins.
 
 ## Vision alignment
 - **Company vision**: run content delivery as a predictable relay with explicit handoffs and accountability.
@@ -36,12 +36,12 @@ For end-user manual instructions, see `HOW_TO_USE_APP.md`.
   - clicking the top-left Sighthound brand in the app shell routes to `/`
 
 Content mutations (blogs, stages, comments, derived status) are DB-authoritative via RLS, triggers, and constraints. Administrative operations are authorized in the application layer (`src/lib/server-permissions.ts`) before executing `service_role` actions. UI checks are UX guardrails.
-|Workflow-critical blog status/assignment/date edits from Dashboard and My Tasks are API-authoritative through `POST /api/blogs/[id]/transition` (not direct client `blogs.update(...)` mutations).
-|- writer completion handoff: if writing transitions to `completed` and a publisher is assigned (including assignment updates after writing is already complete), the route auto-jogs `publisher_status` from `not_started` to `in_progress` unless an explicit `publisher_status` is provided in the same payload.
-|Blog creation is trigger-authoritative for insert permission validation:
-|- self-assignment on writer/publisher fields is allowed without `change_*_assignment` permissions
-|- assigning another user on insert still requires the matching assignment permission
-|- create-form publisher memory is client-only localStorage state and must always be validated against the current selectable users list before prefill
+- Workflow-critical blog status/assignment/date edits from Dashboard and My Tasks are API-authoritative through `POST /api/blogs/[id]/transition` (not direct client `blogs.update(...)` mutations).
+- Writer completion handoff: if writing transitions to `completed` and a publisher is assigned (including assignment updates after writing is already complete), the route auto-jogs `publisher_status` from `not_started` to `in_progress` unless an explicit `publisher_status` is provided in the same payload.
+- Blog creation is trigger-authoritative for insert permission validation:
+  - self-assignment on writer/publisher fields is allowed without `change_*_assignment` permissions
+  - assigning another user on insert still requires the matching assignment permission
+  - create-form publisher memory is client-only localStorage state and must always be validated against the current selectable users list before prefill
 For social execution-stage completion, live links are entered from `/social-posts/[id]` Step 4 (`Review & Publish` → `Live Links`) and persisted in `social_post_links`.
 - Social editor progression defaults to the sidebar primary CTA; raw status selector remains under `Advanced transition controls`.
 - Social editor sidebar includes `Transition Preflight` to expose missing required fields and jump-to-field remediation.
@@ -226,7 +226,7 @@ For social execution-stage completion, live links are entered from `/social-post
 - `src/app/api/blogs/[id]/transition/` — canonical blog transition API for dashboard/task workflow edits
 - `src/app/api/social-posts/[postId]/reopen-brief/` — admin execution-stage brief reopen API
 - `src/app/api/social-posts/reminders/` — awaiting-live-link reminder sweep API
-- `src/app/api/ideas/[id]/delete/` — idea deletion API (creator/admin-gated, idempotent response)
+- `src/app/api/ideas/[id]/` — canonical idea deletion API (creator/admin-gated, idempotent response)
 - `src/lib/quick-view.ts` — quick-view snapshot storage helpers
 - `supabase/migrations/` — schema/history migrations
 - `supabase/functions/` — edge functions
@@ -286,46 +286,11 @@ npm run check
 - if permission-key check constraints are still legacy at runtime, remap inserts can fail
 - ensure constraint drops occur before remap inserts (already reflected in current migration file)
 
-### Current migration set
-- `20260311191500_init.sql`
-- `20260311203000_calendar_model_alignment.sql`
-- `20260312000100_fix_blog_history_trigger_rls.sql`
-- `20260312114000_separate_publish_dates.sql`
-- `20260312124500_pipeline_status_model.sql`
-- `20260312125000_backfill_completion_links.sql`
-- `20260312125500_completion_link_requirements.sql`
-- `20260312131500_publish_timestamp_and_comments.sql`
-- `20260312203000_profile_names_multirole_and_comments_cache.sql`
-- `20260312214500_blog_comments_user_id_compat.sql`
-- `20260312221000_fix_status_trigger_enum_compat.sql`
-- `20260312224000_pipeline_fail_safes_and_import_hash.sql`
-- `20260313113000_blog_ideas.sql`
-- `20260313143000_social_posts_module.sql`
-- `20260313193000_shared_non_admin_role_model.sql`
-- `20260313200000_role_permissions_and_audit.sql`
-- `20260313213000_expand_permission_matrix.sql`
-- `20260315143000_status_enum_replay_compat.sql`
-- `20260316195500_blog_import_logs.sql`
-- `20260316221500_add_delete_user_permission.sql`
-- `20260316224500_approval_audit_trail.sql`
-- `20260317141728_blog_idea_comments_and_updates.sql`
-- `20260317194000_blog_ideas_conversion_sync.sql`
-- `20260317194500_canonical_status_workflow.sql`
-|- `20260318104000_wipe_app_clean_data.sql`
-|- `20260318200000_create_task_assignments.sql`
-|- `20260320164320_relax_writer_complete_google_doc_constraint.sql`
-|- `20260320195000_add_activity_history_delete_policies.sql`
-|- `20260320195100_fix_activity_history_rls.sql`
-|- `20260320220000_create_access_logs.sql` (access_logs table with RLS)
-|- `20260320223000_update_access_logs_rls.sql` (RLS policy updates for user self-access)
-|- `20260321133000_social_workflow_authority_and_event_normalization.sql` (canonical social transition authority, event normalization, reminder tracking)
-|- `20260325111500_enable_public_table_rls.sql` (re-enables RLS on audit/comment/import log tables and adds `blog_import_logs` policies)
-|- `20260325201000_harden_auth_user_creation_trigger.sql` (consolidated safe auth-user profile/notification bootstrap trigger)
-|- `20260325202500_auth_user_creation_diagnostics.sql` (service-role RPC for auth trigger/constraint inspection)
-|- `20260326100000_enforce_comprehensive_rls_policies.sql` (comprehensive CRUD policy normalization)
-|- `20260326103000_harden_auth_user_integrations_trigger.sql` (fixes unqualified `user_integrations` insert in auth trigger)
-|- `20260326113000_guard_social_post_link_delete_audit.sql` (prevents FK violations when social post delete cascades to live-link audit trigger logging)
-|- `20260326123000_fix_wipe_app_clean_preserve_current_admin.sql` (hardens wipe RPC to preserve only signed-in admin profile and wipe all other app data)
+### Migration inventory guidance
+- Do not maintain a static migration inventory in documentation.
+- Use `supabase ... migration list` to inspect the real migration state in your local/project environment.
+- Keep `supabase/migrations/` append-only and add new timestamped files for changes.
+- Remove accidental duplicate local migration files (for example names ending in ` 2.sql`) before `db push`.
 
 ## 5.5) User preferences
 Per-user preferences are stored in `profiles`:
@@ -378,7 +343,7 @@ When debugging access:
 4. refresh profile/session permissions cache
 
 Ideas delete behavior:
-- Route: `DELETE /api/ideas/[id]/delete`
+- Route: `DELETE /api/ideas/[id]` (canonical; legacy `/api/ideas/[id]/delete` is compatibility-only)
 - Authorization: creator of the idea or admin
 - Operational safety: idempotent success response when idea is already deleted
 
@@ -494,11 +459,10 @@ Return flow:
 **How it works**:
 1. If `SLACK_BOT_TOKEN` is configured:
    - Posts to configured channel (`SLACK_MARKETING_CHANNEL` or `#content-ops-alerts`)
-   - Sends DMs to users if `targetEmail` matches Slack user email
    - Uses `chat.postMessage` API
 2. If only `SLACK_WEBHOOK_URL` is configured:
    - Posts only to webhook's designated channel
-   - No DM capability
+   - Uses channel delivery only (no direct-message workflow path)
 
 **Deploy/update**:
 ```bash
@@ -509,7 +473,7 @@ supabase functions deploy slack-notify --project-ref <PROJECT_REF>
 Check Supabase Edge Function logs for:
 - `Invalid payload` — malformed request
 - `No Slack credentials configured` — missing env vars
-- Slack API errors (channel not found, invalid_auth, users.lookupByEmail failure)
+- Slack API errors (channel not found, invalid_auth)
 
 ### Unified events system
 
@@ -847,6 +811,15 @@ Canonical source is the cleaned workbook (`Calendar View` sheet).
 2. run Return to Admin flow
 3. if restore fails, re-authenticate admin user and verify local snapshot clear
 
+### “Notification bell shows unexpected items or duplicates”
+1. confirm bell sections are interpreted correctly:
+   - `Updates` = unread inbox items
+   - `Recent Activity` = de-duplicated feed items not already in inbox
+2. verify `sourceId`-based dedupe behavior in provider state (`notifications:v2:<userId>` local storage key)
+3. use `Mark all read` or `Clear my inbox` to validate read/cleared state transitions
+4. if needed, use `/updates` and `Restore`/`Restore all` to recover cleared items
+5. confirm bell open does not invoke reminder routes (`/api/social-posts/reminders`) as a side effect
+
 ### “Enum/status mismatch during writes”
 1. verify latest status compatibility migrations are applied
 2. verify local/remote migration alignment
@@ -925,10 +898,10 @@ For legacy XLSX import script (`npm run import:legacy`):
 - For authored content continuity during delete/purge, APIs attempt reassignment of `created_by` ownership before removal.
 
 ### Data cleanup
-|- Activity history cleanup: `/api/admin/activity-history`
+- Activity history cleanup: `/api/admin/activity-history`
   - scope: all users or selected users
   - optional comments cleanup for `blog_comments` and `social_post_comments`
-|- Factory reset: `/api/admin/wipe-app-clean`
+- Factory reset: `/api/admin/wipe-app-clean`
   - admin-only
   - preserves only currently signed-in admin auth/profile context
   - deletes all other auth users, including other admins
@@ -986,7 +959,7 @@ Settings UI grouping (for operator orientation):
   | `social_review_overdue` | `social_review_overdue` | Social review overdue reminder |
   | `social_publish_overdue` | `social_publish_overdue` | Social publish overdue reminder |
 
-### Channel and DM configuration
+### Channel configuration
 
 **Channel notifications**:
 - Default channel: `#content-ops-alerts`
@@ -998,27 +971,22 @@ Settings UI grouping (for operator orientation):
   - `Assigned by: <name | Team>`
   - `Open link: <app-url>` (when content ID exists)
 
-**Direct message notifications**:
-- Sent to `targetEmail` if provided in notification payload
-- Requires matching email in Slack workspace
-- Uses `users.lookupByEmail` to find Slack user ID
-- If lookup fails, silently skips DM (logs warning)
 
 ### Reminder sweep behavior
 - **Trigger**: `POST /api/social-posts/reminders` (admin-only)
 - **Criteria**: Posts in `awaiting_live_link` status
 - **Dedupe**: 24-hour cooldown per post via `last_live_link_reminder_at`
 - **Notifications**: Sends `social_live_link_reminder` event
+- **Important UX contract**: reminder sweeps are explicit/admin-triggered operations; opening notification bell or `/updates` never triggers reminder sweeps.
 
 ### Delivery order and fallbacks
 1. **Bot Token method** (preferred):
    - Attempts channel post (`SLACK_MARKETING_CHANNEL` or `#content-ops-alerts`)
-   - Attempts DM to `targetEmail` if configured (even when channel post fails)
    - Uses `chat.postMessage` API
 2. **Webhook method** (fallback):
    - Used if bot-token deliveries did not succeed
    - Posts to webhook URL's configured channel
-   - No DM capability
+   - Uses channel delivery only
 3. **No credentials**:
    - Returns delivery/configuration error
    - Does NOT break in-app notifications
@@ -1045,5 +1013,5 @@ All Slack notifications respect user preferences:
 3. Inspect Supabase Edge Function logs for:
    - `Invalid payload`
    - `No Slack credentials configured`
-   - Slack API errors (channel not found, invalid_auth, users.lookupByEmail failure)
-4. If channel posts succeed but DMs fail, verify `targetEmail` matches an actual Slack user email.
+   - Slack API errors (channel not found, invalid_auth)
+4. If deliveries fail, verify channel configuration and token/webhook validity.

@@ -17,6 +17,7 @@ import {
   parseApiResponseJson,
 } from "@/lib/api-response";
 import { AppIcon } from "@/lib/icons";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useAuth } from "@/providers/auth-provider";
 import { useNotifications } from "@/providers/notifications-provider";
 
@@ -41,6 +42,9 @@ type TaskShortcutItem = {
   scheduledDate: string | null;
   actionState: "action_required" | "waiting_on_others";
 };
+type ApiFailureShape = {
+  errorCode?: string;
+};
 
 function formatRelativeTime(timestamp: number) {
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
@@ -60,7 +64,7 @@ function formatRelativeTime(timestamp: number) {
 }
 
 export default function UpdatesPage() {
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const {
     notifications,
     clearedNotifications,
@@ -92,7 +96,15 @@ export default function UpdatesPage() {
 
 
   const loadUpdates = useCallback(async () => {
-    if (!session?.access_token) {
+    if (authLoading) {
+      return;
+    }
+    const supabase = getSupabaseBrowserClient();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken =
+      session?.access_token ?? sessionData.session?.access_token ?? null;
+    if (!accessToken) {
+      setError(null);
       setRequiredTaskShortcuts([]);
       setActivityFeed([]);
       setIsLoading(false);
@@ -104,10 +116,14 @@ export default function UpdatesPage() {
       const [taskResponse, activityResponse] = await Promise.all([
         fetch("/api/dashboard/tasks-snapshot", {
           headers: {
-            authorization: `Bearer ${session.access_token}`,
+            authorization: `Bearer ${accessToken}`,
           },
         }),
-        fetch("/api/activity-feed"),
+        fetch("/api/activity-feed", {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        }),
       ]);
       const taskPayload = await parseApiResponseJson<{ requiredByMe?: TaskShortcutItem[] }>(
         taskResponse
@@ -120,11 +136,18 @@ export default function UpdatesPage() {
 
       const activityPayload = await parseApiResponseJson<{
         data?: { activities?: ActivityFeedItem[] };
-      }>(activityResponse);
-      if (isApiFailure(activityResponse, activityPayload)) {
+      } & ApiFailureShape>(activityResponse);
+      const activityUnauthorized =
+        activityResponse.status === 401 ||
+        activityPayload.errorCode === "UNAUTHORIZED";
+      if (isApiFailure(activityResponse, activityPayload) && !activityUnauthorized) {
         throw new Error(
           getApiErrorMessage(activityPayload, "Failed to load updates feed.")
         );
+      }
+      if (activityUnauthorized) {
+        setActivityFeed([]);
+        return;
       }
       setActivityFeed((activityPayload.data?.activities ?? []).slice(0, 50));
     } catch (nextError) {
@@ -134,7 +157,7 @@ export default function UpdatesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.access_token]);
+  }, [authLoading, session?.access_token]);
 
   useEffect(() => {
     void loadUpdates();

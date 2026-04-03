@@ -2421,6 +2421,9 @@ export default function SocialPostEditorPage() {
                     className="focus-field min-h-[24rem] w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm leading-relaxed"
                     placeholder="Write your social caption..."
                   />
+                  </div>
+                </fieldset>
+                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p
@@ -2481,7 +2484,6 @@ export default function SocialPostEditorPage() {
                     </details>
                   </div>
                 </div>
-                </fieldset>
               </section>
 
               <section

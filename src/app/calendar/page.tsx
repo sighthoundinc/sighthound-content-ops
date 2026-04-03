@@ -90,11 +90,23 @@ type CalendarViewScope = "mine" | "all";
 type ContentTypeFilter = "blogs" | "social_posts";
 type SocialCalendarPost = Pick<
   SocialPostRecord,
-  "id" | "title" | "product" | "type" | "scheduled_date" | "status" | "created_by"
+  | "id"
+  | "title"
+  | "product"
+  | "type"
+  | "scheduled_date"
+  | "status"
+  | "created_by"
+  | "worker_user_id"
+  | "reviewer_user_id"
 > & {
   associated_blog_id: string | null;
   associated_blog?: Pick<BlogRecord, "id" | "title" | "site"> | null;
   creator?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+  worker?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+  reviewer?: Pick<ProfileRecord, "id" | "full_name" | "email"> | null;
+  worker_name: string | null;
+  reviewer_name: string | null;
 };
 
 function formatCalendarDateLabel(dateKey: string) {
@@ -120,6 +132,12 @@ function normalizeSocialCalendarRows(rows: Array<Record<string, unknown>>) {
     const creator = normalizeRelationObject<
       Pick<ProfileRecord, "id" | "full_name" | "email">
     >(row.creator);
+    const worker = normalizeRelationObject<
+      Pick<ProfileRecord, "id" | "full_name" | "email">
+    >(row.worker);
+    const reviewer = normalizeRelationObject<
+      Pick<ProfileRecord, "id" | "full_name" | "email">
+    >(row.reviewer);
 
     return {
       id: String(row.id ?? ""),
@@ -130,10 +148,18 @@ function normalizeSocialCalendarRows(rows: Array<Record<string, unknown>>) {
       scheduled_date:
         typeof row.scheduled_date === "string" ? row.scheduled_date : null,
       created_by: String(row.created_by ?? ""),
+      worker_user_id:
+        typeof row.worker_user_id === "string" ? row.worker_user_id : null,
+      reviewer_user_id:
+        typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null,
       associated_blog_id:
         typeof row.associated_blog_id === "string" ? row.associated_blog_id : null,
       associated_blog: associatedBlog,
       creator,
+      worker,
+      reviewer,
+      worker_name: worker?.full_name ?? null,
+      reviewer_name: reviewer?.full_name ?? null,
     } satisfies SocialCalendarPost;
   });
 }
@@ -418,7 +444,7 @@ export default function CalendarPage() {
       supabase
         .from("social_posts")
         .select(
-          "id,title,product,type,scheduled_date,status,created_by,associated_blog_id,associated_blog:associated_blog_id(id,title,site),creator:created_by(id,full_name,email)"
+          "id,title,product,type,scheduled_date,status,created_by,worker_user_id,reviewer_user_id,associated_blog_id,associated_blog:associated_blog_id(id,title,site),creator:created_by(id,full_name,email),worker:worker_user_id(id,full_name,email),reviewer:reviewer_user_id(id,full_name,email)"
         )
         .order("scheduled_date", { ascending: true, nullsFirst: false })
         .order("updated_at", { ascending: false });
@@ -483,7 +509,12 @@ export default function CalendarPage() {
     if (viewScope === "all" || !user?.id) {
       return socialPosts;
     }
-    return socialPosts.filter((post) => post.created_by === user.id);
+    return socialPosts.filter(
+      (post) =>
+        post.created_by === user.id ||
+        post.worker_user_id === user.id ||
+        post.reviewer_user_id === user.id
+    );
   }, [socialPosts, user?.id, viewScope]);
   const writerOptions = useMemo(
     () =>
@@ -754,6 +785,28 @@ export default function CalendarPage() {
     () => socialPosts.find((post) => post.id === activeSocialPostId) ?? null,
     [activeSocialPostId, socialPosts]
   );
+  const activeSocialPostOwnerDisplay = useMemo(() => {
+    if (!activeSocialPost) {
+      return "Unassigned";
+    }
+    const isReviewStage =
+      activeSocialPost.status === "in_review" ||
+      activeSocialPost.status === "creative_approved";
+    if (isReviewStage) {
+      return (
+        activeSocialPost.reviewer_name ??
+        activeSocialPost.worker_name ??
+        activeSocialPost.creator?.full_name ??
+        "Unassigned"
+      );
+    }
+    return (
+      activeSocialPost.worker_name ??
+      activeSocialPost.creator?.full_name ??
+      activeSocialPost.reviewer_name ??
+      "Unassigned"
+    );
+  }, [activeSocialPost]);
   const draggingBlog = useMemo(
     () => blogs.find((blog) => blog.id === draggingBlogId) ?? null,
     [draggingBlogId, blogs]
@@ -1573,9 +1626,9 @@ export default function CalendarPage() {
                 </div>
                 <div className="mt-4 space-y-3 text-sm text-slate-700">
                   <p>
-                    Owner ·{" "}
+                    Assigned to ·{" "}
                     <span className="font-medium">
-                      {activeSocialPost.creator?.full_name ?? "Unassigned"}
+                      {activeSocialPostOwnerDisplay}
                     </span>
                   </p>
                   <p>

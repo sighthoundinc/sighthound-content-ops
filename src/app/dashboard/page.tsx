@@ -205,6 +205,7 @@ type DashboardSocialPostMetric = {
   updated_at: string;
   associated_blog_site: string | null;
   creator_name: string | null;
+  assigned_to_name: string | null;
   worker_name: string | null;
   reviewer_name: string | null;
 };
@@ -845,7 +846,7 @@ export default function DashboardPage() {
       const { data, error } = await supabase
         .from("social_posts")
         .select(
-          "id,title,product,type,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)"
+          "id,title,product,type,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),assigned_to:assigned_to_user_id(full_name),worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)"
         );
       return { data, error };
     };
@@ -877,6 +878,9 @@ export default function DashboardPage() {
             row.associated_blog
           );
           const creator = normalizeRelationObject<{ full_name?: unknown }>(row.creator);
+          const assignedTo = normalizeRelationObject<{ full_name?: unknown }>(
+            row.assigned_to
+          );
           const worker = normalizeRelationObject<{ full_name?: unknown }>(row.worker);
           const reviewer = normalizeRelationObject<{ full_name?: unknown }>(
             row.reviewer
@@ -914,6 +918,8 @@ export default function DashboardPage() {
               (associatedBlog?.site as string | undefined) ?? null,
             creator_name:
               (creator?.full_name as string | undefined) ?? null,
+            assigned_to_name:
+              (assignedTo?.full_name as string | undefined) ?? null,
             worker_name:
               (worker?.full_name as string | undefined) ?? null,
             reviewer_name:
@@ -1293,6 +1299,21 @@ export default function DashboardPage() {
         .map((value) => ({ value, label: value })),
     [socialPosts]
   );
+  useEffect(() => {
+    const validUserIds = new Set(filterUserOptions.map((option) => option.value));
+    const validSocialProducts = new Set(
+      socialProductFilterOptions.map((option) => option.value)
+    );
+    setWriterFilters((previous) =>
+      previous.filter((value) => validUserIds.has(value))
+    );
+    setPublisherFilters((previous) =>
+      previous.filter((value) => validUserIds.has(value))
+    );
+    setSocialProductFilters((previous) =>
+      previous.filter((value) => validSocialProducts.has(value))
+    );
+  }, [filterUserOptions, socialProductFilterOptions]);
   const crossWorkflowFilterOptions = useMemo(
     () =>
       (
@@ -1382,8 +1403,16 @@ export default function DashboardPage() {
       const lifecycleBucket = deriveSocialLifecycleBucket(post.status);
       const ownerDisplay =
         post.status === "in_review" || post.status === "creative_approved"
-          ? post.reviewer_name ?? "Unassigned"
-          : post.worker_name ?? post.creator_name ?? "Unassigned";
+          ? post.assigned_to_name ??
+            post.reviewer_name ??
+            post.worker_name ??
+            post.creator_name ??
+            "Unassigned"
+          : post.assigned_to_name ??
+            post.worker_name ??
+            post.creator_name ??
+            post.reviewer_name ??
+            "Unassigned";
       return {
         content_type: "social_post",
         content_label: getMixedContentLabel({

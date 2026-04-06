@@ -93,6 +93,7 @@ For every non-trivial UI or workflow change:
 2. Transition API is the permission boundary for writer/publisher status transitions, assignment changes, and scheduled/display publish date edits.
 3. The route must enforce assignment/status prerequisites (for example, no publisher completion before writer completion) and return contract-normalized API errors.
 4. Dashboard and My Tasks clients must parse responses with `parseApiResponseJson()`, `isApiFailure()`, and `getApiErrorMessage()`.
+5. When publisher status first transitions to `completed`, `blogs.actual_published_at` must auto-capture to `now()` if currently unset.
 
 ## Runtime Schema Compatibility Retirement (MUST)
 1. Do not add new runtime fallback branches for legacy blog date columns in dashboard/task/blog surfaces.
@@ -746,9 +747,21 @@ Endpoint returns:
 ## Social Post Dedicated Editor Workflow (MUST)
 The dedicated editor at `/social-posts/[id]` follows a guided 4-step flow:
 1. **Setup** — Post Title, Platform(s), Publish Date, Canva Link/Page, Product, Type.
-2. **Link Context (optional)** — Associated Blog search + linked blog actions.
+2. **Associated Blog (optional)** — Associated Blog search + linked blog actions.
 3. **Write Caption** — UTF-8 editor focus with formatting tools and grouped copy actions.
 4. **Review & Publish** — Checklist validation, role-aware transition controls, live-link URL entry, and stage-based final CTA labels.
+
+Dedicated editor section order contract:
+- `Setup`
+- `Assignment`
+- `Associated Blog`
+- `Write Caption`
+- `Review & Publish`
+- `Comments`
+- `Current Snapshot`
+- `Checklist`
+- `Assignment & Changes`
+- Do not label this final section as `Activity` on social post surfaces.
 
 P0 UX invariants for the dedicated editor:
 - Primary stage progression uses the sidebar final CTA; raw status controls are secondary under an advanced disclosure.
@@ -756,6 +769,8 @@ P0 UX invariants for the dedicated editor:
 - Setup keeps required-now fields prominent while optional brief fields remain de-emphasized in an optional disclosure.
 - Live-link workflow supports quick paste with platform auto-detection while retaining platform-specific link inputs.
 - Current snapshot includes explicit handoff context (`Assigned to`, `Reviewer`, `Current owner`, `Next owner`) and latest rollback reason when available.
+- A top `Next Action` strip surfaces primary CTA, owner handoff context, preflight readiness count, and saved/unsaved state.
+- A `Jump to` mini navigator links to all major editor sections to reduce scroll/search friction.
 
 P1 UX invariants for social workflow ergonomics:
 - `Changes Requested` transitions must use a structured template (category + checklist + optional context) rather than free-text-only reasons.
@@ -960,7 +975,19 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 2. This visibility is read-only for non-privileged actions and must not be gated behind `admin` or `manage_users`.
 3. Record-level activity history must use canonical columns (`changed_by`, `event_type`, `field_name`, `old_value`, `new_value`, `changed_at`) to keep formatting and UI rendering stable across surfaces.
 4. Global/system activity pages under Settings remain admin-only and are separate from record-level history visibility.
-5. In any page or detail drawer that includes record-level comments/activity, the `Comments` and `Activity` sections must be placed at the end of the layout (final sections) for consistent scan order.
+5. In any page or detail drawer that includes record-level comments/links/assignment history, keep ordering predictable:
+   - `Comments` must render above link and assignment/change sections.
+   - `Links`, when shown as a standalone section, should render below comments.
+   - Social post assignment/status history sections must be labeled `Assignment & Changes` (not `Activity`).
+   - Assignment/change history remains the final section.
+6. Detail pages (`/blogs/[id]`, `/social-posts/[id]`) must expose a top actionability strip:
+   - `Next Action` summary + primary CTA
+   - explicit saved/unsaved indicator
+   - compact preflight readiness signal
+   - section jump navigator (`Jump to`) for major blocks
+7. Blog detail keyboard parity:
+   - `Alt+Shift+J` jumps to next missing preflight field
+   - `Alt+Shift+Enter` triggers the primary next action when available
 
 ## Link Target Behavior (MUST)
 

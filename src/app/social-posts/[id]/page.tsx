@@ -361,6 +361,21 @@ function createFormFromPost(post: SocialPostEditorRecord): EditorFormState {
   };
 }
 
+function createSocialEditorFormSnapshot(form: EditorFormState) {
+  return JSON.stringify({
+    title: form.title.trim(),
+    product: form.product,
+    type: form.type,
+    canva_url: form.canva_url.trim(),
+    canva_page: form.canva_page.trim(),
+    caption: form.caption,
+    platforms: [...form.platforms].sort(),
+    scheduled_date: form.scheduled_date,
+    status: form.status,
+    associated_blog_id: form.associated_blog_id,
+  });
+}
+
 export default function SocialPostEditorPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -410,6 +425,7 @@ export default function SocialPostEditorPage() {
   const [isReopenBriefModalOpen, setIsReopenBriefModalOpen] = useState(false);
   const [reopenBriefReason, setReopenBriefReason] = useState("");
   const [hasAppliedRequestedFocus, setHasAppliedRequestedFocus] = useState(false);
+  const [savedFormSnapshot, setSavedFormSnapshot] = useState<string | null>(null);
   const canEditBrief = useMemo(() => {
     if (!post) {
       return false;
@@ -514,7 +530,9 @@ export default function SocialPostEditorPage() {
     }
     const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
     setPost(normalized);
-    setForm(createFormFromPost(normalized));
+    const nextForm = createFormFromPost(normalized);
+    setForm(nextForm);
+    setSavedFormSnapshot(createSocialEditorFormSnapshot(nextForm));
     setBlogSearchQuery(normalized.associated_blog?.title ?? "");
     if (linksError) {
       showError(`${VALIDATION_MESSAGES.couldNotLoadLinks} ${linksError.message}`);
@@ -670,6 +688,9 @@ export default function SocialPostEditorPage() {
       }
       const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
       setPost(normalized);
+      const nextForm = createFormFromPost(normalized);
+      setForm(nextForm);
+      setSavedFormSnapshot(createSocialEditorFormSnapshot(nextForm));
       updateStatus(statusId, { type: "success", message: VALIDATION_MESSAGES.postSaved });
       setIsSaving(false);
       return true;
@@ -1153,6 +1174,30 @@ export default function SocialPostEditorPage() {
     }
     return true;
   }, [finalAction.nextStatus, form, hasDraftRequirements, hasLiveLink, hasReviewRequirements]);
+  const isBriefDirty = useMemo(() => {
+    if (!form || !savedFormSnapshot) {
+      return false;
+    }
+    return createSocialEditorFormSnapshot(form) !== savedFormSnapshot;
+  }, [form, savedFormSnapshot]);
+  const socialSectionLinks = useMemo(
+    () =>
+      [
+        { href: "#social-editor-step-setup", label: "Setup" },
+        { href: "#social-editor-step-assignment", label: "Assignment" },
+        { href: "#social-editor-step-associated-blog", label: "Associated Blog" },
+        { href: "#social-editor-step-write-caption", label: "Write Caption" },
+        { href: "#social-editor-step-review-publish", label: "Review & Publish" },
+        { href: "#social-editor-step-comments", label: "Comments" },
+        { href: "#social-editor-step-current-snapshot", label: "Current Snapshot" },
+        { href: "#social-editor-step-checklist", label: "Checklist" },
+        {
+          href: "#social-editor-step-assignment-changes",
+          label: "Assignment & Changes",
+        },
+      ] as const,
+    []
+  );
   const transitionRequiredFields = useMemo<PreflightFieldKey[]>(() => {
     if (!form || finalAction.nextStatus === form.status) {
       return [];
@@ -1208,6 +1253,23 @@ export default function SocialPostEditorPage() {
     return Object.fromEntries(entries);
   }, [activity, availableUsers]);
   const latestActivity = useMemo(() => activity.slice(0, 20), [activity]);
+  const groupedLatestActivity = useMemo(() => {
+    const groups = new Map<string, SocialActivityRecord[]>();
+    for (const entry of latestActivity) {
+      const dayLabel = formatDateInTimezone(
+        entry.changed_at,
+        profile?.timezone,
+        "MMM d, yyyy"
+      );
+      const bucket = groups.get(dayLabel) ?? [];
+      bucket.push(entry);
+      groups.set(dayLabel, bucket);
+    }
+    return Array.from(groups.entries()).map(([dayLabel, entries]) => ({
+      dayLabel,
+      entries,
+    }));
+  }, [latestActivity, profile?.timezone]);
   const latestRollbackReason = useMemo(() => {
     for (const entry of latestActivity) {
       if (entry.event_type !== "social_post_rolled_back") {
@@ -1766,6 +1828,76 @@ export default function SocialPostEditorPage() {
               </div>
             }
           />
+          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
+                  Next Action
+                </h3>
+                <p className="text-sm font-medium text-slate-900">
+                  {finalAction.label} → {SOCIAL_POST_STATUS_LABELS[finalAction.nextStatus]}
+                </p>
+                <p className="text-sm text-slate-600">{finalAction.helper}</p>
+                <p className="text-xs text-slate-600">
+                  Current owner: {currentOwnerName} • Next owner: {nextOwnerName}
+                </p>
+                <p
+                  className={`text-xs ${
+                    isBriefDirty ? "text-amber-700" : "text-emerald-700"
+                  }`}
+                >
+                  {isBriefDirty
+                    ? "Unsaved changes"
+                    : `All changes saved • ${formatSavedTimestamp(post.updated_at, profile?.timezone)}`}
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={isPrimaryActionDisabled}
+                aria-keyshortcuts="Alt+Shift+Enter"
+                onClick={() => {
+                  void handleFinalAction();
+                }}
+              >
+                {isSaving ? "Saving…" : finalAction.label}
+              </Button>
+            </div>
+            <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Transition Preflight
+              </p>
+              {transitionRequiredFields.length === 0 ? (
+                <p className="text-xs text-emerald-700">No required blockers for current action.</p>
+              ) : (
+                <p className="text-xs text-slate-600">
+                  {readyTransitionFieldCount} / {transitionRequiredFields.length} required items
+                  ready.
+                </p>
+              )}
+              <p className="text-[11px] text-slate-500">
+                Shortcut: {SOCIAL_POST_EDITOR_SHORTCUTS.nextRequired.keys[0]} • Primary action:{" "}
+                {SOCIAL_POST_EDITOR_SHORTCUTS.primaryAction.keys[0]}
+              </p>
+            </div>
+          </section>
+          <nav
+            aria-label="Detail sections"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+          >
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Jump to
+            </span>
+            {socialSectionLinks.map((sectionLink) => (
+              <a
+                key={sectionLink.href}
+                href={sectionLink.href}
+                className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                {sectionLink.label}
+              </a>
+            ))}
+          </nav>
           <ConfirmationModal
             isOpen={isDeleteModalOpen}
             title="Delete post?"
@@ -2186,7 +2318,10 @@ export default function SocialPostEditorPage() {
                 </fieldset>
               </section>
 
-              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+              <section
+                id="social-editor-step-assignment"
+                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-base font-semibold text-slate-900">Assignment</h3>
@@ -2282,12 +2417,12 @@ export default function SocialPostEditorPage() {
               </section>
 
               <section
-                id="social-editor-step-link-context"
+                id="social-editor-step-associated-blog"
                 className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
               >
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">
-                    Link Context <span className="text-slate-500">(optional)</span>
+                    Associated Blog <span className="text-slate-500">(optional)</span>
                   </h3>
                   <p className="text-sm text-slate-600">
                     Link a related blog so caption and publishing context stay connected.
@@ -2648,7 +2783,10 @@ export default function SocialPostEditorPage() {
                   </div>
                 </div>
               </section>
-              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+              <section
+                id="social-editor-step-comments"
+                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+              >
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Comments</h3>
                   <p className="text-sm text-slate-600">
@@ -2679,7 +2817,9 @@ export default function SocialPostEditorPage() {
                   </div>
                 </div>
                 {comments.length === 0 ? (
-                  <p className="text-sm text-slate-500">No comments yet.</p>
+                  <p className="text-sm text-slate-500">
+                    No comments yet. Add context here to avoid handoff confusion.
+                  </p>
                 ) : (
                   <ul className="space-y-2">
                     {comments.slice(0, 20).map((comment) => (
@@ -2701,48 +2841,15 @@ export default function SocialPostEditorPage() {
                   </ul>
                 )}
               </section>
-              <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">Activity</h3>
-                  <p className="text-sm text-slate-600">
-                    Status and assignment changes are visible in latest-first order.
-                  </p>
-                </div>
-                {latestActivity.length === 0 ? (
-                  <p className="text-sm text-slate-500">No activity yet.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {latestActivity.map((entry) => (
-                      <li
-                        key={entry.id}
-                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                      >
-                        <p className="text-sm font-medium text-slate-800">
-                          {formatActivityEventTitle(entry)}
-                        </p>
-                        {(() => {
-                          const detail = formatActivityChangeDescription(entry, {
-                            userNameById: activityUserNameById,
-                          });
-                          return detail ? (
-                            <p className="text-xs text-slate-600">{detail}</p>
-                          ) : null;
-                        })()}
-                        <p className="text-xs text-slate-400">
-                          {entry.actor?.full_name ?? "System"} •{" "}
-                          {formatDateInTimezone(entry.changed_at, profile?.timezone)}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
             </div>
 
             <aside className="space-y-3">
-              <section className="sticky top-20 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+              <section
+                id="social-editor-step-current-snapshot"
+                className="sticky top-20 space-y-2 rounded-lg border border-slate-200 bg-white p-3"
+              >
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Current Snapshot + Handoff
+                  Current Snapshot
                 </p>
                 <div className="space-y-2 border-b border-slate-200 pb-2">
                   <div className="flex items-center justify-between">
@@ -2770,10 +2877,13 @@ export default function SocialPostEditorPage() {
                   </div>
                 ) : null}
               </section>
-              <section className="sticky top-56 space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+              <section
+                id="social-editor-step-checklist"
+                className="sticky top-56 space-y-3 rounded-lg border border-slate-200 bg-white p-3"
+              >
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Checklist + Validation
+                    Checklist
                   </p>
                 </div>
                 <ul className="space-y-1">
@@ -2873,6 +2983,54 @@ export default function SocialPostEditorPage() {
                     <p className="text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
                   ) : null}
                 </div>
+              </section>
+              <section
+                id="social-editor-step-assignment-changes"
+                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+              >
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Assignment & Changes</h3>
+                  <p className="text-sm text-slate-600">
+                    Status and assignment changes are visible in latest-first order.
+                  </p>
+                </div>
+                {groupedLatestActivity.length === 0 ? (
+                  <p className="text-sm text-slate-500">No assignment or status changes yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {groupedLatestActivity.map((group) => (
+                      <section key={group.dayLabel} className="space-y-2">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          {group.dayLabel}
+                        </h4>
+                        <ul className="space-y-2">
+                          {group.entries.map((entry) => (
+                            <li
+                              key={entry.id}
+                              className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                            >
+                              <p className="text-sm font-medium text-slate-800">
+                                {formatActivityEventTitle(entry)}
+                              </p>
+                              {(() => {
+                                const detail = formatActivityChangeDescription(entry, {
+                                  userNameById: activityUserNameById,
+                                });
+                                return detail ? (
+                                  <p className="text-xs text-slate-600">{detail}</p>
+                                ) : null;
+                              })()}
+                              <p className="text-xs text-slate-400">
+                                {entry.actor?.full_name ?? "System"} •{" "}
+                                {formatDateInTimezone(entry.changed_at, profile?.timezone)}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </div>
+                )}
               </section>
             </aside>
           </div>

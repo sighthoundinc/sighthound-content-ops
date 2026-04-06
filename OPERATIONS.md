@@ -34,10 +34,21 @@ npm run check:full
 - Empty create title should auto-normalize to `Untitled social post` instead of failing create.
 - `published` requires at least one valid live link.
 - Execution-stage rollback to `changes_requested` requires a reason.
+- Social post editor section order is:
+  - `Setup` → `Assignment` → `Associated Blog` → `Write Caption` → `Review & Publish` → `Comments` → `Current Snapshot` → `Checklist` → `Assignment & Changes`
+- Social post history sections use the label `Assignment & Changes` (never `Activity`).
+- Live-link controls are part of `Review & Publish` on the dedicated social editor.
+- Detail pages include a top `Next Action` strip + `Jump to` section navigator for faster execution.
+- Detail pages show explicit save state (`Unsaved changes` vs `All changes saved`) tied to form state.
+- Blog detail uses preflight readiness + jump-to-field guidance and keyboard parity shortcuts:
+  - `Alt+Shift+J` (next missing required field)
+  - `Alt+Shift+Enter` (primary action)
 
 ### Blogs
 - Writing flow handoff to publishing remains enforced.
 - Publishing completion cannot bypass prerequisite writing completion and review checkpoint.
+- On first transition to publisher `completed`, `actual_published_at` is auto-captured when unset.
+- Blog details preserve footer ordering: `Comments` → `Links` → `Assignment & Changes`.
 
 ## 4) API contract integrity
 - Use canonical mutation routes for workflow transitions.

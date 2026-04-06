@@ -68,6 +68,7 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Writing completion is the handoff trigger into publishing.
 - Publishing completion must not bypass writing prerequisites.
 - Reviewer checkpoint at `Awaiting Publishing Approval` is required before final completion.
+- When publishing transitions to `completed`, `actual_published_at` is auto-captured if empty.
 
 ## 5) Queue and visibility contract
 ### My Tasks
@@ -91,6 +92,23 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Slack delivery suppresses preview unfurls (`unfurl_links: false`, `unfurl_media: false`) while retaining clickable links.
 - Blog/social comment creation emits Slack alerts with full multi-line comment text plus actor context (`By: <name>`).
 - Slack comment payload rendering preserves line breaks, caps length defensively, and neutralizes ping tokens before delivery.
+
+## 6.1) Record detail section ordering contract
+- On blog detail surfaces with links and history blocks:
+  - `Comments` appears before `Links`.
+  - `Links` appears above assignment/change history.
+  - Assignment/change history remains the final block.
+- On social post detail/editor surfaces:
+  - Section order is `Setup` → `Assignment` → `Associated Blog` → `Write Caption` → `Review & Publish` → `Comments` → `Current Snapshot` → `Checklist` → `Assignment & Changes`.
+  - Live-link inputs are part of `Review & Publish` (not a standalone `Links` section).
+  - History/changes sections are labeled `Assignment & Changes` (not `Activity`).
+- This ordering applies to both full pages and detail drawers.
+- Both detail pages expose a top `Next Action` strip with:
+  - primary CTA and owner handoff summary
+  - explicit saved/unsaved state
+  - preflight readiness count and missing-field jump cues
+- Both detail pages include a compact in-page section navigator (`Jump to`) with anchor links.
+- Assignment/change history readability is improved via grouped day buckets and clearer empty-state guidance.
 
 ## 7) API behavior contract (high-level)
 - Workflow transitions are API-authoritative.

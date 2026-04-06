@@ -3220,6 +3220,7 @@ function SocialPostsPageContent() {
                   </button>
                 </div>
               </section>
+
               <section className="mt-4 rounded-lg border border-slate-200 p-4">
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                   Assignment
@@ -3241,6 +3242,53 @@ function SocialPostsPageContent() {
                       {activePost.reviewer?.full_name ?? "Not assigned"}
                     </p>
                   </div>
+                </div>
+              </section>
+              <section className="mt-4 rounded-lg border border-slate-200 p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Comments
+                </h4>
+                <form className="mt-3 space-y-2" onSubmit={handleAddComment}>
+                  {replyToComment ? (
+                    <div className="flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                      <span>
+                        Replying to {replyToComment.author?.full_name ?? "comment"}
+                      </span>
+                      <button
+                        type="button"
+                        className="font-semibold"
+                        onClick={() => {
+                          setReplyToComment(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : null}
+                  <textarea
+                    value={panelCommentDraft}
+                    onChange={(event) => {
+                      setPanelCommentDraft(event.target.value);
+                    }}
+                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    placeholder="Add discussion or feedback..."
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isCommentSaving}
+                      className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isCommentSaving ? "Adding..." : "Add Comment"}
+                    </button>
+                  </div>
+                </form>
+                <div className="mt-3">
+                  {panelComments.length === 0 ? (
+                    <p className="text-sm text-slate-500">No comments yet.</p>
+                  ) : (
+                    renderCommentTree(null, 0)
+                  )}
                 </div>
               </section>
 
@@ -3303,60 +3351,12 @@ function SocialPostsPageContent() {
 
               <section className="mt-4 rounded-lg border border-slate-200 p-4">
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Comments
-                </h4>
-                <form className="mt-3 space-y-2" onSubmit={handleAddComment}>
-                  {replyToComment ? (
-                    <div className="flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                      <span>
-                        Replying to {replyToComment.author?.full_name ?? "comment"}
-                      </span>
-                      <button
-                        type="button"
-                        className="font-semibold"
-                        onClick={() => {
-                          setReplyToComment(null);
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : null}
-                  <textarea
-                    value={panelCommentDraft}
-                    onChange={(event) => {
-                      setPanelCommentDraft(event.target.value);
-                    }}
-                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    placeholder="Add discussion or feedback..."
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={isCommentSaving}
-                      className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isCommentSaving ? "Adding..." : "Add Comment"}
-                    </button>
-                  </div>
-                </form>
-                <div className="mt-3">
-                  {panelComments.length === 0 ? (
-                    <p className="text-sm text-slate-500">No comments yet.</p>
-                  ) : (
-                    renderCommentTree(null, 0)
-                  )}
-                </div>
-              </section>
-
-              <section className="mt-4 rounded-lg border border-slate-200 p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Recent Changes (latest 5)
+                  Assignment & Changes (latest 5)
                 </h4>
                 {isPanelLoading ? (
-                  <p className="mt-3 text-sm text-slate-500">Loading activity…</p>
+                  <p className="mt-3 text-sm text-slate-500">Loading assignment and status changes…</p>
                 ) : panelActivity.length === 0 ? (
-                  <p className="mt-3 text-sm text-slate-500">No activity yet.</p>
+                  <p className="mt-3 text-sm text-slate-500">No assignment or status changes yet.</p>
                 ) : (
                   <ul className="mt-3 space-y-2">
                     {panelActivity.slice(0, 5).map((entry) => (

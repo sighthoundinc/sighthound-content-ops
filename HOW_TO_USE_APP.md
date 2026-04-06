@@ -69,6 +69,7 @@ Flow:
 
 Key rule:
 - Publishing completion should not bypass writing completion and review checkpoint.
+- If Actual Published Date is empty, it is auto-captured when publishing is marked complete.
 
 ## 5) Daily execution rhythm
 1. Open [My Tasks](/tasks)
@@ -89,6 +90,32 @@ What “explicit updates” means:
 | [Dashboard](/dashboard) | Cross-content queue health | Triage and prioritization |
 | [Calendar](/calendar) | Scheduled workload by date | Planning and sequencing |
 | Notifications | Assignment and stage updates | Respond to change quickly |
+
+### Detail page section order
+Blog detail views:
+1. `Comments`
+2. `Links`
+3. `Assignment & Changes`
+
+Social post editor views:
+1. `Setup`
+2. `Assignment`
+3. `Associated Blog`
+4. `Write Caption`
+5. `Review & Publish`
+6. `Comments`
+7. `Current Snapshot`
+8. `Checklist`
+9. `Assignment & Changes`
+
+Naming rule:
+- Social post history sections must use `Assignment & Changes` (not `Activity`).
+
+Shared detail-page usability helpers:
+- Top `Next Action` strip shows the primary action, current/next owner, and readiness hints.
+- `Jump to` links let you jump directly to major sections.
+- Save state is explicit: `Unsaved changes` vs `All changes saved`.
+- `Assignment & Changes` is grouped by day for easier scanning.
 
 ## 7) Transition gates reference
 - Never transition without required target-stage fields.

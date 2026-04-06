@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
@@ -67,6 +67,57 @@ type BlogFormState = {
   is_archived: boolean;
 };
 
+
+const BLOG_DETAIL_SHORTCUTS = {
+  nextRequired: {
+    key: "j",
+    keys: ["⌥⇧J"],
+    label: "Jump to next required field",
+  },
+  primaryAction: {
+    key: "Enter",
+    keys: ["⌥⇧↵"],
+    label: "Run primary action",
+  },
+} as const;
+
+type BlogPreflightFieldKey =
+  | "writer_id"
+  | "google_doc_url"
+  | "writer_status_completed"
+  | "publisher_id"
+  | "live_url";
+
+const BLOG_PREFLIGHT_FIELD_META: Record<
+  BlogPreflightFieldKey,
+  { label: string; targetId: string }
+> = {
+  writer_id: { label: "Assigned to (Writing)", targetId: "blog-writer-id" },
+  google_doc_url: { label: "Google Doc URL", targetId: "blog-google-doc-url" },
+  writer_status_completed: {
+    label: "Writing status must be completed",
+    targetId: "blog-writer-status",
+  },
+  publisher_id: { label: "Assigned to (Publishing)", targetId: "blog-publisher-id" },
+  live_url: { label: "Live URL", targetId: "blog-live-url" },
+};
+
+function createBlogFormSnapshot(form: BlogFormState) {
+  return JSON.stringify({
+    title: form.title.trim(),
+    site: form.site,
+    writer_id: form.writer_id,
+    publisher_id: form.publisher_id,
+    writer_status: form.writer_status,
+    publisher_status: form.publisher_status,
+    google_doc_url: form.google_doc_url.trim(),
+    live_url: form.live_url.trim(),
+    scheduled_publish_date: form.scheduled_publish_date,
+    display_published_date: form.display_published_date,
+    actual_published_at: form.actual_published_at,
+    is_archived: form.is_archived,
+  });
+}
 type BlogCommentRecord = {
   id: string;
   blog_id: string;
@@ -140,6 +191,7 @@ export default function BlogDetailPage() {
     "writer" | "publisher" | null
   >(null);
   const [blogVersion, setBlogVersion] = useState<string | null>(null);
+  const [savedFormSnapshot, setSavedFormSnapshot] = useState<string | null>(null);
 
   useEffect(() => {
     if (!error) {
@@ -216,7 +268,7 @@ export default function BlogDetailPage() {
       setBlog(nextBlog);
       // Store version (updated_at) to detect concurrent changes
       setBlogVersion(nextBlog.updated_at);
-      setForm({
+      const nextForm = {
         title: nextBlog.title,
         site: nextBlog.site,
         writer_id: nextBlog.writer_id ?? "",
@@ -231,7 +283,9 @@ export default function BlogDetailPage() {
           nextBlog.actual_published_at ?? nextBlog.published_at
         ),
         is_archived: nextBlog.is_archived,
-      });
+      };
+      setForm(nextForm);
+      setSavedFormSnapshot(createBlogFormSnapshot(nextForm));
       setUsers((usersData ?? []) as ProfileRecord[]);
       setHistory((historyData ?? []) as BlogHistoryRecord[]);
       if (commentsError) {
@@ -305,6 +359,83 @@ export default function BlogDetailPage() {
     }
     return Object.fromEntries(entries);
   }, [blog?.publisher, blog?.writer, users]);
+  const isDetailDirty = useMemo(() => {
+    if (!form || !savedFormSnapshot) {
+      return false;
+    }
+    return createBlogFormSnapshot(form) !== savedFormSnapshot;
+  }, [form, savedFormSnapshot]);
+  const blogSectionLinks = useMemo(
+    () =>
+      [
+        { href: "#blog-details", label: "Details" },
+        { href: "#blog-workflow", label: "Workflow" },
+        { href: "#blog-comments", label: "Comments" },
+        { href: "#blog-links", label: "Links" },
+        { href: "#blog-assignment-changes", label: "Assignment & Changes" },
+      ] as const,
+    []
+  );
+  const blogPreflightRequiredFields = useMemo<BlogPreflightFieldKey[]>(() => {
+    if (!form) {
+      return [];
+    }
+    if (form.writer_status !== "completed") {
+      return ["writer_id", "google_doc_url"];
+    }
+    if (form.publisher_status !== "completed") {
+      return ["publisher_id", "writer_status_completed", "live_url"];
+    }
+    return [];
+  }, [form]);
+  const missingBlogPreflightFields = useMemo<BlogPreflightFieldKey[]>(() => {
+    if (!form || blogPreflightRequiredFields.length === 0) {
+      return [];
+    }
+    return blogPreflightRequiredFields.filter((field) => {
+      if (field === "writer_id") {
+        return !form.writer_id;
+      }
+      if (field === "google_doc_url") {
+        return form.google_doc_url.trim().length === 0;
+      }
+      if (field === "publisher_id") {
+        return !form.publisher_id;
+      }
+      if (field === "writer_status_completed") {
+        return form.writer_status !== "completed";
+      }
+      if (field === "live_url") {
+        return form.live_url.trim().length === 0;
+      }
+      return false;
+    });
+  }, [blogPreflightRequiredFields, form]);
+  const readyBlogPreflightCount =
+    blogPreflightRequiredFields.length - missingBlogPreflightFields.length;
+  const jumpToBlogField = useCallback((field: BlogPreflightFieldKey) => {
+    const targetId = BLOG_PREFLIGHT_FIELD_META[field]?.targetId;
+    if (!targetId) {
+      return;
+    }
+    const target = document.getElementById(targetId);
+    if (!target) {
+      return;
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement
+    ) {
+      target.focus();
+      return;
+    }
+    const nestedFocusable = target.querySelector("input,textarea,select,button");
+    if (nestedFocusable instanceof HTMLElement) {
+      nestedFocusable.focus();
+    }
+  }, []);
 
   const updateBlog = async (
     updates: Record<string, unknown>,
@@ -368,7 +499,7 @@ export default function BlogDetailPage() {
     setBlog(nextBlog);
     // Update version after successful save to prevent stale version on concurrent changes
     setBlogVersion(nextBlog.updated_at);
-    setForm({
+    const nextForm = {
       title: nextBlog.title,
       site: nextBlog.site,
       writer_id: nextBlog.writer_id ?? "",
@@ -383,7 +514,9 @@ export default function BlogDetailPage() {
         nextBlog.actual_published_at ?? nextBlog.published_at
       ),
       is_archived: nextBlog.is_archived,
-    });
+    };
+    setForm(nextForm);
+    setSavedFormSnapshot(createBlogFormSnapshot(nextForm));
     setSuccessMessage(message);
 
     if (notify) {
@@ -400,8 +533,7 @@ export default function BlogDetailPage() {
     setIsSaving(false);
   };
 
-  const handleDetailsSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const saveDetailsChanges = async () => {
     if (!form || !blog || !canSaveDetails || isSaving) {
       return;
     }
@@ -518,6 +650,10 @@ export default function BlogDetailPage() {
           }
         : undefined
     );
+  };
+  const handleDetailsSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await saveDetailsChanges();
   };
 
   const handleConfirmCompletion = async () => {
@@ -842,6 +978,148 @@ export default function BlogDetailPage() {
       }
     );
   };
+  const groupedHistory = useMemo(() => {
+    const groups = new Map<string, BlogHistoryRecord[]>();
+    for (const entry of history) {
+      const dayLabel = formatDateInTimezone(
+        entry.changed_at,
+        profile?.timezone,
+        "MMM d, yyyy"
+      );
+      const bucket = groups.get(dayLabel) ?? [];
+      bucket.push(entry);
+      groups.set(dayLabel, bucket);
+    }
+    return Array.from(groups.entries()).map(([dayLabel, entries]) => ({
+      dayLabel,
+      entries,
+    }));
+  }, [history, profile?.timezone]);
+  const blogNextAction = useMemo(() => {
+    if (!form || !blog) {
+      return {
+        title: "Review record",
+        helper: "Confirm details and workflow ownership.",
+        ctaLabel: null as string | null,
+        actionType: "none" as "none" | "save_details" | "mark_writing_complete" | "mark_publishing_complete",
+        disabled: true,
+      };
+    }
+    if (form.writer_status !== "completed") {
+      return {
+        title: "Complete writing handoff",
+        helper:
+          "Before writing can be completed, set Assigned to (Writing) and add Google Doc URL.",
+        ctaLabel: "Mark Writing Complete",
+        actionType: "mark_writing_complete" as const,
+        disabled:
+          !canMarkWritingComplete ||
+          !canWriterEdit ||
+          !form.writer_id ||
+          form.google_doc_url.trim().length === 0 ||
+          isSaving,
+      };
+    }
+    if (form.publisher_status !== "completed") {
+      return {
+        title: "Complete publishing handoff",
+        helper:
+          "Before publishing can be completed, writing must stay complete and Live URL must be set.",
+        ctaLabel: "Mark Publishing Complete",
+        actionType: "mark_publishing_complete" as const,
+        disabled:
+          !canMarkPublishingComplete ||
+          !canPublisherEdit ||
+          !form.publisher_id ||
+          form.live_url.trim().length === 0 ||
+          isSaving,
+      };
+    }
+    if (isDetailDirty && canSaveDetails) {
+      return {
+        title: "Save remaining metadata changes",
+        helper: "There are unsaved metadata changes on this page.",
+        ctaLabel: "Save Metadata",
+        actionType: "save_details" as const,
+        disabled: isSaving,
+      };
+    }
+    return {
+      title: "Workflow complete",
+      helper: "Writing and publishing are completed for this blog.",
+      ctaLabel: null,
+      actionType: "none" as const,
+      disabled: true,
+    };
+  }, [
+    blog,
+    canMarkPublishingComplete,
+    canMarkWritingComplete,
+    canPublisherEdit,
+    canSaveDetails,
+    canWriterEdit,
+    form,
+    isDetailDirty,
+    isSaving,
+  ]);
+  const runBlogPrimaryAction = useCallback(() => {
+    if (blogNextAction.actionType === "mark_writing_complete") {
+      setPendingCompletionAction("writer");
+      return;
+    }
+    if (blogNextAction.actionType === "mark_publishing_complete") {
+      setPendingCompletionAction("publisher");
+      return;
+    }
+    if (blogNextAction.actionType === "save_details") {
+      void saveDetailsChanges();
+    }
+  }, [blogNextAction.actionType, saveDetailsChanges]);
+  useEffect(() => {
+    const handleBlogShortcut = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey) {
+        return;
+      }
+      if (!event.altKey || !event.shiftKey) {
+        return;
+      }
+      if (pendingCompletionAction) {
+        return;
+      }
+      const normalizedKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      if (normalizedKey === BLOG_DETAIL_SHORTCUTS.nextRequired.key) {
+        event.preventDefault();
+        if (missingBlogPreflightFields.length === 0) {
+          showSuccess("All required transition fields are complete.");
+          return;
+        }
+        jumpToBlogField(missingBlogPreflightFields[0]);
+        showSuccess("Jumped to next required field.");
+        return;
+      }
+      if (event.key === BLOG_DETAIL_SHORTCUTS.primaryAction.key) {
+        event.preventDefault();
+        if (!blogNextAction.ctaLabel || blogNextAction.disabled) {
+          showError("Primary action is unavailable right now.");
+          return;
+        }
+        runBlogPrimaryAction();
+      }
+    };
+    window.addEventListener("keydown", handleBlogShortcut);
+    return () => {
+      window.removeEventListener("keydown", handleBlogShortcut);
+    };
+  }, [
+    blogNextAction.ctaLabel,
+    blogNextAction.disabled,
+    jumpToBlogField,
+    missingBlogPreflightFields,
+    pendingCompletionAction,
+    runBlogPrimaryAction,
+    showError,
+    showSuccess,
+  ]);
 
   if (isLoading || !form) {
     return (
@@ -905,9 +1183,103 @@ export default function BlogDetailPage() {
               <StatusBadge status={blog.overall_status} />
             </div>
           </header>
+          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
+                  Next Action
+                </h3>
+                <p className="text-sm font-medium text-slate-900">{blogNextAction.title}</p>
+                <p className="text-sm text-slate-600">{blogNextAction.helper}</p>
+                <p
+                  className={`text-xs ${
+                    isDetailDirty ? "text-amber-700" : "text-emerald-700"
+                  }`}
+                >
+                  {isDetailDirty
+                    ? "Unsaved changes"
+                    : `All changes saved • ${formatDateInTimezone(
+                        blog.updated_at,
+                        profile?.timezone,
+                        "MMM d, h:mm a"
+                      )}`}
+                </p>
+              </div>
+              {blogNextAction.ctaLabel ? (
+                <button
+                  type="button"
+                  disabled={blogNextAction.disabled}
+                  aria-keyshortcuts="Alt+Shift+Enter"
+                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={runBlogPrimaryAction}
+                >
+                  {blogNextAction.ctaLabel}
+                </button>
+              ) : null}
+            </div>
+            <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Transition Preflight
+              </p>
+              {blogPreflightRequiredFields.length === 0 ? (
+                <p className="text-xs text-emerald-700">No required blockers for the current stage.</p>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-600">
+                    {readyBlogPreflightCount} / {blogPreflightRequiredFields.length} required items
+                    ready for next completion action.
+                  </p>
+                  {missingBlogPreflightFields.length === 0 ? (
+                    <p className="text-xs text-emerald-700">All required items are complete.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {missingBlogPreflightFields.map((field) => (
+                        <li
+                          key={field}
+                          className="flex items-center justify-between gap-2 text-xs text-slate-700"
+                        >
+                          <span>{BLOG_PREFLIGHT_FIELD_META[field].label}</span>
+                          <button
+                            type="button"
+                            className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                            onClick={() => {
+                              jumpToBlogField(field);
+                            }}
+                          >
+                            Go to field
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+              <p className="text-[11px] text-slate-500">
+                Shortcut: {BLOG_DETAIL_SHORTCUTS.nextRequired.keys[0]} • Primary action:{" "}
+                {BLOG_DETAIL_SHORTCUTS.primaryAction.keys[0]}
+              </p>
+            </div>
+          </section>
+          <nav
+            aria-label="Detail sections"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+          >
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Jump to
+            </span>
+            {blogSectionLinks.map((sectionLink) => (
+              <a
+                key={sectionLink.href}
+                href={sectionLink.href}
+                className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                {sectionLink.label}
+              </a>
+            ))}
+          </nav>
 
 
-          <section className="rounded-lg border border-slate-200 p-4">
+          <section id="blog-details" className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Blog Details
             </h3>
@@ -972,6 +1344,7 @@ export default function BlogDetailPage() {
                     Writer
                   </span>
                   <select
+                    id="blog-writer-id"
                     disabled={!canChangeWriterAssignment}
                     value={form.writer_id}
                     onChange={(event) => {
@@ -1004,6 +1377,7 @@ export default function BlogDetailPage() {
                     Publisher
                   </span>
                   <select
+                    id="blog-publisher-id"
                     disabled={!canChangePublisherAssignment}
                     value={form.publisher_id}
                     onChange={(event) => {
@@ -1100,9 +1474,16 @@ export default function BlogDetailPage() {
               </div>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
-                  Actual Published Timestamp
-                </span>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">
+                    Actual Published Timestamp
+                  </span>
+                  {blog?.actual_published_at && form.actual_published_at && (
+                    <span className="text-xs text-slate-500">
+                      Auto-captured • Editable by admin
+                    </span>
+                  )}
+                </div>
                 <input
                   disabled={!canOverrideWorkflow}
                   type="datetime-local"
@@ -1125,6 +1506,11 @@ export default function BlogDetailPage() {
                   }}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 />
+                {!form.actual_published_at && blog?.publisher_status === "completed" && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Automatically captured when blog is published. Admins can edit anytime.
+                  </p>
+                )}
               </label>
 
               <label className="inline-flex items-center gap-2 text-sm text-slate-700">
@@ -1167,7 +1553,7 @@ export default function BlogDetailPage() {
             </form>
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-2">
+          <section id="blog-workflow" className="grid gap-4 xl:grid-cols-2">
             <div className="rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                 Writer Workflow
@@ -1182,6 +1568,7 @@ export default function BlogDetailPage() {
                     Writing Stage
                   </span>
                   <select
+                    id="blog-writer-status"
                     disabled={!canWriterEdit}
                     value={form.writer_status}
                     onChange={(event) => {
@@ -1221,6 +1608,7 @@ export default function BlogDetailPage() {
                     Google Doc URL
                   </span>
                   <input
+                    id="blog-google-doc-url"
                     disabled={!canWriterEdit}
                     type="url"
                     value={form.google_doc_url}
@@ -1315,6 +1703,7 @@ export default function BlogDetailPage() {
                     Live URL
                   </span>
                   <input
+                    id="blog-live-url"
                     disabled={!canPublisherEdit}
                     type="url"
                     value={form.live_url}
@@ -1358,63 +1747,7 @@ export default function BlogDetailPage() {
           </section>
 
 
-          {blog.google_doc_url ? (
-            <section className="rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Links
-              </h3>
-              <div className="mt-2 space-y-3 text-sm">
-                <div>
-                  <p className="text-xs font-medium text-slate-500">Draft</p>
-                  <LinkQuickActions href={blog.google_doc_url} label="Draft URL" />
-                </div>
-                {blog.live_url ? (
-                  <div>
-                    <p className="text-xs font-medium text-slate-500">Live URL</p>
-                    <LinkQuickActions href={blog.live_url} label="Live URL" />
-                  </div>
-                ) : null}
-                <div>
-                  <p className="text-xs font-medium text-slate-500">Blog Page</p>
-                  <LinkQuickActions href={`/blogs/${blog.id}`} label="Blog page URL" />
-                </div>
-              </div>
-            </section>
-          ) : null}
-          <section className="rounded-lg border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Assignment & Changes
-            </h3>
-            {history.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">No history yet.</p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {history.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                  >
-                    <p className="text-sm font-medium text-slate-800">
-                      {formatActivityEventTitle(entry)}
-                    </p>
-                    {(() => {
-                      const detail = formatActivityChangeDescription(entry, {
-                        userNameById: activityUserNameById,
-                      });
-                      return detail ? (
-                        <p className="text-xs text-slate-500">{detail}</p>
-                      ) : null;
-                    })()}
-                    <p className="text-xs text-slate-400">
-                      {formatDateInTimezone(entry.changed_at, profile?.timezone)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="rounded-lg border border-slate-200 p-4">
+          <section id="blog-comments" className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Comments
             </h3>
@@ -1455,7 +1788,9 @@ export default function BlogDetailPage() {
             ) : null}
 
             {comments.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">No comments yet.</p>
+              <p className="mt-3 text-sm text-slate-500">
+                No comments yet. Add context for reviewers or owners to keep handoffs clear.
+              </p>
             ) : (
               <ul className="mt-3 space-y-2">
                 {comments.map((comment) => (
@@ -1475,6 +1810,78 @@ export default function BlogDetailPage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </section>
+          <section id="blog-links" className="rounded-lg border border-slate-200 p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Links
+            </h3>
+            <div className="mt-2 space-y-3 text-sm">
+              <div>
+                <p className="text-xs font-medium text-slate-500">Draft</p>
+                <LinkQuickActions href={blog.google_doc_url} label="Draft URL" />
+                {!blog.google_doc_url ? (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Add a Google Doc URL in Writing Workflow to unlock this link.
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">Live URL</p>
+                <LinkQuickActions href={blog.live_url} label="Live URL" />
+                {!blog.live_url ? (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Add a Live URL in Publishing Workflow when the post is published.
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">Blog Page</p>
+                <LinkQuickActions href={`/blogs/${blog.id}`} label="Blog page URL" />
+              </div>
+            </div>
+          </section>
+          <section id="blog-assignment-changes" className="rounded-lg border border-slate-200 p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Assignment & Changes
+            </h3>
+            {groupedHistory.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-500">
+                No assignment or status changes yet. Workflow updates will appear here.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {groupedHistory.map((group) => (
+                  <section key={group.dayLabel} className="space-y-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {group.dayLabel}
+                    </h4>
+                    <ul className="space-y-2">
+                      {group.entries.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                        >
+                          <p className="text-sm font-medium text-slate-800">
+                            {formatActivityEventTitle(entry)}
+                          </p>
+                          {(() => {
+                            const detail = formatActivityChangeDescription(entry, {
+                              userNameById: activityUserNameById,
+                            });
+                            return detail ? (
+                              <p className="text-xs text-slate-500">{detail}</p>
+                            ) : null;
+                          })()}
+                          <p className="text-xs text-slate-400">
+                            {formatDateInTimezone(entry.changed_at, profile?.timezone)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             )}
           </section>
 

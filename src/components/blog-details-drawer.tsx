@@ -131,11 +131,6 @@ export function BlogDetailsDrawer({
           {workflowContent}
         </DetailDrawerSection>
         <DetailDrawerSection title="Dates">{datesContent}</DetailDrawerSection>
-        {linksContent ? (
-          <DetailDrawerSection title="Links (full)" collapsible defaultOpen={false}>
-            {linksContent}
-          </DetailDrawerSection>
-        ) : null}
         {commentsContent ? (
           <DetailDrawerSection
             title="Comments"
@@ -144,6 +139,11 @@ export function BlogDetailsDrawer({
             itemCount={commentsCount}
           >
             {commentsContent}
+          </DetailDrawerSection>
+        ) : null}
+        {linksContent ? (
+          <DetailDrawerSection title="Links (full)" collapsible defaultOpen={false}>
+            {linksContent}
           </DetailDrawerSection>
         ) : null}
         {timelineContent ? (

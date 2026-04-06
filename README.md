@@ -10,6 +10,7 @@ Content Relay is a stage-based content operations app for managing blogs and soc
 ## Pipeline overview
 ### Blog track
 Writing flow → Writing Approved handoff → Publishing in Progress → Awaiting Publishing Approval → Publishing Approved → Published
+- If Actual Published Date is blank, it is automatically captured when publishing is marked completed.
 
 ### Social track
 Draft → In Review → Changes Requested → Creative Approved → Ready to Publish → Awaiting Live Link → Published
@@ -37,6 +38,15 @@ Social posts must include at least one valid public live link before they can mo
 - `Ideas`: intake and conversion to blogs/social posts
 - `Calendar`: schedule planning and conflict visibility
 - `Settings`: profile, timezone, notifications, connected services
+
+Detail page ordering rule:
+- Blogs: `Comments` → `Links` → `Assignment & Changes`.
+- Social Posts: `Setup` → `Assignment` → `Associated Blog` → `Write Caption` → `Review & Publish` → `Comments` → `Current Snapshot` → `Checklist` → `Assignment & Changes`.
+- On social post surfaces, use `Assignment & Changes` instead of `Activity`.
+- Both detail pages include:
+  - top `Next Action` strip (primary CTA + owner handoff context + preflight)
+  - `Jump to` section navigator
+  - explicit save-state indicator (`Unsaved changes` / `All changes saved`)
 
 ## Workflow ownership model
 - Work stages are owned by the execution owner

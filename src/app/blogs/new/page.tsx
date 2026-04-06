@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedPage } from "@/components/protected-page";
-import { isMissingBlogCommentsTableError } from "@/lib/blog-schema";
 import {
   getApiErrorMessage,
   isApiFailure,
@@ -291,26 +290,29 @@ function NewBlogPageContent() {
         setIsSubmitting(false);
         return;
       }
-      const { error: commentInsertError } = await supabase
-        .schema("public")
-        .from("blog_comments")
-        .insert({
-          blog_id: createdBlogId,
-          comment: trimmedInitialComment,
-          user_id: user.id,
-        });
-      if (commentInsertError) {
-        if (isMissingBlogCommentsTableError(commentInsertError)) {
-          console.warn(
-            "Initial comment skipped because public.blog_comments is unavailable in schema cache.",
-            commentInsertError
-          );
-        } else {
-          console.error("Comment insert failed:", commentInsertError);
-          setError("Blog created, but the initial comment couldn't be saved.");
-          setIsSubmitting(false);
-          return;
-        }
+      const commentResponse = await fetch(`/api/blogs/${createdBlogId}/comments`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ comment: trimmedInitialComment }),
+      }).catch(() => null);
+      if (!commentResponse) {
+        setError("Blog created, but the initial comment couldn't be saved.");
+        setIsSubmitting(false);
+        return;
+      }
+      const commentPayload = await parseApiResponseJson<Record<string, unknown>>(commentResponse);
+      if (isApiFailure(commentResponse, commentPayload)) {
+        setError(
+          getApiErrorMessage(
+            commentPayload,
+            "Blog created, but the initial comment couldn't be saved."
+          )
+        );
+        setIsSubmitting(false);
+        return;
       }
     }
 

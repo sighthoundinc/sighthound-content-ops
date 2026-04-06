@@ -3,12 +3,14 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 type EventType =
   | "blog_created"
+  | "blog_comment_created"
   | "writer_assigned"
   | "writer_completed"
   | "ready_to_publish"
   | "published"
   | "blog_publish_overdue"
   | "social_post_created"
+  | "social_comment_created"
   | "social_submitted_for_review"
   | "social_changes_requested"
   | "social_creative_approved"
@@ -25,6 +27,7 @@ interface NotifyPayload {
   socialPostId?: string;
   title: string;
   site: string;
+  commentBody?: string;
   actorName: string;
   targetUserName?: string; // User to whom task is assigned/action needed
   targetUserNames?: string[];
@@ -55,16 +58,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 const DEFAULT_APP_URL = "https://sighthound-content-ops.vercel.app";
+const MAX_COMMENT_BODY_LENGTH = 3000;
 
 
 const EVENT_CONTENT_TYPE: Record<EventType, string> = {
   blog_created: "Blog",
+  blog_comment_created: "Blog",
   writer_assigned: "Blog",
   writer_completed: "Blog",
   ready_to_publish: "Blog",
   published: "Blog",
   blog_publish_overdue: "Blog",
   social_post_created: "Social",
+  social_comment_created: "Social",
   social_submitted_for_review: "Social",
   social_changes_requested: "Social",
   social_creative_approved: "Social",
@@ -79,12 +85,14 @@ const EVENT_CONTENT_TYPE: Record<EventType, string> = {
 
 const EVENT_ACTION: Record<EventType, string> = {
   blog_created: "Created - draft is ready for work",
+  blog_comment_created: "New comment",
   writer_assigned: "Assigned - work can start",
   writer_completed: "Writing complete - awaiting publishing review",
   ready_to_publish: "Ready to publish - awaiting publishing action",
   published: "Published",
   blog_publish_overdue: "Publish overdue - immediate action required",
   social_post_created: "Created - draft is ready for work",
+  social_comment_created: "New comment",
   social_submitted_for_review: "Submitted for review - awaiting editorial approval",
   social_changes_requested: "Changes requested - awaiting revision",
   social_creative_approved: "Creative approved - awaiting next action",
@@ -97,6 +105,10 @@ const EVENT_ACTION: Record<EventType, string> = {
 };
 
 const ROLE_LABELS = new Set(["writer", "publisher", "editor", "social editor", "admin"]);
+const COMMENT_EVENT_TYPES = new Set<EventType>([
+  "blog_comment_created",
+  "social_comment_created",
+]);
 
 function normalizeName(value: string | null | undefined) {
   if (typeof value !== "string") {
@@ -124,6 +136,24 @@ function resolveAssignedTo(payload: NotifyPayload) {
   return normalizeName(payload.targetUserName) ?? "Team";
 }
 
+function normalizeCommentBody(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.replace(/\r\n?/g, "\n").trim();
+  if (!normalized) {
+    return null;
+  }
+  const mentionSafe = normalized
+    .replace(/@(?=(here|channel|everyone)\b)/gi, "@\u200B")
+    .replace(/<@/g, "<@\u200B")
+    .replace(/<!/g, "<!\u200B");
+  if (mentionSafe.length <= MAX_COMMENT_BODY_LENGTH) {
+    return mentionSafe;
+  }
+  return `${mentionSafe.slice(0, MAX_COMMENT_BODY_LENGTH - 3)}...`;
+}
+
 function buildMessage(payload: NotifyPayload) {
   const appUrl = resolveAppUrl();
   const deepLink = payload.socialPostId
@@ -134,19 +164,29 @@ function buildMessage(payload: NotifyPayload) {
 
   const contentType = EVENT_CONTENT_TYPE[payload.eventType];
   const action = EVENT_ACTION[payload.eventType];
-  const assignedTo = resolveAssignedTo(payload);
   const assignedBy = normalizeName(payload.actorName) ?? "Team";
+  const isCommentEvent = COMMENT_EVENT_TYPES.has(payload.eventType);
 
   // Line 1: [Social|Blog] Title (site)
   const headerLine = `[${contentType}] ${payload.title} (${payload.site})`;
   // Line 2: Action
   const actionLine = `Action: ${action}`;
+  // Line 5 (optional): Open link
+  const openLine = deepLink ? `Open link: ${deepLink}` : null;
+  if (isCommentEvent) {
+    const commentBody = normalizeCommentBody(payload.commentBody);
+    const byLine = `By: ${assignedBy}`;
+    const commentLine = commentBody ? `Comment:\n${commentBody}` : "Comment:\n(No comment text)";
+    const parts = [headerLine, actionLine, byLine, commentLine];
+    if (openLine) parts.push(openLine);
+    return parts.join("\n");
+  }
+
+  const assignedTo = resolveAssignedTo(payload);
   // Line 3: Assigned to
   const assignedToLine = `Assigned to: ${assignedTo}`;
   // Line 4: Assigned by
   const assignedByLine = `Assigned by: ${assignedBy}`;
-  // Line 5 (optional): Open link
-  const openLine = deepLink ? `Open link: ${deepLink}` : null;
 
   const parts = [headerLine, actionLine, assignedToLine, assignedByLine];
   if (openLine) parts.push(openLine);

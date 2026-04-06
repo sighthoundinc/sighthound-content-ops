@@ -89,6 +89,8 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Slack workflow alerts include `Open link: <deep link>` for linkable blog/social records.
 - Slack deep-link base URL resolution is deterministic: `NEXT_PUBLIC_APP_URL` → `APP_URL` → `https://sighthound-content-ops.vercel.app`.
 - Slack delivery suppresses preview unfurls (`unfurl_links: false`, `unfurl_media: false`) while retaining clickable links.
+- Blog/social comment creation emits Slack alerts with full multi-line comment text plus actor context (`By: <name>`).
+- Slack comment payload rendering preserves line breaks, caps length defensively, and neutralizes ping tokens before delivery.
 
 ## 7) API behavior contract (high-level)
 - Workflow transitions are API-authoritative.

@@ -114,3 +114,4 @@ What “explicit updates” means:
 - Each Slack workflow alert includes a clickable `Open link:` line when the item is linkable.
 - If app URL config is missing, links still work via fallback base URL: `https://sighthound-content-ops.vercel.app`.
 - Link previews are intentionally suppressed to keep channel alerts compact.
+- New blog/social comments also post to Slack with full comment text (multi-line), plus author and record context.

@@ -103,6 +103,11 @@ import {
   formatActivityChangeDescription,
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
+import {
+  getApiErrorMessage,
+  isApiFailure,
+  parseApiResponseJson,
+} from "@/lib/api-response";
 import { useAuth } from "@/providers/auth-provider";
 import { useSystemFeedback } from "@/providers/system-feedback-provider";
 import { logDashboardVisitEvent } from "@/app/actions/log-dashboard-visit";
@@ -590,7 +595,7 @@ const normalizeSavedViews = (value: unknown): SavedDashboardView[] => {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { hasPermission, profile, user } = useAuth();
+  const { hasPermission, profile, session, user } = useAuth();
   const { showError, showSuccess, showWarning } = useSystemFeedback();
   useEffect(() => {
     if (!user?.id) {
@@ -3074,6 +3079,10 @@ export default function DashboardPage() {
     if (!activeBlog || !user?.id) {
       return;
     }
+    if (!session?.access_token) {
+      setPanelError("Session expired. Refresh and try again.");
+      return;
+    }
     if (!canCreateComments) {
       setPanelError("You do not have permission to add comments.");
       return;
@@ -3087,37 +3096,22 @@ export default function DashboardPage() {
 
     setIsPanelCommentSaving(true);
     setPanelError(null);
-
-    const supabase = getSupabaseBrowserClient();
-    let { error: insertError } = await supabase
-      .schema("public")
-      .from("blog_comments")
-      .insert({
-        blog_id: activeBlog.id,
-        comment: trimmedComment,
-        user_id: user.id,
-      });
-
-    if (isMissingBlogCommentUserIdColumnError(insertError)) {
-      const fallback = await supabase
-        .schema("public")
-        .from("blog_comments")
-        .insert({
-          blog_id: activeBlog.id,
-          comment: trimmedComment,
-          created_by: user.id,
-        });
-      insertError = fallback.error;
+    const createResponse = await fetch(`/api/blogs/${activeBlog.id}/comments`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ comment: trimmedComment }),
+    }).catch(() => null);
+    if (!createResponse) {
+      setPanelError("Couldn't add comment. Please try again.");
+      setIsPanelCommentSaving(false);
+      return;
     }
-
-    if (insertError) {
-      if (isMissingBlogCommentsTableError(insertError)) {
-        setPanelError(
-          "Comments table is missing from schema cache. Run latest migrations and refresh schema cache."
-        );
-      } else {
-        setPanelError(insertError.message);
-      }
+    const createPayload = await parseApiResponseJson<Record<string, unknown>>(createResponse);
+    if (isApiFailure(createResponse, createPayload)) {
+      setPanelError(getApiErrorMessage(createPayload, "Couldn't add comment. Please try again."));
       setIsPanelCommentSaving(false);
       return;
     }

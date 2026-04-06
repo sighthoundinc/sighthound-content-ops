@@ -1,35 +1,45 @@
 # Slack Notifications Structure
 ## Overview
 Slack workflow notifications are channel-based and delivered to `#content-ops-alerts` through `supabase/functions/slack-notify`.
-For workflow create/transition/reminder flows, emission is centralized in `src/lib/server-slack-emitter.ts`.
+For workflow/comment create/transition/reminder flows, emission is centralized in `src/lib/server-slack-emitter.ts`.
 This keeps Slack delivery logic consistent across all UI surfaces that trigger the same workflow action.
 
 ## Centralized emission contract
-Use `emitWorkflowSlackEvent()` for all workflow create/transition/reminder Slack events.
+Use `emitWorkflowSlackEvent()` for all workflow/comment create/transition/reminder Slack events.
 
 Current centralized API-route emitters:
 - `src/app/api/blogs/route.ts`
+- `src/app/api/blogs/[id]/comments/route.ts`
 - `src/app/api/social-posts/route.ts`
+- `src/app/api/social-posts/[id]/comments/route.ts`
 - `src/app/api/blogs/[id]/transition/route.ts`
 - `src/app/api/social-posts/[id]/transition/route.ts`
 - `src/app/api/social-posts/reminders/route.ts`
 - `src/app/api/social-posts/overdue-checks/route.ts`
 - `src/app/api/blogs/overdue-checks/route.ts`
-Client-side direct Slack emits are not valid for create/transition/reminder paths.
+Client-side direct Slack emits are not valid for create/comment/transition/reminder paths.
 
 ## Message format
-All messages follow:
+Workflow/assignment events follow:
 - Line 1: `[Blog|Social] <Title> (<Site>)`
 - Line 2: `Action: <action text>`
 - Line 3: `Assigned to: <resolved user name(s) | Team>`
 - Line 4: `Assigned by: <resolved actor name | Team>`
 - Line 5 (optional): `Open link: <deep link>`
+Comment-created events follow:
+- Line 1: `[Blog|Social] <Title> (<Site>)`
+- Line 2: `Action: New comment`
+- Line 3: `By: <resolved actor name | Team>`
+- Line 4: `Comment:` with full multi-line comment text
+- Line 5 (optional): `Open link: <deep link>`
 
 Role labels are normalized out of assignee/actor lines. If no resolvable user name exists, fallback is `Team`.
+Comment text preserves line breaks, caps length defensively, and neutralizes Slack ping tokens (`@here`, `@channel`, `@everyone`, mention tokens).
 
 ## Active Slack workflow events
 Blog workflow events:
 - `blog_created`
+- `blog_comment_created`
 - `writer_assigned`
 - `writer_completed` (edge-function supported for backward compatibility)
 - `ready_to_publish`
@@ -38,6 +48,7 @@ Blog workflow events:
 
 Social workflow events:
 - `social_post_created`
+- `social_comment_created`
 - `social_submitted_for_review`
 - `social_changes_requested`
 - `social_creative_approved`
@@ -70,4 +81,4 @@ Social workflow events:
 
 ## Notes
 - Unified event emission (`emitEvent`) remains the source for activity history and in-app notification coupling.
-- The centralized Slack emitter is the source for workflow transition/reminder Slack delivery.
+- The centralized Slack emitter is the source for workflow/comment transition/reminder Slack delivery.

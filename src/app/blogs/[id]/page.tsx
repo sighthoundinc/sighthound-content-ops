@@ -535,6 +535,10 @@ export default function BlogDetailPage() {
     if (!blog || !user?.id) {
       return;
     }
+    if (!session?.access_token) {
+      setError("Session expired. Refresh and try again.");
+      return;
+    }
     if (!canCreateComments) {
       setError("You do not have permission to add comments.");
       return;
@@ -549,30 +553,36 @@ export default function BlogDetailPage() {
     setIsCommentSaving(true);
     setError(null);
     setCommentsUnavailableMessage(null);
+    const createResponse = await fetch(`/api/blogs/${blog.id}/comments`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ comment: trimmedComment }),
+    }).catch(() => null);
 
-    const supabase = getSupabaseBrowserClient();
-    const { error: insertError } = await supabase
-      .schema("public")
-      .from("blog_comments")
-      .insert({
-        blog_id: blog.id,
-        comment: trimmedComment,
-        user_id: user.id,
-      });
-
-
-    if (insertError) {
-      if (isMissingBlogCommentsTableError(insertError)) {
-        setCommentsUnavailableMessage(
-          "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
-        );
+    if (!createResponse) {
+      setError("Couldn't add comment. Please try again.");
+      setIsCommentSaving(false);
+      return;
+    }
+    const createPayload = await parseApiResponseJson<Record<string, unknown>>(createResponse);
+    if (isApiFailure(createResponse, createPayload)) {
+      const errorMessage = getApiErrorMessage(
+        createPayload,
+        "Couldn't add comment. Please try again."
+      );
+      if (errorMessage.toLowerCase().includes("comments table is missing")) {
+        setCommentsUnavailableMessage(errorMessage);
       } else {
-        console.error("Comment insert failed:", insertError);
-        setError("Couldn't add comment. Please try again.");
+        setError(errorMessage);
       }
       setIsCommentSaving(false);
       return;
     }
+
+    const supabase = getSupabaseBrowserClient();
 
     const { data: commentsData, error: commentsError } = await supabase
       .schema("public")

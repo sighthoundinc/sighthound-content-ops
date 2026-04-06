@@ -2029,6 +2029,10 @@ function SocialPostsPageContent() {
     if (!activePost || !user?.id) {
       return;
     }
+    if (!session?.access_token) {
+      setPanelError("Session expired. Refresh and try again.");
+      return;
+    }
     const trimmedComment = panelCommentDraft.trim();
     if (!trimmedComment) {
       setPanelError("Comment cannot be empty.");
@@ -2038,17 +2042,26 @@ function SocialPostsPageContent() {
     setIsCommentSaving(true);
     setPanelError(null);
 
-    const supabase = getSupabaseBrowserClient();
-    const { error: insertError } = await supabase.from("social_post_comments").insert({
-      social_post_id: activePost.id,
-      comment: trimmedComment,
-      user_id: user.id,
-      parent_comment_id: replyToComment?.id ?? null,
-    });
+    const createResponse = await fetch(`/api/social-posts/${activePost.id}/comments`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        comment: trimmedComment,
+        parent_comment_id: replyToComment?.id ?? null,
+      }),
+    }).catch(() => null);
 
-    if (insertError) {
-      console.error("Failed to add comment:", insertError);
+    if (!createResponse) {
       setPanelError("Couldn't add comment. Please try again.");
+      setIsCommentSaving(false);
+      return;
+    }
+    const createPayload = await parseApiResponseJson<Record<string, unknown>>(createResponse);
+    if (isApiFailure(createResponse, createPayload)) {
+      setPanelError(getApiErrorMessage(createPayload, "Couldn't add comment. Please try again."));
       setIsCommentSaving(false);
       return;
     }

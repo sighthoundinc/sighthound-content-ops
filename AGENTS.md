@@ -577,17 +577,24 @@ To keep idea intake predictable and avoid split editing patterns:
 - **Provider**: `NotificationsProvider` in root layout
 
 ### Slack Notification Display Contract (MUST)
-- Applies to all Slack-enabled workflow notifications regardless of event type.
-- Display lines must follow:
+- Applies to all Slack-enabled workflow and comment notifications.
+- Workflow/assignment event display lines must follow:
   1. `[Blog|Social] <Title> (<Site>)`
   2. `Action: <action text>`
   3. `Assigned to: <resolved user name(s) | Team>`
   4. `Assigned by: <resolved actor name | Team>`
   5. `Open link: <app-url>` when deep-linkable content exists
+- Comment-created event display lines must follow:
+  1. `[Blog|Social] <Title> (<Site>)`
+  2. `Action: New comment`
+  3. `By: <resolved actor name | Team>`
+  4. `Comment:` followed by full multi-line comment text
+  5. `Open link: <app-url>` when deep-linkable content exists
 - Role labels (`Writer`, `Editor`, `Publisher`, etc.) are not valid assignee/actor display values and must be normalized to resolved names or `Team`.
 - If multiple assignees exist, join with comma + space.
 - `Open link` must be resilient and must not depend on payload `appUrl`; deep-link base URL resolves in order: `NEXT_PUBLIC_APP_URL` → `APP_URL` → `https://sighthound-content-ops.vercel.app`.
 - Slack posts must keep links clickable while suppressing previews by setting `unfurl_links: false` and `unfurl_media: false` in both bot-token (`chat.postMessage`) and webhook delivery payloads.
+- Full comment text in Slack must preserve line breaks, cap length defensively, and neutralize Slack ping tokens (`@here`, `@channel`, `@everyone`, and mention tokens) to prevent accidental mass mentions.
 
 ### Notification Preferences Enforcement (MUST)
 
@@ -776,11 +783,13 @@ Workflow authority invariants:
 Reminder + notification invariants:
 - Awaiting-live-link reminder sweeps use `POST /api/social-posts/reminders`.
 - Reminder dedupe is enforced with `social_posts.last_live_link_reminder_at` using a 24-hour cooldown.
-- Social and blog workflow create/transition/reminder Slack events must emit through `emitWorkflowSlackEvent()` in `src/lib/server-slack-emitter.ts`.
-- Create/transition/reminder routes must not invoke `slack-notify` directly; use the centralized helper instead.
-- Covered centralized create/transition/reminder routes include:
+- Social and blog workflow/comment create/transition/reminder Slack events must emit through `emitWorkflowSlackEvent()` in `src/lib/server-slack-emitter.ts`.
+- Create/comment/transition/reminder routes must not invoke `slack-notify` directly; use the centralized helper instead.
+- Covered centralized create/comment/transition/reminder routes include:
   - `POST /api/blogs`
+  - `POST /api/blogs/[id]/comments`
   - `POST /api/social-posts`
+  - `POST /api/social-posts/[id]/comments`
   - `POST /api/blogs/[id]/transition`
   - `POST /api/social-posts/[id]/transition`
   - `POST /api/social-posts/reminders`

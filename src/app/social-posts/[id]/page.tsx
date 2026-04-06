@@ -1408,21 +1408,35 @@ export default function SocialPostEditorPage() {
       showError(VALIDATION_MESSAGES.sessionExpired);
       return;
     }
+    if (!session?.access_token) {
+      showError(VALIDATION_MESSAGES.sessionExpired);
+      return;
+    }
     const trimmedComment = commentDraft.trim();
     if (!trimmedComment) {
       showError("Comment cannot be empty.");
       return;
     }
     setIsCommentSaving(true);
-    const supabase = getSupabaseBrowserClient();
-    const { error: insertError } = await supabase.from("social_post_comments").insert({
-      social_post_id: post.id,
-      comment: trimmedComment,
-      user_id: user.id,
-      parent_comment_id: null,
-    });
-    if (insertError) {
-      showError(`Couldn't add comment. ${insertError.message}`);
+    const createResponse = await fetch(`/api/social-posts/${post.id}/comments`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        comment: trimmedComment,
+        parent_comment_id: null,
+      }),
+    }).catch(() => null);
+    if (!createResponse) {
+      showError("Couldn't add comment. Please try again.");
+      setIsCommentSaving(false);
+      return;
+    }
+    const createPayload = await parseApiResponseJson<Record<string, unknown>>(createResponse);
+    if (isApiFailure(createResponse, createPayload)) {
+      showError(getApiErrorMessage(createPayload, "Couldn't add comment. Please try again."));
       setIsCommentSaving(false);
       return;
     }

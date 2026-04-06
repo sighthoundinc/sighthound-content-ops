@@ -2,12 +2,14 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 export type SlackWorkflowEventType =
   | "blog_created"
+  | "blog_comment_created"
   | "writer_assigned"
   | "writer_completed"
   | "ready_to_publish"
   | "published"
   | "blog_publish_overdue"
   | "social_post_created"
+  | "social_comment_created"
   | "social_submitted_for_review"
   | "social_changes_requested"
   | "social_creative_approved"
@@ -26,6 +28,7 @@ type EmitWorkflowSlackEventInput = {
   socialPostId?: string | null;
   title: string;
   site: string;
+  commentBody?: string | null;
   actorName?: string | null;
   actorUserId?: string | null;
   targetUserName?: string | null;
@@ -66,6 +69,16 @@ function normalizeDisplayNameList(values: Array<string | null | undefined>) {
     normalized.push(candidate);
   }
   return normalized;
+}
+function normalizeCommentBody(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return trimmed;
 }
 
 async function resolveNameByUserId(adminClient: AdminClient, userIds: string[]) {
@@ -139,6 +152,7 @@ export async function emitWorkflowSlackEvent(
     (targetUserNames.length > 0 ? targetUserNames[0] : null) ??
     normalizeDisplayName(input.targetUserId ? nameByUserId.get(input.targetUserId) : undefined) ??
     "Team";
+  const commentBody = normalizeCommentBody(input.commentBody);
 
   try {
     await adminClient.functions.invoke("slack-notify", {
@@ -152,6 +166,7 @@ export async function emitWorkflowSlackEvent(
         targetUserName,
         targetUserNames: targetUserNames.length > 0 ? targetUserNames : undefined,
         appUrl: process.env.NEXT_PUBLIC_APP_URL,
+        commentBody,
       },
     });
   } catch (error) {

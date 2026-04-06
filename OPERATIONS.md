@@ -63,6 +63,9 @@ npm run check:full
 
 ### Slack delivery details
 - Edge function: `supabase/functions/slack-notify/index.ts`.
+- Centralized comment emitters:
+  - `POST /api/blogs/[id]/comments`
+  - `POST /api/social-posts/[id]/comments`
 - Deep-link base URL fallback order:
   1. `NEXT_PUBLIC_APP_URL`
   2. `APP_URL`
@@ -71,6 +74,7 @@ npm run check:full
 - Both bot-token and webhook sends suppress previews while keeping links clickable:
   - `unfurl_links: false`
   - `unfurl_media: false`
+- Comment notifications include full multi-line comment text with mention-token neutralization and defensive max-length capping.
 
 ## 8) Common failure patterns and quick response
 | Symptom | Likely cause | Response |

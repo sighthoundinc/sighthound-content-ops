@@ -14,6 +14,7 @@ const SOCIAL_PRODUCTS = [
 ] as const;
 const SOCIAL_TYPES = ["image", "carousel", "link", "video"] as const;
 const SOCIAL_PLATFORMS = ["linkedin", "facebook", "instagram"] as const;
+const DEFAULT_SOCIAL_POST_TITLE = "Untitled social post";
 
 const createSocialPostPayloadSchema = z
   .object({
@@ -22,6 +23,7 @@ const createSocialPostPayloadSchema = z
     type: z.enum(SOCIAL_TYPES),
     platforms: z.array(z.enum(SOCIAL_PLATFORMS)).optional(),
     scheduled_date: z.string().date().nullable().optional(),
+    associated_blog_id: z.string().uuid().nullable().optional(),
     worker_user_id: z.string().uuid().nullable().optional(),
     reviewer_user_id: z.string().uuid(),
   })
@@ -63,11 +65,12 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
   }
 
   const normalizedPlatforms = Array.from(new Set(payload.platforms ?? []));
+  const normalizedTitle = payload.title?.trim() || DEFAULT_SOCIAL_POST_TITLE;
 
   const { data: createdRow, error: createError } = await auth.context.adminClient
     .from("social_posts")
     .insert({
-      title: payload.title?.trim() ?? "",
+      title: normalizedTitle,
       product: payload.product,
       type: payload.type,
       scheduled_date: payload.scheduled_date ?? null,
@@ -76,6 +79,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       created_by: auth.context.userId,
       worker_user_id: workerUserId,
       reviewer_user_id: payload.reviewer_user_id,
+      associated_blog_id: payload.associated_blog_id ?? null,
     })
     .select(
       "id,title,product,type,canva_url,canva_page,caption,platforms,scheduled_date,status,created_by,worker_user_id,reviewer_user_id,created_at,updated_at,associated_blog_id,associated_blog:associated_blog_id(id,title,slug,site),creator:created_by(id,full_name,email),worker:worker_user_id(id,full_name,email),reviewer:reviewer_user_id(id,full_name,email)"
@@ -87,7 +91,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: invalidForeignKey
-          ? "Assigned users are invalid. Select valid team members and try again."
+          ? "Assigned users or associated blog are invalid. Select valid values and try again."
           : "Couldn't create post. Please try again.",
       },
       { status: invalidForeignKey ? 400 : 500 }
@@ -103,7 +107,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
   await emitWorkflowSlackEvent(auth.context.adminClient, {
     eventType: "social_post_created",
     socialPostId: createdRow.id,
-    title: createdRow.title || "Untitled social post",
+    title: createdRow.title || DEFAULT_SOCIAL_POST_TITLE,
     site: createdRow.product,
     actorUserId: auth.context.userId,
     targetUserId: workerUserId,

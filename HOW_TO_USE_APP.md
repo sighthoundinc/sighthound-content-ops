@@ -44,6 +44,9 @@ Ownership rule:
 | Published | Terminal | Done |
 
 Mandatory gates:
+- Social post creation in `Draft`: Product, Type, Assigned to, Reviewer
+- Optional at create: Title, Platforms, Scheduled date, Associated blog
+- If Title is left empty at create, the app saves it as `Untitled social post`
 - `Draft → In Review`: Product, Type, Canva URL
 - Execution transitions: Product, Type, Canva URL, Platforms, Caption, Scheduled Publish Date
 - `Awaiting Live Link → Published`: at least one valid public live link

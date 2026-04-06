@@ -660,6 +660,11 @@ function SocialPostsPageContent() {
   const [newScheduledDate, setNewScheduledDate] = useState("");
   const [newWorkerUserId, setNewWorkerUserId] = useState<string | null>(null);
   const [newReviewerUserId, setNewReviewerUserId] = useState<string | null>(null);
+  const [newAssociatedBlogId, setNewAssociatedBlogId] = useState<string | null>(null);
+  const [createBlogSearchQuery, setCreateBlogSearchQuery] = useState("");
+  const [createBlogSearchResults, setCreateBlogSearchResults] = useState<BlogLookupResult[]>([]);
+  const [isCreateBlogSearchOpen, setIsCreateBlogSearchOpen] = useState(false);
+  const [isCreateBlogSearchLoading, setIsCreateBlogSearchLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<
     Array<{ id: string; full_name: string; email: string }>
@@ -812,6 +817,10 @@ function SocialPostsPageContent() {
     setNewScheduledDate("");
     setNewWorkerUserId(isAdmin ? null : user?.id ?? null);
     setNewReviewerUserId(null);
+    setNewAssociatedBlogId(null);
+    setCreateBlogSearchQuery("");
+    setCreateBlogSearchResults([]);
+    setIsCreateBlogSearchOpen(false);
     setNewTitle("");
     setNewProduct(createDefaults.product);
     setNewType(createDefaults.type);
@@ -1246,6 +1255,38 @@ function SocialPostsPageContent() {
       window.clearTimeout(timeout);
     };
   }, [blogSearchQuery, isBlogSearchOpen]);
+  useEffect(() => {
+    const query = createBlogSearchQuery.trim();
+    if (!isCreateModalOpen || !isCreateBlogSearchOpen || query.length === 0) {
+      setCreateBlogSearchResults([]);
+      setIsCreateBlogSearchLoading(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void (async () => {
+        const supabase = getSupabaseBrowserClient();
+        setIsCreateBlogSearchLoading(true);
+        const { data, error: searchError } = await supabase.rpc("search_blog_lookup", {
+          p_query: query,
+          p_limit: 8,
+        });
+        if (searchError) {
+          console.error("Failed to search blogs for create modal:", searchError);
+          setError("Couldn't search blogs. Please try again.");
+          setCreateBlogSearchResults([]);
+          setIsCreateBlogSearchLoading(false);
+          return;
+        }
+        setCreateBlogSearchResults((data ?? []) as BlogLookupResult[]);
+        setIsCreateBlogSearchLoading(false);
+      })();
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [createBlogSearchQuery, isCreateBlogSearchOpen, isCreateModalOpen]);
 
   const calendarRange = useMemo(() => {
     if (calendarMode === "month") {
@@ -1503,6 +1544,7 @@ function SocialPostsPageContent() {
         scheduled_date: newScheduledDate || null,
         worker_user_id: workerUserId,
         reviewer_user_id: reviewerUserId,
+        associated_blog_id: newAssociatedBlogId,
       }),
     }).catch(() => null);
 
@@ -3670,6 +3712,73 @@ function SocialPostsPageContent() {
                     })}
                   </div>
                 </div>
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                    Associated Blog (optional)
+                  </span>
+                  <input
+                    value={createBlogSearchQuery}
+                    onFocus={() => {
+                      setIsCreateBlogSearchOpen(true);
+                    }}
+                    onChange={(event) => {
+                      setCreateBlogSearchQuery(event.target.value);
+                      setNewAssociatedBlogId(null);
+                      setIsCreateBlogSearchOpen(true);
+                    }}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    placeholder="Search blog title or slug..."
+                  />
+                  {newAssociatedBlogId ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                      <span>Linked blog ID: {newAssociatedBlogId}</span>
+                      <button
+                        type="button"
+                        className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100"
+                        onClick={() => {
+                          setNewAssociatedBlogId(null);
+                          setCreateBlogSearchQuery("");
+                          setCreateBlogSearchResults([]);
+                          setIsCreateBlogSearchOpen(false);
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  ) : null}
+                  {isCreateBlogSearchOpen ? (
+                    <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white">
+                      {isCreateBlogSearchLoading ? (
+                        <p className="px-3 py-2 text-sm text-slate-500">Searching blogs…</p>
+                      ) : createBlogSearchQuery.trim().length === 0 ? (
+                        <p className="px-3 py-2 text-sm text-slate-500">
+                          Type to search blogs.
+                        </p>
+                      ) : createBlogSearchResults.length === 0 ? (
+                        <p className="px-3 py-2 text-sm text-slate-500">No matching blogs.</p>
+                      ) : (
+                        createBlogSearchResults.map((blog) => (
+                          <button
+                            key={blog.id}
+                            type="button"
+                            className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                            onClick={() => {
+                              setNewAssociatedBlogId(blog.id);
+                              setCreateBlogSearchQuery(blog.title);
+                              setCreateBlogSearchResults([]);
+                              setIsCreateBlogSearchOpen(false);
+                            }}
+                          >
+                            <p className="text-sm font-medium text-slate-900">{blog.title}</p>
+                            <p className="text-xs text-slate-500">
+                              {blog.slug || "no-slug"} • {blog.site}
+                            </p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </label>
                 <div className="grid gap-3 md:grid-cols-2">
                   {isAdmin ? (
                     <label className="block">

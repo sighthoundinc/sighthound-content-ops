@@ -40,6 +40,12 @@ The product goal is predictable stage-based execution with explicit ownership an
 - `awaiting_live_link` → `published`
 - `awaiting_live_link` → `changes_requested`
 
+### Draft creation contract
+- New social posts are created in `draft`.
+- Required at create: `product`, `type`, `worker_user_id` (assigned owner), `reviewer_user_id`.
+- Optional at create: `title`, `platforms`, `scheduled_date`, `associated_blog_id`.
+- If `title` is empty at create, API normalizes it to `Untitled social post` to keep create non-blocking.
+
 ### Required fields by transition target
 | Target status | Required fields |
 |---|---|

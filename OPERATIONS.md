@@ -29,6 +29,9 @@ npm run check:full
   - `ready_to_publish`
   - `awaiting_live_link`
   - `published`
+- Draft create gate remains: Product, Type, Assigned to, Reviewer.
+- Optional draft-create fields remain non-blocking: Title, Platforms, Scheduled date, Associated blog.
+- Empty create title should auto-normalize to `Untitled social post` instead of failing create.
 - `published` requires at least one valid live link.
 - Execution-stage rollback to `changes_requested` requires a reason.
 

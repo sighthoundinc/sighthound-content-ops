@@ -14,6 +14,11 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 ### Social track
 Draft → In Review → Changes Requested → Creative Approved → Ready to Publish → Awaiting Live Link → Published
 
+Social post create contract:
+- Required at create: Product, Type, Assigned to, Reviewer
+- Optional at create: Title, Platforms, Scheduled date, Associated blog
+- Empty create title is normalized to `Untitled social post`
+
 ### Final gate
 Social posts must include at least one valid public live link before they can move to `Published`.
 

@@ -16,7 +16,6 @@ Current centralized API-route emitters:
 - `src/app/api/social-posts/overdue-checks/route.ts`
 - `src/app/api/blogs/overdue-checks/route.ts`
 Client-side direct Slack emits are not valid for create/transition/reminder paths.
-Client-side direct Slack emits are not valid for transition/reminder paths.
 
 ## Message format
 All messages follow:
@@ -52,8 +51,17 @@ Social workflow events:
 ## Routing and behavior
 - Slack delivery is channel-first (`#content-ops-alerts`).
 - Delivery uses bot-token posting when available, with webhook fallback.
+- Bot-token and webhook sends suppress previews while keeping links clickable (`unfurl_links: false`, `unfurl_media: false`).
 - Slack failures are non-blocking and do not fail the primary workflow mutation response.
 - Reminder and overdue sweeps use cooldown claim logic before emission to reduce duplicate notifications.
+
+## Open link resilience
+- `Open link:` is built from canonical record IDs (`blogId` / `socialPostId`) in the Slack edge function, not from payload `appUrl`.
+- Base app URL resolution order:
+  1. `NEXT_PUBLIC_APP_URL`
+  2. `APP_URL`
+  3. `https://sighthound-content-ops.vercel.app` (default fallback)
+- This guarantees deep links are included even when payload-level URL data is missing.
 
 ## Environment variables
 - `SLACK_BOT_TOKEN`

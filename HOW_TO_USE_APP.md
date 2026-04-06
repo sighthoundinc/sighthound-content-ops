@@ -108,3 +108,9 @@ What “explicit updates” means:
 3. Check transition gates
 4. Move stage
 5. Confirm handoff or wait-state
+
+## 10) Slack workflow alerts
+- Workflow updates are posted to `#content-ops-alerts`.
+- Each Slack workflow alert includes a clickable `Open link:` line when the item is linkable.
+- If app URL config is missing, links still work via fallback base URL: `https://sighthound-content-ops.vercel.app`.
+- Link previews are intentionally suppressed to keep channel alerts compact.

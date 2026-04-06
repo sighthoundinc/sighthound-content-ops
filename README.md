@@ -43,6 +43,11 @@ Social posts must include at least one valid public live link before they can mo
 - Review stages are owned by reviewer
 - Terminal stages are complete and have no active owner
 
+## Slack workflow alerts
+- Workflow Slack notifications are posted to `#content-ops-alerts`.
+- `Open link:` deep links are generated server-side from canonical content IDs and use resilient app URL fallback (`NEXT_PUBLIC_APP_URL` → `APP_URL` → `https://sighthound-content-ops.vercel.app`).
+- Slack delivery keeps links clickable while suppressing previews (`unfurl_links: false`, `unfurl_media: false`) for both bot-token and webhook paths.
+
 ## Documentation map
 - User workflow guide: `HOW_TO_USE_APP.md`
 - Technical behavior/spec: `SPECIFICATION.md`

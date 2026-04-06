@@ -586,6 +586,8 @@ To keep idea intake predictable and avoid split editing patterns:
   5. `Open link: <app-url>` when deep-linkable content exists
 - Role labels (`Writer`, `Editor`, `Publisher`, etc.) are not valid assignee/actor display values and must be normalized to resolved names or `Team`.
 - If multiple assignees exist, join with comma + space.
+- `Open link` must be resilient and must not depend on payload `appUrl`; deep-link base URL resolves in order: `NEXT_PUBLIC_APP_URL` → `APP_URL` → `https://sighthound-content-ops.vercel.app`.
+- Slack posts must keep links clickable while suppressing previews by setting `unfurl_links: false` and `unfurl_media: false` in both bot-token (`chat.postMessage`) and webhook delivery payloads.
 
 ### Notification Preferences Enforcement (MUST)
 

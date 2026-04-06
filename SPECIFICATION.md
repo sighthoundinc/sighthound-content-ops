@@ -86,6 +86,9 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Internal links open in same tab.
 - External links open in new tab.
 - Social post final completion requires saved live-link proof.
+- Slack workflow alerts include `Open link: <deep link>` for linkable blog/social records.
+- Slack deep-link base URL resolution is deterministic: `NEXT_PUBLIC_APP_URL` → `APP_URL` → `https://sighthound-content-ops.vercel.app`.
+- Slack delivery suppresses preview unfurls (`unfurl_links: false`, `unfurl_media: false`) while retaining clickable links.
 
 ## 7) API behavior contract (high-level)
 - Workflow transitions are API-authoritative.

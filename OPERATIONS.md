@@ -61,6 +61,17 @@ npm run check:full
 - Notification preference toggles should be respected at emission time.
 - Delivery failures should degrade safely without blocking core workflow transitions.
 
+### Slack delivery details
+- Edge function: `supabase/functions/slack-notify/index.ts`.
+- Deep-link base URL fallback order:
+  1. `NEXT_PUBLIC_APP_URL`
+  2. `APP_URL`
+  3. `https://sighthound-content-ops.vercel.app`
+- `Open link:` generation uses canonical record IDs (`blogId`/`socialPostId`) and must not depend on payload `appUrl`.
+- Both bot-token and webhook sends suppress previews while keeping links clickable:
+  - `unfurl_links: false`
+  - `unfurl_media: false`
+
 ## 8) Common failure patterns and quick response
 | Symptom | Likely cause | Response |
 |---|---|---|

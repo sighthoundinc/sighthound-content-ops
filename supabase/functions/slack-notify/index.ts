@@ -31,10 +31,30 @@ interface NotifyPayload {
   appUrl?: string;
 }
 
+function normalizeAppUrl(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.replace(/\/$/, "");
+}
+
+function resolveAppUrl() {
+  return (
+    normalizeAppUrl(Deno.env.get("NEXT_PUBLIC_APP_URL")) ??
+    normalizeAppUrl(Deno.env.get("APP_URL")) ??
+    DEFAULT_APP_URL
+  );
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+const DEFAULT_APP_URL = "https://sighthound-content-ops.vercel.app";
 
 
 const EVENT_CONTENT_TYPE: Record<EventType, string> = {
@@ -105,13 +125,12 @@ function resolveAssignedTo(payload: NotifyPayload) {
 }
 
 function buildMessage(payload: NotifyPayload) {
-  const deepLink = payload.appUrl
-    ? payload.socialPostId
-      ? `${payload.appUrl}/social-posts/${payload.socialPostId}`
-      : payload.blogId
-        ? `${payload.appUrl}/blogs/${payload.blogId}`
-        : null
-    : null;
+  const appUrl = resolveAppUrl();
+  const deepLink = payload.socialPostId
+    ? `${appUrl}/social-posts/${payload.socialPostId}`
+    : payload.blogId
+      ? `${appUrl}/blogs/${payload.blogId}`
+      : null;
 
   const contentType = EVENT_CONTENT_TYPE[payload.eventType];
   const action = EVENT_ACTION[payload.eventType];
@@ -201,6 +220,8 @@ serve(async (request) => {
         await callSlackApi(botToken, "chat.postMessage", {
           channel: marketingChannel,
           text,
+          unfurl_links: false,
+          unfurl_media: false,
         });
         delivered = true;
       } catch (error) {
@@ -217,6 +238,8 @@ serve(async (request) => {
           },
           body: JSON.stringify({
             text,
+            unfurl_links: false,
+            unfurl_media: false,
           }),
         });
         if (!webhookResponse.ok) {

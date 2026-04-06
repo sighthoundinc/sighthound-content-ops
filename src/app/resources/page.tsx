@@ -15,20 +15,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+    <section
+      id={id}
+      className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-4 md:p-5"
+    >
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
       <div className="space-y-3 text-sm text-slate-700">{children}</div>
     </section>
-  );
-}
-
-function BulletList({ items }: { items: string[] }) {
-  return (
-    <ul className="list-disc space-y-1 pl-5">
-      {items.map((item, index) => (
-        <li key={`${index}-${item}`}>{item}</li>
-      ))}
-    </ul>
   );
 }
 
@@ -50,363 +43,298 @@ export default function ResourcesPage() {
   return (
     <ProtectedPage>
       <AppShell>
-        <div className="space-y-5">
+        <div className="mx-auto max-w-5xl space-y-4 sm:space-y-5">
           <DataPageHeader
             title="User Manual"
-            description="Role-based manual with quick links for Writers, Publishers, Editors/Reviewers, and Admins."
+            description="Simple, stage-based guide for how content moves, who acts next, and what is required at each handoff."
           />
-          <Section id="vision" title="Vision">
-            <p>
-              Sighthound Content Relay is built to turn content execution into a reliable handoff
-              system from idea to live publish.
-            </p>
-            <BulletList
-              items={[
-                "Company vision: make planning, review, and publishing coordination predictable across every campaign.",
-                "App vision: every record has clear ownership, clear next action, and full workflow visibility.",
-                "Execution standard: reduce dropped handoffs and unclear priorities by keeping one shared source of truth.",
-              ]}
-            />
+
+          <Section id="quick-nav" title="Quick navigation">
+            <p>Jump to any section directly:</p>
+            <ul className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+              <li>
+                <a href="#what-this-app-does" className="font-medium text-sky-700 underline underline-offset-2">
+                  1) What this app does
+                </a>
+              </li>
+              <li>
+                <a href="#key-concepts" className="font-medium text-sky-700 underline underline-offset-2">
+                  2) Key concepts and ownership
+                </a>
+              </li>
+              <li>
+                <a href="#social-pipeline" className="font-medium text-sky-700 underline underline-offset-2">
+                  3) Social post pipeline
+                </a>
+              </li>
+              <li>
+                <a href="#blog-pipeline" className="font-medium text-sky-700 underline underline-offset-2">
+                  4) Blog pipeline
+                </a>
+              </li>
+              <li>
+                <a href="#daily-rhythm" className="font-medium text-sky-700 underline underline-offset-2">
+                  5) Daily execution rhythm
+                </a>
+              </li>
+              <li>
+                <a href="#tools" className="font-medium text-sky-700 underline underline-offset-2">
+                  6) Visibility tools
+                </a>
+              </li>
+              <li>
+                <a href="#gates" className="font-medium text-sky-700 underline underline-offset-2">
+                  7) Transition gates
+                </a>
+              </li>
+              <li>
+                <a href="#sop-card" className="font-medium text-sky-700 underline underline-offset-2">
+                  8) SOP card
+                </a>
+              </li>
+            </ul>
           </Section>
-          <Section id="start-here" title="1. Start here">
-            <p>This workspace helps you run blog and social-post work from draft to completion.</p>
+
+          <Section id="what-this-app-does" title="1) What this app does">
+            <p>
+              Content Relay is a stage-based workflow app for moving content from intake to
+              published output with clear ownership and required-field gates.
+            </p>
+            <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+              <table className="min-w-[640px] border-collapse text-left text-sm sm:min-w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-900">
+                    <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Track</th>
+                    <th className="py-2 pr-3 font-semibold sm:pr-4">What it manages</th>
+                    <th className="py-2 font-semibold">End state</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Blogs</td>
+                    <td className="py-2 pr-3 sm:pr-4">Editorial writing and publishing flow</td>
+                    <td className="py-2">Published blog</td>
+                  </tr>
+                  <tr>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Social Posts</td>
+                    <td className="py-2 pr-3 sm:pr-4">Creative, review, publishing, and live-link proof</td>
+                    <td className="py-2">Published post with valid live link</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Open work in <InternalPageLink href="/tasks">My Tasks</InternalPageLink>, monitor queues in{" "}
+              <InternalPageLink href="/dashboard">Dashboard</InternalPageLink>, and plan timing in{" "}
+              <InternalPageLink href="/calendar">Calendar</InternalPageLink>.
+            </p>
+          </Section>
+
+          <Section id="key-concepts" title="2) Key concepts and ownership">
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink> first to see what
-                needs action now.
+                <span className="font-medium text-slate-900">Stage:</span> the current status in the
+                workflow.
               </li>
-              <li>Use clear status steps to avoid skipped handoffs.</li>
-              <li>Use filters and imports to keep large queues manageable.</li>
-              <li>Use notifications to track assignments and stage changes.</li>
+              <li>
+                <span className="font-medium text-slate-900">Gate:</span> required fields or conditions
+                before a transition is allowed.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Handoff:</span> ownership change from one
+                actor to another.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Terminal stage:</span> done; no further
+                action required.
+              </li>
+            </ul>
+            <p className="font-medium text-slate-900">Ownership rule of thumb</p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Work stage = execution owner acts</li>
+              <li>Review stage = reviewer acts</li>
+              <li>Terminal stage = complete</li>
+            </ul>
+          </Section>
+
+          <Section id="social-pipeline" title="3) Social post pipeline">
+            <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+              <table className="min-w-[760px] border-collapse text-left text-sm sm:min-w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-900">
+                    <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Status</th>
+                    <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Owner</th>
+                    <th className="py-2 font-semibold">Required action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Draft</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creator/Worker</td>
+                    <td className="py-2">Complete essentials and submit for review</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">In Review</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer</td>
+                    <td className="py-2">Approve or request changes</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Changes Requested</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creator/Worker</td>
+                    <td className="py-2">Apply changes and resubmit</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creative Approved</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer</td>
+                    <td className="py-2">Confirm handoff to execution</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Ready to Publish</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creator/Worker</td>
+                    <td className="py-2">Publish the post</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Live Link</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creator/Worker</td>
+                    <td className="py-2">Submit at least one public live link</td>
+                  </tr>
+                  <tr>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Published</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Terminal</td>
+                    <td className="py-2">Done</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="font-medium text-slate-900">Mandatory gates</p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>`Draft → In Review`: Product, Type, Canva URL</li>
+              <li>
+                Later execution transitions: Product, Type, Canva URL, Platforms, Caption, Scheduled
+                Publish Date
+              </li>
+              <li>`Awaiting Live Link → Published`: at least one valid public live link</li>
+              <li>
+                Rollback from execution stages to `Changes Requested` requires a non-empty reason
+              </li>
             </ul>
             <p className="font-medium text-slate-900">
-              Keep this page as your day-to-day reference while operating the workflow.
+              Flow: Draft → In Review → (Changes Requested ↔ In Review) → Creative Approved → Ready to
+              Publish → Awaiting Live Link → Published
+            </p>
+            <p>
+              Work from <InternalPageLink href="/social-posts">Social Posts</InternalPageLink> and use{" "}
+              <InternalPageLink href="/tasks">My Tasks</InternalPageLink> for assignment-based priority.
             </p>
           </Section>
 
-          <Section id="role-quick-links" title="Role quick links">
-            <p>Jump directly to the role path you are operating right now:</p>
-            <ul className="grid gap-2 sm:grid-cols-2">
-              <li>
-                <a href="#writer-quick-start" className="font-medium text-sky-700 underline underline-offset-2">
-                  Writer quick start
-                </a>
-              </li>
-              <li>
-                <a href="#publisher-quick-start" className="font-medium text-sky-700 underline underline-offset-2">
-                  Publisher quick start
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#editor-reviewer-quick-start"
-                  className="font-medium text-sky-700 underline underline-offset-2"
-                >
-                  Editor/Reviewer quick start
-                </a>
-              </li>
-              <li>
-                <a href="#admin-quick-start" className="font-medium text-sky-700 underline underline-offset-2">
-                  Admin quick start
-                </a>
-              </li>
-              <li>
-                <a href="#shared-navigation-map" className="font-medium text-sky-700 underline underline-offset-2">
-                  Shared navigation map
-                </a>
-              </li>
-              <li>
-                <a href="#when-you-are-stuck" className="font-medium text-sky-700 underline underline-offset-2">
-                  When you are stuck
-                </a>
-              </li>
-            </ul>
+          <Section id="blog-pipeline" title="4) Blog pipeline">
+            <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+              <table className="min-w-[760px] border-collapse text-left text-sm sm:min-w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-900">
+                    <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Stage</th>
+                    <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Owner</th>
+                    <th className="py-2 font-semibold">Required action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writing stages</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned writing owner</td>
+                    <td className="py-2">Draft and refine content</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writing Approved</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Handoff point</td>
+                    <td className="py-2">Transfer execution to publishing flow</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publishing in Progress</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned publishing owner</td>
+                    <td className="py-2">Prepare and execute publish steps</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Publishing Approval</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer checkpoint</td>
+                    <td className="py-2">Validate readiness before final completion</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publishing Approved</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned publishing owner</td>
+                    <td className="py-2">Complete final publication action</td>
+                  </tr>
+                  <tr>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Published</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Terminal</td>
+                    <td className="py-2">Done</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Use <InternalPageLink href="/blogs">Blogs</InternalPageLink> for record-level workflow and{" "}
+              <InternalPageLink href="/tasks">My Tasks</InternalPageLink> to execute owned stages.
+            </p>
           </Section>
 
-          <Section id="shared-navigation-map" title="Shared navigation map">
+          <Section id="daily-rhythm" title="5) Daily execution rhythm">
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>
+                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink>
+              </li>
+              <li>Work `Required by me` first</li>
+              <li>Confirm required fields/checklist</li>
+              <li>Transition status when gate is satisfied</li>
+              <li>Track dependencies in `Waiting on Others`</li>
+            </ol>
+            <p>
+              “Explicit updates” means transitions reflect true state, rollback reasons are included
+              when sending work back, and publish proof is attached before completion.
+            </p>
+          </Section>
+
+          <Section id="tools" title="6) Visibility tools">
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                <InternalPageLink href="/dashboard">Dashboard</InternalPageLink>: cross-content
-                queue view with filters and sort controls.
+                <InternalPageLink href="/tasks">My Tasks</InternalPageLink>: what needs your action
+                now
               </li>
               <li>
-                <InternalPageLink href="/tasks">My Tasks</InternalPageLink>: assignment-first
-                execution queue.
+                <InternalPageLink href="/dashboard">Dashboard</InternalPageLink>: cross-content queue
+                health
               </li>
               <li>
-                <InternalPageLink href="/blogs">Blogs</InternalPageLink>: published/reference
-                lookup and copy/export actions.
+                <InternalPageLink href="/calendar">Calendar</InternalPageLink>: scheduled workload and
+                timing
               </li>
               <li>
-                <InternalPageLink href="/social-posts">Social Posts</InternalPageLink>: social
-                workflow list plus full editor.
-              </li>
-              <li>
-                <InternalPageLink href="/ideas">Ideas</InternalPageLink>: intake and conversion
-                into blogs or social posts.
-              </li>
-              <li>
-                <InternalPageLink href="/calendar">Calendar</InternalPageLink>: scheduling and
-                capacity planning.
-              </li>
-              <li>
-                <InternalPageLink href="/settings">Settings</InternalPageLink>: profile,
-                connectors, notifications, and admin tools.
+                <InternalPageLink href="/settings">Settings</InternalPageLink>: personal preferences,
+                notifications, connectors
               </li>
             </ul>
           </Section>
 
-          <Section id="writer-quick-start" title="Writer quick start">
-            <ol className="list-decimal space-y-1 pl-5">
-              <li>
-                Start in <InternalPageLink href="/tasks">My Tasks</InternalPageLink> and focus on{" "}
-                `Required by: &lt;username&gt;`.
-              </li>
-              <li>Open assigned records and complete required fields/checklist items.</li>
-              <li>For social posts, ensure Product, Type, and Canva link are complete before review submission.</li>
-              <li>Move stages forward only when validation is complete and handoff context is clear.</li>
-              <li>Use `Waiting on Others` to track blocked handoffs.</li>
-            </ol>
-          </Section>
-
-          <Section id="publisher-quick-start" title="Publisher quick start">
-            <ol className="list-decimal space-y-1 pl-5">
-              <li>
-                Start in <InternalPageLink href="/tasks">My Tasks</InternalPageLink> and focus on
-                publishing-stage records.
-              </li>
-              <li>Blogs auto-move to `Publishing in Progress` when writing is marked complete and a publisher is assigned.</li>
-              <li>Confirm publish date readiness and required publishing fields.</li>
-              <li>Complete publishing steps only after upstream approvals are complete.</li>
-              <li>Add/update required links (blog live URL or social live links).</li>
-              <li>
-                Use <InternalPageLink href="/calendar">Calendar</InternalPageLink> for near-term
-                schedule conflict checks.
-              </li>
-            </ol>
-          </Section>
-
-          <Section id="editor-reviewer-quick-start" title="Editor/Reviewer quick start">
-            <ol className="list-decimal space-y-1 pl-5">
-              <li>
-                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink> for review-stage
-                records.
-              </li>
-              <li>Review quality and required field completeness.</li>
-              <li>Use `Changes Requested` for actionable revision guidance when needed.</li>
-              <li>Approve only when the next owner can execute without missing context.</li>
-              <li>Use record-level Activity to verify change history and ownership transitions.</li>
-            </ol>
-          </Section>
-
-          <Section id="admin-quick-start" title="Admin quick start">
-            <ol className="list-decimal space-y-1 pl-5">
-              <li>
-                Use <InternalPageLink href="/dashboard">Dashboard</InternalPageLink> and{" "}
-                <InternalPageLink href="/tasks">My Tasks</InternalPageLink> to spot workflow
-                bottlenecks.
-              </li>
-              <li>
-                Use <InternalPageLink href="/settings">Settings</InternalPageLink> to manage
-                users, permissions, and connectors.
-              </li>
-              <li>Use Activity History for audit review and troubleshooting.</li>
-              <li>Use quick-view to validate non-admin experience when triaging user reports.</li>
-              <li>Use destructive actions (cleanup, wipe) only after confirming scope and impact.</li>
-            </ol>
-          </Section>
-
-          <Section id="when-you-are-stuck" title="When you are stuck">
-            <p>Use these internal links to get unstuck quickly:</p>
+          <Section id="gates" title="7) Transition gates (quick reference)">
             <ul className="list-disc space-y-1 pl-5">
-              <li>
-                <a
-                  href="#workflow-rules-statuses"
-                  className="font-medium text-sky-700 underline underline-offset-2"
-                >
-                  Workflow rules and statuses
-                </a>
-              </li>
-              <li>
-                <a href="#filters-search" className="font-medium text-sky-700 underline underline-offset-2">
-                  Filters and search
-                </a>
-              </li>
-              <li>
-                <a href="#imports" className="font-medium text-sky-700 underline underline-offset-2">
-                  Import workflow
-                </a>
-              </li>
-              <li>
-                <a href="#notifications" className="font-medium text-sky-700 underline underline-offset-2">
-                  Notifications and feedback
-                </a>
-              </li>
-              <li>
-                <a href="#troubleshooting" className="font-medium text-sky-700 underline underline-offset-2">
-                  Troubleshooting quick fixes
-                </a>
-              </li>
+              <li>Do not transition unless required target-stage fields are complete</li>
+              <li>Do not publish social content without a valid saved live link</li>
+              <li>Do not rollback execution-stage social work without a reason</li>
+              <li>Do not finalize blog publishing before writing handoff and review checkpoint</li>
             </ul>
           </Section>
 
-          <Section id="daily-workflow" title="2. Daily workflow (recommended order)">
+          <Section id="sop-card" title="8) SOP card">
+            <p className="font-medium text-slate-900">One-screen daily SOP</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
-                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink> and review what is
-                assigned and due.
+                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink>
               </li>
-              <li>Open each item and complete required fields/checklist items.</li>
-              <li>Move status forward only when the current stage is complete.</li>
-              <li>Use filters to focus on one queue (status, product, type, owner).</li>
-              <li>
-                For <InternalPageLink href="/social-posts">Social Posts</InternalPageLink>, add at
-                least one public live link before final completion.
-              </li>
+              <li>Execute `Required by me`</li>
+              <li>Validate transition gates</li>
+              <li>Move stage forward</li>
+              <li>Confirm handoff or wait-state</li>
             </ol>
-          </Section>
-
-          <Section id="workflow-rules-statuses" title="3. Workflow rules and statuses">
-            <p className="font-semibold text-slate-900">Blog status language:</p>
-            <BulletList
-              items={[
-                "Writer labels: Awaiting Editorial Review, Writing Approved.",
-                "Publisher flow: Not Started → Publishing in Progress → Awaiting Publishing Approval → Publishing Approved → Published.",
-              ]}
-            />
-            <p className="font-semibold text-slate-900">Social post status model:</p>
-            <BulletList
-              items={[
-                "Draft",
-                "In Review",
-                "Changes Requested",
-                "Creative Approved",
-                "Ready to Publish",
-                "Awaiting Live Link",
-                "Published",
-              ]}
-            />
-            <p className="font-semibold text-slate-900">Social next actions:</p>
-            <BulletList
-              items={[
-                "Draft → Submit for Review",
-                "In Review → Review Needed",
-                "Changes Requested → Apply Changes",
-                "Creative Approved → Add Caption & Schedule",
-                "Ready to Publish → Publish Post",
-                "Awaiting Live Link → Submit Link",
-                "Published → Done",
-              ]}
-            />
-            <p className="font-semibold text-slate-900">Workflow rules to remember:</p>
-            <BulletList
-              items={[
-                "Social editors can collaborate on the same post concurrently.",
-                "When writing is approved on a blog, assigned publishing work is auto-jogged from Not Started to Publishing in Progress unless an explicit publishing stage is sent in the same update.",
-                "At Publishing Approved, the assigned publisher remains the next actor; admin publisher-review assignments are no longer actionable at that stage.",
-                "Execution stages keep brief fields read-only for stable handoff.",
-                "Returning from execution to Changes Requested requires a reason.",
-                "Published requires at least one valid live link (LinkedIn, Facebook, or Instagram).",
-                "On Ideas, comments and references stay visible and are edited through Edit Idea (not inline).",
-              ]}
-            />
-          </Section>
-
-          <Section id="filters-search" title="4. Filters and search">
-            <BulletList
-              items={[
-                "Search is case-insensitive and supports partial matches.",
-                "Combine filters to narrow to actionable work quickly.",
-                "Filters persist until changed or cleared.",
-                "If no results appear, clear one filter at a time to isolate the blocker.",
-                "Grouped dashboard filters: Cross-Content Scope, Blog Filters, and Social Filters.",
-                "Scope-safe behavior: blog-only filters pass through social rows, and social-only filters pass through blog rows.",
-              ]}
-            />
-            <p className="font-semibold text-slate-900">Table sorting and controls:</p>
-            <BulletList
-              items={[
-                "Click table headers to sort ascending/descending.",
-                "Sort indicators: ↕ (unsorted), ↑ (ascending), ↓ (descending).",
-                "Global action order: Copy → Customize → Import → Export.",
-                "Phase A selection: both blog and social rows can be selected in the first column.",
-                "Safety gate: blog mutation controls are disabled whenever any social row is selected.",
-                "Selected CSV/PDF export supports mixed selected rows.",
-              ]}
-            />
-          </Section>
-
-          <Section id="imports" title="5. Import workflow">
-            <ol className="list-decimal space-y-1 pl-5">
-              <li>Upload your sheet.</li>
-              <li>Map/select columns and unselect non-required columns.</li>
-              <li>Use sheet preview to select/unselect rows before import.</li>
-              <li>Exclude error rows and correct key-field issues.</li>
-              <li>Run import and update optional fields later if needed.</li>
-            </ol>
-            <p className="font-semibold text-slate-900">Required key columns:</p>
-            <BulletList
-              items={[
-                "SH or RED",
-                "Full blog title",
-                "Full published blog URL",
-                "Blog writer name",
-                "Person who published",
-                "Date shown on blog (YYYY-MM-DD)",
-              ]}
-            />
-          </Section>
-
-          <Section id="shortcuts" title="6. Shortcuts and fast navigation">
-            <BulletList
-              items={[
-                "Use the clickable Shortcut label to open the shortcuts modal.",
-                "Command palette: ⌘K (Mac) or Ctrl+K (Windows).",
-                "Esc closes open dropdowns and modals.",
-                "Quick Create: ↑/↓ to move, Enter to select, Esc to close.",
-              ]}
-            />
-          </Section>
-
-          <Section id="notifications" title="7. Notifications and feedback">
-            <p className="font-semibold text-slate-900">Notification bell:</p>
-            <BulletList
-              items={[
-                "Tracks assignments, stage changes, submissions, publications, and mentions.",
-                "Unread badge shows what still needs review.",
-                "Click any item to jump to the related record.",
-              ]}
-            />
-            <p className="font-semibold text-slate-900">Notification preferences:</p>
-            <ul className="list-disc space-y-1 pl-5">
-              <li>
-                <InternalPageLink href="/settings">Settings</InternalPageLink> → Notification
-                Preferences controls all notification types.
-              </li>
-              <li>Use global on/off plus per-type toggles.</li>
-              <li>Slack notifications route to the shared `#content-ops-alerts` channel.</li>
-            </ul>
-            <p className="font-semibold text-slate-900">Action feedback:</p>
-            <BulletList
-              items={[
-                "Success/error alerts appear at the bottom-left and auto-dismiss quickly.",
-                "Copy actions show a visual copied confirmation.",
-              ]}
-            />
-          </Section>
-
-          <Section id="troubleshooting" title="8. Troubleshooting quick fixes">
-            <BulletList
-              items={[
-                "Cannot move status: finish required checklist items and save first.",
-                "Social post stuck before completion: add at least one valid public live link.",
-                "Missing results: clear filters/search and reapply one by one.",
-                "Import errors: unselect invalid rows, verify required columns, then retry.",
-                "If branding assets fail, fallback order is automatic: login (text-logo SVG → text-logo PNG → badge SVG → text lockup) and app header badge (animated GIF → badge SVG → SH lockup).",
-                "Missing notifications: verify notification toggles and connector status in Settings (/settings).",
-                "Unexpected UI state: refresh once, retry action, then report with item ID and step where it failed.",
-              ]}
-            />
           </Section>
         </div>
       </AppShell>

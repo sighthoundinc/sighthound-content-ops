@@ -67,6 +67,8 @@ Detail page ordering rule:
 - Workflow summary brief: `docs/CONTENT_RELAY_DOCUMENTATION_BRIEF.md`
 
 ## Local setup
+Prerequisite:
+- Node.js `20.x`
 1. Install dependencies
 ```bash
 npm install

@@ -1,1 +1,2 @@
-npx lint-staged
+# Pre-commit lint-staged disabled per request.
+exit 0

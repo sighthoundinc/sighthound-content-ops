@@ -688,9 +688,9 @@ export default function SocialPostEditorPage() {
       }
       const normalized = normalizePostRow((data ?? {}) as Record<string, unknown>);
       setPost(normalized);
-      const nextForm = createFormFromPost(normalized);
-      setForm(nextForm);
-      setSavedFormSnapshot(createSocialEditorFormSnapshot(nextForm));
+      const refreshedForm = createFormFromPost(normalized);
+      setForm(refreshedForm);
+      setSavedFormSnapshot(createSocialEditorFormSnapshot(refreshedForm));
       updateStatus(statusId, { type: "success", message: VALIDATION_MESSAGES.postSaved });
       setIsSaving(false);
       return true;

@@ -603,7 +603,7 @@ function BlogLibraryPageContent() {
       if (commentsError) {
         if (isMissingBlogCommentsTableError(commentsError)) {
           setPanelError(
-            "Comments table is missing from schema cache. Run latest migrations and refresh schema cache."
+            "Comments are temporarily unavailable right now. Please try again in a moment."
           );
         } else {
           setPanelError(commentsError.message);
@@ -1427,7 +1427,7 @@ function BlogLibraryPageContent() {
                             resetColumnVisibility();
                           }}
                         >
-                          Reset
+                          Reset Defaults
                         </button>
                       </div>
                       <div className="mt-2 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">

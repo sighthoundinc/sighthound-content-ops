@@ -305,6 +305,20 @@ export default function ResourcesPage() {
                 health
               </li>
               <li>
+                Dashboard overview and snapshot insights are tuned for speed and clarity, with
+                smooth background refresh to keep the experience responsive while you navigate.
+              </li>
+              <li>
+                Dashboard filtering: start with <span className="font-medium">Lens</span>, then use
+                default filters (`Content Type`, `Status`, `Assigned to`, `Site`), and open{" "}
+                <span className="font-medium">More filters</span> only for advanced blog/social
+                filters.
+              </li>
+              <li>
+                Filter options show contextual counts, and <span className="font-medium">Lens shortcuts</span>{" "}
+                let you save frequently used lens views for one-click reuse.
+              </li>
+              <li>
                 <InternalPageLink href="/calendar">Calendar</InternalPageLink>: scheduled workload and
                 timing
               </li>

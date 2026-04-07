@@ -157,7 +157,7 @@ export default function IdeasPage() {
     nextDescription: string;
   }) => {
     if (!user?.id) {
-      setError("You must be logged in.");
+      setError("Please sign in to continue.");
       return false;
     }
 
@@ -288,7 +288,7 @@ export default function IdeasPage() {
   };
   const handleDeleteIdea = (idea: BlogIdeaRecord) => {
     if (!session?.access_token) {
-      setError("You must be logged in.");
+      setError("Please sign in to continue.");
       return;
     }
     if (deletingIdeaId) {
@@ -299,7 +299,7 @@ export default function IdeasPage() {
 
   const confirmDeleteIdea = async () => {
     if (!session?.access_token || !pendingDeleteIdea) {
-      setError("You must be logged in.");
+      setError("Please sign in to continue.");
       return;
     }
     setDeletingIdeaId(pendingDeleteIdea.id);
@@ -312,7 +312,7 @@ export default function IdeasPage() {
     });
     const payload = await parseApiResponseJson<Record<string, unknown>>(response);
     if (isApiFailure(response, payload)) {
-      showError(getApiErrorMessage(payload, "Failed to delete idea."));
+      showError(getApiErrorMessage(payload, "Couldn't delete idea. Please try again."));
       setDeletingIdeaId(null);
       return;
     }
@@ -559,7 +559,7 @@ export default function IdeasPage() {
                     disabled={isSubmitting}
                     className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSubmitting ? "Saving..." : "Save Idea"}
+                    {isSubmitting ? "Creating..." : "Create Idea"}
                   </button>
                   <button
                     type="button"

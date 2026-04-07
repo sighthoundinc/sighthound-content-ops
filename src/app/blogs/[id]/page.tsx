@@ -292,7 +292,7 @@ export default function BlogDetailPage() {
         if (isMissingBlogCommentsTableError(commentsError)) {
           setComments([]);
           setCommentsUnavailableMessage(
-            "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
+            "Comments are temporarily unavailable right now. Please try again shortly."
           );
         } else {
           console.error("Comments load failed:", commentsError);
@@ -730,7 +730,7 @@ export default function BlogDetailPage() {
     if (commentsError) {
       if (isMissingBlogCommentsTableError(commentsError)) {
         setCommentsUnavailableMessage(
-          "Comments table is missing from schema cache. Run the latest Supabase migrations and refresh schema cache."
+          "Comments are temporarily unavailable right now. Please try again shortly."
         );
       } else {
         console.error("Comments refresh failed:", commentsError);
@@ -1262,7 +1262,7 @@ export default function BlogDetailPage() {
           </section>
           <nav
             aria-label="Detail sections"
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 xl:hidden"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 lg:hidden"
           >
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Jump to
@@ -1279,7 +1279,7 @@ export default function BlogDetailPage() {
           </nav>
 
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-6">
               <section id="blog-details" className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -1887,8 +1887,8 @@ export default function BlogDetailPage() {
             )}
           </section>
             </div>
-            <aside className="hidden xl:block">
-              <div className="space-y-3 xl:sticky xl:top-20">
+            <aside className="hidden lg:block">
+              <div className="space-y-3 lg:sticky lg:top-20">
                 <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">

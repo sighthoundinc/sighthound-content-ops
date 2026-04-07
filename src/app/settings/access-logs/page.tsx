@@ -317,7 +317,7 @@ export default function AccessLogsPage() {
           </nav>
           <DataPageHeader
             title="Activity History"
-            description="View access and workflow activity in plain language"
+            description="Review sign-ins and workflow activity in clear, human-friendly language"
           />
 
           {error && (
@@ -354,7 +354,7 @@ export default function AccessLogsPage() {
                       >
                         <span className="block truncate">
                           {pendingActivityTypes.length === 0
-                            ? "Select activity types"
+                            ? "Choose activity types"
                             : `${pendingActivityTypes.length} selected`}
                         </span>
                       </button>
@@ -386,7 +386,7 @@ export default function AccessLogsPage() {
 
                   {/* User Dropdown */}
                   <div className="min-w-[16rem] flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Users</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Team Members</label>
                     <div className="relative" ref={userDropdownRef}>
                       <button
                         type="button"
@@ -407,7 +407,7 @@ export default function AccessLogsPage() {
                       >
                         <span className="block truncate">
                           {pendingUserIds.length === 0
-                            ? "Select users"
+                            ? "Choose team members"
                             : `${pendingUserIds.length} selected`}
                         </span>
                       </button>
@@ -459,14 +459,14 @@ export default function AccessLogsPage() {
                   disabled={isSaving || (JSON.stringify(pendingActivityTypes) === JSON.stringify(selectedActivityTypes) && JSON.stringify(pendingUserIds) === JSON.stringify(selectedUserIds))}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
                 >
-                  {isSaving ? "Saving..." : "Apply Filters"}
+                  {isSaving ? "Saving..." : "Apply"}
                 </button>
               </div>
             </div>
           )}
 
           {!isLoading && totalCount === 0 && !error && (
-            <DataPageEmptyState title="No activity yet" description="Login and dashboard activity will appear here" />
+            <DataPageEmptyState title="No activity yet" description="Sign-ins and workflow actions will appear here" />
           )}
 
           {!isLoading && totalCount > 0 && !error && (

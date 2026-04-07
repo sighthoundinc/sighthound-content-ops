@@ -1,10 +1,10 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 
 export const SOCIAL_TASK_SELECT_WITH_OWNERSHIP =
-  "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,editor_user_id,admin_owner_id";
+  "id,title,type,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,editor_user_id,admin_owner_id,associated_blog:associated_blog_id(site)";
 
 export const SOCIAL_TASK_SELECT_LEGACY =
-  "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id";
+  "id,title,type,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,associated_blog:associated_blog_id(site)";
 
 export function isMissingSocialOwnershipColumnsError(
   error: Pick<PostgrestError, "code" | "message" | "details" | "hint"> | null | undefined

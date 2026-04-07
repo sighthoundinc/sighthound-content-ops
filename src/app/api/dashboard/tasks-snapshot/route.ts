@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiContract } from "@/lib/api-contract";
-import {
-  BLOG_SELECT_WITH_DATES,
-  getBlogPublishDate,
-  normalizeBlogRows,
-} from "@/lib/blog-schema";
+import { getBlogPublishDate } from "@/lib/blog-schema";
 import {
   PUBLISHER_STATUS_LABELS,
   SOCIAL_POST_STATUS_LABELS,
@@ -15,14 +11,15 @@ import {
   getSocialTaskActionStateFromRow,
   type TaskActionState,
 } from "@/lib/task-action-state";
-import {
-  isMissingSocialOwnershipColumnsError,
-  SOCIAL_TASK_SELECT_LEGACY,
-  SOCIAL_TASK_SELECT_WITH_OWNERSHIP,
-} from "@/lib/social-post-schema";
-import { ACTIVE_SOCIAL_STATUSES, assertValidStatus } from "@/lib/task-logic";
+import { fetchSharedTaskClassificationInputs } from "@/lib/server-task-classification-inputs";
+import { assertValidStatus } from "@/lib/task-logic";
 import { requirePermission } from "@/lib/server-permissions";
-import type { BlogRecord, SocialPostStatus } from "@/lib/types";
+import type { SocialPostStatus } from "@/lib/types";
+import {
+  buildUserScopedResponseCacheKey,
+  getServerResponseCacheValue,
+  setServerResponseCacheValue,
+} from "@/lib/server-response-cache";
 
 
 type SnapshotTask = {
@@ -40,6 +37,9 @@ type SnapshotResponse = {
   requiredByMe: SnapshotTask[];
   waitingOnOthers: SnapshotTask[];
 };
+const DASHBOARD_SNAPSHOT_CACHE_TTL_MS = 30_000;
+const DASHBOARD_SNAPSHOT_CACHE_CONTROL =
+  "private, max-age=30, stale-while-revalidate=30";
 
 function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
   if (leftDate && rightDate) {
@@ -66,102 +66,40 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     if (!profile) {
       return NextResponse.json({ error: "User profile not found." }, { status: 401 });
     }
+    const cacheKey = buildUserScopedResponseCacheKey(
+      "dashboard:tasks-snapshot",
+      profile.id
+    );
+    const cachedSnapshot = getServerResponseCacheValue<SnapshotResponse>(cacheKey);
+    if (cachedSnapshot) {
+      return NextResponse.json(cachedSnapshot, {
+        headers: {
+          "Cache-Control": DASHBOARD_SNAPSHOT_CACHE_CONTROL,
+        },
+      });
+    }
 
     const userId = profile.id;
     const isAdmin =
       profile.role === "admin" ||
       (Array.isArray(profile.user_roles) && profile.user_roles.includes("admin"));
 
-    const { data: assignments, error: assignmentError } = await adminClient
-      .from("task_assignments")
-      .select("blog_id,task_type")
-      .eq("assigned_to_user_id", userId)
-      .eq("status", "pending");
-
-    if (assignmentError && !assignmentError.message.includes("task_assignments")) {
+    const sharedInputs = await fetchSharedTaskClassificationInputs({
+      adminClient,
+      userId,
+    });
+    if (!sharedInputs.data || sharedInputs.error) {
       return NextResponse.json(
-        { error: "Failed to load task assignments." },
+        { error: sharedInputs.error?.message ?? "Failed to load task inputs." },
         { status: 500 }
       );
     }
 
-    const assignmentMap = new Map<
-      string,
-      Array<{ taskType: "writer_review" | "publisher_review" }>
-    >();
-    const assignedBlogIdSet = new Set<string>();
-    for (const assignment of assignments ?? []) {
-      if (
-        typeof assignment.blog_id === "string" &&
-        typeof assignment.task_type === "string"
-      ) {
-        const existingAssignments = assignmentMap.get(assignment.blog_id) ?? [];
-        existingAssignments.push({
-          taskType: assignment.task_type as "writer_review" | "publisher_review",
-        });
-        assignmentMap.set(assignment.blog_id, existingAssignments);
-        assignedBlogIdSet.add(assignment.blog_id);
-      }
-    }
-    const assignedBlogIds = Array.from(assignedBlogIdSet);
-
-    let blogQuery = adminClient
-      .from("blogs")
-      .select(BLOG_SELECT_WITH_DATES)
-      .eq("is_archived", false)
-      .neq("overall_status", "published");
-    if (assignedBlogIds.length > 0) {
-      blogQuery = blogQuery.or(
-        `writer_id.eq.${userId},publisher_id.eq.${userId},id.in.(${assignedBlogIds.join(",")})`
-      );
-    } else {
-      blogQuery = blogQuery.or(`writer_id.eq.${userId},publisher_id.eq.${userId}`);
-    }
-
-    const { data: blogRows, error: blogError } = await blogQuery
-      .order("scheduled_publish_date", { ascending: true, nullsFirst: false })
-      .order("updated_at", { ascending: false });
-
-    if (blogError) {
-      return NextResponse.json({ error: "Failed to load blog tasks." }, { status: 500 });
-    }
-
-    const normalizedBlogs = normalizeBlogRows(
-      (blogRows ?? []) as Array<Record<string, unknown>>
-    ) as BlogRecord[];
-
-    const fetchSocialRows = async (includeOwnershipColumns: boolean) => {
-      let query = adminClient
-        .from("social_posts")
-        .select(
-          includeOwnershipColumns
-            ? SOCIAL_TASK_SELECT_WITH_OWNERSHIP
-            : SOCIAL_TASK_SELECT_LEGACY
-        )
-        .in("status", ACTIVE_SOCIAL_STATUSES);
-
-      query = query.or(
-        includeOwnershipColumns
-          ? `assigned_to_user_id.eq.${userId},worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
-          : `worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
-      );
-
-      return query.order("scheduled_date", { ascending: true, nullsFirst: false });
-    };
-
-    let { data: socialRows, error: socialError } = await fetchSocialRows(true);
-    if (isMissingSocialOwnershipColumnsError(socialError)) {
-      console.warn(
-        "social_posts ownership columns missing; falling back to legacy social task query."
-      );
-      const fallbackResult = await fetchSocialRows(false);
-      socialRows = fallbackResult.data;
-      socialError = fallbackResult.error;
-    }
-
-    if (socialError) {
-      return NextResponse.json({ error: "Failed to load social tasks." }, { status: 500 });
-    }
+    const {
+      blogs: normalizedBlogs,
+      assignmentMap,
+      socialRows,
+    } = sharedInputs.data;
 
     const blogTasks: SnapshotTask[] = [];
     for (const blog of normalizedBlogs) {
@@ -200,10 +138,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       });
     }
 
-    const normalizedSocialRows = (socialRows ?? []) as unknown as Array<
-      Record<string, unknown>
-    >;
-    const socialTasks: SnapshotTask[] = normalizedSocialRows.flatMap((row) => {
+    const socialTasks: SnapshotTask[] = socialRows.flatMap((row) => {
         const status = row.status as SocialPostStatus;
         if (!(status in SOCIAL_POST_STATUS_LABELS)) {
           return [];
@@ -245,8 +180,16 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         .filter((item) => item.actionState === "waiting_on_others")
         .sort(compareByScheduleThenCreated),
     };
-
-    return NextResponse.json(response);
+    setServerResponseCacheValue(
+      cacheKey,
+      response,
+      DASHBOARD_SNAPSHOT_CACHE_TTL_MS
+    );
+    return NextResponse.json(response, {
+      headers: {
+        "Cache-Control": DASHBOARD_SNAPSHOT_CACHE_CONTROL,
+      },
+    });
   } catch (error) {
     console.error(
       "Error in dashboard tasks snapshot endpoint:",

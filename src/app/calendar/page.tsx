@@ -468,7 +468,7 @@ export default function CalendarPage() {
     }
     if (socialPostsError) {
       console.error("Calendar social posts load failed:", socialPostsError);
-      setError("Couldn't load posts. Please try again.");
+      setError("Couldn't load social posts. Please try again.");
       setIsLoading(false);
       return;
     }
@@ -839,7 +839,7 @@ export default function CalendarPage() {
     if (updateError) {
       updateStatus(statusId, {
         type: "error",
-        message: "Failed to save changes.",
+        message: "We couldn't save your update.",
         actionLabel: "Retry",
         onAction: () => {
           void updateScheduledDate(blogId, scheduledDate);

@@ -8,9 +8,16 @@ This runbook describes how to operate Content Relay safely in day-to-day environ
 - UI is guidance and feedback; transition validity is enforced server-side.
 - All workflow-critical actions should flow through canonical API routes.
 - Workspace home standup cards (`/api/dashboard/summary`) and `My Tasks Snapshot` (`/api/dashboard/tasks-snapshot`) must stay aligned by using the same assignment/action-state classifier, including review assignments from `task_assignments`.
+- `My Tasks` queue payload (`/api/tasks/queue`) must read from the same assignment/blog/social input helper as summary/snapshot so all three surfaces stay synchronized.
 - When multiple associations exist for the same blog, classifier precedence must favor `action_required` over `waiting_on_others`.
 - Social ownership classification in summary/snapshot must evaluate `assigned_to_user_id` first and fall back to legacy owner columns when ownership columns are unavailable.
 - Dashboard overview social metrics must apply the same ownership-column fallback pattern so social counts do not drop to zero during schema-cache drift.
+- Dashboard overview cards are fetched from `GET /api/dashboard/overview-metrics`; keep this endpoint authoritative for overview totals and avoid re-implementing these aggregates on the client.
+- Dashboard summary/snapshot/overview endpoints use per-user short-lived cache entries (30s TTL, private cache-control) to reduce repeated DB hits during rapid navigation:
+  - `GET /api/dashboard/summary`
+  - `GET /api/dashboard/tasks-snapshot`
+  - `GET /api/dashboard/overview-metrics`
+- Keep overview aggregation server-side and single-pass; do not reintroduce repeated metric-bucket `.filter()` chains in client dashboard code.
 
 ## 2) Environments and release gate
 ### Recommended flow
@@ -43,9 +50,9 @@ npm run check:full
 - Social post history sections use the label `Assignment & Changes` (never `Activity`).
 - Live-link controls are part of `Review & Publish` on the dedicated social editor.
 - Detail-page responsive rail contract:
-  - On `xl`+ screens, detail pages render a right rail (`~280px`, `~320px` at `2xl`) for high-priority workflow controls.
+  - On `lg`+ screens, detail pages render a right rail (`~280px`, `~320px` at `2xl`) for high-priority workflow controls.
   - On smaller screens, those controls stack inline in the main column to avoid overflow and cramped layouts.
-  - Sticky behavior is applied to a single rail wrapper on `xl`+ to prevent stacked-sticky overlap.
+  - Sticky behavior is applied to a single rail wrapper on `lg`+ to prevent stacked-sticky overlap.
 - Detail pages include a top `Next Action` strip + `Jump to` section navigator for faster execution.
 - Detail pages show explicit save state (`Unsaved changes` vs `All changes saved`) tied to form state.
 - Blog detail uses preflight readiness + jump-to-field guidance and keyboard parity shortcuts:
@@ -103,10 +110,23 @@ npm run check:full
 | Inconsistent queue ownership | Assignment/state mismatch | Refresh queue and re-run transition with current state |
 | Import partial failures | Key columns/row validation issues | Fix invalid rows, re-run import on valid selection |
 
+Dashboard filtering operating model:
+- Default dashboard filters are `Lens`, `Content Type`, `Status`, `Assigned to`, and `Site`.
+- Lens order is fixed for consistent triage behavior and saved-view recall:
+  `All Work` → `Needs My Action` → `Awaiting Review` → `Ready to Publish` → `Awaiting Live Link` → `Published Last 7 Days` (`All Work` default).
+- Filter option labels include contextual counts in the current filter context.
+- `Lens shortcuts` are optional user-saved quick actions for one-click lens reapplication.
+- `More filters` reveals advanced controls (delivery + detailed blog/social filters).
+- Advanced controls are scope-aware: blog controls only affect blog rows; social controls only affect social rows.
+
 ## 9) Database and migration operations
 - Treat `supabase/migrations` as append-only.
 - Add new timestamped migrations; do not rewrite applied migration history.
 - Run migration push when schema-affecting changes are introduced.
+- Keep composite query indexes in place for high-frequency queue/summary filters:
+  - `social_posts(status, assigned_to_user_id, worker_user_id, reviewer_user_id, created_by)`
+  - `blogs(is_archived, overall_status, writer_id, publisher_id, scheduled_publish_date)`
+  - `task_assignments(assigned_to_user_id, status, blog_id, task_type)`
 
 ## 10) Documentation maintenance rule
 When workflow behavior changes, update:

@@ -123,7 +123,7 @@ export default function HomePage() {
         setError(null);
       } catch (err) {
         console.error("Dashboard summary load failed:", err);
-        setError("Couldn't load dashboard summary. Please try again.");
+        setError("Couldn't load your workspace summary. Please try again.");
         setSummary(null);
         setTasksSnapshot({ requiredByMe: [], waitingOnOthers: [] });
       } finally {

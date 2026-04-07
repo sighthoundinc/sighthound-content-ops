@@ -1506,11 +1506,11 @@ function SocialPostsPageContent() {
   const handleCreatePost = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user?.id) {
-      setError("You must be logged in.");
+      setError("Please sign in to continue.");
       return;
     }
     if (!session?.access_token) {
-      setError("Session expired. Refresh and try again.");
+      setError("Your session expired. Please sign in again.");
       return;
     }
 
@@ -1616,12 +1616,12 @@ function SocialPostsPageContent() {
     const allowedTransitions = SOCIAL_POST_ALLOWED_TRANSITIONS[currentStatus] ?? [];
     if (!allowedTransitions.includes(toStatus)) {
       setError(
-        `Invalid status transition from ${SOCIAL_POST_STATUS_LABELS[currentStatus]} to ${SOCIAL_POST_STATUS_LABELS[toStatus]}`
+        `That status change isn’t available from ${SOCIAL_POST_STATUS_LABELS[currentStatus]} to ${SOCIAL_POST_STATUS_LABELS[toStatus]}.`
       );
       return false;
     }
     if (!session?.access_token) {
-      setError("Session expired. Refresh and try again.");
+      setError("Your session expired. Please sign in again.");
       return false;
     }
 
@@ -1772,7 +1772,7 @@ function SocialPostsPageContent() {
 
     if (!canEditBrief && briefChanged) {
       setPanelError(
-        "Brief fields are read-only at this stage for non-admin users."
+        "Brief details are locked at this stage."
       );
       setIsPanelSaving(false);
       return;
@@ -1840,7 +1840,7 @@ function SocialPostsPageContent() {
       return;
     }
     if (!session?.access_token) {
-      setPanelError("Session expired. Refresh and try again.");
+      setPanelError("Your session expired. Please sign in again.");
       return;
     }
     const response = await fetch(`/api/social-posts/${activePost.id}/reopen-brief`, {
@@ -2030,7 +2030,7 @@ function SocialPostsPageContent() {
       return;
     }
     if (!session?.access_token) {
-      setPanelError("Session expired. Refresh and try again.");
+      setPanelError("Your session expired. Please sign in again.");
       return;
     }
     const trimmedComment = panelCommentDraft.trim();
@@ -2095,7 +2095,7 @@ function SocialPostsPageContent() {
     const publishedCount = postsToDelete.length - deletablePosts.length;
 
     if (deletablePosts.length === 0) {
-      showError("Cannot delete published posts");
+      showError("Published posts can’t be deleted.");
       return;
     }
 
@@ -2140,7 +2140,7 @@ function SocialPostsPageContent() {
       });
       const payload = await parseApiResponseJson<Record<string, unknown>>(response);
       if (isApiFailure(response, payload)) {
-        const errorMessage = getApiErrorMessage(payload, "Failed to delete post.");
+        const errorMessage = getApiErrorMessage(payload, "Couldn't delete post. Please try again.");
         if (pendingDeleteRequest.source === "panel") {
           setPanelError(errorMessage);
         } else {
@@ -2199,7 +2199,7 @@ function SocialPostsPageContent() {
     if (failureCount > 0) {
       message +=
         (message ? ", " : "") +
-        `failed to delete ${failureCount} post${failureCount === 1 ? "" : "s"}`;
+        `couldn’t delete ${failureCount} post${failureCount === 1 ? "" : "s"}`;
     }
     if (pendingDeleteRequest.publishedCount > 0) {
       message +=
@@ -2544,7 +2544,7 @@ function SocialPostsPageContent() {
                               closeOpenDetailsMenus();
                             }}
                           >
-                            Reset
+                            Reset Defaults
                           </button>
                         </div>
                         <div className="mt-2 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
@@ -3216,7 +3216,7 @@ function SocialPostsPageContent() {
                       void handleSavePostDetails();
                     }}
                   >
-                    {isPanelSaving ? "Saving..." : "Save Details"}
+                    {isPanelSaving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </section>
@@ -3843,7 +3843,7 @@ function SocialPostsPageContent() {
                     disabled={isCreating}
                     className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isCreating ? "Creating..." : "Create Post"}
+                    {isCreating ? "Creating..." : "Create Social Post"}
                   </button>
                   <button
                     type="button"

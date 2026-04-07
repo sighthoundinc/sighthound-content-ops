@@ -33,9 +33,16 @@ Social posts must include at least one valid public live link before they can mo
 - When a user has multiple associations on the same blog, the selected card/snapshot classification prioritizes actionable work (`Required by me`) over waiting states.
 - Social ownership classification on home/snapshot reads current assignee ownership first and falls back safely to legacy owner columns when needed.
 - Dashboard overview social metrics also use ownership fallback behavior so social counts stay visible during temporary schema-cache drift.
+- Dashboard summary/snapshot/overview APIs use short-lived per-user caching (30s) to reduce repeated query load during frequent page switching.
 
 ## Core pages
-- `Dashboard`: cross-content queue and filter view
+- `Dashboard`: cross-content queue and filter view, with overview cards loaded from server aggregation (`/api/dashboard/overview-metrics`)
+  - overview/summary/snapshot endpoints return private short-lived cached responses (`Cache-Control` with 30s max-age + stale-while-revalidate) for smoother navigation
+  - Lens options use a fixed triage order: `All Work` → `Needs My Action` → `Awaiting Review` → `Ready to Publish` → `Awaiting Live Link` → `Published Last 7 Days` (default lens: `All Work`)
+  - Filter options show contextual counts so users can estimate impact before toggling a facet.
+  - `Lens shortcuts` let users save and reapply frequently used lens selections with one click.
+- `My Tasks`: assignment-first execution queue served by unified API (`/api/tasks/queue`)
+  - advanced filters under `More filters` with scope-aware blog/social controls
 - `My Tasks`: assignment-first execution queue
 - `Blogs`: blog workflow list and details
 - `Social Posts`: list/board/calendar and full social editor
@@ -52,7 +59,7 @@ Detail page ordering rule:
   - `Jump to` section navigator
   - explicit save-state indicator (`Unsaved changes` / `All changes saved`)
 - Responsive detail layout:
-  - `xl`+ screens show a sticky right rail for high-priority workflow controls.
+  - `lg`+ screens show a sticky right rail for high-priority workflow controls.
   - Smaller screens stack those controls into the main content flow for consistent readability.
 
 ## Workflow ownership model
@@ -96,3 +103,6 @@ npm run typecheck
 npm run check
 npm run check:full
 ```
+
+## Migration note
+- Task/dashboard performance relies on composite indexes introduced for ownership/status-heavy query paths (social posts, blogs, and task assignments). Apply latest Supabase migrations before validating queue/summary performance.

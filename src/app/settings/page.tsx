@@ -297,7 +297,7 @@ function SettingsPageContent() {
   const startQuickViewAsUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!session?.access_token || !session.refresh_token) {
-      setError("Missing active session token.");
+      setError("Your session expired. Please sign in again.");
       return;
     }
     if (!profile || !getUserRoles(profile).includes("admin")) {
@@ -438,7 +438,7 @@ function SettingsPageContent() {
 
   const saveProfileEdits = async (targetUserId: string) => {
     if (!session?.access_token) {
-      setError("Missing active session token.");
+      setError("Your session expired. Please sign in again.");
       return false;
     }
     const edits = editableUsers[targetUserId];
@@ -728,7 +728,7 @@ function SettingsPageContent() {
 
   const deleteActivityHistory = async () => {
     if (!session?.access_token) {
-      setError("Missing active session token.");
+      setError("Your session expired. Please sign in again.");
       return;
     }
     if (!profile || !getUserRoles(profile).includes("admin")) {
@@ -799,7 +799,7 @@ function SettingsPageContent() {
   };
   const wipeAppClean = async () => {
     if (!session?.access_token) {
-      setError("Missing active session token.");
+      setError("Your session expired. Please sign in again.");
       return;
     }
     if (!profile || !getUserRoles(profile).includes("admin") || !canDeleteUsers) {
@@ -873,7 +873,7 @@ function SettingsPageContent() {
   };
   const deleteInactiveUsers = async () => {
     if (!session?.access_token) {
-      setError("Missing active session token.");
+      setError("Your session expired. Please sign in again.");
       return;
     }
     if (!profile || !getUserRoles(profile).includes("admin") || !canDeleteUsers) {
@@ -1063,7 +1063,7 @@ function SettingsPageContent() {
           <header className="space-y-2">
             <h2 className="text-xl font-semibold text-slate-900">Settings</h2>
             <p className="text-sm text-slate-600">
-              Manage your profile, configure workspace defaults, and access admin controls.
+              Manage your profile, workspace preferences, and admin controls in one place.
             </p>
           </header>
 
@@ -1082,7 +1082,7 @@ function SettingsPageContent() {
                     My Profile
                   </h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    Update your name, timezone, and other personal preferences.
+                    Keep your personal details and daily working preferences up to date.
                   </p>
                     <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -1277,10 +1277,10 @@ function SettingsPageContent() {
               {isAdminUser ? (
                 <section className="rounded-lg border border-rose-200 bg-rose-50/40 p-4">
                   <h3 className="text-base font-semibold text-rose-900">
-                    Manage Activity Records
+                    Activity History Cleanup
                   </h3>
                   <p className="mt-1 text-sm text-rose-800/90">
-                    Clean up activity records. Useful for removing test data or reducing noise.
+                    Keep Activity History focused by clearing test data or low-value noise.
                   </p>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -1294,7 +1294,7 @@ function SettingsPageContent() {
                         }}
                       />
                       <span>
-                        <span className="font-medium text-slate-900">Delete all history</span>
+                        <span className="font-medium text-slate-900">Clear all activity history</span>
                         <span className="mt-0.5 block text-xs text-slate-500">
                           Remove activity records for everyone.
                         </span>
@@ -1312,7 +1312,7 @@ function SettingsPageContent() {
                       />
                       <span>
                         <span className="font-medium text-slate-900">
-                          Delete selected users only
+                          Clear selected team members
                         </span>
                         <span className="mt-0.5 block text-xs text-slate-500">
                           Remove activity records for specific team members.
@@ -1331,7 +1331,7 @@ function SettingsPageContent() {
                     </div>
                   ) : null}
                   <p className="mt-3 text-xs text-rose-700/90">
-                    Removes activity from blogs, social posts, and permissions. This action cannot be undone.
+                    This removes activity from blogs, social posts, and permissions. This action cannot be undone.
                   </p>
                   <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-700">
                     <input
@@ -1357,7 +1357,7 @@ function SettingsPageContent() {
                           setIsDeleteHistoryModalOpen(true);
                         }}
                       >
-                        Delete Records
+                        Review Cleanup
                       </button>
                   </div>
                 </section>
@@ -1365,7 +1365,7 @@ function SettingsPageContent() {
               {isAdminUser && canDeleteUsers ? (
                 <section className="rounded-lg border border-rose-300 bg-rose-100/50 p-4">
                   <h3 className="text-base font-semibold text-rose-900">
-                    Danger Zone: Wipe App Clean
+                    Danger Zone · Wipe App Clean
                   </h3>
                   <p className="mt-1 text-sm text-rose-800/90">
                     Factory reset the entire app. Removes all content, users, and history—except your admin account.
@@ -1393,7 +1393,7 @@ function SettingsPageContent() {
                     Administration
                   </h3>
                   <p className="mt-1 text-sm text-indigo-900/80">
-                    Manage permissions and temporarily view the app as another user.
+                    Manage access controls and safely preview the workspace as another user.
                   </p>
                   {canManagePermissions ? (
                     <div className="mt-3">
@@ -1401,14 +1401,14 @@ function SettingsPageContent() {
                         href="/settings/permissions"
                         className="inline-flex rounded-md border border-indigo-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
                       >
-                        Open Permissions Panel
+                        Open Permissions
                       </Link>
                     </div>
                   ) : null}
                   {isQuickViewActive && quickViewSnapshot ? (
                     <div className="mt-2 rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-700">
                       <p>
-                        Active quick-view: acting as{" "}
+                        Quick view is active: you are currently viewing as{" "}
                         <span className="font-semibold">
                           {quickViewSnapshot.targetDisplayName}
                         </span>
@@ -1434,7 +1434,7 @@ function SettingsPageContent() {
                     <form className="mt-3 grid gap-3 md:grid-cols-3" onSubmit={startQuickViewAsUser}>
                       <label className="block md:col-span-2">
                         <span className="mb-1 block text-sm font-medium text-slate-700">
-                          Quick view as
+                          Quick view as team member
                         </span>
                         <select
                           className="w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm"
@@ -1458,7 +1458,7 @@ function SettingsPageContent() {
                           disabled={isSwitchingQuickViewUser}
                           className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {isSwitchingQuickViewUser ? "Switching..." : "Switch View"}
+                          {isSwitchingQuickViewUser ? "Switching..." : "Start Quick View"}
                         </button>
                       </div>
                     </form>
@@ -1474,7 +1474,7 @@ function SettingsPageContent() {
                         Create User Account
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        Add a new team member to the app.
+                        Invite and set up a new team member account.
                       </p>
                       <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={createUser}>
                       <label className="block">
@@ -1554,7 +1554,7 @@ function SettingsPageContent() {
                         Reassign User Work
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        Transfer all writer and publisher work from one team member to another.
+                        Move active writing and publishing ownership from one teammate to another.
                       </p>
                       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={reassignEverythingFromUser}>
                       <label className="block">
@@ -1642,7 +1642,7 @@ function SettingsPageContent() {
                         User Directory
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        View all team members, edit their details, or deactivate accounts.
+                        View team members, update details, and manage account status.
                       </p>
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
                         <label className="block">

@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 type MultiSelectOption = {
   value: string;
   label: string;
+  selectedLabel?: string;
 };
 
 export function CheckboxMultiSelect({
@@ -79,7 +80,7 @@ export function CheckboxMultiSelect({
     () =>
       options
         .filter((option) => selectedSet.has(option.value))
-        .map((option) => option.label),
+        .map((option) => option.selectedLabel ?? option.label),
     [options, selectedSet]
   );
 

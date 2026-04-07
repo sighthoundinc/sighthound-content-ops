@@ -213,9 +213,12 @@ type DashboardSocialPostMetric = {
   updated_at: string;
   associated_blog_site: string | null;
   creator_name: string | null;
+  created_by_user_id: string | null;
   assigned_to_user_id: string | null;
   worker_name: string | null;
+  worker_user_id: string | null;
   reviewer_name: string | null;
+  reviewer_user_id: string | null;
 };
 type DashboardContentType = "blog" | "social_post";
 type DashboardLifecycleBucket =
@@ -228,6 +231,7 @@ type DashboardContentRow = {
   content_type: DashboardContentType;
   content_label: string;
   site: string;
+  site_key: BlogSite;
   id: string;
   title: string;
   status_display: string;
@@ -235,6 +239,7 @@ type DashboardContentRow = {
   scheduled_date: string | null;
   published_date: string | null;
   owner_display: string;
+  owner_user_id: string | null;
   updated_at: string;
   product?: string | null;
   blog?: BlogRecord;
@@ -355,9 +360,58 @@ type CrossContentWorkflowFilter =
   | "open_work"
   | "awaiting_review"
   | "ready_to_publish"
+  | "awaiting_live_link"
   | "published_recent";
 type CrossContentDeliveryFilter = "scheduled" | "unscheduled" | "overdue";
 type DashboardContentTypeFilter = MixedContentFilterValue;
+type DashboardLens =
+  | "all_work"
+  | "needs_my_action"
+  | "awaiting_review"
+  | "ready_to_publish"
+  | "awaiting_live_link"
+  | "published_recent";
+const DASHBOARD_LENS_ORDER: DashboardLens[] = [
+  "all_work",
+  "needs_my_action",
+  "awaiting_review",
+  "ready_to_publish",
+  "awaiting_live_link",
+  "published_recent",
+];
+type DashboardOverviewMetricBreakdown = { blogs: number; social: number };
+type DashboardOverviewMetrics = {
+  openWork: number;
+  scheduledNextSevenDays: number;
+  awaitingReview: number;
+  readyToPublish: number;
+  awaitingLiveLink: number;
+  publishedLastSevenDays: number;
+  breakdown: {
+    openWork: DashboardOverviewMetricBreakdown;
+    scheduledNextSevenDays: DashboardOverviewMetricBreakdown;
+    awaitingReview: DashboardOverviewMetricBreakdown;
+    readyToPublish: DashboardOverviewMetricBreakdown;
+    awaitingLiveLink: DashboardOverviewMetricBreakdown;
+    publishedLastSevenDays: DashboardOverviewMetricBreakdown;
+  };
+};
+const INITIAL_DASHBOARD_OVERVIEW_METRICS: DashboardOverviewMetrics = {
+  openWork: 0,
+  scheduledNextSevenDays: 0,
+  awaitingReview: 0,
+  readyToPublish: 0,
+  awaitingLiveLink: 0,
+  publishedLastSevenDays: 0,
+  breakdown: {
+    openWork: { blogs: 0, social: 0 },
+    scheduledNextSevenDays: { blogs: 0, social: 0 },
+    awaitingReview: { blogs: 0, social: 0 },
+    readyToPublish: { blogs: 0, social: 0 },
+    awaitingLiveLink: { blogs: 0, social: 0 },
+    publishedLastSevenDays: { blogs: 0, social: 0 },
+  },
+};
 const METRIC_FILTER_LABELS: Record<MetricFilterKey, string> = {
   open_work: "Open Work",
   scheduled_next_7_days: "Scheduled Next 7 Days",
@@ -373,6 +427,15 @@ const CROSS_CONTENT_WORKFLOW_FILTER_LABELS: Record<
   open_work: "Open Work",
   awaiting_review: "Awaiting Review",
   ready_to_publish: "Ready to Publish",
+  awaiting_live_link: "Awaiting Live Link",
+  published_recent: "Published Last 7 Days",
+};
+const DASHBOARD_LENS_LABELS: Record<DashboardLens, string> = {
+  all_work: "All Work",
+  needs_my_action: "Needs My Action",
+  awaiting_review: "Awaiting Review",
+  ready_to_publish: "Ready to Publish",
+  awaiting_live_link: "Awaiting Live Link",
   published_recent: "Published Last 7 Days",
 };
 const CROSS_CONTENT_DELIVERY_FILTER_LABELS: Record<
@@ -388,6 +451,8 @@ type DashboardFilterState = {
   search: string;
   siteFilters: BlogSite[];
   contentTypeFilters: DashboardContentTypeFilter[];
+  assignedToFilters: string[];
+  lens: DashboardLens;
   statusFilters: OverallBlogStatus[];
   writerFilters: string[];
   publisherFilters: string[];
@@ -402,6 +467,23 @@ type DashboardFilterState = {
   rowDensity: "compact" | "comfortable";
   rowLimit: TableRowLimit;
 };
+type DashboardRowFilterOverrides = Partial<{
+  search: string;
+  siteFilters: BlogSite[];
+  contentTypeFilters: DashboardContentTypeFilter[];
+  assignedToFilters: string[];
+  lens: DashboardLens;
+  statusFilters: OverallBlogStatus[];
+  writerFilters: string[];
+  publisherFilters: string[];
+  writerStatusFilters: WriterStageStatus[];
+  publisherStatusFilters: PublisherStageStatus[];
+  socialStatusFilters: SocialPostStatus[];
+  socialProductFilters: string[];
+  crossWorkflowFilters: CrossContentWorkflowFilter[];
+  crossDeliveryFilters: CrossContentDeliveryFilter[];
+  activeMetricFilter: MetricFilterKey | null;
+}>;
 
 type SavedDashboardView = {
   id: string;
@@ -411,10 +493,19 @@ type SavedDashboardView = {
   createdAt: string;
   updatedAt: string;
 };
+type SavedLensShortcut = {
+  id: string;
+  name: string;
+  lens: DashboardLens;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const DASHBOARD_FILTER_STATE_STORAGE_KEY = "dashboard-filter-state:v1";
 const DASHBOARD_SAVED_VIEWS_STORAGE_KEY = "dashboard-saved-views:v1";
 const DASHBOARD_ACTIVE_SAVED_VIEW_STORAGE_KEY = "dashboard-active-saved-view:v1";
+const DASHBOARD_SAVED_LENS_SHORTCUTS_STORAGE_KEY =
+  "dashboard-saved-lens-shortcuts:v1";
 const buildUserScopedStorageKey = (baseKey: string, userId: string | null | undefined) =>
   `${baseKey}:${userId ?? "anonymous"}`;
 
@@ -431,6 +522,7 @@ const CROSS_WORKFLOW_FILTER_SET = new Set<CrossContentWorkflowFilter>([
   "open_work",
   "awaiting_review",
   "ready_to_publish",
+  "awaiting_live_link",
   "published_recent",
 ]);
 const CROSS_DELIVERY_FILTER_SET = new Set<CrossContentDeliveryFilter>([
@@ -439,11 +531,16 @@ const CROSS_DELIVERY_FILTER_SET = new Set<CrossContentDeliveryFilter>([
   "overdue",
 ]);
 const ROW_LIMIT_SET = new Set<TableRowLimit>(TABLE_ROW_LIMIT_OPTIONS);
+const DASHBOARD_LENS_SET = new Set<DashboardLens>([
+  ...DASHBOARD_LENS_ORDER,
+]);
 
 const DEFAULT_DASHBOARD_FILTER_STATE: DashboardFilterState = {
   search: "",
   siteFilters: [],
   contentTypeFilters: [],
+  assignedToFilters: [],
+  lens: "all_work",
   statusFilters: [],
   writerFilters: [],
   publisherFilters: [],
@@ -487,6 +584,11 @@ const normalizeDashboardFilterState = (value: unknown): DashboardFilterState => 
     (value): value is DashboardContentTypeFilter =>
       CONTENT_TYPE_FILTER_SET.has(value as DashboardContentTypeFilter)
   );
+  const assignedToFilters = normalizeStringArray(state.assignedToFilters);
+  const lens =
+    typeof state.lens === "string" && DASHBOARD_LENS_SET.has(state.lens as DashboardLens)
+      ? (state.lens as DashboardLens)
+      : DEFAULT_DASHBOARD_FILTER_STATE.lens;
   const statusFilters = normalizeStringArray(state.statusFilters).filter(
     (status): status is OverallBlogStatus =>
       OVERALL_STATUS_SET.has(status as OverallBlogStatus)
@@ -536,6 +638,8 @@ const normalizeDashboardFilterState = (value: unknown): DashboardFilterState => 
     search,
     siteFilters,
     contentTypeFilters,
+    assignedToFilters,
+    lens,
     statusFilters,
     writerFilters,
     publisherFilters,
@@ -595,6 +699,58 @@ const normalizeSavedViews = (value: unknown): SavedDashboardView[] => {
 
   return normalizedViews.slice(0, 50);
 };
+const normalizeSavedLensShortcuts = (value: unknown): SavedLensShortcut[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seenIds = new Set<string>();
+  const seenLens = new Set<DashboardLens>();
+  const normalizedShortcuts: SavedLensShortcut[] = [];
+
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") {
+      continue;
+    }
+    const candidate = entry as Partial<SavedLensShortcut>;
+    if (typeof candidate.id !== "string" || candidate.id.trim() === "") {
+      continue;
+    }
+    if (
+      typeof candidate.lens !== "string" ||
+      !DASHBOARD_LENS_SET.has(candidate.lens as DashboardLens)
+    ) {
+      continue;
+    }
+    const lensValue = candidate.lens as DashboardLens;
+    if (seenIds.has(candidate.id) || seenLens.has(lensValue)) {
+      continue;
+    }
+    const defaultName = DASHBOARD_LENS_LABELS[lensValue];
+    const name =
+      typeof candidate.name === "string" && candidate.name.trim().length > 0
+        ? candidate.name.trim()
+        : defaultName;
+
+    normalizedShortcuts.push({
+      id: candidate.id,
+      name,
+      lens: lensValue,
+      createdAt:
+        typeof candidate.createdAt === "string"
+          ? candidate.createdAt
+          : new Date().toISOString(),
+      updatedAt:
+        typeof candidate.updatedAt === "string"
+          ? candidate.updatedAt
+          : new Date().toISOString(),
+    });
+    seenIds.add(candidate.id);
+    seenLens.add(lensValue);
+  }
+
+  return normalizedShortcuts.slice(0, DASHBOARD_LENS_ORDER.length);
+};
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -648,6 +804,8 @@ export default function DashboardPage() {
   const [contentTypeFilters, setContentTypeFilters] = useState<
     DashboardContentTypeFilter[]
   >([]);
+  const [assignedToFilters, setAssignedToFilters] = useState<string[]>([]);
+  const [lens, setLens] = useState<DashboardLens>(DEFAULT_DASHBOARD_FILTER_STATE.lens);
   const [statusFilters, setStatusFilters] = useState<OverallBlogStatus[]>([]);
   const [writerFilters, setWriterFilters] = useState<string[]>([]);
   const [publisherFilters, setPublisherFilters] = useState<string[]>([]);
@@ -674,9 +832,16 @@ export default function DashboardPage() {
   );
   const [savedViews, setSavedViews] = useState<SavedDashboardView[]>([]);
   const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
+  const [savedLensShortcuts, setSavedLensShortcuts] = useState<SavedLensShortcut[]>(
+    []
+  );
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOverviewLoading, setIsOverviewLoading] = useState(true);
+  const [overviewMetrics, setOverviewMetrics] = useState<DashboardOverviewMetrics>(
+    INITIAL_DASHBOARD_OVERVIEW_METRICS
+  );
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
   const [selectedSocialPostIds, setSelectedSocialPostIds] = useState<string[]>([]);
@@ -699,6 +864,7 @@ export default function DashboardPage() {
   const [activeMetricFilter, setActiveMetricFilter] = useState<MetricFilterKey | null>(null);
   const [isApplyingFilterFeedback, setIsApplyingFilterFeedback] = useState(false);
   const [isEditColumnsOpen, setIsEditColumnsOpen] = useState(false);
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const [, setCompletionTimingsByBlog] = useState<
     Record<string, BlogCompletionTiming>
@@ -716,6 +882,14 @@ export default function DashboardPage() {
   );
   const activeSavedViewStorageKey = useMemo(
     () => buildUserScopedStorageKey(DASHBOARD_ACTIVE_SAVED_VIEW_STORAGE_KEY, profile?.id),
+    [profile?.id]
+  );
+  const savedLensShortcutsStorageKey = useMemo(
+    () =>
+      buildUserScopedStorageKey(
+        DASHBOARD_SAVED_LENS_SHORTCUTS_STORAGE_KEY,
+        profile?.id
+      ),
     [profile?.id]
   );
   const columnViewStorageKey = useMemo(
@@ -757,6 +931,8 @@ export default function DashboardPage() {
     setSearch(nextState.search);
     setSiteFilters(nextState.siteFilters);
     setContentTypeFilters(nextState.contentTypeFilters);
+    setAssignedToFilters(nextState.assignedToFilters);
+    setLens(nextState.lens);
     setStatusFilters(nextState.statusFilters);
     setWriterFilters(nextState.writerFilters);
     setPublisherFilters(nextState.publisherFilters);
@@ -778,6 +954,8 @@ export default function DashboardPage() {
       search,
       siteFilters,
       contentTypeFilters,
+      assignedToFilters,
+      lens,
       statusFilters,
       writerFilters,
       publisherFilters,
@@ -796,6 +974,8 @@ export default function DashboardPage() {
       publisherFilters,
       publisherStatusFilters,
       rowLimit,
+      assignedToFilters,
+      lens,
       search,
       socialProductFilters,
       socialStatusFilters,
@@ -812,9 +992,11 @@ export default function DashboardPage() {
     ]
   );
   const hasActiveDashboardFilters =
+    lens !== DEFAULT_DASHBOARD_FILTER_STATE.lens ||
     search.trim().length > 0 ||
     siteFilters.length > 0 ||
     contentTypeFilters.length > 0 ||
+    assignedToFilters.length > 0 ||
     statusFilters.length > 0 ||
     writerFilters.length > 0 ||
     publisherFilters.length > 0 ||
@@ -825,6 +1007,20 @@ export default function DashboardPage() {
     crossWorkflowFilters.length > 0 ||
     crossDeliveryFilters.length > 0 ||
     activeMetricFilter !== null;
+  const hasBlogFilterScope =
+    contentTypeFilters.length === 0 || contentTypeFilters.includes("blog");
+  const hasSocialFilterScope =
+    contentTypeFilters.length === 0 ||
+    contentTypeFilters.some((filterValue) => filterValue !== "blog");
+  const activeAdvancedFilterCount =
+    crossDeliveryFilters.length +
+    statusFilters.length +
+    writerFilters.length +
+    publisherFilters.length +
+    writerStatusFilters.length +
+    publisherStatusFilters.length +
+    socialStatusFilters.length +
+    socialProductFilters.length;
 
   const loadData = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -852,9 +1048,9 @@ export default function DashboardPage() {
     };
     const fetchSocialPosts = async () => {
       const selectWithOwnership =
-        "id,title,product,type,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),assigned_to_user_id,worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)";
+        "id,title,product,type,status,scheduled_date,created_at,updated_at,created_by,worker_user_id,reviewer_user_id,associated_blog:associated_blog_id(site),creator:created_by(full_name),assigned_to_user_id,worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)";
       const selectLegacy =
-        "id,title,product,type,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)";
+        "id,title,product,type,status,scheduled_date,created_at,updated_at,created_by,worker_user_id,reviewer_user_id,associated_blog:associated_blog_id(site),creator:created_by(full_name),worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)";
 
       let { data, error } = await supabase
         .from("social_posts")
@@ -875,9 +1071,7 @@ export default function DashboardPage() {
     ] = await Promise.all([fetchBlogs(), fetchSocialPosts()]);
 
     if (blogsError) {
-      setError(
-        `Couldn't load dashboard. ${blogsError.message ? "Error: " + blogsError.message : "Try refreshing."}`
-      );
+      setError("Couldn't load dashboard. Please refresh and try again.");
       setIsLoading(false);
       return;
     }
@@ -933,14 +1127,22 @@ export default function DashboardPage() {
               (associatedBlog?.site as string | undefined) ?? null,
             creator_name:
               (creator?.full_name as string | undefined) ?? null,
+            created_by_user_id:
+              typeof row.created_by === "string" ? row.created_by : null,
             assigned_to_user_id:
               typeof row.assigned_to_user_id === "string"
                 ? row.assigned_to_user_id
                 : null,
             worker_name:
               (worker?.full_name as string | undefined) ?? null,
+            worker_user_id:
+              typeof row.worker_user_id === "string" ? row.worker_user_id : null,
             reviewer_name:
               (reviewer?.full_name as string | undefined) ?? null,
+            reviewer_user_id:
+              typeof row.reviewer_user_id === "string"
+                ? row.reviewer_user_id
+                : null,
           } satisfies DashboardSocialPostMetric;
         })
         .filter((row): row is DashboardSocialPostMetric => row !== null);
@@ -994,9 +1196,43 @@ export default function DashboardPage() {
     setIsLoading(false);
   }, []);
 
+  const loadOverviewMetrics = useCallback(async () => {
+    if (!session?.access_token) {
+      setOverviewMetrics(INITIAL_DASHBOARD_OVERVIEW_METRICS);
+      setIsOverviewLoading(false);
+      return;
+    }
+    setIsOverviewLoading(true);
+    const response = await fetch("/api/dashboard/overview-metrics", {
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+      },
+    }).catch(() => null);
+    if (!response) {
+      setOverviewMetrics(INITIAL_DASHBOARD_OVERVIEW_METRICS);
+      setIsOverviewLoading(false);
+      showWarning("Dashboard overview is temporarily unavailable.");
+      return;
+    }
+
+    const payload = await parseApiResponseJson<DashboardOverviewMetrics>(response);
+    if (isApiFailure(response, payload)) {
+      setOverviewMetrics(INITIAL_DASHBOARD_OVERVIEW_METRICS);
+      setIsOverviewLoading(false);
+      showWarning(getApiErrorMessage(payload, "Dashboard overview is temporarily unavailable."));
+      return;
+    }
+
+    setOverviewMetrics(payload);
+    setIsOverviewLoading(false);
+  }, [session?.access_token, showWarning]);
+
   useEffect(() => {
     void loadData();
   }, [loadData]);
+  useEffect(() => {
+    void loadOverviewMetrics();
+  }, [loadOverviewMetrics]);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -1047,7 +1283,7 @@ export default function DashboardPage() {
     if (typeof window === "undefined") {
       return;
     }
-    const storageKeySignature = `${filterStateStorageKey}|${savedViewsStorageKey}|${activeSavedViewStorageKey}`;
+    const storageKeySignature = `${filterStateStorageKey}|${savedViewsStorageKey}|${activeSavedViewStorageKey}|${savedLensShortcutsStorageKey}`;
     if (hydratedStorageKeysRef.current === storageKeySignature) {
       return;
     }
@@ -1077,8 +1313,28 @@ export default function DashboardPage() {
     if (activeSavedViewIdRaw) {
       setActiveSavedViewId(activeSavedViewIdRaw);
     }
+
+    const savedLensShortcutsRaw = window.localStorage.getItem(
+      savedLensShortcutsStorageKey
+    );
+    if (savedLensShortcutsRaw) {
+      try {
+        const parsedLensShortcuts = JSON.parse(savedLensShortcutsRaw) as unknown;
+        setSavedLensShortcuts(normalizeSavedLensShortcuts(parsedLensShortcuts));
+      } catch {
+        setSavedLensShortcuts([]);
+      }
+    } else {
+      setSavedLensShortcuts([]);
+    }
     setHasLoadedLocalState(true);
-  }, [activeSavedViewStorageKey, applyFilterState, filterStateStorageKey, savedViewsStorageKey]);
+  }, [
+    activeSavedViewStorageKey,
+    applyFilterState,
+    filterStateStorageKey,
+    savedLensShortcutsStorageKey,
+    savedViewsStorageKey,
+  ]);
 
   useEffect(() => {
     if (!hasLoadedLocalState) {
@@ -1105,6 +1361,18 @@ export default function DashboardPage() {
       JSON.stringify(savedViews)
     );
   }, [hasLoadedLocalState, savedViews, savedViewsStorageKey]);
+  useEffect(() => {
+    if (!hasLoadedLocalState) {
+      return;
+    }
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      savedLensShortcutsStorageKey,
+      JSON.stringify(savedLensShortcuts)
+    );
+  }, [hasLoadedLocalState, savedLensShortcuts, savedLensShortcutsStorageKey]);
 
   useEffect(() => {
     if (!hasLoadedLocalState) {
@@ -1191,6 +1459,7 @@ export default function DashboardPage() {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsEditColumnsOpen(false);
+        setIsAdvancedFiltersOpen(false);
         if (activeBlogId) {
           setActiveBlogId(null);
           setPanelError(null);
@@ -1355,6 +1624,14 @@ export default function DashboardPage() {
       })),
     []
   );
+  const lensOptions = useMemo(
+    () =>
+      DASHBOARD_LENS_ORDER.map((value) => ({
+        value,
+        label: DASHBOARD_LENS_LABELS[value],
+      })),
+    []
+  );
   const dashboardRows = useMemo<DashboardContentRow[]>(() => {
     const deriveBlogLifecycleBucket = (blog: BlogRecord): DashboardLifecycleBucket => {
       if (blog.overall_status === "published") {
@@ -1391,6 +1668,12 @@ export default function DashboardPage() {
     };
     const blogRows = blogs.map((blog) => {
       const lifecycleBucket = deriveBlogLifecycleBucket(blog);
+      const ownerUserId =
+        lifecycleBucket === "published"
+          ? blog.publisher_id ?? blog.writer_id ?? null
+          : blog.writer_status !== "completed"
+            ? blog.writer_id ?? null
+            : blog.publisher_id ?? null;
       const ownerDisplay =
         lifecycleBucket === "published"
           ? blog.publisher?.full_name ?? blog.writer?.full_name ?? "Unassigned"
@@ -1401,6 +1684,7 @@ export default function DashboardPage() {
         content_type: "blog",
         content_label: getMixedContentLabel({ contentType: "blog" }),
         site: getSiteShortLabel(blog.site),
+        site_key: blog.site,
         id: blog.id,
         title: blog.title,
         status_display: STATUS_LABELS[blog.overall_status],
@@ -1411,6 +1695,7 @@ export default function DashboardPage() {
           blog.published_at?.slice(0, 10) ??
           null,
         owner_display: ownerDisplay,
+        owner_user_id: ownerUserId,
         updated_at: blog.updated_at,
         product: null,
         blog,
@@ -1418,6 +1703,17 @@ export default function DashboardPage() {
     });
     const socialRows = socialPosts.map((post) => {
       const lifecycleBucket = deriveSocialLifecycleBucket(post.status);
+      const socialSite = (post.associated_blog_site as BlogSite | null) ?? "sighthound.com";
+      const ownerUserId =
+        post.status === "in_review" || post.status === "creative_approved"
+          ? post.assigned_to_user_id ??
+            post.reviewer_user_id ??
+            post.worker_user_id ??
+            post.created_by_user_id
+          : post.assigned_to_user_id ??
+            post.worker_user_id ??
+            post.created_by_user_id ??
+            post.reviewer_user_id;
       const assignedToName =
         post.assigned_to_user_id
           ? assignableUsers.find((candidate) => candidate.id === post.assigned_to_user_id)
@@ -1441,7 +1737,8 @@ export default function DashboardPage() {
           contentType: "social_post",
           socialType: post.type,
         }),
-        site: getSiteShortLabel((post.associated_blog_site as BlogSite | null) ?? "sighthound.com"),
+        site: getSiteShortLabel(socialSite),
+        site_key: socialSite,
         id: post.id,
         title: post.title,
         status_display: post.status.replaceAll("_", " ").replace(/\b\w/g, (char) =>
@@ -1451,6 +1748,7 @@ export default function DashboardPage() {
         scheduled_date: post.scheduled_date,
         published_date: post.status === "published" ? post.updated_at : null,
         owner_display: ownerDisplay,
+        owner_user_id: ownerUserId,
         updated_at: post.updated_at,
         product: post.product,
         social_post: post,
@@ -1458,110 +1756,100 @@ export default function DashboardPage() {
     });
     return [...blogRows, ...socialRows];
   }, [assignableUsers, blogs, socialPosts]);
-  const filteredRows = useMemo(() => {
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const nextSevenDaysEnd = new Date(todayStart);
-    nextSevenDaysEnd.setDate(todayStart.getDate() + 6);
-    nextSevenDaysEnd.setHours(23, 59, 59, 999);
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    const isInNextSevenDays = (dateValue: string | null) => {
-      if (!dateValue) {
-        return false;
-      }
-      const dateTime = new Date(`${dateValue}T00:00:00`).getTime();
-      return (
-        dateTime >= todayStart.getTime() && dateTime <= nextSevenDaysEnd.getTime()
-      );
-    };
+  const assignedToFilterOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          dashboardRows
+            .map((row) => row.owner_display.trim())
+            .filter((value) => value.length > 0)
+        )
+      )
+        .sort((left, right) => left.localeCompare(right))
+        .map((value) => ({ value, label: value })),
+    [dashboardRows]
+  );
+  useEffect(() => {
+    const validAssignedToValues = new Set(
+      assignedToFilterOptions.map((option) => option.value)
+    );
+    setAssignedToFilters((previous) =>
+      previous.filter((value) => validAssignedToValues.has(value))
+    );
+  }, [assignedToFilterOptions]);
+  const matchesDashboardRow = useCallback(
+    (
+      row: DashboardContentRow,
+      overrides: DashboardRowFilterOverrides = {}
+    ) => {
+      const now = new Date();
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const nextSevenDaysEnd = new Date(todayStart);
+      nextSevenDaysEnd.setDate(todayStart.getDate() + 6);
+      nextSevenDaysEnd.setHours(23, 59, 59, 999);
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
+      const effectiveSearch = (overrides.search ?? search).toLowerCase().trim();
+      const effectiveSiteFilters = overrides.siteFilters ?? siteFilters;
+      const effectiveContentTypeFilters =
+        overrides.contentTypeFilters ?? contentTypeFilters;
+      const effectiveAssignedToFilters =
+        overrides.assignedToFilters ?? assignedToFilters;
+      const effectiveLens = overrides.lens ?? lens;
+      const effectiveStatusFilters = overrides.statusFilters ?? statusFilters;
+      const effectiveWriterFilters = overrides.writerFilters ?? writerFilters;
+      const effectivePublisherFilters =
+        overrides.publisherFilters ?? publisherFilters;
+      const effectiveWriterStatusFilters =
+        overrides.writerStatusFilters ?? writerStatusFilters;
+      const effectivePublisherStatusFilters =
+        overrides.publisherStatusFilters ?? publisherStatusFilters;
+      const effectiveSocialStatusFilters =
+        overrides.socialStatusFilters ?? socialStatusFilters;
+      const effectiveSocialProductFilters =
+        overrides.socialProductFilters ?? socialProductFilters;
+      const effectiveCrossWorkflowFilters =
+        overrides.crossWorkflowFilters ?? crossWorkflowFilters;
+      const effectiveCrossDeliveryFilters =
+        overrides.crossDeliveryFilters ?? crossDeliveryFilters;
+      const effectiveMetricFilter =
+        overrides.activeMetricFilter === undefined
+          ? activeMetricFilter
+          : overrides.activeMetricFilter;
 
-    const isPublishedInLastSevenDays = (row: DashboardContentRow) => {
-      if (row.lifecycle_bucket !== "published") {
-        return false;
-      }
-      // Use the same date source as focusStripMetrics for consistency
-      // For blogs: use actual published timestamp date
-      // For social posts: updated_at (status=published)
-      let timestamp: string | null = null;
-      if (row.blog) {
-        timestamp = row.blog.actual_published_at ?? row.blog.published_at ?? null;
-      } else if (row.social_post) {
-        timestamp = row.social_post.status === "published" ? row.social_post.updated_at : null;
-      }
-      if (!timestamp) {
-        return false;
-      }
-      const publishedAt = new Date(timestamp).getTime();
-      return publishedAt >= sevenDaysAgo.getTime() && publishedAt <= now.getTime();
-    };
-
-    const matchesMetricFilter = (row: DashboardContentRow) => {
-      if (!activeMetricFilter) {
-        return true;
-      }
-      if (activeMetricFilter === "open_work") {
-        return row.lifecycle_bucket !== "published";
-      }
-      if (activeMetricFilter === "scheduled_next_7_days") {
+      const isInNextSevenDays = (dateValue: string | null) => {
+        if (!dateValue) {
+          return false;
+        }
+        const dateTime = new Date(`${dateValue}T00:00:00`).getTime();
         return (
-          row.lifecycle_bucket !== "published" &&
-          isInNextSevenDays(row.scheduled_date)
+          dateTime >= todayStart.getTime() && dateTime <= nextSevenDaysEnd.getTime()
         );
-      }
-      if (activeMetricFilter === "awaiting_review") {
-        return row.lifecycle_bucket === "awaiting_review";
-      }
-      if (activeMetricFilter === "ready_to_publish") {
-        return row.lifecycle_bucket === "ready_to_publish";
-      }
-      if (activeMetricFilter === "awaiting_live_link") {
-        return row.lifecycle_bucket === "awaiting_live_link";
-      }
-      return isPublishedInLastSevenDays(row);
-    };
-    const matchesCrossWorkflowFilters = (row: DashboardContentRow) => {
-      if (crossWorkflowFilters.length === 0) {
-        return true;
-      }
-      return crossWorkflowFilters.some((filterValue) => {
-        if (filterValue === "open_work") {
-          return row.lifecycle_bucket !== "published";
+      };
+      const isPublishedInLastSevenDays = () => {
+        if (row.lifecycle_bucket !== "published") {
+          return false;
         }
-        if (filterValue === "awaiting_review") {
-          return row.lifecycle_bucket === "awaiting_review";
+        let timestamp: string | null = null;
+        if (row.blog) {
+          timestamp = row.blog.actual_published_at ?? row.blog.published_at ?? null;
+        } else if (row.social_post) {
+          timestamp =
+            row.social_post.status === "published" ? row.social_post.updated_at : null;
         }
-        if (filterValue === "ready_to_publish") {
-          return row.lifecycle_bucket === "ready_to_publish";
+        if (!timestamp) {
+          return false;
         }
-        return isPublishedInLastSevenDays(row);
-      });
-    };
-    const matchesCrossDeliveryFilters = (row: DashboardContentRow) => {
-      if (crossDeliveryFilters.length === 0) {
-        return true;
-      }
+        const publishedAt = new Date(timestamp).getTime();
+        return publishedAt >= sevenDaysAgo.getTime() && publishedAt <= now.getTime();
+      };
       const scheduledDate = row.scheduled_date;
       const scheduledTimestamp = scheduledDate
         ? new Date(`${scheduledDate}T00:00:00`).getTime()
         : null;
-      return crossDeliveryFilters.some((filterValue) => {
-        if (filterValue === "scheduled") {
-          return scheduledDate !== null;
-        }
-        if (filterValue === "unscheduled") {
-          return scheduledDate === null;
-        }
-        return (
-          scheduledTimestamp !== null &&
-          scheduledTimestamp < todayStart.getTime() &&
-          row.lifecycle_bucket !== "published"
-        );
-      });
-    };
-    return dashboardRows.filter((row) => {
-      const normalizedSearch = search.toLowerCase().trim();
+      const isScheduledInNextSevenDays = isInNextSevenDays(scheduledDate);
+      const isPublishedRecent = isPublishedInLastSevenDays();
       const searchHaystack = [
         row.title,
         row.site,
@@ -1573,64 +1861,144 @@ export default function DashboardPage() {
       ]
         .join(" ")
         .toLowerCase();
+
+      const matchesMetricFilter = (() => {
+        if (!effectiveMetricFilter) {
+          return true;
+        }
+        if (effectiveMetricFilter === "open_work") {
+          return row.lifecycle_bucket !== "published";
+        }
+        if (effectiveMetricFilter === "scheduled_next_7_days") {
+          return row.lifecycle_bucket !== "published" && isScheduledInNextSevenDays;
+        }
+        if (effectiveMetricFilter === "awaiting_review") {
+          return row.lifecycle_bucket === "awaiting_review";
+        }
+        if (effectiveMetricFilter === "ready_to_publish") {
+          return row.lifecycle_bucket === "ready_to_publish";
+        }
+        if (effectiveMetricFilter === "awaiting_live_link") {
+          return row.lifecycle_bucket === "awaiting_live_link";
+        }
+        return isPublishedRecent;
+      })();
+      const matchesLensFilter = (() => {
+        if (effectiveLens === "all_work") {
+          return true;
+        }
+        if (effectiveLens === "needs_my_action") {
+          if (!user?.id) {
+            return false;
+          }
+          return row.lifecycle_bucket !== "published" && row.owner_user_id === user.id;
+        }
+        if (effectiveLens === "awaiting_review") {
+          return row.lifecycle_bucket === "awaiting_review";
+        }
+        if (effectiveLens === "ready_to_publish") {
+          return row.lifecycle_bucket === "ready_to_publish";
+        }
+        if (effectiveLens === "awaiting_live_link") {
+          return row.lifecycle_bucket === "awaiting_live_link";
+        }
+        return isPublishedRecent;
+      })();
+      const matchesCrossWorkflowFilters =
+        effectiveCrossWorkflowFilters.length === 0 ||
+        effectiveCrossWorkflowFilters.some((filterValue) => {
+          if (filterValue === "open_work") {
+            return row.lifecycle_bucket !== "published";
+          }
+          if (filterValue === "awaiting_review") {
+            return row.lifecycle_bucket === "awaiting_review";
+          }
+          if (filterValue === "ready_to_publish") {
+            return row.lifecycle_bucket === "ready_to_publish";
+          }
+          if (filterValue === "awaiting_live_link") {
+            return row.lifecycle_bucket === "awaiting_live_link";
+          }
+          return isPublishedRecent;
+        });
+      const matchesCrossDeliveryFilters =
+        effectiveCrossDeliveryFilters.length === 0 ||
+        effectiveCrossDeliveryFilters.some((filterValue) => {
+          if (filterValue === "scheduled") {
+            return scheduledDate !== null;
+          }
+          if (filterValue === "unscheduled") {
+            return scheduledDate === null;
+          }
+          return (
+            scheduledTimestamp !== null &&
+            scheduledTimestamp < todayStart.getTime() &&
+            row.lifecycle_bucket !== "published"
+          );
+        });
       const matchesSearch =
-        normalizedSearch.length === 0 || searchHaystack.includes(normalizedSearch);
+        effectiveSearch.length === 0 || searchHaystack.includes(effectiveSearch);
       const matchesContentType =
-        contentTypeFilters.length === 0 ||
+        effectiveContentTypeFilters.length === 0 ||
         matchesMixedContentFilters({
-          selectedFilters: contentTypeFilters,
+          selectedFilters: effectiveContentTypeFilters,
           contentType: row.content_type,
           socialType: row.social_post?.type ?? null,
         });
-      // Blog-scoped filters: site and status apply only to blog rows; social rows pass through
+      const matchesAssignedTo =
+        effectiveAssignedToFilters.length === 0 ||
+        effectiveAssignedToFilters.includes(row.owner_display);
       const matchesSite =
-        siteFilters.length === 0 ||
-        (row.content_type === "social_post" || siteFilters.includes(row.site as BlogSite));
+        effectiveSiteFilters.length === 0 ||
+        effectiveSiteFilters.includes(row.site_key);
       const matchesStatus =
-        statusFilters.length === 0 ||
+        effectiveStatusFilters.length === 0 ||
         (row.content_type === "social_post" ||
-          (row.blog ? statusFilters.includes(row.blog.overall_status) : false));
-      // Blog writer/publisher filters: apply only to blog rows; social rows pass through
+          (row.blog ? effectiveStatusFilters.includes(row.blog.overall_status) : false));
       const matchesWriter =
-        writerFilters.length === 0 ||
+        effectiveWriterFilters.length === 0 ||
         (row.content_type === "social_post" ||
           (row.blog?.writer_id !== null &&
             row.blog?.writer_id !== undefined &&
-            writerFilters.includes(row.blog.writer_id)));
+            effectiveWriterFilters.includes(row.blog.writer_id)));
       const matchesPublisher =
-        publisherFilters.length === 0 ||
+        effectivePublisherFilters.length === 0 ||
         (row.content_type === "social_post" ||
           (row.blog?.publisher_id !== null &&
             row.blog?.publisher_id !== undefined &&
-            publisherFilters.includes(row.blog.publisher_id)));
-      // Blog workflow status filters: apply only to blog rows; social rows pass through
+            effectivePublisherFilters.includes(row.blog.publisher_id)));
       const matchesWriterStatus =
-        writerStatusFilters.length === 0 ||
+        effectiveWriterStatusFilters.length === 0 ||
         (row.content_type === "social_post" ||
-          (row.blog ? writerStatusFilters.includes(row.blog.writer_status) : false));
+          (row.blog
+            ? effectiveWriterStatusFilters.includes(row.blog.writer_status)
+            : false));
       const matchesPublisherStatus =
-        publisherStatusFilters.length === 0 ||
+        effectivePublisherStatusFilters.length === 0 ||
         (row.content_type === "social_post" ||
-          (row.blog ? publisherStatusFilters.includes(row.blog.publisher_status) : false));
-      // Social-scoped filters: apply only to social rows; blog rows pass through
+          (row.blog
+            ? effectivePublisherStatusFilters.includes(row.blog.publisher_status)
+            : false));
       const matchesSocialStatus =
-        socialStatusFilters.length === 0 ||
+        effectiveSocialStatusFilters.length === 0 ||
         (row.content_type === "blog" ||
           (row.social_post
-            ? socialStatusFilters.includes(row.social_post.status)
+            ? effectiveSocialStatusFilters.includes(row.social_post.status)
             : false));
       const matchesSocialProduct =
-        socialProductFilters.length === 0 ||
+        effectiveSocialProductFilters.length === 0 ||
         (row.content_type === "blog" ||
           (row.social_post?.product !== null &&
             row.social_post?.product !== undefined &&
-            socialProductFilters.includes(row.social_post.product)));
+            effectiveSocialProductFilters.includes(row.social_post.product)));
       return (
-        matchesMetricFilter(row) &&
-        matchesCrossWorkflowFilters(row) &&
-        matchesCrossDeliveryFilters(row) &&
+        matchesLensFilter &&
+        matchesMetricFilter &&
+        matchesCrossWorkflowFilters &&
+        matchesCrossDeliveryFilters &&
         matchesSearch &&
         matchesContentType &&
+        matchesAssignedTo &&
         matchesSite &&
         matchesStatus &&
         matchesWriter &&
@@ -1640,23 +2008,338 @@ export default function DashboardPage() {
         matchesSocialStatus &&
         matchesSocialProduct
       );
-    });
+    },
+    [
+      activeMetricFilter,
+      assignedToFilters,
+      contentTypeFilters,
+      crossDeliveryFilters,
+      crossWorkflowFilters,
+      lens,
+      publisherFilters,
+      publisherStatusFilters,
+      search,
+      siteFilters,
+      socialProductFilters,
+      socialStatusFilters,
+      statusFilters,
+      user?.id,
+      writerFilters,
+      writerStatusFilters,
+    ]
+  );
+  const filteredRows = useMemo(
+    () => dashboardRows.filter((row) => matchesDashboardRow(row)),
+    [dashboardRows, matchesDashboardRow]
+  );
+  const facetFilterOptionCounts = useMemo(() => {
+    const countRowsForFacet = (
+      overrides: DashboardRowFilterOverrides,
+      rowPredicate?: (row: DashboardContentRow) => boolean
+    ) =>
+      dashboardRows.reduce((count, row) => {
+        if (rowPredicate && !rowPredicate(row)) {
+          return count;
+        }
+        return matchesDashboardRow(row, overrides) ? count + 1 : count;
+      }, 0);
+
+    return {
+      contentType: Object.fromEntries(
+        contentTypeFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet({ contentTypeFilters: [option.value] }),
+        ])
+      ) as Record<string, number>,
+      crossWorkflow: Object.fromEntries(
+        crossWorkflowFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet({ crossWorkflowFilters: [option.value] }),
+        ])
+      ) as Record<string, number>,
+      assignedTo: Object.fromEntries(
+        assignedToFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet({ assignedToFilters: [option.value] }),
+        ])
+      ) as Record<string, number>,
+      site: Object.fromEntries(
+        siteFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet({ siteFilters: [option.value as BlogSite] }),
+        ])
+      ) as Record<string, number>,
+      crossDelivery: Object.fromEntries(
+        crossDeliveryFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet({ crossDeliveryFilters: [option.value] }),
+        ])
+      ) as Record<string, number>,
+      status: Object.fromEntries(
+        overallStatusFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet(
+            { statusFilters: [option.value] },
+            (row) => row.content_type === "blog"
+          ),
+        ])
+      ) as Record<string, number>,
+      writer: Object.fromEntries(
+        writerFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet(
+            { writerFilters: [option.value] },
+            (row) => row.content_type === "blog"
+          ),
+        ])
+      ) as Record<string, number>,
+      publisher: Object.fromEntries(
+        publisherFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet(
+            { publisherFilters: [option.value] },
+            (row) => row.content_type === "blog"
+          ),
+        ])
+      ) as Record<string, number>,
+      writerStatus: Object.fromEntries(
+        writerStatusFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet(
+            { writerStatusFilters: [option.value] },
+            (row) => row.content_type === "blog"
+          ),
+        ])
+      ) as Record<string, number>,
+      publisherStatus: Object.fromEntries(
+        publisherStatusFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet(
+            { publisherStatusFilters: [option.value] },
+            (row) => row.content_type === "blog"
+          ),
+        ])
+      ) as Record<string, number>,
+      socialStatus: Object.fromEntries(
+        socialStatusFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet(
+            { socialStatusFilters: [option.value] },
+            (row) => row.content_type === "social_post"
+          ),
+        ])
+      ) as Record<string, number>,
+      socialProduct: Object.fromEntries(
+        socialProductFilterOptions.map((option) => [
+          option.value,
+          countRowsForFacet(
+            { socialProductFilters: [option.value] },
+            (row) => row.content_type === "social_post"
+          ),
+        ])
+      ) as Record<string, number>,
+    };
   }, [
-    contentTypeFilters,
+    assignedToFilterOptions,
+    contentTypeFilterOptions,
+    crossDeliveryFilterOptions,
+    crossWorkflowFilterOptions,
     dashboardRows,
-    crossDeliveryFilters,
-    crossWorkflowFilters,
-    publisherFilters,
-    publisherStatusFilters,
-    search,
-    siteFilters,
-    socialProductFilters,
-    socialStatusFilters,
-    statusFilters,
-    activeMetricFilter,
-    writerFilters,
-    writerStatusFilters,
+    matchesDashboardRow,
+    overallStatusFilterOptions,
+    publisherFilterOptions,
+    publisherStatusFilterOptions,
+    siteFilterOptions,
+    socialProductFilterOptions,
+    socialStatusFilterOptions,
+    writerFilterOptions,
+    writerStatusFilterOptions,
   ]);
+  const withFacetCountLabel = useCallback(
+    (label: string, value: string, counts: Record<string, number>) =>
+      `${label} (${counts[value] ?? 0})`,
+    []
+  );
+  const contentTypeFilterOptionsWithCounts = useMemo(
+    () =>
+      contentTypeFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.contentType
+        ),
+        selectedLabel: option.label,
+      })),
+    [contentTypeFilterOptions, facetFilterOptionCounts.contentType, withFacetCountLabel]
+  );
+  const crossWorkflowFilterOptionsWithCounts = useMemo(
+    () =>
+      crossWorkflowFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.crossWorkflow
+        ),
+        selectedLabel: option.label,
+      })),
+    [
+      crossWorkflowFilterOptions,
+      facetFilterOptionCounts.crossWorkflow,
+      withFacetCountLabel,
+    ]
+  );
+  const assignedToFilterOptionsWithCounts = useMemo(
+    () =>
+      assignedToFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.assignedTo
+        ),
+        selectedLabel: option.label,
+      })),
+    [assignedToFilterOptions, facetFilterOptionCounts.assignedTo, withFacetCountLabel]
+  );
+  const siteFilterOptionsWithCounts = useMemo(
+    () =>
+      siteFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.site
+        ),
+        selectedLabel: option.label,
+      })),
+    [facetFilterOptionCounts.site, siteFilterOptions, withFacetCountLabel]
+  );
+  const crossDeliveryFilterOptionsWithCounts = useMemo(
+    () =>
+      crossDeliveryFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.crossDelivery
+        ),
+        selectedLabel: option.label,
+      })),
+    [
+      crossDeliveryFilterOptions,
+      facetFilterOptionCounts.crossDelivery,
+      withFacetCountLabel,
+    ]
+  );
+  const overallStatusFilterOptionsWithCounts = useMemo(
+    () =>
+      overallStatusFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.status
+        ),
+        selectedLabel: option.label,
+      })),
+    [facetFilterOptionCounts.status, overallStatusFilterOptions, withFacetCountLabel]
+  );
+  const writerFilterOptionsWithCounts = useMemo(
+    () =>
+      writerFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.writer
+        ),
+        selectedLabel: option.label,
+      })),
+    [facetFilterOptionCounts.writer, withFacetCountLabel, writerFilterOptions]
+  );
+  const publisherFilterOptionsWithCounts = useMemo(
+    () =>
+      publisherFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.publisher
+        ),
+        selectedLabel: option.label,
+      })),
+    [facetFilterOptionCounts.publisher, publisherFilterOptions, withFacetCountLabel]
+  );
+  const writerStatusFilterOptionsWithCounts = useMemo(
+    () =>
+      writerStatusFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.writerStatus
+        ),
+        selectedLabel: option.label,
+      })),
+    [
+      facetFilterOptionCounts.writerStatus,
+      withFacetCountLabel,
+      writerStatusFilterOptions,
+    ]
+  );
+  const publisherStatusFilterOptionsWithCounts = useMemo(
+    () =>
+      publisherStatusFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.publisherStatus
+        ),
+        selectedLabel: option.label,
+      })),
+    [
+      facetFilterOptionCounts.publisherStatus,
+      publisherStatusFilterOptions,
+      withFacetCountLabel,
+    ]
+  );
+  const socialStatusFilterOptionsWithCounts = useMemo(
+    () =>
+      socialStatusFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.socialStatus
+        ),
+        selectedLabel: option.label,
+      })),
+    [
+      facetFilterOptionCounts.socialStatus,
+      socialStatusFilterOptions,
+      withFacetCountLabel,
+    ]
+  );
+  const socialProductFilterOptionsWithCounts = useMemo(
+    () =>
+      socialProductFilterOptions.map((option) => ({
+        ...option,
+        label: withFacetCountLabel(
+          option.label,
+          option.value,
+          facetFilterOptionCounts.socialProduct
+        ),
+        selectedLabel: option.label,
+      })),
+    [
+      facetFilterOptionCounts.socialProduct,
+      socialProductFilterOptions,
+      withFacetCountLabel,
+    ]
+  );
 
   const sortedRows = useMemo(() => {
     const collator = new Intl.Collator(undefined, { sensitivity: "base" });
@@ -1716,9 +2399,11 @@ export default function DashboardPage() {
     setCurrentPage(1);
   }, [
     activeMetricFilter,
+    assignedToFilters,
     contentTypeFilters,
     crossDeliveryFilters,
     crossWorkflowFilters,
+    lens,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
@@ -1739,9 +2424,11 @@ export default function DashboardPage() {
     tableContainerRef.current.scrollTop = 0;
   }, [
     activeMetricFilter,
+    assignedToFilters,
     contentTypeFilters,
     crossDeliveryFilters,
     crossWorkflowFilters,
+    lens,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
@@ -1768,11 +2455,13 @@ export default function DashboardPage() {
     };
   }, [
     activeMetricFilter,
+    assignedToFilters,
     currentPage,
     contentTypeFilters,
     crossDeliveryFilters,
     crossWorkflowFilters,
     isLoading,
+    lens,
     publisherFilters,
     publisherStatusFilters,
     rowLimit,
@@ -1812,115 +2501,7 @@ export default function DashboardPage() {
   );
 
 
-  const focusStripMetrics = useMemo(() => {
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const nextSevenDaysEnd = new Date(todayStart);
-    nextSevenDaysEnd.setDate(todayStart.getDate() + 6);
-    nextSevenDaysEnd.setHours(23, 59, 59, 999);
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(now.getDate() - 7);
-
-    const isInNextSevenDays = (dateValue: string | null) => {
-      if (!dateValue) {
-        return false;
-      }
-      const dateTime = new Date(`${dateValue}T00:00:00`).getTime();
-      return (
-        dateTime >= todayStart.getTime() && dateTime <= nextSevenDaysEnd.getTime()
-      );
-    };
-    const isInLastSevenDays = (dateValue: string | null) => {
-      if (!dateValue) {
-        return false;
-      }
-      const dateTime = new Date(dateValue).getTime();
-      return dateTime >= sevenDaysAgo.getTime() && dateTime <= now.getTime();
-    };
-
-    const openWorkBlogs = blogs.filter(
-      (blog) => blog.overall_status !== "published"
-    ).length;
-    const openWorkSocialPosts = socialPosts.filter(
-      (post) => post.status !== "published"
-    ).length;
-
-    const scheduledNextSevenDaysBlogs = blogs.filter((blog) => {
-      if (blog.overall_status === "published") {
-        return false;
-      }
-      return isInNextSevenDays(getBlogScheduledDate(blog));
-    }).length;
-    const scheduledNextSevenDaysSocialPosts = socialPosts.filter(
-      (post) => post.status !== "published" && isInNextSevenDays(post.scheduled_date)
-    ).length;
-
-    const awaitingReviewBlogs = blogs.filter(
-      (blog) =>
-        blog.writer_status === "pending_review" ||
-        blog.publisher_status === "pending_review" ||
-        blog.publisher_status === "publisher_approved"
-    ).length;
-    const awaitingReviewSocialPosts = socialPosts.filter(
-      (post) => post.status === "in_review"
-    ).length;
-
-    const readyToPublishBlogs = blogs.filter(
-      (blog) => blog.overall_status === "ready_to_publish"
-    ).length;
-    const readyToPublishSocialPosts = socialPosts.filter(
-      (post) => post.status === "ready_to_publish"
-    ).length;
-
-    const awaitingLiveLink = socialPosts.filter(
-      (post) => post.status === "awaiting_live_link"
-    ).length;
-
-    const publishedLastSevenDaysBlogs = blogs.filter((blog) => {
-      if (blog.overall_status !== "published") {
-        return false;
-      }
-      // Use the original publish date (scheduled/display date) not the import date
-      // This way imported blogs don't inflate the "last 7 days" metric
-      const publishedTimestamp = getBlogPublishDate(blog);
-      return publishedTimestamp && isInLastSevenDays(publishedTimestamp);
-    }).length;
-    const publishedLastSevenDaysSocialPosts = socialPosts.filter(
-      (post) => post.status === "published" && isInLastSevenDays(post.updated_at)
-    ).length;
-
-    return {
-      openWork: openWorkBlogs + openWorkSocialPosts,
-      scheduledNextSevenDays:
-        scheduledNextSevenDaysBlogs + scheduledNextSevenDaysSocialPosts,
-      awaitingReview: awaitingReviewBlogs + awaitingReviewSocialPosts,
-      readyToPublish: readyToPublishBlogs + readyToPublishSocialPosts,
-      awaitingLiveLink,
-      publishedLastSevenDays:
-        publishedLastSevenDaysBlogs + publishedLastSevenDaysSocialPosts,
-      breakdown: {
-        openWork: { blogs: openWorkBlogs, social: openWorkSocialPosts },
-        scheduledNextSevenDays: {
-          blogs: scheduledNextSevenDaysBlogs,
-          social: scheduledNextSevenDaysSocialPosts,
-        },
-        awaitingReview: {
-          blogs: awaitingReviewBlogs,
-          social: awaitingReviewSocialPosts,
-        },
-        readyToPublish: {
-          blogs: readyToPublishBlogs,
-          social: readyToPublishSocialPosts,
-        },
-        awaitingLiveLink: { blogs: 0, social: awaitingLiveLink },
-        publishedLastSevenDays: {
-          blogs: publishedLastSevenDaysBlogs,
-          social: publishedLastSevenDaysSocialPosts,
-        },
-      },
-    };
-  }, [blogs, socialPosts]);
+  const focusStripMetrics = overviewMetrics;
 
   const visibleBlogIds = useMemo(
     () =>
@@ -2049,7 +2630,10 @@ export default function DashboardPage() {
     );
   };
 
-  const handleToggleSingle = (row: DashboardContentRow, checked: boolean) => {
+  const handleToggleSingle = (
+    row: Pick<DashboardContentRow, "content_type" | "id">,
+    checked: boolean
+  ) => {
     if (!canSelectRows) {
       return;
     }
@@ -2130,6 +2714,7 @@ export default function DashboardPage() {
     applyFilterState(DEFAULT_DASHBOARD_FILTER_STATE);
     setActiveMetricFilter(null);
     setActiveSavedViewId(null);
+    setIsAdvancedFiltersOpen(false);
     setError(null);
     setSuccessMessage("Dashboard filters reset.");
   }, [applyFilterState]);
@@ -2137,10 +2722,75 @@ export default function DashboardPage() {
     resetDashboardFilters();
     setSuccessMessage("All filters cleared.");
   }, [resetDashboardFilters]);
+  const clearAdvancedFilters = useCallback(() => {
+    setCrossDeliveryFilters([]);
+    setStatusFilters([]);
+    setWriterFilters([]);
+    setPublisherFilters([]);
+    setWriterStatusFilters([]);
+    setPublisherStatusFilters([]);
+    setSocialStatusFilters([]);
+    setSocialProductFilters([]);
+    setSuccessMessage("Advanced filters cleared.");
+  }, []);
+  const saveCurrentLensShortcut = useCallback(() => {
+    const existingShortcut = savedLensShortcuts.find(
+      (shortcut) => shortcut.lens === lens
+    );
+    if (existingShortcut) {
+      setSuccessMessage(`Lens shortcut "${existingShortcut.name}" is already saved.`);
+      return;
+    }
+    const nowIso = new Date().toISOString();
+    const nextId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}`;
+    const shortcutName = DASHBOARD_LENS_LABELS[lens];
+    setSavedLensShortcuts((previous) => [
+      ...previous,
+      {
+        id: nextId,
+        name: shortcutName,
+        lens,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+    ]);
+    setSuccessMessage(`Saved lens shortcut "${shortcutName}".`);
+  }, [lens, savedLensShortcuts]);
+  const applyLensShortcut = useCallback((shortcut: SavedLensShortcut) => {
+    setLens(shortcut.lens);
+    setSuccessMessage(`Applied lens shortcut "${shortcut.name}".`);
+  }, []);
+  const removeLensShortcut = useCallback((shortcut: SavedLensShortcut) => {
+    setSavedLensShortcuts((previous) =>
+      previous.filter((entry) => entry.id !== shortcut.id)
+    );
+    setSuccessMessage(`Removed lens shortcut "${shortcut.name}".`);
+  }, []);
+  const sortedSavedLensShortcuts = useMemo(
+    () =>
+      [...savedLensShortcuts].sort(
+        (left, right) =>
+          DASHBOARD_LENS_ORDER.indexOf(left.lens) -
+          DASHBOARD_LENS_ORDER.indexOf(right.lens)
+      ),
+    [savedLensShortcuts]
+  );
 
   const activeFilterPills = useMemo(
     () =>
       [
+        lens !== DEFAULT_DASHBOARD_FILTER_STATE.lens
+          ? {
+              id: "lens",
+              label: `Lens: ${DASHBOARD_LENS_LABELS[lens]}`,
+              onRemove: () => {
+                setLens(DEFAULT_DASHBOARD_FILTER_STATE.lens);
+              },
+            }
+          : null,
         search.trim()
           ? {
               id: "search",
@@ -2166,9 +2816,18 @@ export default function DashboardPage() {
             );
           },
         })),
+        ...assignedToFilters.map((value) => ({
+          id: `assigned-to-${value}`,
+          label: `Assigned to: ${value}`,
+          onRemove: () => {
+            setAssignedToFilters((previous) =>
+              previous.filter((entry) => entry !== value)
+            );
+          },
+        })),
         ...writerFilters.map((writerId) => ({
           id: `writer-${writerId}`,
-          label: `Blog Writer: ${
+          label: `Writing Assignee: ${
             filterUserOptions.find((writer) => writer.value === writerId)?.label ?? writerId
           }`,
           onRemove: () => {
@@ -2177,7 +2836,7 @@ export default function DashboardPage() {
         })),
         ...publisherFilters.map((publisherId) => ({
           id: `publisher-${publisherId}`,
-          label: `Blog Publisher: ${
+          label: `Publishing Assignee: ${
             filterUserOptions.find((publisher) => publisher.value === publisherId)?.label ??
             publisherId
           }`,
@@ -2187,14 +2846,14 @@ export default function DashboardPage() {
         })),
         ...writerStatusFilters.map((status) => ({
           id: `writer-status-${status}`,
-          label: `Blog Writer Status: ${WRITER_STATUS_LABELS[status]}`,
+          label: `Writing Status: ${WRITER_STATUS_LABELS[status]}`,
           onRemove: () => {
             setWriterStatusFilters((previous) => previous.filter((value) => value !== status));
           },
         })),
         ...publisherStatusFilters.map((status) => ({
           id: `publisher-status-${status}`,
-          label: `Blog Publisher Status: ${PUBLISHER_STATUS_LABELS[status]}`,
+          label: `Publishing Status: ${PUBLISHER_STATUS_LABELS[status]}`,
           onRemove: () => {
             setPublisherStatusFilters((previous) => previous.filter((value) => value !== status));
           },
@@ -2221,7 +2880,7 @@ export default function DashboardPage() {
         })),
         ...crossWorkflowFilters.map((filterValue) => ({
           id: `cross-workflow-${filterValue}`,
-          label: `Workflow: ${CROSS_CONTENT_WORKFLOW_FILTER_LABELS[filterValue]}`,
+          label: `Status: ${CROSS_CONTENT_WORKFLOW_FILTER_LABELS[filterValue]}`,
           onRemove: () => {
             setCrossWorkflowFilters((previous) =>
               previous.filter((value) => value !== filterValue)
@@ -2256,8 +2915,10 @@ export default function DashboardPage() {
       ].filter((pill) => pill !== null),
     [
       activeMetricFilter,
+      assignedToFilters,
       contentTypeFilters,
       filterUserOptions,
+      lens,
       publisherFilters,
       publisherStatusFilters,
       search,
@@ -2564,7 +3225,7 @@ export default function DashboardPage() {
       return false;
     }
     if (!hasOnlyBlogSelection) {
-      setError("Bulk blog mutations require blog-only selection. Deselect social rows first.");
+      setError("Bulk updates only work with blog selections. Deselect social posts first.");
       return false;
     }
     return true;
@@ -2581,7 +3242,7 @@ export default function DashboardPage() {
       setSuccessMessage(successText);
     } catch (mutationError) {
       const message =
-        mutationError instanceof Error ? mutationError.message : "Bulk action failed.";
+        mutationError instanceof Error ? mutationError.message : "We couldn't apply bulk changes.";
       setError(message);
     } finally {
       setIsBulkSaving(false);
@@ -2998,7 +3659,7 @@ export default function DashboardPage() {
       if (isMissingBlogCommentsTableError(commentsError)) {
         setPanelComments([]);
         setPanelError(
-          "Comments table is missing from schema cache. Run latest migrations and refresh schema cache."
+          "Comments are temporarily unavailable right now. Please try again in a moment."
         );
       } else {
         setPanelComments([]);
@@ -3093,7 +3754,7 @@ export default function DashboardPage() {
       return;
     }
     if (!session?.access_token) {
-      setPanelError("Session expired. Refresh and try again.");
+      setPanelError("Your session expired. Please sign in again.");
       return;
     }
     if (!canCreateComments) {
@@ -3210,7 +3871,7 @@ export default function DashboardPage() {
               </div>
             }
           />
-          {isLoading ? (
+          {isOverviewLoading ? (
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
               <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
               <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
@@ -3398,120 +4059,207 @@ export default function DashboardPage() {
                 }
                 filters={
                   <div className="md:col-span-2 xl:col-span-4 grid gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
-                        Grouped Filters
-                      </p>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            Group 1 · Cross-Content Scope
-                          </p>
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            <CheckboxMultiSelect
-                              label="Sites"
-                              options={siteFilterOptions}
-                              selectedValues={siteFilters}
-                              onChange={(nextValues) => {
-                                setSiteFilters(nextValues as BlogSite[]);
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Lens
+                        </span>
+                        <select
+                          value={lens}
+                          onChange={(event) => {
+                            setLens(event.target.value as DashboardLens);
+                          }}
+                          className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                        >
+                          {lensOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <CheckboxMultiSelect
+                        label="Content Type"
+                        options={contentTypeFilterOptionsWithCounts}
+                        selectedValues={contentTypeFilters}
+                        onChange={(nextValues) => {
+                          setContentTypeFilters(nextValues as DashboardContentTypeFilter[]);
+                        }}
+                      />
+                      <CheckboxMultiSelect
+                        label="Status"
+                        options={crossWorkflowFilterOptionsWithCounts}
+                        selectedValues={crossWorkflowFilters}
+                        onChange={(nextValues) => {
+                          setCrossWorkflowFilters(nextValues as CrossContentWorkflowFilter[]);
+                        }}
+                      />
+                      <CheckboxMultiSelect
+                        label="Assigned to"
+                        options={assignedToFilterOptionsWithCounts}
+                        selectedValues={assignedToFilters}
+                        onChange={setAssignedToFilters}
+                      />
+                      <CheckboxMultiSelect
+                        label="Site"
+                        options={siteFilterOptionsWithCounts}
+                        selectedValues={siteFilters}
+                        onChange={(nextValues) => {
+                          setSiteFilters(nextValues as BlogSite[]);
+                        }}
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Lens shortcuts
+                      </span>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        disabled={sortedSavedLensShortcuts.some(
+                          (shortcut) => shortcut.lens === lens
+                        )}
+                        onClick={saveCurrentLensShortcut}
+                      >
+                        Save current lens
+                      </Button>
+                      {sortedSavedLensShortcuts.length === 0 ? (
+                        <span className="text-xs text-slate-500">
+                          No saved lens shortcuts yet.
+                        </span>
+                      ) : (
+                        sortedSavedLensShortcuts.map((shortcut) => (
+                          <div
+                            key={shortcut.id}
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white p-1"
+                          >
+                            <button
+                              type="button"
+                              className={`rounded px-2 py-1 text-xs font-medium ${
+                                shortcut.lens === lens
+                                  ? "bg-slate-900 text-white"
+                                  : "text-slate-700 hover:bg-slate-100"
+                              }`}
+                              onClick={() => {
+                                applyLensShortcut(shortcut);
                               }}
-                            />
-                            <CheckboxMultiSelect
-                              label="Content Type"
-                              options={contentTypeFilterOptions}
-                              selectedValues={contentTypeFilters}
-                              onChange={(nextValues) => {
-                                setContentTypeFilters(nextValues as DashboardContentTypeFilter[]);
+                            >
+                              {shortcut.name}
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded px-2 py-1 text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                              onClick={() => {
+                                removeLensShortcut(shortcut);
                               }}
-                            />
-                            <CheckboxMultiSelect
-                              label="Workflow (All Content)"
-                              options={crossWorkflowFilterOptions}
-                              selectedValues={crossWorkflowFilters}
-                              onChange={(nextValues) => {
-                                setCrossWorkflowFilters(
-                                  nextValues as CrossContentWorkflowFilter[]
-                                );
-                              }}
-                            />
-                            <CheckboxMultiSelect
-                              label="Delivery (All Content)"
-                              options={crossDeliveryFilterOptions}
-                              selectedValues={crossDeliveryFilters}
-                              onChange={(nextValues) => {
-                                setCrossDeliveryFilters(
-                                  nextValues as CrossContentDeliveryFilter[]
-                                );
-                              }}
-                            />
+                            >
+                              Remove
+                            </button>
                           </div>
-                        </div>
-                        <div>
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            Group 2 · Blog Filters
-                          </p>
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                        ))
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setIsAdvancedFiltersOpen((previous) => !previous);
+                        }}
+                      >
+                        {isAdvancedFiltersOpen
+                          ? "Hide more filters"
+                          : `More filters${activeAdvancedFilterCount > 0 ? ` (${activeAdvancedFilterCount} active)` : ""}`}
+                      </Button>
+                      {activeAdvancedFilterCount > 0 ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={clearAdvancedFilters}
+                        >
+                          Clear advanced
+                        </Button>
+                      ) : null}
+                    </div>
+                    {isAdvancedFiltersOpen ? (
+                      <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <CheckboxMultiSelect
+                            label="Delivery"
+                            options={crossDeliveryFilterOptionsWithCounts}
+                            selectedValues={crossDeliveryFilters}
+                            onChange={(nextValues) => {
+                              setCrossDeliveryFilters(
+                                nextValues as CrossContentDeliveryFilter[]
+                              );
+                            }}
+                          />
+                          {hasBlogFilterScope ? (
                             <CheckboxMultiSelect
                               label="Blog Stage"
-                              options={overallStatusFilterOptions}
+                              options={overallStatusFilterOptionsWithCounts}
                               selectedValues={statusFilters}
                               onChange={(nextValues) => {
                                 setStatusFilters(nextValues as OverallBlogStatus[]);
                               }}
                             />
+                          ) : null}
+                          {hasSocialFilterScope ? (
                             <CheckboxMultiSelect
-                              label="Blog Writers"
-                              options={writerFilterOptions}
+                              label="Social Status"
+                              options={socialStatusFilterOptionsWithCounts}
+                              selectedValues={socialStatusFilters}
+                              onChange={(nextValues) => {
+                                setSocialStatusFilters(nextValues as SocialPostStatus[]);
+                              }}
+                            />
+                          ) : null}
+                          {hasSocialFilterScope ? (
+                            <CheckboxMultiSelect
+                              label="Social Product"
+                              options={socialProductFilterOptionsWithCounts}
+                              selectedValues={socialProductFilters}
+                              onChange={setSocialProductFilters}
+                            />
+                          ) : null}
+                        </div>
+                        {hasBlogFilterScope ? (
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <CheckboxMultiSelect
+                              label="Writing Assignees"
+                              options={writerFilterOptionsWithCounts}
                               selectedValues={writerFilters}
                               onChange={setWriterFilters}
                             />
                             <CheckboxMultiSelect
-                              label="Blog Publishers"
-                              options={publisherFilterOptions}
+                              label="Publishing Assignees"
+                              options={publisherFilterOptionsWithCounts}
                               selectedValues={publisherFilters}
                               onChange={setPublisherFilters}
                             />
                             <CheckboxMultiSelect
-                              label="Blog Writer Status"
-                              options={writerStatusFilterOptions}
+                              label="Writing Status"
+                              options={writerStatusFilterOptionsWithCounts}
                               selectedValues={writerStatusFilters}
                               onChange={(nextValues) => {
                                 setWriterStatusFilters(nextValues as WriterStageStatus[]);
                               }}
                             />
                             <CheckboxMultiSelect
-                              label="Blog Publisher Status"
-                              options={publisherStatusFilterOptions}
+                              label="Publishing Status"
+                              options={publisherStatusFilterOptionsWithCounts}
                               selectedValues={publisherStatusFilters}
                               onChange={(nextValues) => {
                                 setPublisherStatusFilters(nextValues as PublisherStageStatus[]);
                               }}
                             />
                           </div>
-                        </div>
-                        <div>
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            Group 3 · Social Filters
-                          </p>
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            <CheckboxMultiSelect
-                              label="Social Status"
-                              options={socialStatusFilterOptions}
-                              selectedValues={socialStatusFilters}
-                              onChange={(nextValues) => {
-                                setSocialStatusFilters(nextValues as SocialPostStatus[]);
-                              }}
-                            />
-                            <CheckboxMultiSelect
-                              label="Social Product"
-                              options={socialProductFilterOptions}
-                              selectedValues={socialProductFilters}
-                              onChange={setSocialProductFilters}
-                            />
-                          </div>
-                        </div>
+                        ) : null}
                       </div>
-                    </div>
+                    ) : null}
                   </div>
                 }
               />
@@ -3542,14 +4290,13 @@ export default function DashboardPage() {
               </div>
               {hasOnlySocialSelection ? (
                 <p className="text-xs text-slate-600">
-                  Social rows are selected. Social bulk mutations are not enabled yet in
-                  Phase A.
+                  Social posts are selected. Bulk updates for social posts are not available yet.
                 </p>
               ) : null}
               {hasSocialSelection && hasBlogSelection ? (
                 <p className="text-xs text-slate-600">
-                  Blog bulk mutations are temporarily gated while social rows are selected.
-                  Deselect social rows to apply blog changes.
+                  Blog bulk updates are available only when social posts are not selected.
+                  Deselect social posts to continue.
                 </p>
               ) : null}
 
@@ -3624,7 +4371,7 @@ export default function DashboardPage() {
               </div>
               {!canRunBulkActions ? (
                 <p className="text-xs text-slate-500">
-                  Bulk mutations are disabled for your current permissions.
+                  Bulk updates are unavailable with your current permissions.
                 </p>
               ) : null}
 
@@ -3832,7 +4579,7 @@ export default function DashboardPage() {
                           className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                           onClick={resetColumnView}
                         >
-                          Reset Default
+                          Reset Defaults
                         </button>
                       </div>
                     </div>

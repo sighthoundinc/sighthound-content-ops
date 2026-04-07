@@ -517,10 +517,16 @@ These rules apply to all table implementations (DataTable, DashboardTable, etc.)
 4. Dashboard supports mixed row selection (blogs + social), but mutation controls must remain safely gated.
 5. Blog mutation actions may run only when the current selection is blog-only; they must disable for mixed or social-only selections.
 6. Export and copy flows must use the unified visible-column model while preserving blog-only URL copy semantics.
-7. Dashboard filters are grouped and scoped by contract:
-   - Cross-Content Scope filters apply to both content types.
-   - Blog filters apply only to blog rows (social rows pass through).
-   - Social filters apply only to social rows (blog rows pass through).
+7. Dashboard filters follow a Lens-first compact contract:
+   - Default filter row includes `Lens`, `Content Type`, `Status`, `Assigned to`, and `Site`.
+   - Filter option labels include contextual counts based on the current active filter context.
+   - `More filters` reveals advanced filters (`Delivery`, blog stage/assignment/status filters, social status/product filters).
+   - Users can optionally save `Lens shortcuts` for one-click lens reapplication.
+   - Advanced visibility is scope-aware:
+     - blog advanced controls show only when selected content scope includes blog.
+     - social advanced controls show only when selected content scope includes social.
+   - Blog advanced filters apply only to blog rows (social rows pass through).
+   - Social advanced filters apply only to social rows (blog rows pass through).
 8. Dashboard and My Tasks must share one mixed-content classification helper (`src/lib/content-classification.ts`) for labels and filter matching semantics.
 9. Mixed-content filter values are canonical:
    - `blog`
@@ -988,6 +994,9 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 7. Blog detail keyboard parity:
    - `Alt+Shift+J` jumps to next missing preflight field
    - `Alt+Shift+Enter` triggers the primary next action when available
+8. Detail-page responsive right-rail behavior:
+   - `lg`+ viewports render side-by-side content with a sticky right rail for next-action/preflight context.
+   - Below `lg`, right-rail cards render inline in main content flow (non-sticky) to avoid cramped side columns.
 
 ## Link Target Behavior (MUST)
 

@@ -119,13 +119,13 @@ const PLATFORM_CAPTION_GUIDANCE: Record<SocialPlatform, string> = {
 };
 const VALIDATION_MESSAGES = {
   captionExceeds: "Caption exceeds LinkedIn limit.",
-  sessionExpired: "Session expired. Refresh and try again.",
+  sessionExpired: "Your session expired. Please sign in again.",
   couldNotSave: "Couldn't save.",
-  couldNotLoad: "Couldn't load post.",
+  couldNotLoad: "Couldn't load this post.",
   couldNotLoadLinks: "Couldn't load live links.",
   couldNotSearchBlogs: "Couldn't search blogs.",
-  briefReadOnly: "Execution-stage brief fields are read-only. Use Edit Brief to reopen.",
-  invalidTransition: "Invalid status transition",
+  briefReadOnly: "Brief details are locked at this stage. Use Edit Brief to continue.",
+  invalidTransition: "That status change isn’t available",
   noPermissionTransition: "You do not have permission for that transition from the current stage.",
   rollbackReasonRequired: "Rollback reason is required.",
   couldNotChangeStatus: "Couldn't change post status.",
@@ -140,7 +140,7 @@ const VALIDATION_MESSAGES = {
   platformRequired: "Select at least one platform.",
   canvaUrlInvalid: "Canva link must start with https:// or http://",
 } as const;
-const ASSIGNED_USER_HELPER_TEXT = "Only assigned user can perform this action";
+const ASSIGNED_USER_HELPER_TEXT = "This action is available to the current assignee only.";
 const PREFLIGHT_FIELD_META = {
   product: { label: "Product", targetId: "social-post-product" },
   type: { label: "Type", targetId: "social-post-type" },
@@ -888,7 +888,7 @@ export default function SocialPostEditorPage() {
 
   const saveAssignments = useCallback(async () => {
     if (!post || !editWorkerUserId || !editReviewerUserId) {
-      showError("Assigned to and Reviewer are required.");
+      showError("Assigned to and Reviewer are required before saving.");
       return;
     }
     setIsAssignmentSaving(true);
@@ -905,7 +905,7 @@ export default function SocialPostEditorPage() {
       )
       .single();
     if (saveError) {
-      showError(`Couldn't save assignments. ${saveError.message}`);
+      showError("Couldn't save assignments. Please try again.");
       setIsAssignmentSaving(false);
       return;
     }
@@ -1697,7 +1697,7 @@ export default function SocialPostEditorPage() {
     });
     const payload = await parseApiResponseJson<Record<string, unknown>>(response);
     if (isApiFailure(response, payload)) {
-      showError(getApiErrorMessage(payload, "Failed to delete post."));
+      showError(getApiErrorMessage(payload, "Couldn't delete post. Please try again."));
       setIsDeletingPost(false);
       return;
     }
@@ -2140,7 +2140,7 @@ export default function SocialPostEditorPage() {
               ) : null}
             </div>
           ) : null}
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
               <section
                 id="social-editor-step-setup"
@@ -2844,7 +2844,7 @@ export default function SocialPostEditorPage() {
             </div>
 
             <aside className="space-y-3">
-              <div className="space-y-3 xl:sticky xl:top-20">
+              <div className="space-y-3 lg:sticky lg:top-20">
                 <section
                   id="social-editor-step-current-snapshot"
                   className="space-y-2 rounded-lg border border-slate-200 bg-white p-3"

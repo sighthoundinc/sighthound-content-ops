@@ -86,8 +86,8 @@ What “explicit updates” means:
 ## 6) Visibility tools
 | Tool | What it shows | When to use |
 |---|---|---|
-| [My Tasks](/tasks) | Assigned work + blocked handoffs | Daily execution |
-| [Dashboard](/dashboard) | Cross-content queue health | Triage and prioritization |
+| [My Tasks](/tasks) | Assigned work + blocked handoffs (from unified server queue) | Daily execution |
+| [Dashboard](/dashboard) | Cross-content queue health + server-backed overview cards | Triage and prioritization |
 | [Calendar](/calendar) | Scheduled workload by date | Planning and sequencing |
 | Notifications | Assignment and stage updates | Respond to change quickly |
 
@@ -97,6 +97,23 @@ Home page consistency rule:
 - If you are associated to the same blog in multiple ways, `Required by me` takes precedence over waiting-state classification.
 - Social task ownership checks use the current assignee model first and fall back to legacy owner columns when required for compatibility.
 - Dashboard overview social counts follow the same compatibility fallback so social work does not disappear from overview cards if ownership columns are temporarily unavailable.
+- Dashboard cards and snapshots are optimized for a fast, smooth experience and refresh seamlessly in the background as you move through the app.
+
+### Dashboard filtering (quick use)
+- Start with `Lens` for common triage views:
+  - `All Work`
+  - `Needs My Action`
+  - `Awaiting Review`
+  - `Ready to Publish`
+  - `Awaiting Live Link`
+  - `Published Last 7 Days`
+- Use `Save current lens` to pin frequently used lenses under `Lens shortcuts`.
+- Use compact default filters for quick narrowing: `Content Type`, `Status`, `Assigned to`, `Site`.
+- Filter option labels include contextual counts so you can preview result size before selecting.
+- Open `More filters` only when needed for delivery and detailed blog/social workflow filters.
+- Advanced filters are context-aware:
+  - Blog advanced filters affect only blog rows.
+  - Social advanced filters affect only social rows.
 
 ### Detail page section order
 Blog detail views:
@@ -124,8 +141,8 @@ Shared detail-page usability helpers:
 - Save state is explicit: `Unsaved changes` vs `All changes saved`.
 - `Assignment & Changes` is grouped by day for easier scanning.
 - Responsive right rail behavior is consistent on both detail pages:
-  - `xl` and above: right rail is visible and sticky.
-  - Below `xl`: right-rail cards move into the main vertical flow (no side column).
+  - `lg` and above: right rail is visible and sticky.
+  - Below `lg`: right-rail cards move into the main vertical flow (no side column).
 
 ## 7) Transition gates reference
 - Never transition without required target-stage fields.
@@ -138,6 +155,7 @@ Shared detail-page usability helpers:
 - Assign clear ownership before first transition.
 - Confirm first-stage required fields at creation time.
 - Use [Settings](/settings) to configure profile/timezone/notifications.
+- Keep deployments on latest database migrations so dashboard/task queues remain responsive at higher data volume.
 
 ## 9) Quick SOP card
 1. Open [My Tasks](/tasks)

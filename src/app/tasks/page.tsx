@@ -33,7 +33,6 @@ import {
   TableRowLimitSelect,
 } from "@/components/table-controls";
 import {
-  BLOG_SELECT_WITH_DATES,
   getBlogPublishDate,
   normalizeBlogRows,
 } from "@/lib/blog-schema";
@@ -59,7 +58,6 @@ import {
   getWriterTaskActionState,
   type TaskActionState,
 } from "@/lib/task-action-state";
-import { ACTIVE_SOCIAL_STATUSES } from "@/lib/task-logic";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getUserRoles } from "@/lib/roles";
 import {
@@ -67,7 +65,6 @@ import {
   segmentedControlItemClass,
 } from "@/lib/segmented-control";
 import { getSiteBadgeClasses, getSiteShortLabel } from "@/lib/site";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getDashboardFilterIntent } from "@/lib/dashboard-filter-state";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -153,6 +150,15 @@ type UnifiedTaskRow = {
   contentLabel: string;
   blogTask: TaskItem | null;
   socialTask: SocialTaskItem | null;
+};
+type TasksQueueResponse = {
+  blogs: Array<Record<string, unknown>>;
+  socialRows: Array<Record<string, unknown>>;
+  assignments: Array<{
+    blogId: string;
+    taskType: "writer_review" | "publisher_review";
+    assignedAt: string | null;
+  }>;
 };
 
 type TaskTableColumnKey =
@@ -249,7 +255,7 @@ function normalizeRelationObject<T>(value: unknown): T | null {
 
 export default function MyTasksPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-slate-600">Loading tasks…</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-slate-600">Loading your work…</div>}>
       <MyTasksPageContent />
     </Suspense>
   );
@@ -362,126 +368,50 @@ function MyTasksPageContent() {
   const [taskAssignments, setTaskAssignments] = useState<Map<string, { taskType: 'writer_review' | 'publisher_review'; assignedAt: string }>>(new Map());
   const taskRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const loadTasks = useCallback(async () => {
-    if (!user?.id) {
+    if (!user?.id || !session?.access_token) {
       return;
     }
-    const supabase = getSupabaseBrowserClient();
     setIsLoading(true);
     setError(null);
-
-    // Fetch pending task assignments for current user
-    const { data: assignments, error: assignmentError } = await supabase
-      .from("task_assignments")
-      .select("blog_id, task_type, assigned_at")
-      .eq("assigned_to_user_id", user.id)
-      .eq("status", "pending");
-
-    const assignmentMap = new Map<string, { taskType: 'writer_review' | 'publisher_review'; assignedAt: string }>();
-    const assignedBlogIds: string[] = [];
-    
-    // If task_assignments table doesn't exist yet (schema cache delay), continue without assignments
-    if (assignmentError && !assignmentError.message.includes('task_assignments')) {
-      console.error("Task assignments load failed:", assignmentError);
-      setError("Couldn't load assignments. Please try again.");
-      setIsLoading(false);
-      return;
-    }
-
-    if (assignments && assignments.length > 0) {
-      for (const assignment of assignments) {
-        if (typeof assignment.blog_id === 'string' && typeof assignment.task_type === 'string' && typeof assignment.assigned_at === 'string') {
-          assignmentMap.set(assignment.blog_id, {
-            taskType: assignment.task_type as 'writer_review' | 'publisher_review',
-            assignedAt: assignment.assigned_at
-          });
-          assignedBlogIds.push(assignment.blog_id);
-        }
-      }
-    }
-    setTaskAssignments(assignmentMap);
-
-    // Build query to fetch personal tasks + assigned tasks
-    let query = supabase
-      .from("blogs")
-      .select(BLOG_SELECT_WITH_DATES)
-      .eq("is_archived", false)
-      .neq("overall_status", "published");
-
-    if (assignedBlogIds.length > 0) {
-      query = query.or(`writer_id.eq.${user.id},publisher_id.eq.${user.id},id.in.(${assignedBlogIds.join(',')})`)
-    } else {
-      query = query.or(`writer_id.eq.${user.id},publisher_id.eq.${user.id}`);
-    }
-
-    const { data, error: tasksError } = await query
-      .order("scheduled_publish_date", { ascending: true, nullsFirst: false })
-      .order("updated_at", { ascending: false });
-
-    if (tasksError) {
-      console.error("Tasks load failed:", tasksError);
+    const queueResponse = await fetch("/api/tasks/queue", {
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+      },
+    }).catch(() => null);
+    if (!queueResponse) {
       setError("Couldn't load tasks. Please try again.");
       setIsLoading(false);
       return;
     }
-
-    setBlogs(normalizeBlogRows((data ?? []) as Array<Record<string, unknown>>) as BlogRecord[]);
-
-    const socialSelectWithOwnership =
-      "id,title,type,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,assigned_to_user_id,associated_blog:associated_blog_id(site)";
-    const socialSelectLegacy =
-      "id,title,type,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id,associated_blog:associated_blog_id(site)";
-    const fetchSocialRows = async (includeOwnershipColumn: boolean) => {
-      let query = supabase
-        .from("social_posts")
-        .select(includeOwnershipColumn ? socialSelectWithOwnership : socialSelectLegacy)
-        .in("status", ACTIVE_SOCIAL_STATUSES);
-      query = query.or(
-        includeOwnershipColumn
-          ? `assigned_to_user_id.eq.${user.id},worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
-          : `worker_user_id.eq.${user.id},reviewer_user_id.eq.${user.id},created_by.eq.${user.id}`
-      );
-      return query.order("scheduled_date", {
-        ascending: true,
-        nullsFirst: false,
-      });
-    };
-    const isMissingAssignedOwnershipColumnError = (
-      error: {
-        message?: string;
-        details?: string;
-        hint?: string;
-        code?: string;
-      } | null
-    ) => {
-      if (!error) {
-        return false;
-      }
-      const combinedText = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`;
-      return (
-        error.code === "42703" ||
-        combinedText.includes("assigned_to_user_id") ||
-        combinedText.includes("Unexpected input: ,assigned_to_user_id")
-      );
-    };
-
-    let { data: socialRows, error: socialError } = await fetchSocialRows(true);
-    if (isMissingAssignedOwnershipColumnError(socialError)) {
-      console.warn(
-        "Social posts assigned_to_user_id column missing; falling back to legacy social task query."
-      );
-      const fallbackResult = await fetchSocialRows(false);
-      socialRows = fallbackResult.data;
-      socialError = fallbackResult.error;
-    }
-
-    if (socialError) {
-      console.error("Social posts load failed:", socialError);
-      setError("Couldn't load social posts. Please try again.");
+    const queuePayload = await parseApiResponseJson<TasksQueueResponse>(queueResponse);
+    if (isApiFailure(queueResponse, queuePayload)) {
+      setError(getApiErrorMessage(queuePayload, "Couldn't load tasks. Please try again."));
       setIsLoading(false);
       return;
     }
 
-    const normalizedSocialRows = (socialRows ?? []) as unknown as Array<
+    setBlogs(
+      normalizeBlogRows((queuePayload.blogs ?? []) as Array<Record<string, unknown>>) as BlogRecord[]
+    );
+    const assignmentMap = new Map<
+      string,
+      { taskType: "writer_review" | "publisher_review"; assignedAt: string }
+    >();
+    for (const assignment of queuePayload.assignments ?? []) {
+      if (
+        typeof assignment.blogId === "string" &&
+        typeof assignment.taskType === "string" &&
+        typeof assignment.assignedAt === "string"
+      ) {
+        assignmentMap.set(assignment.blogId, {
+          taskType: assignment.taskType,
+          assignedAt: assignment.assignedAt,
+        });
+      }
+    }
+    setTaskAssignments(assignmentMap);
+
+    const normalizedSocialRows = (queuePayload.socialRows ?? []) as Array<
       Record<string, unknown>
     >;
     const derivedSocialTasks = normalizedSocialRows
@@ -547,7 +477,7 @@ function MyTasksPageContent() {
       });
     setSocialTasks(derivedSocialTasks);
     setIsLoading(false);
-  }, [isAdmin, user?.id]);
+  }, [isAdmin, session?.access_token, user?.id]);
 
   useEffect(() => {
 
@@ -1494,7 +1424,7 @@ function MyTasksPageContent() {
     if (!data) {
       updateAlert(statusId, {
         type: "error",
-        message: "Couldn't save changes.",
+        message: "We couldn't save your changes.",
       });
       setSavingTaskId(null);
       return;
@@ -1897,7 +1827,7 @@ function MyTasksPageContent() {
                                 resetColumnVisibility();
                               }}
                             >
-                              Reset
+                              Reset Defaults
                             </button>
                           </div>
                           <div className="mt-2 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">

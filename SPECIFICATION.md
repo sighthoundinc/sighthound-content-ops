@@ -76,6 +76,7 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Action-state split:
   - `Required by me`
   - `Waiting on Others`
+- `My Tasks` data must be served by `GET /api/tasks/queue` using the same shared task-classification input helper used by summary/snapshot.
 
 ### Workspace home summary
 - Home standup cards and `My Tasks Snapshot` share the same assignment/action-state classification model.
@@ -84,9 +85,32 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - If a user has multiple associations on one blog, candidate selection must prioritize `action_required` before `waiting_on_others`.
 - Social summary/snapshot ownership classification must evaluate current assignee ownership (`assigned_to_user_id`) and gracefully fall back to legacy owner columns for compatibility.
 - Dashboard social metrics must keep rendering when social ownership columns are unavailable by retrying with the legacy social-owner query shape.
+- Summary (`/api/dashboard/summary`), snapshot (`/api/dashboard/tasks-snapshot`), and tasks queue (`/api/tasks/queue`) must fetch assignment/blog/social inputs through one shared server helper to prevent query drift.
 
 ### Dashboard
 - Cross-content queue with filtering and sorting.
+- Overview cards are server-authoritative and loaded from `GET /api/dashboard/overview-metrics`.
+- The dashboard page must not derive overview card totals by scanning full table datasets client-side.
+- Dashboard aggregate APIs use short-lived per-user response caching (30s TTL) for:
+  - `GET /api/dashboard/summary`
+  - `GET /api/dashboard/tasks-snapshot`
+  - `GET /api/dashboard/overview-metrics`
+- `GET /api/dashboard/overview-metrics` computes metric buckets server-side in single-pass reductions (no repeated multi-filter bucket scans).
+- Database performance contract for task/query paths:
+  - `social_posts(status, assigned_to_user_id, worker_user_id, reviewer_user_id, created_by)`
+  - `blogs(is_archived, overall_status, writer_id, publisher_id, scheduled_publish_date)`
+  - `task_assignments(assigned_to_user_id, status, blog_id, task_type)`
+- Filter UX is Lens-first with compact defaults:
+  - default row: `Lens`, `Content Type`, `Status`, `Assigned to`, `Site`
+  - Lens options are deterministic and ordered as:
+    `All Work` → `Needs My Action` → `Awaiting Review` → `Ready to Publish` → `Awaiting Live Link` → `Published Last 7 Days`
+  - Default lens is `All Work`
+  - Filter option labels include contextual counts based on current active filters.
+  - Optional `Lens shortcuts` let users save and reapply frequently used lenses quickly.
+  - advanced filters under `More filters`
+- Advanced filters are scope-aware by selected content type:
+  - blog advanced controls apply to blog rows only
+  - social advanced controls apply to social rows only
 
 ### Calendar
 - Date-based schedule view for planning and rescheduling.
@@ -118,9 +142,9 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Both detail pages include a compact in-page section navigator (`Jump to`) with anchor links.
 - Assignment/change history readability is improved via grouped day buckets and clearer empty-state guidance.
 - Detail-page responsive rail contract:
-  - At `xl`+, both `/blogs/[id]` and `/social-posts/[id]` render a right rail column for next-action/preflight context.
-  - Below `xl`, right-rail cards collapse into the primary column in normal document flow.
-  - Sticky positioning is applied to a single right-rail wrapper on `xl`+ to avoid multi-sticky collision.
+  - At `lg`+, both `/blogs/[id]` and `/social-posts/[id]` render a right rail column for next-action/preflight context.
+  - Below `lg`, right-rail cards collapse into the primary column in normal document flow.
+  - Sticky positioning is applied to a single right-rail wrapper on `lg`+ to avoid multi-sticky collision.
 
 ## 7) API behavior contract (high-level)
 - Workflow transitions are API-authoritative.

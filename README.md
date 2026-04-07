@@ -32,6 +32,7 @@ Social posts must include at least one valid public live link before they can mo
 - Home standup cards and `My Tasks Snapshot` use the same assignment/action-state model, so actionable review assignments (including admin review assignments) stay aligned across both surfaces.
 - When a user has multiple associations on the same blog, the selected card/snapshot classification prioritizes actionable work (`Required by me`) over waiting states.
 - Social ownership classification on home/snapshot reads current assignee ownership first and falls back safely to legacy owner columns when needed.
+- Dashboard overview social metrics also use ownership fallback behavior so social counts stay visible during temporary schema-cache drift.
 
 ## Core pages
 - `Dashboard`: cross-content queue and filter view

@@ -96,6 +96,7 @@ Home page consistency rule:
 - If a review assignment appears under `Required by me`, the matching status count should also be reflected in the standup cards.
 - If you are associated to the same blog in multiple ways, `Required by me` takes precedence over waiting-state classification.
 - Social task ownership checks use the current assignee model first and fall back to legacy owner columns when required for compatibility.
+- Dashboard overview social counts follow the same compatibility fallback so social work does not disappear from overview cards if ownership columns are temporarily unavailable.
 
 ### Detail page section order
 Blog detail views:

@@ -10,6 +10,7 @@ This runbook describes how to operate Content Relay safely in day-to-day environ
 - Workspace home standup cards (`/api/dashboard/summary`) and `My Tasks Snapshot` (`/api/dashboard/tasks-snapshot`) must stay aligned by using the same assignment/action-state classifier, including review assignments from `task_assignments`.
 - When multiple associations exist for the same blog, classifier precedence must favor `action_required` over `waiting_on_others`.
 - Social ownership classification in summary/snapshot must evaluate `assigned_to_user_id` first and fall back to legacy owner columns when ownership columns are unavailable.
+- Dashboard overview social metrics must apply the same ownership-column fallback pattern so social counts do not drop to zero during schema-cache drift.
 
 ## 2) Environments and release gate
 ### Recommended flow

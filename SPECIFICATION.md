@@ -83,6 +83,7 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Actionable (`action_required`) ownership is the source for standup card counts, so cards stay in sync with the `Required by me` snapshot group.
 - If a user has multiple associations on one blog, candidate selection must prioritize `action_required` before `waiting_on_others`.
 - Social summary/snapshot ownership classification must evaluate current assignee ownership (`assigned_to_user_id`) and gracefully fall back to legacy owner columns for compatibility.
+- Dashboard social metrics must keep rendering when social ownership columns are unavailable by retrying with the legacy social-owner query shape.
 
 ### Dashboard
 - Cross-content queue with filtering and sorting.

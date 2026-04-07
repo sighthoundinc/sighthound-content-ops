@@ -49,6 +49,9 @@ import {
   normalizeBlogRows,
 } from "@/lib/blog-schema";
 import {
+  isMissingSocialOwnershipColumnsError,
+} from "@/lib/social-post-schema";
+import {
   canTransitionPublisherStatus,
   canTransitionWriterStatus,
 } from "@/lib/permissions";
@@ -848,11 +851,21 @@ export default function DashboardPage() {
       return { data, error };
     };
     const fetchSocialPosts = async () => {
-      const { data, error } = await supabase
+      const selectWithOwnership =
+        "id,title,product,type,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),assigned_to_user_id,worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)";
+      const selectLegacy =
+        "id,title,product,type,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)";
+
+      let { data, error } = await supabase
         .from("social_posts")
-        .select(
-          "id,title,product,type,status,scheduled_date,created_at,updated_at,associated_blog:associated_blog_id(site),creator:created_by(full_name),assigned_to_user_id,worker:worker_user_id(full_name),reviewer:reviewer_user_id(full_name)"
-        );
+        .select(selectWithOwnership);
+
+      if (isMissingSocialOwnershipColumnsError(error)) {
+        const fallback = await supabase.from("social_posts").select(selectLegacy);
+        data = fallback.data as typeof data;
+        error = fallback.error;
+      }
+
       return { data, error };
     };
 

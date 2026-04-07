@@ -11,12 +11,8 @@ import {
   WRITER_STATUS_LABELS,
 } from "@/lib/status";
 import {
-  compareBlogTaskCandidatePriority,
-  getAdminAssignmentTaskActionState,
-  getPublisherTaskActionState,
-  getSocialTaskActionState,
-  getWriterTaskActionState,
-  type BlogTaskAssociation,
+  getSelectedBlogTaskCandidate,
+  getSocialTaskActionStateFromRow,
   type TaskActionState,
 } from "@/lib/task-action-state";
 import {
@@ -43,11 +39,6 @@ type SnapshotTask = {
 type SnapshotResponse = {
   requiredByMe: SnapshotTask[];
   waitingOnOthers: SnapshotTask[];
-};
-type BlogTaskCandidate = {
-  actionState: TaskActionState;
-  statusLabel: string;
-  association: BlogTaskAssociation;
 };
 
 function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
@@ -176,63 +167,33 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     for (const blog of normalizedBlogs) {
       const scheduledDate = getBlogPublishDate(blog);
       const assignmentEntries = assignmentMap.get(blog.id) ?? [];
-      const candidates: BlogTaskCandidate[] = [];
 
       assertValidStatus(blog.writer_status, "writer");
       assertValidStatus(blog.publisher_status, "publisher");
 
-      if (blog.writer_id === userId) {
-        const actionState = getWriterTaskActionState(blog.writer_status);
-        candidates.push({
-          association: "writer",
-          statusLabel: WRITER_STATUS_LABELS[blog.writer_status],
-          actionState,
-        });
-      }
-
-      if (blog.publisher_id === userId) {
-        const actionState = getPublisherTaskActionState(
-          blog.writer_status,
-          blog.publisher_status
-        );
-        candidates.push({
-          association: "publisher",
-          statusLabel:
-            blog.writer_status === "completed" && blog.publisher_status === "not_started"
-              ? "Ready to publish"
-              : PUBLISHER_STATUS_LABELS[blog.publisher_status],
-          actionState,
-        });
-      }
-
-      for (const assignment of assignmentEntries) {
-        const taskType = assignment.taskType;
-        const actionState = getAdminAssignmentTaskActionState(
-          taskType,
-          blog.writer_status,
-          blog.publisher_status
-        );
-        candidates.push({
-          association: "admin_assignment",
-          statusLabel:
-            taskType === "writer_review"
-              ? WRITER_STATUS_LABELS[blog.writer_status]
-              : PUBLISHER_STATUS_LABELS[blog.publisher_status],
-          actionState,
-        });
-      }
-
-      if (candidates.length === 0) {
+      const selected = getSelectedBlogTaskCandidate({
+        userId,
+        writerId: blog.writer_id,
+        publisherId: blog.publisher_id,
+        writerStatus: blog.writer_status,
+        publisherStatus: blog.publisher_status,
+        assignmentEntries,
+      });
+      if (!selected) {
         continue;
       }
-
-      const [selected] = [...candidates].sort(compareBlogTaskCandidatePriority);
       blogTasks.push({
         id: `${blog.id}:blog`,
         title: blog.title,
         kind: "blog",
         href: `/blogs/${blog.id}`,
-        statusLabel: selected.statusLabel,
+        statusLabel:
+          selected.countBucket === "writer"
+            ? WRITER_STATUS_LABELS[blog.writer_status]
+            : blog.writer_status === "completed" &&
+                blog.publisher_status === "not_started"
+              ? "Ready to publish"
+              : PUBLISHER_STATUS_LABELS[blog.publisher_status],
         scheduledDate,
         createdAt: blog.created_at,
         actionState: selected.actionState,
@@ -248,28 +209,12 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           return [];
         }
         assertValidStatus(status, "social");
-        const createdBy = typeof row.created_by === "string" ? row.created_by : null;
-        const workerUserId =
-          typeof row.worker_user_id === "string" ? row.worker_user_id : null;
-        const reviewerUserId =
-          typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null;
-        const assignedToUserId =
-          typeof row.assigned_to_user_id === "string" ? row.assigned_to_user_id : null;
-        const editorUserId =
-          typeof row.editor_user_id === "string" ? row.editor_user_id : null;
-        const adminOwnerId =
-          typeof row.admin_owner_id === "string" ? row.admin_owner_id : null;
-        const actionState = getSocialTaskActionState({
-          status,
-          userId,
-          isAdmin,
-          createdBy,
-          workerUserId,
-          reviewerUserId,
-          assignedToUserId,
-          editorUserId,
-          adminOwnerId,
-        });
+        const actionState =
+          getSocialTaskActionStateFromRow({
+            row,
+            userId,
+            isAdmin,
+          }) ?? "waiting_on_others";
 
         return [{
           id: String(row.id ?? ""),

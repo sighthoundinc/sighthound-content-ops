@@ -4,13 +4,8 @@ import { BLOG_SELECT_WITH_DATES, normalizeBlogRows } from "@/lib/blog-schema";
 import { requirePermission } from "@/lib/server-permissions";
 import { getUserRoles } from "@/lib/roles";
 import {
-  compareBlogTaskCandidatePriority,
-  getAdminAssignmentTaskActionState,
-  getPublisherTaskActionState,
-  getSocialTaskActionState,
-  getWriterTaskActionState,
-  type BlogTaskAssociation,
-  type TaskActionState,
+  getSelectedBlogTaskCandidate,
+  getSocialTaskActionStateFromRow,
 } from "@/lib/task-action-state";
 import {
   isMissingSocialOwnershipColumnsError,
@@ -32,13 +27,6 @@ interface DashboardSummary {
   socialPostCounts: Record<string, number>;
   userRoles: string[];
 }
-
-type BlogTaskCandidate = {
-  actionState: TaskActionState;
-  statusKey: string;
-  countBucket: "writer" | "publisher";
-  association: BlogTaskAssociation;
-};
 
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
@@ -128,53 +116,18 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
 
     for (const blog of normalizedBlogs) {
       const assignmentEntries = assignmentMap.get(blog.id) ?? [];
-      const candidates: BlogTaskCandidate[] = [];
 
       assertValidStatus(blog.writer_status, "writer");
       assertValidStatus(blog.publisher_status, "publisher");
 
-      if (blog.writer_id === profile.id) {
-        candidates.push({
-          association: "writer",
-          countBucket: "writer",
-          statusKey: blog.writer_status,
-          actionState: getWriterTaskActionState(blog.writer_status),
-        });
-      }
-
-      if (blog.publisher_id === profile.id) {
-        candidates.push({
-          association: "publisher",
-          countBucket: "publisher",
-          statusKey: blog.publisher_status,
-          actionState: getPublisherTaskActionState(
-            blog.writer_status,
-            blog.publisher_status
-          ),
-        });
-      }
-
-      for (const assignment of assignmentEntries) {
-        const countBucket =
-          assignment.taskType === "writer_review" ? "writer" : "publisher";
-        candidates.push({
-          association: "admin_assignment",
-          countBucket,
-          statusKey:
-            countBucket === "writer" ? blog.writer_status : blog.publisher_status,
-          actionState: getAdminAssignmentTaskActionState(
-            assignment.taskType,
-            blog.writer_status,
-            blog.publisher_status
-          ),
-        });
-      }
-
-      if (candidates.length === 0) {
-        continue;
-      }
-
-      const [selected] = [...candidates].sort(compareBlogTaskCandidatePriority);
+      const selected = getSelectedBlogTaskCandidate({
+        userId: profile.id,
+        writerId: blog.writer_id,
+        publisherId: blog.publisher_id,
+        writerStatus: blog.writer_status,
+        publisherStatus: blog.publisher_status,
+        assignmentEntries,
+      });
       if (!selected || selected.actionState !== "action_required") {
         continue;
       }
@@ -232,23 +185,10 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           return;
         }
         assertValidStatus(status, "social");
-        const actionState = getSocialTaskActionState({
-          status,
+        const actionState = getSocialTaskActionStateFromRow({
+          row,
           userId: profile.id,
           isAdmin,
-          createdBy: typeof row.created_by === "string" ? row.created_by : null,
-          workerUserId:
-            typeof row.worker_user_id === "string" ? row.worker_user_id : null,
-          reviewerUserId:
-            typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null,
-          assignedToUserId:
-            typeof row.assigned_to_user_id === "string"
-              ? row.assigned_to_user_id
-              : null,
-          editorUserId:
-            typeof row.editor_user_id === "string" ? row.editor_user_id : null,
-          adminOwnerId:
-            typeof row.admin_owner_id === "string" ? row.admin_owner_id : null,
         });
         if (actionState !== "action_required") {
           return;

@@ -7,6 +7,7 @@
 // Tracking: Monitor console.warn logs for usage patterns
 
 import { NextRequest, NextResponse } from "next/server";
+import { withApiContract } from "@/lib/api-contract";
 
 // Type augmentation for globalThis counter
 declare global {
@@ -17,10 +18,10 @@ declare global {
  * @deprecated - Temporary proxy to new endpoint.
  * Call DELETE /api/ideas/[id] instead.
  */
-export const DELETE = async (
+export const DELETE = withApiContract(async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) => {
+) {
   const { id } = await params;
 
   // Kill switch: Disable legacy endpoint in production if needed
@@ -79,4 +80,4 @@ export const DELETE = async (
       { status: 500 }
     );
   }
-};
+});

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withApiContract } from "@/lib/api-contract";
 
 declare global {
   var __deprecatedIdeasDeleteHits: number | undefined;
@@ -10,7 +11,7 @@ declare global {
  * Exposes deprecation usage metrics for monitoring and removal readiness.
  * Not for external consumption.
  */
-export async function GET() {
+export const GET = withApiContract(async function GET() {
   return NextResponse.json(
     {
       deprecatedIdeasDeleteHits: globalThis.__deprecatedIdeasDeleteHits || 0,
@@ -19,4 +20,4 @@ export async function GET() {
     },
     { status: 200 }
   );
-}
+});

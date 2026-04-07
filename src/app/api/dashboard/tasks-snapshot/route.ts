@@ -11,12 +11,19 @@ import {
   WRITER_STATUS_LABELS,
 } from "@/lib/status";
 import {
+  compareBlogTaskCandidatePriority,
   getAdminAssignmentTaskActionState,
   getPublisherTaskActionState,
   getSocialTaskActionState,
   getWriterTaskActionState,
+  type BlogTaskAssociation,
   type TaskActionState,
 } from "@/lib/task-action-state";
+import {
+  isMissingSocialOwnershipColumnsError,
+  SOCIAL_TASK_SELECT_LEGACY,
+  SOCIAL_TASK_SELECT_WITH_OWNERSHIP,
+} from "@/lib/social-post-schema";
 import { ACTIVE_SOCIAL_STATUSES, assertValidStatus } from "@/lib/task-logic";
 import { requirePermission } from "@/lib/server-permissions";
 import type { BlogRecord, SocialPostStatus } from "@/lib/types";
@@ -40,7 +47,7 @@ type SnapshotResponse = {
 type BlogTaskCandidate = {
   actionState: TaskActionState;
   statusLabel: string;
-  association: "writer" | "publisher" | "admin_assignment";
+  association: BlogTaskAssociation;
 };
 
 function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
@@ -56,23 +63,6 @@ function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
   return 0;
 }
 
-
-function compareBlogCandidatePriority(left: BlogTaskCandidate, right: BlogTaskCandidate) {
-  const actionPriority: Record<TaskActionState, number> = {
-    action_required: 2,
-    waiting_on_others: 1,
-  };
-  if (actionPriority[left.actionState] !== actionPriority[right.actionState]) {
-    return actionPriority[right.actionState] - actionPriority[left.actionState];
-  }
-
-  const associationPriority: Record<BlogTaskCandidate["association"], number> = {
-    admin_assignment: 3,
-    publisher: 2,
-    writer: 1,
-  };
-  return associationPriority[right.association] - associationPriority[left.association];
-}
 
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
@@ -93,7 +83,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
 
     const { data: assignments, error: assignmentError } = await adminClient
       .from("task_assignments")
-      .select("blog_id,task_type,assigned_at")
+      .select("blog_id,task_type")
       .eq("assigned_to_user_id", userId)
       .eq("status", "pending");
 
@@ -106,22 +96,23 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
 
     const assignmentMap = new Map<
       string,
-      { taskType: "writer_review" | "publisher_review"; assignedAt: string }
+      Array<{ taskType: "writer_review" | "publisher_review" }>
     >();
-    const assignedBlogIds: string[] = [];
+    const assignedBlogIdSet = new Set<string>();
     for (const assignment of assignments ?? []) {
       if (
         typeof assignment.blog_id === "string" &&
-        typeof assignment.task_type === "string" &&
-        typeof assignment.assigned_at === "string"
+        typeof assignment.task_type === "string"
       ) {
-        assignmentMap.set(assignment.blog_id, {
+        const existingAssignments = assignmentMap.get(assignment.blog_id) ?? [];
+        existingAssignments.push({
           taskType: assignment.task_type as "writer_review" | "publisher_review",
-          assignedAt: assignment.assigned_at,
         });
-        assignedBlogIds.push(assignment.blog_id);
+        assignmentMap.set(assignment.blog_id, existingAssignments);
+        assignedBlogIdSet.add(assignment.blog_id);
       }
     }
+    const assignedBlogIds = Array.from(assignedBlogIdSet);
 
     let blogQuery = adminClient
       .from("blogs")
@@ -148,16 +139,34 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       (blogRows ?? []) as Array<Record<string, unknown>>
     ) as BlogRecord[];
 
-    const { data: socialRows, error: socialError } = await adminClient
-      .from("social_posts")
-      .select(
-        "id,title,status,scheduled_date,created_at,created_by,worker_user_id,reviewer_user_id"
-      )
-      .in("status", ACTIVE_SOCIAL_STATUSES)
-      .or(
-        `worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
-      )
-      .order("scheduled_date", { ascending: true, nullsFirst: false });
+    const fetchSocialRows = async (includeOwnershipColumns: boolean) => {
+      let query = adminClient
+        .from("social_posts")
+        .select(
+          includeOwnershipColumns
+            ? SOCIAL_TASK_SELECT_WITH_OWNERSHIP
+            : SOCIAL_TASK_SELECT_LEGACY
+        )
+        .in("status", ACTIVE_SOCIAL_STATUSES);
+
+      query = query.or(
+        includeOwnershipColumns
+          ? `assigned_to_user_id.eq.${userId},worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
+          : `worker_user_id.eq.${userId},reviewer_user_id.eq.${userId},created_by.eq.${userId}`
+      );
+
+      return query.order("scheduled_date", { ascending: true, nullsFirst: false });
+    };
+
+    let { data: socialRows, error: socialError } = await fetchSocialRows(true);
+    if (isMissingSocialOwnershipColumnsError(socialError)) {
+      console.warn(
+        "social_posts ownership columns missing; falling back to legacy social task query."
+      );
+      const fallbackResult = await fetchSocialRows(false);
+      socialRows = fallbackResult.data;
+      socialError = fallbackResult.error;
+    }
 
     if (socialError) {
       return NextResponse.json({ error: "Failed to load social tasks." }, { status: 500 });
@@ -166,7 +175,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     const blogTasks: SnapshotTask[] = [];
     for (const blog of normalizedBlogs) {
       const scheduledDate = getBlogPublishDate(blog);
-      const assignment = assignmentMap.get(blog.id);
+      const assignmentEntries = assignmentMap.get(blog.id) ?? [];
       const candidates: BlogTaskCandidate[] = [];
 
       assertValidStatus(blog.writer_status, "writer");
@@ -196,7 +205,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         });
       }
 
-      if (assignment) {
+      for (const assignment of assignmentEntries) {
         const taskType = assignment.taskType;
         const actionState = getAdminAssignmentTaskActionState(
           taskType,
@@ -217,7 +226,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         continue;
       }
 
-      const [selected] = [...candidates].sort(compareBlogCandidatePriority);
+      const [selected] = [...candidates].sort(compareBlogTaskCandidatePriority);
       blogTasks.push({
         id: `${blog.id}:blog`,
         title: blog.title,
@@ -244,6 +253,12 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           typeof row.worker_user_id === "string" ? row.worker_user_id : null;
         const reviewerUserId =
           typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null;
+        const assignedToUserId =
+          typeof row.assigned_to_user_id === "string" ? row.assigned_to_user_id : null;
+        const editorUserId =
+          typeof row.editor_user_id === "string" ? row.editor_user_id : null;
+        const adminOwnerId =
+          typeof row.admin_owner_id === "string" ? row.admin_owner_id : null;
         const actionState = getSocialTaskActionState({
           status,
           userId,
@@ -251,9 +266,9 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
           createdBy,
           workerUserId,
           reviewerUserId,
-          assignedToUserId: null,
-          editorUserId: null,
-          adminOwnerId: null,
+          assignedToUserId,
+          editorUserId,
+          adminOwnerId,
         });
 
         return [{

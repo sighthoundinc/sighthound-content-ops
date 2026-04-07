@@ -6,6 +6,31 @@ import type {
 
 export type TaskActionState = "action_required" | "waiting_on_others";
 export type BlogReviewTaskType = "writer_review" | "publisher_review";
+export type BlogTaskAssociation = "writer" | "publisher" | "admin_assignment";
+
+type BlogTaskCandidatePriorityInput = {
+  actionState: TaskActionState;
+  association: BlogTaskAssociation;
+};
+
+export function compareBlogTaskCandidatePriority<
+  T extends BlogTaskCandidatePriorityInput,
+>(left: T, right: T) {
+  const actionPriority: Record<TaskActionState, number> = {
+    action_required: 2,
+    waiting_on_others: 1,
+  };
+  if (actionPriority[left.actionState] !== actionPriority[right.actionState]) {
+    return actionPriority[right.actionState] - actionPriority[left.actionState];
+  }
+
+  const associationPriority: Record<BlogTaskAssociation, number> = {
+    admin_assignment: 3,
+    publisher: 2,
+    writer: 1,
+  };
+  return associationPriority[right.association] - associationPriority[left.association];
+}
 
 export function getWriterTaskActionState(
   writerStatus: WriterStageStatus

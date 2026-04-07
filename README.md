@@ -29,6 +29,9 @@ Social posts must include at least one valid public live link before they can mo
 3. Complete required fields/checklists
 4. Move status forward only when gates are satisfied
 5. Monitor `Waiting on Others` for handoff blockers
+- Home standup cards and `My Tasks Snapshot` use the same assignment/action-state model, so actionable review assignments (including admin review assignments) stay aligned across both surfaces.
+- When a user has multiple associations on the same blog, the selected card/snapshot classification prioritizes actionable work (`Required by me`) over waiting states.
+- Social ownership classification on home/snapshot reads current assignee ownership first and falls back safely to legacy owner columns when needed.
 
 ## Core pages
 - `Dashboard`: cross-content queue and filter view
@@ -47,6 +50,9 @@ Detail page ordering rule:
   - top `Next Action` strip (primary CTA + owner handoff context + preflight)
   - `Jump to` section navigator
   - explicit save-state indicator (`Unsaved changes` / `All changes saved`)
+- Responsive detail layout:
+  - `xl`+ screens show a sticky right rail for high-priority workflow controls.
+  - Smaller screens stack those controls into the main content flow for consistent readability.
 
 ## Workflow ownership model
 - Work stages are owned by the execution owner

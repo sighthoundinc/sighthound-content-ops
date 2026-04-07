@@ -7,6 +7,9 @@ This runbook describes how to operate Content Relay safely in day-to-day environ
 - Core workflow authority is database + API transition contracts.
 - UI is guidance and feedback; transition validity is enforced server-side.
 - All workflow-critical actions should flow through canonical API routes.
+- Workspace home standup cards (`/api/dashboard/summary`) and `My Tasks Snapshot` (`/api/dashboard/tasks-snapshot`) must stay aligned by using the same assignment/action-state classifier, including review assignments from `task_assignments`.
+- When multiple associations exist for the same blog, classifier precedence must favor `action_required` over `waiting_on_others`.
+- Social ownership classification in summary/snapshot must evaluate `assigned_to_user_id` first and fall back to legacy owner columns when ownership columns are unavailable.
 
 ## 2) Environments and release gate
 ### Recommended flow
@@ -38,6 +41,10 @@ npm run check:full
   - `Setup` → `Assignment` → `Associated Blog` → `Write Caption` → `Review & Publish` → `Comments` → `Current Snapshot` → `Checklist` → `Assignment & Changes`
 - Social post history sections use the label `Assignment & Changes` (never `Activity`).
 - Live-link controls are part of `Review & Publish` on the dedicated social editor.
+- Detail-page responsive rail contract:
+  - On `xl`+ screens, detail pages render a right rail (`~280px`, `~320px` at `2xl`) for high-priority workflow controls.
+  - On smaller screens, those controls stack inline in the main column to avoid overflow and cramped layouts.
+  - Sticky behavior is applied to a single rail wrapper on `xl`+ to prevent stacked-sticky overlap.
 - Detail pages include a top `Next Action` strip + `Jump to` section navigator for faster execution.
 - Detail pages show explicit save state (`Unsaved changes` vs `All changes saved`) tied to form state.
 - Blog detail uses preflight readiness + jump-to-field guidance and keyboard parity shortcuts:

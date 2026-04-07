@@ -77,6 +77,13 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
   - `Required by me`
   - `Waiting on Others`
 
+### Workspace home summary
+- Home standup cards and `My Tasks Snapshot` share the same assignment/action-state classification model.
+- Blog counts must account for direct writer/publisher ownership and pending review ownership from `task_assignments`.
+- Actionable (`action_required`) ownership is the source for standup card counts, so cards stay in sync with the `Required by me` snapshot group.
+- If a user has multiple associations on one blog, candidate selection must prioritize `action_required` before `waiting_on_others`.
+- Social summary/snapshot ownership classification must evaluate current assignee ownership (`assigned_to_user_id`) and gracefully fall back to legacy owner columns for compatibility.
+
 ### Dashboard
 - Cross-content queue with filtering and sorting.
 
@@ -109,6 +116,10 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
   - preflight readiness count and missing-field jump cues
 - Both detail pages include a compact in-page section navigator (`Jump to`) with anchor links.
 - Assignment/change history readability is improved via grouped day buckets and clearer empty-state guidance.
+- Detail-page responsive rail contract:
+  - At `xl`+, both `/blogs/[id]` and `/social-posts/[id]` render a right rail column for next-action/preflight context.
+  - Below `xl`, right-rail cards collapse into the primary column in normal document flow.
+  - Sticky positioning is applied to a single right-rail wrapper on `xl`+ to avoid multi-sticky collision.
 
 ## 7) API behavior contract (high-level)
 - Workflow transitions are API-authoritative.

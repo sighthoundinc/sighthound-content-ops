@@ -1183,7 +1183,7 @@ export default function BlogDetailPage() {
               <StatusBadge status={blog.overall_status} />
             </div>
           </header>
-          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 xl:hidden">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
@@ -1262,7 +1262,7 @@ export default function BlogDetailPage() {
           </section>
           <nav
             aria-label="Detail sections"
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 xl:hidden"
           >
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Jump to
@@ -1279,7 +1279,9 @@ export default function BlogDetailPage() {
           </nav>
 
 
-          <section id="blog-details" className="rounded-lg border border-slate-200 p-4">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-6">
+              <section id="blog-details" className="rounded-lg border border-slate-200 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Blog Details
             </h3>
@@ -1551,7 +1553,7 @@ export default function BlogDetailPage() {
                 </button>
               </div>
             </form>
-          </section>
+              </section>
 
           <section id="blog-workflow" className="grid gap-4 xl:grid-cols-2">
             <div className="rounded-lg border border-slate-200 p-4">
@@ -1884,7 +1886,108 @@ export default function BlogDetailPage() {
               </div>
             )}
           </section>
-
+            </div>
+            <aside className="hidden xl:block">
+              <div className="space-y-3 xl:sticky xl:top-20">
+                <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
+                        Next Action
+                      </h3>
+                      <p className="text-sm font-medium text-slate-900">{blogNextAction.title}</p>
+                      <p className="text-sm text-slate-600">{blogNextAction.helper}</p>
+                      <p
+                        className={`text-xs ${
+                          isDetailDirty ? "text-amber-700" : "text-emerald-700"
+                        }`}
+                      >
+                        {isDetailDirty
+                          ? "Unsaved changes"
+                          : `All changes saved • ${formatDateInTimezone(
+                              blog.updated_at,
+                              profile?.timezone,
+                              "MMM d, h:mm a"
+                            )}`}
+                      </p>
+                    </div>
+                    {blogNextAction.ctaLabel ? (
+                      <button
+                        type="button"
+                        disabled={blogNextAction.disabled}
+                        aria-keyshortcuts="Alt+Shift+Enter"
+                        className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={runBlogPrimaryAction}
+                      >
+                        {blogNextAction.ctaLabel}
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Transition Preflight
+                    </p>
+                    {blogPreflightRequiredFields.length === 0 ? (
+                      <p className="text-xs text-emerald-700">
+                        No required blockers for the current stage.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-xs text-slate-600">
+                          {readyBlogPreflightCount} / {blogPreflightRequiredFields.length} required
+                          items ready for next completion action.
+                        </p>
+                        {missingBlogPreflightFields.length === 0 ? (
+                          <p className="text-xs text-emerald-700">All required items are complete.</p>
+                        ) : (
+                          <ul className="space-y-1">
+                            {missingBlogPreflightFields.map((field) => (
+                              <li
+                                key={field}
+                                className="flex items-center justify-between gap-2 text-xs text-slate-700"
+                              >
+                                <span>{BLOG_PREFLIGHT_FIELD_META[field].label}</span>
+                                <button
+                                  type="button"
+                                  className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                                  onClick={() => {
+                                    jumpToBlogField(field);
+                                  }}
+                                >
+                                  Go to field
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+                    <p className="text-[11px] text-slate-500">
+                      Shortcut: {BLOG_DETAIL_SHORTCUTS.nextRequired.keys[0]} • Primary action:{" "}
+                      {BLOG_DETAIL_SHORTCUTS.primaryAction.keys[0]}
+                    </p>
+                  </div>
+                </section>
+                <nav
+                  aria-label="Detail sections"
+                  className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Jump to
+                  </span>
+                  {blogSectionLinks.map((sectionLink) => (
+                    <a
+                      key={sectionLink.href}
+                      href={sectionLink.href}
+                      className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    >
+                      {sectionLink.label}
+                    </a>
+                  ))}
+                </nav>
+              </div>
+            </aside>
+          </div>
         </div>
         <ConfirmationModal
           isOpen={pendingCompletionAction !== null}

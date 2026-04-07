@@ -91,6 +91,12 @@ What “explicit updates” means:
 | [Calendar](/calendar) | Scheduled workload by date | Planning and sequencing |
 | Notifications | Assignment and stage updates | Respond to change quickly |
 
+Home page consistency rule:
+- The top standup cards and `My Tasks Snapshot` use the same assignment/action-state model.
+- If a review assignment appears under `Required by me`, the matching status count should also be reflected in the standup cards.
+- If you are associated to the same blog in multiple ways, `Required by me` takes precedence over waiting-state classification.
+- Social task ownership checks use the current assignee model first and fall back to legacy owner columns when required for compatibility.
+
 ### Detail page section order
 Blog detail views:
 1. `Comments`
@@ -116,6 +122,9 @@ Shared detail-page usability helpers:
 - `Jump to` links let you jump directly to major sections.
 - Save state is explicit: `Unsaved changes` vs `All changes saved`.
 - `Assignment & Changes` is grouped by day for easier scanning.
+- Responsive right rail behavior is consistent on both detail pages:
+  - `xl` and above: right rail is visible and sticky.
+  - Below `xl`: right-rail cards move into the main vertical flow (no side column).
 
 ## 7) Transition gates reference
 - Never transition without required target-stage fields.

@@ -2140,7 +2140,7 @@ export default function SocialPostEditorPage() {
               ) : null}
             </div>
           ) : null}
-          <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
               <section
                 id="social-editor-step-setup"
@@ -2844,10 +2844,11 @@ export default function SocialPostEditorPage() {
             </div>
 
             <aside className="space-y-3">
-              <section
-                id="social-editor-step-current-snapshot"
-                className="sticky top-20 space-y-2 rounded-lg border border-slate-200 bg-white p-3"
-              >
+              <div className="space-y-3 xl:sticky xl:top-20">
+                <section
+                  id="social-editor-step-current-snapshot"
+                  className="space-y-2 rounded-lg border border-slate-200 bg-white p-3"
+                >
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Current Snapshot
                 </p>
@@ -2876,11 +2877,11 @@ export default function SocialPostEditorPage() {
                     <p className="text-xs text-amber-800">{latestRollbackReason}</p>
                   </div>
                 ) : null}
-              </section>
-              <section
-                id="social-editor-step-checklist"
-                className="sticky top-56 space-y-3 rounded-lg border border-slate-200 bg-white p-3"
-              >
+                </section>
+                <section
+                  id="social-editor-step-checklist"
+                  className="space-y-3 rounded-lg border border-slate-200 bg-white p-3"
+                >
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Checklist
@@ -2983,7 +2984,8 @@ export default function SocialPostEditorPage() {
                     <p className="text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
                   ) : null}
                 </div>
-              </section>
+                </section>
+              </div>
               <section
                 id="social-editor-step-assignment-changes"
                 className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"

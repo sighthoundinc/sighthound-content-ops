@@ -106,3 +106,4 @@ npm run check:full
 
 ## Migration note
 - Task/dashboard performance relies on composite indexes introduced for ownership/status-heavy query paths (social posts, blogs, and task assignments). Apply latest Supabase migrations before validating queue/summary performance.
+- Legacy compatibility endpoint `DELETE /api/ideas/[id]/delete` is retired (`410 Gone`). Use `DELETE /api/ideas/[id]`.

@@ -4,6 +4,10 @@ import { authenticateRequest } from "@/lib/server-permissions";
 import { getUserRoles } from "@/lib/roles";
 import { withApiContract } from "@/lib/api-contract";
 import { emitWorkflowSlackEvent } from "@/lib/server-slack-emitter";
+import {
+  getCurrentDateIso,
+  getOverdueUpdatedAtCutoffIso,
+} from "@/lib/overdue-window";
 
 const OVERDUE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -23,14 +27,16 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
-  const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const overdueUpdatedAtCutoffIso = getOverdueUpdatedAtCutoffIso(now);
+  const todayIso = getCurrentDateIso(now);
+  const requestAuthToken = request.headers.get("authorization") ?? undefined;
 
   // Check for social posts stuck in in_review status (overdue for review)
   const { data: reviewDuePost, error: reviewError } = await auth.context.adminClient
     .from("social_posts")
     .select("id,title,product,status,reviewer_user_id,last_review_overdue_notification_at")
     .eq("status", "in_review")
-    .gte("updated_at", oneDayAgo);
+    .lte("updated_at", overdueUpdatedAtCutoffIso);
 
   if (reviewError) {
     console.error("Failed to load posts for review overdue check:", reviewError);
@@ -48,7 +54,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     )
     .eq("status", "ready_to_publish")
     .not("scheduled_date", "is", null)
-    .gte("updated_at", oneDayAgo);
+    .lte("scheduled_date", todayIso)
+    .lte("updated_at", overdueUpdatedAtCutoffIso);
 
   if (publishError) {
     console.error("Failed to load posts for publish overdue check:", publishError);
@@ -118,6 +125,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       actorName: "System",
       contentTitle: post.title,
       timestamp: Date.now(),
+    }, {
+      authToken: requestAuthToken,
     });
     if (emitSuccess) {
       reviewOverdueNotificationsSent += 1;
@@ -160,6 +169,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       actorName: "System",
       contentTitle: post.title,
       timestamp: Date.now(),
+    }, {
+      authToken: requestAuthToken,
     });
     if (emitSuccess) {
       publishOverdueNotificationsSent += 1;

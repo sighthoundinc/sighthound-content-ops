@@ -156,6 +156,7 @@ Shared detail-page usability helpers:
 - Confirm first-stage required fields at creation time.
 - Use [Settings](/settings) to configure profile/timezone/notifications.
 - Keep deployments on latest database migrations so dashboard/task queues remain responsive at higher data volume.
+- Protected pages require a valid signed-in session; if your session expires you’ll be redirected to [Login](/login) and can continue after signing in again.
 
 ## 9) Quick SOP card
 1. Open [My Tasks](/tasks)

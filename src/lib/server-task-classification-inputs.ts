@@ -31,6 +31,16 @@ export type SharedTaskClassificationInputs = {
   socialRows: Array<Record<string, unknown>>;
 };
 
+function normalizeRecordRows(rows: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+  return rows.filter(
+    (row): row is Record<string, unknown> =>
+      typeof row === "object" && row !== null && !Array.isArray(row)
+  );
+}
+
 export async function fetchSharedTaskClassificationInputs({
   adminClient,
   userId,
@@ -101,9 +111,7 @@ export async function fetchSharedTaskClassificationInputs({
     return { error: { kind: "blogs", message: "Failed to load blog tasks." } };
   }
 
-  const blogs = normalizeBlogRows(
-    (blogRows ?? []) as Array<Record<string, unknown>>
-  ) as BlogRecord[];
+  const blogs = normalizeBlogRows(normalizeRecordRows(blogRows)) as BlogRecord[];
 
   const fetchSocialRows = async (includeOwnershipColumns: boolean) => {
     let query = adminClient
@@ -139,7 +147,7 @@ export async function fetchSharedTaskClassificationInputs({
       blogs,
       assignments,
       assignmentMap,
-      socialRows: (socialRows ?? []) as Array<Record<string, unknown>>,
+      socialRows: normalizeRecordRows(socialRows),
     },
   };
 }

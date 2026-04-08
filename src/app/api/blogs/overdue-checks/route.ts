@@ -4,6 +4,10 @@ import { authenticateRequest } from "@/lib/server-permissions";
 import { getUserRoles } from "@/lib/roles";
 import { withApiContract } from "@/lib/api-contract";
 import { emitWorkflowSlackEvent } from "@/lib/server-slack-emitter";
+import {
+  getCurrentDateIso,
+  getOverdueUpdatedAtCutoffIso,
+} from "@/lib/overdue-window";
 
 const OVERDUE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -23,11 +27,12 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
-  const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const overdueUpdatedAtCutoffIso = getOverdueUpdatedAtCutoffIso(now);
+  const requestAuthToken = request.headers.get("authorization") ?? undefined;
 
   // Check for blogs stuck in pending_review publisher status (overdue for publishing)
   // Look for blogs with a scheduled_publish_date that has passed or is today
-  const todayIso = new Date(now).toISOString().split("T")[0];
+  const todayIso = getCurrentDateIso(now);
 
   const { data: publishDueBlogs, error: publishError } = await auth.context.adminClient
     .from("blogs")
@@ -36,7 +41,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     )
     .eq("publisher_status", "pending_review")
     .lte("scheduled_publish_date", todayIso)
-    .gte("updated_at", oneDayAgo);
+    .lte("updated_at", overdueUpdatedAtCutoffIso);
 
   if (publishError) {
     console.error("Failed to load blogs for publish overdue check:", publishError);
@@ -100,6 +105,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       actorName: "System",
       contentTitle: blog.title,
       timestamp: Date.now(),
+    }, {
+      authToken: requestAuthToken,
     });
     if (emitSuccess) {
       publishOverdueNotificationsSent += 1;

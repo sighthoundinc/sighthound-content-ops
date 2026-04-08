@@ -31,15 +31,10 @@ The following are valid specialized workflow/system actions:
 - `/api/admin/wipe-app-clean`
 - `/api/events/record-activity`
 
-## Legacy compatibility endpoint
-Current temporary legacy proxy:
-- `DELETE /api/ideas/[id]/delete` → proxies to `DELETE /api/ideas/[id]`
-
-Rules for legacy endpoints:
-1. Mark as deprecated in-file.
-2. Log usage clearly for migration visibility.
-3. Keep migration target explicit in docs/comments.
-4. Remove once callers are migrated.
+## Retired compatibility endpoint
+- `DELETE /api/ideas/[id]/delete` is retired and returns `410 Gone`.
+- Canonical delete contract is `DELETE /api/ideas/[id]`.
+- Do not introduce new action-suffix CRUD compatibility proxies.
 
 ## Route inventory note
 REST standards define target architecture; not every resource currently has full CRUD API parity.

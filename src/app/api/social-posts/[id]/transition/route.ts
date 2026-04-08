@@ -74,6 +74,7 @@ export const POST = withApiContract(async function POST(
     }
     const payload = parsedPayload.data;
     const isAdmin = getUserRoles(auth.context.profile).includes("admin");
+    const requestAuthToken = request.headers.get("authorization") ?? undefined;
 
     // 1. Parse and validate next status
     const nextStatus = payload.nextStatus as SocialPostStatus;
@@ -384,6 +385,8 @@ export const POST = withApiContract(async function POST(
         reason: normalizedReason,
       },
       timestamp: Date.now(),
+    }, {
+      authToken: requestAuthToken,
     });
 
     // 15. Send Slack notification (non-blocking)

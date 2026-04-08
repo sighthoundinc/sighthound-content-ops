@@ -151,6 +151,8 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Request validation occurs at API boundary.
 - Client-side transitions cannot bypass server transition rules.
 - API responses follow a stable success/error contract for predictable client behavior.
+- Canonical ideas delete route is `DELETE /api/ideas/[id]`; legacy `DELETE /api/ideas/[id]/delete` is retired and returns `410 Gone`.
+- Middleware gate for protected pages validates Supabase session identity in addition to cookie presence.
 
 ## 8) Date and timezone contract
 - User-facing timestamps are rendered by user timezone preference.

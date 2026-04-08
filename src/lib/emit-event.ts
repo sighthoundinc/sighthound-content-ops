@@ -17,6 +17,12 @@ import {
   type UnifiedEvent,
 } from "@/lib/unified-events";
 
+type EmitEventOptions = {
+  skipNotification?: boolean;
+  skipActivityHistory?: boolean;
+  authToken?: string;
+};
+
 /**
  * Emit a unified event that triggers both notifications and activity history.
  * Non-breaking: Returns success/error for caller to handle.
@@ -31,10 +37,7 @@ import {
  */
 export async function emitEvent(
   event: UnifiedEvent,
-  options?: {
-    skipNotification?: boolean;
-    skipActivityHistory?: boolean;
-  }
+  options?: EmitEventOptions
 ): Promise<{ success: boolean; error?: string }> {
   // Validate event before processing
   const validationError = validateUnifiedEvent(event);
@@ -73,7 +76,7 @@ export async function emitEvent(
   // Record to activity history (unless skipped)
   if (!options?.skipActivityHistory) {
     try {
-      const historySuccess = await recordActivityHistory(event);
+      const historySuccess = await recordActivityHistory(event, options);
       success.activityHistory = historySuccess;
       if (!historySuccess) {
         errors.push("Activity history recording failed (see console logs)");
@@ -159,6 +162,44 @@ function getRecordActivityEndpoint() {
   return `http://127.0.0.1:${port}/api/events/record-activity`;
 }
 
+function normalizeAuthToken(token: string | null | undefined) {
+  if (!token) {
+    return null;
+  }
+  const trimmed = token.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (trimmed.startsWith("Bearer ")) {
+    const bearerToken = trimmed.slice("Bearer ".length).trim();
+    return bearerToken.length > 0 ? bearerToken : null;
+  }
+  return trimmed;
+}
+
+async function resolveRecordActivityAuthToken(options?: EmitEventOptions) {
+  const forwardedToken = normalizeAuthToken(options?.authToken);
+  if (forwardedToken) {
+    return forwardedToken;
+  }
+
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const { getSupabaseBrowserClient } = await import("@/lib/supabase/browser");
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase.auth.getSession();
+    return normalizeAuthToken(data.session?.access_token);
+  } catch (error) {
+    console.warn("Failed to resolve browser auth token for activity event", {
+      error,
+    });
+    return null;
+  }
+}
+
 /**
  * Get notification payload from unified event.
  * Callers in React components should use pushNotification() with the returned object.
@@ -191,17 +232,25 @@ export function getNotificationFromEvent(event: UnifiedEvent): NotificationInput
  * Record event to activity history via API.
  * @returns true if recording succeeded
  */
-async function recordActivityHistory(event: UnifiedEvent): Promise<boolean> {
+async function recordActivityHistory(
+  event: UnifiedEvent,
+  options?: EmitEventOptions
+): Promise<boolean> {
   try {
     const record = unifiedEventToActivityRecord(event);
     const endpoint = getRecordActivityEndpoint();
+    const authToken = await resolveRecordActivityAuthToken(options);
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (authToken) {
+      headers.authorization = `Bearer ${authToken}`;
+    }
 
     // Call API to record activity history
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         ...record,
         contentType: event.contentType,

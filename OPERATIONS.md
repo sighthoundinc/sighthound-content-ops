@@ -70,6 +70,8 @@ npm run check:full
 - Keep request validation at route boundaries.
 - Keep response shape stable (success/error envelope) for predictable client handling.
 - Avoid direct state mutation bypasses from client to DB.
+- Legacy endpoint policy: `DELETE /api/ideas/[id]/delete` is retired and returns `410 Gone`; use `DELETE /api/ideas/[id]`.
+- Middleware auth gate validates Supabase session identity on protected routes (not just cookie presence) before allowing page access.
 
 ## 5) Import operations
 - Import should support selective columns and selective rows.

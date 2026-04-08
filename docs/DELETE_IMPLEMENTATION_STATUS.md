@@ -5,7 +5,7 @@
 ### Implemented REST delete endpoints
 - **Social Posts**: `DELETE /api/social-posts/[id]` (`src/app/api/social-posts/[id]/route.ts`)
 - **Ideas**: `DELETE /api/ideas/[id]` (`src/app/api/ideas/[id]/route.ts`)
-- **Legacy compatibility proxy (deprecated)**: `DELETE /api/ideas/[id]/delete` (`src/app/api/ideas/[id]/delete/route.ts`)
+- **Legacy ideas endpoint (retired)**: `DELETE /api/ideas/[id]/delete` now returns `410 Gone` and no longer proxies requests.
 
 ### Not yet implemented as REST endpoint
 - **Blogs**: `DELETE /api/blogs/[id]` does **not** currently exist.
@@ -28,6 +28,9 @@
 - Idempotent success behavior:
   - If record does not exist, route returns `200` with `"Idea already deleted"`.
   - If record is deleted, route returns `200` with `deletedIdeaId` and `deletedIdeaTitle`.
+- Legacy compatibility note:
+  - `DELETE /api/ideas/[id]/delete` is retired and always returns `410 Gone`.
+  - Clients must call `DELETE /api/ideas/[id]`.
 
 ### Blogs
 - No dedicated API delete route yet.

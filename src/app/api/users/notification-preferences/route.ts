@@ -1,7 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { invalidateUserPreferencesCache } from "@/lib/notification-preferences-cache";
 import { withApiContract } from "@/lib/api-contract";
+import { authenticateRequest } from "@/lib/server-permissions";
 
 interface NotificationPreferencesUpdate {
   notifications_enabled?: boolean;
@@ -87,37 +87,19 @@ function normalizePreferences(preferences: RawNotificationPreferences | null) {
  */
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
+    const auth = await authenticateRequest(request);
+    if ("error" in auth) {
       return NextResponse.json(
-        { error: "Missing authorization header" },
-        { status: 401 }
-      );
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // Extract user from JWT in authorization header
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-    } = await supabase.auth.getUser(token);
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: auth.error },
+        { status: auth.status }
       );
     }
 
     // Get user's notification preferences
-    const { data: preferences, error } = await supabase
+    const { data: preferences, error } = await auth.context.adminClient
       .from("notification_preferences")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", auth.context.userId)
       .single();
 
     if (error && error.code !== "PGRST116") {
@@ -142,29 +124,11 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
  */
 export const PATCH = withApiContract(async function PATCH(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
+    const auth = await authenticateRequest(request);
+    if ("error" in auth) {
       return NextResponse.json(
-        { error: "Missing authorization header" },
-        { status: 401 }
-      );
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // Extract user from JWT
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-    } = await supabase.auth.getUser(token);
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: auth.error },
+        { status: auth.status }
       );
     }
 
@@ -217,11 +181,11 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
 
     // Atomic upsert avoids duplicate-key races when multiple requests
     // try to bootstrap/update notification preferences concurrently.
-    const { data: upserted, error: upsertError } = await supabase
+    const { data: upserted, error: upsertError } = await auth.context.adminClient
       .from("notification_preferences")
       .upsert(
         {
-          user_id: user.id,
+          user_id: auth.context.userId,
           ...updates,
         },
         { onConflict: "user_id" }
@@ -234,7 +198,7 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
     }
 
     // Invalidate cache after upsert
-    invalidateUserPreferencesCache(user.id);
+    invalidateUserPreferencesCache(auth.context.userId);
 
     return NextResponse.json(
       normalizePreferences((upserted ?? null) as RawNotificationPreferences | null)

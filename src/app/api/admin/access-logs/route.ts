@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/server-permissions";
 import { withApiContract } from "@/lib/api-contract";
+type AccessLogRow = {
+  id: string;
+  user_id: string;
+  event_type: string;
+  created_at: string;
+};
+
+type AccessLogProfile = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+};
 
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {
@@ -59,28 +71,41 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       );
     }
 
-    // Enrich with user profile data from profiles table
-    const logsWithProfiles = data
-      ? await Promise.all(
-          data.map(async (log: Record<string, unknown>) => {
-            // Fetch profile to get email and full_name
-            const { data: profile } = await adminClient
-              .from("profiles")
-              .select("full_name, email")
-              .eq("id", log.user_id)
-              .maybeSingle();
+    const logs = (data ?? []) as AccessLogRow[];
+    const userIds = Array.from(
+      new Set(
+        logs
+          .map((log) => log.user_id)
+          .filter((userId): userId is string => typeof userId === "string" && userId.length > 0)
+      )
+    );
 
-            return {
-              id: log.id,
-              user_id: log.user_id,
-              event_type: log.event_type,
-              created_at: log.created_at,
-              email: profile?.email || "",
-              full_name: profile?.full_name || "",
-            };
-          })
-        )
-      : [];
+    let profileByUserId = new Map<string, AccessLogProfile>();
+    if (userIds.length > 0) {
+      const { data: profiles, error: profilesError } = await adminClient
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      if (profilesError) {
+        console.warn("Failed to batch load profiles for access logs:", profilesError);
+      } else {
+        profileByUserId = new Map(
+          ((profiles ?? []) as AccessLogProfile[]).map((profile) => [profile.id, profile])
+        );
+      }
+    }
+
+    const logsWithProfiles = logs.map((log) => {
+      const profile = profileByUserId.get(log.user_id);
+      return {
+        id: log.id,
+        user_id: log.user_id,
+        event_type: log.event_type,
+        created_at: log.created_at,
+        email: profile?.email || "",
+        full_name: profile?.full_name || "",
+      };
+    });
 
     return NextResponse.json({
       logs: logsWithProfiles,

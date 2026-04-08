@@ -23,6 +23,7 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
+  const requestAuthToken = request.headers.get("authorization") ?? undefined;
 
   const { data: awaitingPosts, error: postsError } = await auth.context.adminClient
     .from("social_posts")
@@ -85,6 +86,8 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
       actorName: "System",
       contentTitle: post.title,
       timestamp: Date.now(),
+    }, {
+      authToken: requestAuthToken,
     });
     if (emitSuccess) {
       remindersSent += 1;

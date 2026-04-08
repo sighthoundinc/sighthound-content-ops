@@ -400,14 +400,24 @@ Requirements:
 ## Delivery Quality Gate (MUST)
 
 Before considering a task complete:
+1. Use fast-by-default validation: run affected-scope checks first (changed files/modules/routes), and avoid full-suite checks unless explicitly requested by the user or required by risk.
+2. Enforce a strict validation time budget of **3 minutes maximum** per task iteration; if checks exceed or are likely to exceed this budget, stop and ask the user whether to continue with broader/full checks.
+3. Escalate validation depth by risk:
+   - **Low Risk**: no mandatory automated checks unless user requests.
+   - **Medium Risk**: run targeted checks for touched surfaces.
+   - **High Risk**: ask user approval, then run broader checks relevant to the changed risk surface.
+4. Use failure-fast ordering when validations are run: cheapest/high-signal checks first, heavier checks last.
+5. Always report exactly what was run, what was skipped, and why; never imply checks passed if they were not executed.
+6. Verify affected UX surfaces for consistency with existing global patterns and invariants in this file.
+7. Confirm documentation updates from the rule above are applied when applicable.
+8. Prefer small, reversible changes over broad rewrites unless the task explicitly requires larger refactoring.
+9. Apply risk-based validation from **Change Risk Classification** where applicable.
+10. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
+5. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
 
-1. Run relevant validation steps (lint/typecheck/tests/build) when available; if not run, state exactly why.
-   - For full-app stabilization/release verification, run `npm run check:full` (no-cache lint + typecheck + build).
-2. Verify affected UX surfaces for consistency with existing global patterns and invariants in this file.
-3. Confirm documentation updates from the rule above are applied when applicable.
-4. Prefer small, reversible changes over broad rewrites unless the task explicitly requires larger refactoring.
-5. Apply risk-based validation from **Change Risk Classification** where applicable.
-6. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
+## Post-Task Validation Confirmation (MUST)
+
+After completing any task, the agent must explicitly ask the user whether to run validation commands (for example lint, typecheck, tests, or build) before running them.
 
 ## Git Commits (MUST)
 

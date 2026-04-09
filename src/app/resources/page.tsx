@@ -92,6 +92,11 @@ export default function ResourcesPage() {
                   8) SOP card
                 </a>
               </li>
+              <li>
+                <a href="#associated-content" className="font-medium text-sky-700 underline underline-offset-2">
+                  9) Associated Content navigation
+                </a>
+              </li>
             </ul>
           </Section>
 
@@ -349,6 +354,34 @@ export default function ResourcesPage() {
               <li>Move stage forward</li>
               <li>Confirm handoff or wait-state</li>
             </ol>
+          </Section>
+
+          <Section id="associated-content" title="9) Associated Content navigation">
+            <p className="font-medium text-slate-900">Navigate between linked blogs and social posts</p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <span className="font-medium text-slate-900">Dashboard:</span> Click the "Associated Content" badge
+                on any row to navigate between blogs and their linked social posts. Blog rows show a count badge;
+                social rows show the associated blog title.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Blog detail drawer:</span> Open the "Associated Social Posts"
+                section to see all social posts linked to that blog. Click any post title to open its full editor.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Social post editor:</span> View the "Associated Blog"
+                context card (before Comments) to see the linked blog's workflow status, scheduled dates, and quick
+                links to draft doc and live blog.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Social posts list filter:</span> Use the "Associated Blog"
+                dropdown to filter social posts by linked blog. Combine with Status filter for precise triage.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Deep linking:</span> URL params are preserved:
+                `?associated_blog=&#123;blogId&#125;` for filtered social posts, `?filter=&#123;blogId&#125;` for filtered blogs.
+              </li>
+            </ul>
           </Section>
         </div>
       </AppShell>

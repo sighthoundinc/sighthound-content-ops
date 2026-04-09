@@ -26,7 +26,8 @@ export type DashboardTableColumnKey =
   | "published_date"
   | "owner_display"
   | "updated_at"
-  | "product";
+  | "product"
+  | "associated_content";
 
 export const DASHBOARD_COLUMN_LABELS: Record<DashboardTableColumnKey, string> = {
   content_type: "Content",
@@ -40,6 +41,7 @@ export const DASHBOARD_COLUMN_LABELS: Record<DashboardTableColumnKey, string> = 
   owner_display: "Assigned to",
   updated_at: "Updated",
   product: "Product",
+  associated_content: "Associated Content",
 };
 
 const CENTER_ALIGNED_COLUMNS: DashboardTableColumnKey[] = [
@@ -66,6 +68,9 @@ export interface DashboardTableRow {
   owner_display: string;
   updated_at: string;
   product?: string | null;
+  social_post_count?: number | null; // for blog rows
+  associated_blog_id?: string | null; // for social rows
+  associated_blog_title?: string | null; // for social rows
 }
 
 export interface DashboardTableProps {
@@ -82,6 +87,7 @@ export interface DashboardTableProps {
   onSortChange: (column: DashboardTableColumnKey) => void;
   onToggleAll: (checked: boolean) => void;
   onToggleSingle: (row: DashboardTableRow, checked: boolean) => void;
+  onAssociatedContentClick?: (row: DashboardTableRow) => void;
 }
 
 export function DashboardTable({
@@ -98,6 +104,7 @@ export function DashboardTable({
   onSortChange,
   onToggleAll,
   onToggleSingle,
+  onAssociatedContentClick,
 }: DashboardTableProps) {
   const bodyCellClass = getTableBodyCellClass(rowDensity);
   const getRowKey = (row: DashboardTableRow) => `${row.content_type}:${row.id}`;
@@ -305,6 +312,32 @@ export function DashboardTable({
                       return (
                         <td key={column} className={bodyCellClass}>
                           {formatDateInTimezone(row.updated_at, timezone ?? undefined)}
+                        </td>
+                      );
+                    }
+                    if (column === "associated_content") {
+                      const displayValue =
+                        row.content_type === "blog"
+                          ? row.social_post_count
+                            ? `${row.social_post_count} post${row.social_post_count !== 1 ? "s" : ""}`
+                            : "—"
+                          : row.associated_blog_title ?? "—";
+                      return (
+                        <td key={column} className={bodyCellClass}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onAssociatedContentClick) {
+                                onAssociatedContentClick(row);
+                              }
+                            }}
+                            className="truncate text-slate-700 hover:underline cursor-pointer"
+                            title={displayValue}
+                            disabled={displayValue === "—"}
+                          >
+                            {displayValue}
+                          </button>
                         </td>
                       );
                     }

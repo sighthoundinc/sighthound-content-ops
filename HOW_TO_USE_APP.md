@@ -167,9 +167,45 @@ Shared detail-page usability helpers:
 4. Move stage
 5. Confirm handoff or wait-state
 
-## 10) Slack workflow alerts
-- Workflow updates are posted to `#content-ops-alerts`.
-- Each Slack workflow alert includes a clickable `Open link:` line when the item is linkable.
-- If app URL config is missing, links still work via fallback base URL: `https://sighthound-content-ops.vercel.app`.
-- Link previews are intentionally suppressed to keep channel alerts compact.
-- New blog/social comments also post to Slack with full comment text (multi-line), plus author and record context.
+## 10) Associated Content: Navigating between blogs and social posts
+### Quick navigation patterns
+- **Dashboard**: Click the "Associated Content" badge on any row:
+  - Blog row → Shows count + titles of linked social posts → Click to navigate to `/social-posts?associated_blog={blogId}`
+  - Social row → Shows associated blog title → Click to navigate to `/blogs?filter={blogId}`
+- **Blog detail drawer**: "Associated Social Posts" section shows all posts linked to that blog
+  - Each post title is clickable → Opens full social post detail page
+  - View post type, status, platforms, and scheduled date at a glance
+- **Social post detail page**: "Associated Blog" context card shows the linked blog
+  - Blog title is clickable → Opens full blog detail view
+  - Shows blog's writer/publisher status and scheduled dates
+  - Quick links to draft doc and live blog URL for reference
+
+### Social posts list filtering
+- Use the "Associated Blog" dropdown filter to narrow by linked blog:
+  - Default: `All Blogs` (shows all social posts)
+  - Select a blog name to show only social posts linked to that blog
+  - Selected filter appears in the active filter pills (removable with X)
+  - Combine with Status filter for precise triage
+- Filter respects deep-linked URL params: `?associated_blog={blogId}`
+- Click "Clear all filters" to reset to default view
+
+### Workflow example: Blog → Social posts
+1. Open [Dashboard](/dashboard)
+2. Find a blog row with linked social posts (badge shows count)
+3. Click the "Associated Content" badge → Filtered social posts list
+4. Review all social posts for that blog
+5. Click a social post title → Opens full social post editor
+
+### Workflow example: Social post → Blog context
+1. Open [Social Posts](/social-posts)
+2. Click a social post title → Enters full editor view
+3. Scroll to "Associated Blog" section (before Comments)
+4. Review linked blog status and scheduled dates
+5. Click blog title or "Open blog" button → Navigates to blog detail page
+
+## 11) Slack workflow alerts
+|- Workflow updates are posted to `#content-ops-alerts`.
+|- Each Slack workflow alert includes a clickable `Open link:` line when the item is linkable.
+|- If app URL config is missing, links still work via fallback base URL: `https://sighthound-content-ops.vercel.app`.
+|- Link previews are intentionally suppressed to keep channel alerts compact.
+|- New blog/social comments also post to Slack with full comment text (multi-line), plus author and record context.

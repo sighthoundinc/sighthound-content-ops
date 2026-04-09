@@ -173,7 +173,54 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Optional missing values can use deterministic fallback rules.
 - Existing rows can be updated when import identity match succeeds.
 
-## 10) Definition of done for workflow changes
+## 10) Associated Content Visibility Contract (MUST)
+Blogs and social posts support bidirectional navigation and context visibility through associated content relationships:
+
+### Data Model
+- Blogs have many Social Posts (`blogs.id ↔ social_posts.associated_blog_id`)
+- Social Posts belong to zero or one Blog (`social_posts.associated_blog_id ↔ blogs.id`)
+- The association is optional for social posts and optional for blogs
+
+### Dashboard
+- Dashboard mixed-content rows display associated content metadata:
+  - Blog rows show: count badge + truncated titles of linked social posts
+  - Social rows show: associated blog title (if linked)
+- Clicking "Associated Content" navigates:
+  - Blog → `/social-posts?associated_blog={blogId}` (filters by this blog)
+  - Social → `/blogs?filter={blogId}` (filters to single blog view)
+
+### Detail & Editor Views
+- Blog detail drawer: "Associated Social Posts" collapsible section after Links, showing:
+  - Post title (clickable → `/social-posts/[id]`)
+  - Status and type badges
+  - Scheduled publish date
+  - Platform assignments
+- Social detail page: "Associated Blog" context card before Comments, showing:
+  - Blog title (clickable → `/blogs/[id]`)
+  - Writer/Publisher workflow status
+  - Scheduled publish date
+  - Quick links to draft doc and live blog
+
+### Filtering & Search
+- Social posts list has dedicated "Associated Blog" dropdown filter:
+  - Default value: `all` (no filter)
+  - Shows all blogs with linked social posts
+  - Respects URL params: `?associated_blog={blogId}`
+  - Updates pagination and active filter pills when changed
+  - Clears with "Clear all filters" action
+- Search includes associated blog metadata (title, slug) for text matching
+
+### API Contracts
+- `GET /api/blogs/[id]/associated-social-posts` — Fetch social posts linked to a blog
+- `GET /api/social-posts/[id]/associated-blog` — Fetch blog linked to a social post
+- Database queries include `associated_blog` joins for full context rendering
+
+### Navigation Pattern
+- Dashboard → Associated Content click → Filtered list view
+- List view → Associated blog filter selection → Filtered results with pill indicator
+- Detail views → Associated content card click → Full detail page or list view
+
+## 11) Definition of done for workflow changes
 A workflow change is complete only when:
 1. Status/transition logic is updated and validated.
 2. Required-field gates are enforced.

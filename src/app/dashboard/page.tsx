@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { AssociatedSocialPostsSection } from "@/components/associated-social-posts-section";
 import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
 import { BlogImportModal } from "@/components/blog-import-modal";
 import { BulkActionPreviewModal } from "@/components/bulk-action-preview-modal";
@@ -13,6 +14,7 @@ import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ColumnEditor } from "@/components/column-editor";
 import { DashboardTable } from "@/components/dashboard-table";
 import { DetailDrawerField } from "@/components/detail-drawer";
+import { Tooltip } from "@/components/tooltip";
 import {
   DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
   DATA_PAGE_CONTROL_ACTIONS_CLASS,
@@ -89,6 +91,7 @@ import {
 } from "@/lib/content-classification";
 import { getSiteBadgeClasses, getSiteLabel, getSiteShortLabel } from "@/lib/site";
 import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
+import { AppIcon } from "@/lib/icons";
 import type {
   BlogSite,
   BlogHistoryRecord,
@@ -201,7 +204,8 @@ type DashboardColumnKey =
   | "published_date"
   | "owner_display"
   | "updated_at"
-  | "product";
+  | "product"
+  | "associated_content";
 type DashboardSortField = DashboardColumnKey;
 type DashboardSocialPostMetric = {
   id: string;
@@ -220,6 +224,8 @@ type DashboardSocialPostMetric = {
   worker_user_id: string | null;
   reviewer_name: string | null;
   reviewer_user_id: string | null;
+  has_live_link: boolean;
+  published_transition_at: string | null;
 };
 type DashboardContentType = "blog" | "social_post";
 type DashboardLifecycleBucket =
@@ -259,6 +265,7 @@ const DASHBOARD_COLUMN_LABELS: Record<DashboardColumnKey, string> = {
   owner_display: "Owner",
   updated_at: "Updated",
   product: "Product",
+  associated_content: "Associated Content",
 };
 const DEFAULT_DASHBOARD_HIDDEN_COLUMNS: DashboardColumnKey[] = ["id", "product"];
 
@@ -274,6 +281,7 @@ const DEFAULT_DASHBOARD_COLUMN_ORDER: DashboardColumnKey[] = [
   "owner_display",
   "updated_at",
   "product",
+  "associated_content",
 ];
 const REQUIRED_DASHBOARD_COLUMNS: DashboardColumnKey[] = [];
 
@@ -349,6 +357,7 @@ const DASHBOARD_SORT_FIELDS: DashboardSortField[] = [
   "site",
   "id",
   "product",
+  "associated_content",
 ];
 type MetricFilterKey =
   | "open_work"
@@ -421,6 +430,30 @@ const METRIC_FILTER_LABELS: Record<MetricFilterKey, string> = {
   awaiting_live_link: "Awaiting Live Link",
   published_last_7_days: "Published Last 7 Days",
 };
+const METRIC_TOOLTIPS: Record<MetricFilterKey, string> = {
+  open_work:
+    "All non-published blogs and social posts currently in progress.",
+  scheduled_next_7_days:
+    "Non-published items with scheduled dates between today and the next 6 days.",
+  awaiting_review:
+    "Items waiting for review now. Blog: writing/publishing pending review. Social: in review.",
+  ready_to_publish:
+    "Items approved and ready for publish execution.",
+  awaiting_live_link:
+    "Social posts in Awaiting Live Link with no saved live link yet.",
+  published_last_7_days:
+    "Items published in the last 7 days. Blogs use published timestamp; social uses status transition to Published.",
+};
+const INFORMATIONAL_METRIC_KEYS: MetricFilterKey[] = [
+  "open_work",
+  "scheduled_next_7_days",
+  "published_last_7_days",
+];
+const ACTIONABLE_METRIC_KEYS: MetricFilterKey[] = [
+  "awaiting_review",
+  "ready_to_publish",
+  "awaiting_live_link",
+];
 const CROSS_CONTENT_WORKFLOW_FILTER_LABELS: Record<
   CrossContentWorkflowFilter,
   string
@@ -1145,10 +1178,62 @@ export default function DashboardPage() {
               typeof row.reviewer_user_id === "string"
                 ? row.reviewer_user_id
                 : null,
+            has_live_link: false,
+            published_transition_at: null,
           } satisfies DashboardSocialPostMetric;
         })
         .filter((row): row is DashboardSocialPostMetric => row !== null);
-      setSocialPosts(nextSocialPosts);
+      if (nextSocialPosts.length === 0) {
+        setSocialPosts(nextSocialPosts);
+      } else {
+        const socialPostIds = nextSocialPosts.map((post) => post.id);
+        const [liveLinkResult, publishedTransitionResult] = await Promise.all([
+          supabase
+            .from("social_post_links")
+            .select("social_post_id")
+            .in("social_post_id", socialPostIds),
+          supabase
+            .from("social_post_activity_history")
+            .select("social_post_id,changed_at")
+            .eq("field_name", "status")
+            .eq("new_value", "published")
+            .in("social_post_id", socialPostIds),
+        ]);
+
+        const postsWithLiveLinks = new Set<string>();
+        if (!liveLinkResult.error) {
+          for (const row of (liveLinkResult.data ?? []) as Array<Record<string, unknown>>) {
+            const socialPostId =
+              typeof row.social_post_id === "string" ? row.social_post_id : null;
+            if (socialPostId) {
+              postsWithLiveLinks.add(socialPostId);
+            }
+          }
+        }
+
+        const publishedTransitionByPostId = new Map<string, string>();
+        if (!publishedTransitionResult.error) {
+          for (const row of (publishedTransitionResult.data ?? []) as Array<Record<string, unknown>>) {
+            const socialPostId =
+              typeof row.social_post_id === "string" ? row.social_post_id : null;
+            const changedAt = typeof row.changed_at === "string" ? row.changed_at : null;
+            if (!socialPostId || !changedAt) {
+              continue;
+            }
+            const existingTransition = publishedTransitionByPostId.get(socialPostId);
+            if (!existingTransition || changedAt > existingTransition) {
+              publishedTransitionByPostId.set(socialPostId, changedAt);
+            }
+          }
+        }
+
+        const enrichedSocialPosts = nextSocialPosts.map((post) => ({
+          ...post,
+          has_live_link: postsWithLiveLinks.has(post.id),
+          published_transition_at: publishedTransitionByPostId.get(post.id) ?? null,
+        }));
+        setSocialPosts(enrichedSocialPosts);
+      }
     }
 
     const nextBlogIds = nextBlogs.map((blog) => blog.id);
@@ -1641,8 +1726,7 @@ export default function DashboardPage() {
       }
       if (
         blog.writer_status === "pending_review" ||
-        blog.publisher_status === "pending_review" ||
-        blog.publisher_status === "publisher_approved"
+        blog.publisher_status === "pending_review"
       ) {
         return "awaiting_review";
       }
@@ -1748,7 +1832,8 @@ export default function DashboardPage() {
         ),
         lifecycle_bucket: lifecycleBucket,
         scheduled_date: post.scheduled_date,
-        published_date: post.status === "published" ? post.updated_at : null,
+        published_date:
+          post.status === "published" ? post.published_transition_at : null,
         owner_display: ownerDisplay,
         owner_user_id: ownerUserId,
         updated_at: post.updated_at,
@@ -1838,7 +1923,9 @@ export default function DashboardPage() {
           timestamp = row.blog.actual_published_at ?? row.blog.published_at ?? null;
         } else if (row.social_post) {
           timestamp =
-            row.social_post.status === "published" ? row.social_post.updated_at : null;
+            row.social_post.status === "published"
+              ? row.social_post.published_transition_at
+              : null;
         }
         if (!timestamp) {
           return false;
@@ -1881,7 +1968,10 @@ export default function DashboardPage() {
           return row.lifecycle_bucket === "ready_to_publish";
         }
         if (effectiveMetricFilter === "awaiting_live_link") {
-          return row.lifecycle_bucket === "awaiting_live_link";
+          if (row.content_type !== "social_post" || !row.social_post) {
+            return false;
+          }
+          return row.social_post.status === "awaiting_live_link" && !row.social_post.has_live_link;
         }
         return isPublishedRecent;
       })();
@@ -3800,6 +3890,76 @@ export default function DashboardPage() {
     () => [...savedViews].sort((left, right) => left.name.localeCompare(right.name)),
     [savedViews]
   );
+  const getOverviewMetricCardClass = (isActive: boolean) =>
+    `rounded-lg border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-1 ${
+      isActive
+        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+        : "border-slate-300 bg-white text-slate-900 hover:border-slate-400 hover:bg-slate-100"
+    }`;
+  const getOverviewMetricTitleClass = (isActive: boolean) =>
+    isActive ? "text-xs font-semibold text-white" : "text-xs font-semibold text-slate-800";
+  const getOverviewMetricBreakdownClass = (isActive: boolean) =>
+    isActive ? "mt-1 text-[11px] text-slate-200" : "mt-1 text-[11px] text-slate-600";
+  const getOverviewMetricValueClass = (isActive: boolean) =>
+    isActive
+      ? "mt-2 text-2xl font-semibold tabular-nums text-white"
+      : "mt-2 text-2xl font-semibold tabular-nums text-slate-900";
+  const renderOverviewMetricCard = (metricKey: MetricFilterKey) => {
+    const isActive = activeMetricFilter === metricKey;
+    const metricLabel = METRIC_FILTER_LABELS[metricKey];
+    const breakdownByMetric: Record<MetricFilterKey, DashboardOverviewMetricBreakdown> = {
+      open_work: focusStripMetrics.breakdown.openWork,
+      scheduled_next_7_days: focusStripMetrics.breakdown.scheduledNextSevenDays,
+      awaiting_review: focusStripMetrics.breakdown.awaitingReview,
+      ready_to_publish: focusStripMetrics.breakdown.readyToPublish,
+      awaiting_live_link: focusStripMetrics.breakdown.awaitingLiveLink,
+      published_last_7_days: focusStripMetrics.breakdown.publishedLastSevenDays,
+    };
+    const totalByMetric: Record<MetricFilterKey, number> = {
+      open_work: focusStripMetrics.openWork,
+      scheduled_next_7_days: focusStripMetrics.scheduledNextSevenDays,
+      awaiting_review: focusStripMetrics.awaitingReview,
+      ready_to_publish: focusStripMetrics.readyToPublish,
+      awaiting_live_link: focusStripMetrics.awaitingLiveLink,
+      published_last_7_days: focusStripMetrics.publishedLastSevenDays,
+    };
+    const metricBreakdown = breakdownByMetric[metricKey];
+    const metricTotal = totalByMetric[metricKey];
+    const tooltipContent = METRIC_TOOLTIPS[metricKey];
+
+    return (
+      <button
+        key={metricKey}
+        type="button"
+        className={getOverviewMetricCardClass(isActive)}
+        onClick={() => {
+          setActiveMetricFilter((previous) => (previous === metricKey ? null : metricKey));
+        }}
+      >
+        <div className="flex items-center gap-1.5">
+          <p className={getOverviewMetricTitleClass(isActive)}>{metricLabel}</p>
+          <Tooltip content={tooltipContent} delay={100}>
+            <span
+              role="img"
+              aria-label={`${metricLabel} logic`}
+              className={isActive ? "text-slate-200" : "text-slate-500"}
+            >
+              <AppIcon
+                name="info"
+                size={14}
+                boxClassName="h-4 w-4"
+                className={isActive ? "text-slate-200" : "text-slate-500"}
+              />
+            </span>
+          </Tooltip>
+        </div>
+        <p className={getOverviewMetricBreakdownClass(isActive)}>
+          Blogs: {metricBreakdown.blogs} · Social: {metricBreakdown.social}
+        </p>
+        <p className={getOverviewMetricValueClass(isActive)}>{metricTotal}</p>
+      </button>
+    );
+  };
 
   return (
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
@@ -3812,8 +3972,8 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {canCreateBlog || canManageSocialPosts ? (
                   <details className="relative">
-                    <summary className="cursor-pointer list-none rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
-                      Add
+                    <summary className="cursor-pointer list-none rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-1">
+                      Add Content
                     </summary>
                     <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
                       {canCreateBlog ? (
@@ -3888,151 +4048,27 @@ export default function DashboardPage() {
           ) : (
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
               <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
-              <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
-                <button
-                type="button"
-                className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "open_work"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) =>
-                    previous === "open_work" ? null : "open_work"
-                  );
-                }}
-              >
-                <p className="text-xs font-semibold text-slate-700">
-                  Open Work
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Blogs: {focusStripMetrics.breakdown.openWork.blogs} · Social:{" "}
-                  {focusStripMetrics.breakdown.openWork.social}
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.openWork}
-                </p>
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "scheduled_next_7_days"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) =>
-                    previous === "scheduled_next_7_days" ? null : "scheduled_next_7_days"
-                  );
-                }}
-              >
-                <p className="text-xs font-semibold text-slate-700">
-                  Scheduled Next 7 Days
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Blogs: {focusStripMetrics.breakdown.scheduledNextSevenDays.blogs} · Social:{" "}
-                  {focusStripMetrics.breakdown.scheduledNextSevenDays.social}
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.scheduledNextSevenDays}
-                </p>
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "awaiting_review"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) =>
-                    previous === "awaiting_review" ? null : "awaiting_review"
-                  );
-                }}
-              >
-                <p className="text-xs font-semibold text-slate-700">
-                  Awaiting Review
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Blogs: {focusStripMetrics.breakdown.awaitingReview.blogs} · Social:{" "}
-                  {focusStripMetrics.breakdown.awaitingReview.social}
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.awaitingReview}
-                </p>
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "ready_to_publish"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) =>
-                    previous === "ready_to_publish" ? null : "ready_to_publish"
-                  );
-                }}
-              >
-                <p className="text-xs font-semibold text-slate-700">
-                  Ready to Publish
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Blogs: {focusStripMetrics.breakdown.readyToPublish.blogs} · Social:{" "}
-                  {focusStripMetrics.breakdown.readyToPublish.social}
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.readyToPublish}
-                </p>
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "awaiting_live_link"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) =>
-                    previous === "awaiting_live_link" ? null : "awaiting_live_link"
-                  );
-                }}
-              >
-                <p className="text-xs font-semibold text-slate-700">
-                  Awaiting Live Link
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Blogs: {focusStripMetrics.breakdown.awaitingLiveLink.blogs} · Social:{" "}
-                  {focusStripMetrics.breakdown.awaitingLiveLink.social}
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.awaitingLiveLink}
-                </p>
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-3 text-left transition ${
-                  activeMetricFilter === "published_last_7_days"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-                onClick={() => {
-                  setActiveMetricFilter((previous) =>
-                    previous === "published_last_7_days" ? null : "published_last_7_days"
-                  );
-                }}
-              >
-                <p className="text-xs font-semibold text-slate-700">
-                  Published Last 7 Days
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Blogs: {focusStripMetrics.breakdown.publishedLastSevenDays.blogs} · Social:{" "}
-                  {focusStripMetrics.breakdown.publishedLastSevenDays.social}
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {focusStripMetrics.publishedLastSevenDays}
-                </p>
-              </button>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Informational
+                  </p>
+                  <div className="mt-1 grid gap-2 text-sm md:grid-cols-3">
+                    {INFORMATIONAL_METRIC_KEYS.map((metricKey) =>
+                      renderOverviewMetricCard(metricKey)
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Actionable Now
+                  </p>
+                  <div className="mt-1 grid gap-2 text-sm md:grid-cols-3">
+                    {ACTIONABLE_METRIC_KEYS.map((metricKey) =>
+                      renderOverviewMetricCard(metricKey)
+                    )}
+                  </div>
+                </div>
             </div>
             </section>
           )}
@@ -4111,57 +4147,6 @@ export default function DashboardPage() {
                         }}
                       />
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Lens shortcuts
-                      </span>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="xs"
-                        disabled={sortedSavedLensShortcuts.some(
-                          (shortcut) => shortcut.lens === lens
-                        )}
-                        onClick={saveCurrentLensShortcut}
-                      >
-                        Save current lens
-                      </Button>
-                      {sortedSavedLensShortcuts.length === 0 ? (
-                        <span className="text-xs text-slate-500">
-                          No saved lens shortcuts yet.
-                        </span>
-                      ) : (
-                        sortedSavedLensShortcuts.map((shortcut) => (
-                          <div
-                            key={shortcut.id}
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white p-1"
-                          >
-                            <button
-                              type="button"
-                              className={`rounded px-2 py-1 text-xs font-medium ${
-                                shortcut.lens === lens
-                                  ? "bg-slate-900 text-white"
-                                  : "text-slate-700 hover:bg-slate-100"
-                              }`}
-                              onClick={() => {
-                                applyLensShortcut(shortcut);
-                              }}
-                            >
-                              {shortcut.name}
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded px-2 py-1 text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                              onClick={() => {
-                                removeLensShortcut(shortcut);
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
@@ -4188,6 +4173,51 @@ export default function DashboardPage() {
                     </div>
                     {isAdvancedFiltersOpen ? (
                       <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                        <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white p-2">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Lens shortcuts
+                          </span>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="xs"
+                            disabled={sortedSavedLensShortcuts.some(
+                              (shortcut) => shortcut.lens === lens
+                            )}
+                            onClick={saveCurrentLensShortcut}
+                          >
+                            Save current lens
+                          </Button>
+                          {sortedSavedLensShortcuts.map((shortcut) => (
+                            <div
+                              key={shortcut.id}
+                              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white p-1"
+                            >
+                              <button
+                                type="button"
+                                className={`rounded px-2 py-1 text-xs font-medium ${
+                                  shortcut.lens === lens
+                                    ? "bg-slate-900 text-white"
+                                    : "text-slate-700 hover:bg-slate-100"
+                                }`}
+                                onClick={() => {
+                                  applyLensShortcut(shortcut);
+                                }}
+                              >
+                                {shortcut.name}
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded px-2 py-1 text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                                onClick={() => {
+                                  removeLensShortcut(shortcut);
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                           <CheckboxMultiSelect
                             label="Delivery"
@@ -4725,6 +4755,15 @@ export default function DashboardPage() {
                   onToggleSingle={(row, checked) => {
                     handleToggleSingle(row, checked);
                   }}
+                  onAssociatedContentClick={(row) => {
+                    if (row.content_type === "blog" && row.social_post_count) {
+                      // Navigate to social posts filtered by this blog
+                      router.push(`/social-posts?associated_blog=${row.id}`);
+                    } else if (row.content_type === "social_post" && row.associated_blog_id) {
+                      // Navigate to blogs page with this blog in focus
+                      router.push(`/blogs?filter=${row.associated_blog_id}`);
+                    }
+                  }}
                 />
               </div>
               <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
@@ -5049,6 +5088,11 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
+              ) : undefined
+            }
+            associatedContentSection={
+              activeBlog ? (
+                <AssociatedSocialPostsSection blogId={activeBlog.id} />
               ) : undefined
             }
             commentsContent={

@@ -85,7 +85,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
 
     const { data: socialRows, error: socialError } = await adminClient
       .from("social_posts")
-      .select("status,scheduled_date,updated_at");
+      .select("id,status,scheduled_date");
     if (socialError) {
       return NextResponse.json(
         { error: "Failed to load social overview metrics." },
@@ -97,10 +97,17 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       (blogRows ?? []) as Array<Record<string, unknown>>
     ) as BlogRecord[];
     const socialPosts = (socialRows ?? []) as Array<{
+      id?: string;
       status?: SocialPostStatus;
       scheduled_date?: string | null;
-      updated_at?: string | null;
     }>;
+    const socialPostIds = socialPosts
+      .map((post) => (typeof post.id === "string" ? post.id : null))
+      .filter((postId): postId is string => !!postId);
+    const publishedSocialPostIds = socialPosts
+      .filter((post) => post.status === "published")
+      .map((post) => (typeof post.id === "string" ? post.id : null))
+      .filter((postId): postId is string => !!postId);
 
     const now = new Date();
     const todayStart = new Date(now);
@@ -110,6 +117,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
     nextSevenDaysEnd.setHours(23, 59, 59, 999);
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(now.getDate() - 7);
+    const sevenDaysAgoIso = sevenDaysAgo.toISOString();
 
     const isInNextSevenDays = (dateValue: string | null) => {
       if (!dateValue) {
@@ -125,6 +133,50 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       const dateTime = new Date(dateValue).getTime();
       return dateTime >= sevenDaysAgo.getTime() && dateTime <= now.getTime();
     };
+    const socialPostsWithLiveLinks = new Set<string>();
+    if (socialPostIds.length > 0) {
+      const { data: liveLinkRows, error: liveLinkRowsError } = await adminClient
+        .from("social_post_links")
+        .select("social_post_id")
+        .in("social_post_id", socialPostIds);
+      if (liveLinkRowsError) {
+        return NextResponse.json(
+          { error: "Failed to load social live-link metrics." },
+          { status: 500 }
+        );
+      }
+      for (const row of liveLinkRows ?? []) {
+        if (typeof row.social_post_id === "string" && row.social_post_id) {
+          socialPostsWithLiveLinks.add(row.social_post_id);
+        }
+      }
+    }
+    const recentlyPublishedSocialPostIds = new Set<string>();
+    if (publishedSocialPostIds.length > 0) {
+      const { data: socialPublishTransitions, error: socialPublishTransitionsError } =
+        await adminClient
+          .from("social_post_activity_history")
+          .select("social_post_id,changed_at")
+          .eq("field_name", "status")
+          .eq("new_value", "published")
+          .gte("changed_at", sevenDaysAgoIso)
+          .in("social_post_id", publishedSocialPostIds);
+      if (socialPublishTransitionsError) {
+        return NextResponse.json(
+          { error: "Failed to load social published metrics." },
+          { status: 500 }
+        );
+      }
+      for (const row of socialPublishTransitions ?? []) {
+        if (
+          typeof row.social_post_id === "string" &&
+          row.social_post_id &&
+          isInLastSevenDays(typeof row.changed_at === "string" ? row.changed_at : null)
+        ) {
+          recentlyPublishedSocialPostIds.add(row.social_post_id);
+        }
+      }
+    }
 
     const breakdown: DashboardOverviewMetrics["breakdown"] = {
       openWork: { blogs: 0, social: 0 },
@@ -146,8 +198,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       }
       if (
         blog.writer_status === "pending_review" ||
-        blog.publisher_status === "pending_review" ||
-        blog.publisher_status === "publisher_approved"
+        blog.publisher_status === "pending_review"
       ) {
         breakdown.awaitingReview.blogs += 1;
       }
@@ -162,6 +213,7 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       }
     }
     for (const post of socialPosts) {
+      const postId = typeof post.id === "string" ? post.id : null;
       const status = post.status;
       if (!status) {
         continue;
@@ -178,10 +230,14 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       if (status === "ready_to_publish") {
         breakdown.readyToPublish.social += 1;
       }
-      if (status === "awaiting_live_link") {
+      if (
+        status === "awaiting_live_link" &&
+        postId &&
+        !socialPostsWithLiveLinks.has(postId)
+      ) {
         breakdown.awaitingLiveLink.social += 1;
       }
-      if (status === "published" && isInLastSevenDays(post.updated_at ?? null)) {
+      if (status === "published" && postId && recentlyPublishedSocialPostIds.has(postId)) {
         breakdown.publishedLastSevenDays.social += 1;
       }
     }

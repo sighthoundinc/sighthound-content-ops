@@ -1,6 +1,7 @@
 import type { LucideIcon, LucideProps } from "lucide-react";
 import {
   AlertTriangle,
+  ArrowRight,
   Bell,
   BookOpen,
   CalendarDays,
@@ -73,6 +74,7 @@ const APP_ICON_MAP = {
   check: Check,
   loading: LoaderCircle,
   lock: Lock,
+  arrowRight: ArrowRight,
 } satisfies Record<string, LucideIcon>;
 
 export type AppIconName = keyof typeof APP_ICON_MAP;

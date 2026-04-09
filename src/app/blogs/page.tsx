@@ -88,7 +88,8 @@ type LibraryColumnKey =
   | "writer"
   | "publisher"
   | "publisher_status"
-  | "stage";
+  | "stage"
+  | "associated_social_posts";
 type BoardStageQueryFilter = "idea" | "writing" | "reviewing" | "publishing" | "published";
 
 const ROW_LIMIT_OPTIONS: LibraryRowLimit[] = [10, 20, 50, "all"];
@@ -129,6 +130,7 @@ const LIBRARY_COLUMN_LABELS: Record<LibraryColumnKey, string> = {
   publisher: "Publisher",
   publisher_status: "Publisher Status",
   stage: "Stage",
+  associated_social_posts: "Associated Social Posts",
 };
 const isLibraryColumnKey = (value: string): value is LibraryColumnKey =>
   value in LIBRARY_COLUMN_LABELS;
@@ -830,6 +832,20 @@ function BlogLibraryPageContent() {
                 title={blog.publisher?.full_name ?? "Unassigned"}
               >
                 {blog.publisher?.full_name ?? "Unassigned"}
+              </span>
+            );
+          }
+          if (column === "associated_social_posts") {
+            const socialPostCount = (blog as any).social_post_count ?? 0;
+            const displayValue = socialPostCount > 0 
+              ? `${socialPostCount} post${socialPostCount !== 1 ? "s" : ""}`
+              : "—";
+            return (
+              <span 
+                className="text-slate-600 cursor-pointer hover:underline" 
+                title={displayValue}
+              >
+                {displayValue}
               </span>
             );
           }

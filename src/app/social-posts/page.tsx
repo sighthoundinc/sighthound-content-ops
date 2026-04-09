@@ -622,6 +622,7 @@ function SocialPostsPageContent() {
   const shouldOpenCreateModal = searchParams.get("create") === "1";
   const requestedTitle = searchParams.get("title");
   const requestedScheduledDate = searchParams.get("scheduled_date");
+  const requestedAssociatedBlog = searchParams.get("associated_blog");
   const [posts, setPosts] = useState<SocialPostWithRelations[]>([]);
   const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -630,6 +631,7 @@ function SocialPostsPageContent() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 180);
   const [statusFilter, setStatusFilter] = useState<SocialPostStatus | "all">("all");
+  const [associatedBlogFilter, setAssociatedBlogFilter] = useState<string | "all">("all");
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeMonth, setActiveMonth] = useState(new Date());
   const [calendarMode, setCalendarMode] = useState<SocialCalendarMode>("month");
@@ -938,6 +940,12 @@ function SocialPostsPageContent() {
   }, [requestedView]);
 
   useEffect(() => {
+    if (requestedAssociatedBlog) {
+      setAssociatedBlogFilter(requestedAssociatedBlog);
+    }
+  }, [requestedAssociatedBlog]);
+
+  useEffect(() => {
     if (!shouldOpenCreateModal) {
       setHasAppliedCreateQuery(false);
       return;
@@ -990,6 +998,13 @@ function SocialPostsPageContent() {
         return false;
       }
 
+      const matchesAssociatedBlog =
+        associatedBlogFilter === "all" ||
+        post.associated_blog_id === associatedBlogFilter;
+      if (!matchesAssociatedBlog) {
+        return false;
+      }
+
       if (!normalizedSearch) {
         return true;
       }
@@ -1006,7 +1021,7 @@ function SocialPostsPageContent() {
         .toLowerCase();
       return haystack.includes(normalizedSearch);
     });
-  }, [debouncedSearch, posts, statusFilter]);
+  }, [associatedBlogFilter, debouncedSearch, posts, statusFilter]);
 
   const postsByStatus = useMemo(() => {
     return SOCIAL_POST_STATUSES.reduce<Record<SocialPostStatus, SocialPostWithRelations[]>>(
@@ -1081,7 +1096,7 @@ function SocialPostsPageContent() {
 
   useEffect(() => {
     setListCurrentPage(1);
-  }, [search, statusFilter, listRowLimit]);
+  }, [associatedBlogFilter, search, statusFilter, listRowLimit]);
 
   const activePost = useMemo(
     () => posts.find((post) => post.id === activePostId) ?? null,
@@ -1493,8 +1508,13 @@ function SocialPostsPageContent() {
     [filteredPosts]
   );
   const activeFilterPills = useMemo(
-    () =>
-      [
+    () => {
+      const associatedBlogTitle =
+        associatedBlogFilter !== "all"
+          ? posts.find((p) => p.associated_blog_id === associatedBlogFilter)
+              ?.associated_blog?.title
+          : null;
+      return [
         search.trim().length > 0
           ? {
               id: "search",
@@ -1513,12 +1533,23 @@ function SocialPostsPageContent() {
               },
             }
           : null,
-      ].filter((pill) => pill !== null),
-    [search, statusFilter]
+        associatedBlogFilter !== "all" && associatedBlogTitle
+          ? {
+              id: "associated_blog",
+              label: `Blog: ${associatedBlogTitle}`,
+              onRemove: () => {
+                setAssociatedBlogFilter("all");
+              },
+            }
+          : null,
+      ].filter((pill) => pill !== null);
+    },
+    [associatedBlogFilter, posts, search, statusFilter]
   );
   const clearAllFilters = () => {
     setSearch("");
     setStatusFilter("all");
+    setAssociatedBlogFilter("all");
     setListCurrentPage(1);
   };
   const closeOpenDetailsMenus = useCallback(() => {
@@ -2513,21 +2544,50 @@ function SocialPostsPageContent() {
               </Button>
             }
             filters={
-              <select
-                aria-label="Status"
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value as SocialPostStatus | "all");
-                }}
-                className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-              >
-                <option value="all">All Statuses</option>
-                {SOCIAL_POST_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {SOCIAL_POST_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  aria-label="Status"
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value as SocialPostStatus | "all");
+                  }}
+                  className="focus-field rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Statuses</option>
+                  {SOCIAL_POST_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {SOCIAL_POST_STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Associated Blog"
+                  value={associatedBlogFilter}
+                  onChange={(event) => {
+                    setAssociatedBlogFilter(event.target.value);
+                  }}
+                  className="focus-field rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="all">All Blogs</option>
+                  {Array.from(
+                    new Map(
+                      posts
+                        .filter(
+                          (post) =>
+                            post.associated_blog_id && post.associated_blog
+                        )
+                        .map((post) => [
+                          post.associated_blog_id as string,
+                          post.associated_blog?.title,
+                        ])
+                    )
+                  ).map(([blogId, blogTitle]) => (
+                    <option key={blogId} value={blogId}>
+                      {blogTitle}
+                    </option>
+                  ))}
+                </select>
+              </div>
             }
           />
           <DataPageFilterPills pills={activeFilterPills} />

@@ -601,6 +601,19 @@ export default function CalendarPage() {
     const todayDate = new Date(`${todayDateKey}T00:00:00`);
     return (todayDate.getDay() - normalizedWeekStart + 7) % 7;
   }, [normalizedWeekStart, todayDateKey]);
+  const scrollTodayTileIntoView = useCallback(() => {
+    const todayTile = calendarGridRef.current?.querySelector('[data-is-today="true"]');
+    if (!todayTile) {
+      return;
+    }
+    const shouldReduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    todayTile.scrollIntoView({
+      behavior: shouldReduceMotion ? "auto" : "smooth",
+      block: "nearest",
+    });
+  }, []);
 
   const calendarItemsByDate = useMemo(() => {
     const byDate: Record<
@@ -853,19 +866,6 @@ export default function CalendarPage() {
     }
     return `Moving to ${formatCalendarDateLabel(dragOverDateKey)}`;
   }, [dragOverDateKey, draggingBlog]);
-  const scrollTodayTileIntoView = useCallback(() => {
-    const todayTile = calendarGridRef.current?.querySelector('[data-is-today="true"]');
-    if (!todayTile) {
-      return;
-    }
-    const shouldReduceMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    todayTile.scrollIntoView({
-      behavior: shouldReduceMotion ? "auto" : "smooth",
-      block: "nearest",
-    });
-  }, []);
 
 
   const updateScheduledDate = async (blogId: string, scheduledDate: string) => {

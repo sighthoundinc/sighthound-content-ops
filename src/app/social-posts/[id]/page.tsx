@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { AssociatedBlogContextCard } from "@/components/associated-blog-context-card";
 import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DataPageHeader } from "@/components/data-page";
@@ -2783,6 +2784,11 @@ export default function SocialPostEditorPage() {
                   </div>
                 </div>
               </section>
+              {post.associated_blog_id ? (
+                <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                  <AssociatedBlogContextCard blogId={post.associated_blog_id} />
+                </section>
+              ) : null}
               <section
                 id="social-editor-step-comments"
                 className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"

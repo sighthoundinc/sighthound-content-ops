@@ -30,6 +30,7 @@ export function BlogDetailsDrawer({
   workflowContent,
   datesContent,
   linksContent,
+  associatedContentSection,
   commentsContent,
   timelineContent,
   commentsCount,
@@ -49,6 +50,7 @@ export function BlogDetailsDrawer({
   workflowContent: ReactNode;
   datesContent: ReactNode;
   linksContent?: ReactNode;
+  associatedContentSection?: ReactNode;
   commentsContent?: ReactNode;
   timelineContent?: ReactNode;
   commentsCount?: number;
@@ -144,6 +146,11 @@ export function BlogDetailsDrawer({
         {linksContent ? (
           <DetailDrawerSection title="Links (full)" collapsible defaultOpen={false}>
             {linksContent}
+          </DetailDrawerSection>
+        ) : null}
+        {associatedContentSection ? (
+          <DetailDrawerSection title="Associated Social Posts" collapsible defaultOpen={false}>
+            {associatedContentSection}
           </DetailDrawerSection>
         ) : null}
         {timelineContent ? (

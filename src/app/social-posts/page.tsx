@@ -29,6 +29,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
+import { CalendarControlBar } from "@/components/calendar-control-bar";
 import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
 import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -705,6 +706,19 @@ function SocialPostsPageContent() {
     () => getDateKeyInTimezone(new Date(), calendarTimezone),
     [calendarTimezone]
   );
+  const scrollTodayCalendarTileIntoView = useCallback(() => {
+    const todayTile = calendarGridRef.current?.querySelector('[data-is-today="true"]');
+    if (!todayTile) {
+      return;
+    }
+    const shouldReduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    todayTile.scrollIntoView({
+      behavior: shouldReduceMotion ? "auto" : "smooth",
+      block: "nearest",
+    });
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1378,6 +1392,9 @@ function SocialPostsPageContent() {
       ) {
         return;
       }
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
       if (!focusedCalendarDateKey || calendarGridRef.current === null) {
         return;
       }
@@ -1390,7 +1407,10 @@ function SocialPostsPageContent() {
         event.key === "J" ||
         event.key === "k" ||
         event.key === "K" ||
-        event.key === "Enter";
+        event.key === "Enter" ||
+        event.key === "Home" ||
+        event.key === "PageUp" ||
+        event.key === "PageDown";
       if (!isNavigationKey) {
         return;
       }
@@ -1405,6 +1425,22 @@ function SocialPostsPageContent() {
         nextDate = addDays(currentDate, -7);
       } else if (event.key === "ArrowDown") {
         nextDate = addDays(currentDate, 7);
+      } else if (event.key === "Home") {
+        const todayDate = new Date(`${todayCalendarDateKey}T00:00:00`);
+        setFocusedCalendarDateKey(todayCalendarDateKey);
+        setActiveMonth(todayDate);
+        if (typeof window !== "undefined") {
+          window.requestAnimationFrame(() => {
+            scrollTodayCalendarTileIntoView();
+          });
+        }
+        return;
+      } else if (event.key === "PageUp" || event.key === "PageDown") {
+        const delta = event.key === "PageDown" ? 1 : -1;
+        nextDate =
+          calendarMode === "month"
+            ? addMonths(currentDate, delta)
+            : addWeeks(currentDate, delta);
       } else if (event.key === "Enter") {
         const dayItems = calendarPostsByDate[focusedCalendarDateKey] ?? [];
         if (dayItems.length > 0) {
@@ -1447,6 +1483,8 @@ function SocialPostsPageContent() {
     calendarPostsByDate,
     calendarWeekStart,
     focusedCalendarDateKey,
+    scrollTodayCalendarTileIntoView,
+    todayCalendarDateKey,
     view,
   ]);
 
@@ -2701,86 +2739,48 @@ function SocialPostsPageContent() {
             </section>
           ) : (
             <section className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium text-slate-700">
-                  {calendarMode === "month"
+              <CalendarControlBar
+                periodLabel={
+                  calendarMode === "month"
                     ? format(activeMonth, "MMMM yyyy")
                     : `${format(calendarRange.start, "MMM d")} – ${format(
                         calendarRange.end,
                         "MMM d, yyyy"
-                      )}`}
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="md"
-                    onClick={() => {
-                      setActiveMonth((previous) =>
-                        calendarMode === "month"
-                          ? subMonths(previous, 1)
-                          : subWeeks(previous, 1)
-                      );
-                    }}
-                  >
-                    Prev
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="md"
-                    onClick={() => {
-                      const todayDate = new Date(`${todayCalendarDateKey}T00:00:00`);
-                      setActiveMonth(todayDate);
-                      setFocusedCalendarDateKey(todayCalendarDateKey);
-                      setTimeout(() => {
-                        const todayTile = calendarGridRef.current?.querySelector(
-                          '[data-is-today="true"]'
-                        );
-                        if (todayTile) {
-                          todayTile.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                        }
-                      }, 0);
-                    }}
-                  >
-                    Today
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="md"
-                    onClick={() => {
-                      setActiveMonth((previous) =>
-                        calendarMode === "month"
-                          ? addMonths(previous, 1)
-                          : addWeeks(previous, 1)
-                      );
-                    }}
-                  >
-                    Next
-                  </Button>
-                  <div className={SEGMENTED_CONTROL_CLASS}>
-                    <button
-                      type="button"
-                      className={segmentedControlItemClass({ isActive: calendarMode === "month" })}
-                      onClick={() => {
-                        setCalendarMode("month");
-                      }}
-                    >
-                      Month
-                    </button>
-                    <button
-                      type="button"
-                      className={segmentedControlItemClass({ isActive: calendarMode === "week" })}
-                      onClick={() => {
-                        setCalendarMode("week");
-                      }}
-                    >
-                      Week
-                    </button>
-                  </div>
-                </div>
-              </div>
+                      )}`
+                }
+                mode={calendarMode}
+                monthInputValue={format(activeMonth, "yyyy-MM")}
+                onPrev={() => {
+                  setActiveMonth((previous) =>
+                    calendarMode === "month" ? subMonths(previous, 1) : subWeeks(previous, 1)
+                  );
+                }}
+                onToday={() => {
+                  const todayDate = new Date(`${todayCalendarDateKey}T00:00:00`);
+                  setActiveMonth(todayDate);
+                  setFocusedCalendarDateKey(todayCalendarDateKey);
+                  if (typeof window !== "undefined") {
+                    window.requestAnimationFrame(() => {
+                      scrollTodayCalendarTileIntoView();
+                    });
+                  }
+                }}
+                onNext={() => {
+                  setActiveMonth((previous) =>
+                    calendarMode === "month" ? addMonths(previous, 1) : addWeeks(previous, 1)
+                  );
+                }}
+                onMonthInputChange={(nextValue) => {
+                  if (!nextValue) {
+                    return;
+                  }
+                  const nextDate = new Date(`${nextValue}-01T00:00:00`);
+                  if (!Number.isNaN(nextDate.getTime())) {
+                    setActiveMonth(nextDate);
+                  }
+                }}
+                onModeChange={setCalendarMode}
+              />
               <CalendarWeekdayHeaderRow
                 labels={weekdayLabels}
                 todayColumnIndex={todayWeekdayColumnIndex}

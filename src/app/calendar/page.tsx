@@ -29,7 +29,7 @@ import {
 } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { Button } from "@/components/button";
+import { CalendarControlBar } from "@/components/calendar-control-bar";
 import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
 import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -674,6 +674,19 @@ export default function CalendarPage() {
         setActiveSocialPostId(null);
         return;
       }
+      const eventTarget = event.target as HTMLElement | null;
+      if (
+        eventTarget &&
+        (eventTarget.tagName === "INPUT" ||
+          eventTarget.tagName === "TEXTAREA" ||
+          eventTarget.tagName === "SELECT" ||
+          eventTarget.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
       if (!focusedDateKey || calendarGridRef.current === null) {
         return;
       }
@@ -686,7 +699,10 @@ export default function CalendarPage() {
         event.key === "J" ||
         event.key === "k" ||
         event.key === "K" ||
-        event.key === "Enter";
+        event.key === "Enter" ||
+        event.key === "Home" ||
+        event.key === "PageUp" ||
+        event.key === "PageDown";
       if (!isNavigationKey) {
         return;
       }
@@ -705,6 +721,19 @@ export default function CalendarPage() {
         nextDate = addDays(currentDate, -1);
       } else if (event.key === "j" || event.key === "J") {
         nextDate = addDays(currentDate, 1);
+      } else if (event.key === "Home") {
+        const todayDate = new Date(`${todayDateKey}T00:00:00`);
+        setFocusedDateKey(todayDateKey);
+        setCursorDate(todayDate);
+        if (typeof window !== "undefined") {
+          window.requestAnimationFrame(() => {
+            scrollTodayTileIntoView();
+          });
+        }
+        return;
+      } else if (event.key === "PageUp" || event.key === "PageDown") {
+        const delta = event.key === "PageDown" ? 1 : -1;
+        nextDate = mode === "month" ? addMonths(currentDate, delta) : addWeeks(currentDate, delta);
       } else if (event.key === "Enter") {
         const dayItems = calendarItemsByDate[focusedDateKey] ?? [];
         if (dayItems.length > 0) {
@@ -746,7 +775,14 @@ export default function CalendarPage() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [focusedDateKey, mode, normalizedWeekStart, calendarItemsByDate]);
+  }, [
+    focusedDateKey,
+    mode,
+    normalizedWeekStart,
+    calendarItemsByDate,
+    scrollTodayTileIntoView,
+    todayDateKey,
+  ]);
   const noPublishDateBlogs = useMemo(
     () => filteredBlogs.filter((blog) => !getBlogScheduledDate(blog)),
     [filteredBlogs]
@@ -817,6 +853,19 @@ export default function CalendarPage() {
     }
     return `Moving to ${formatCalendarDateLabel(dragOverDateKey)}`;
   }, [dragOverDateKey, draggingBlog]);
+  const scrollTodayTileIntoView = useCallback(() => {
+    const todayTile = calendarGridRef.current?.querySelector('[data-is-today="true"]');
+    if (!todayTile) {
+      return;
+    }
+    const shouldReduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    todayTile.scrollIntoView({
+      behavior: shouldReduceMotion ? "auto" : "smooth",
+      block: "nearest",
+    });
+  }, []);
 
 
   const updateScheduledDate = async (blogId: string, scheduledDate: string) => {
@@ -1030,69 +1079,7 @@ export default function CalendarPage() {
             onSearchChange={() => {}}
             searchPlaceholder=""
             actions={
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  onClick={() => {
-                    setCursorDate((prev) =>
-                      mode === "month" ? subMonths(prev, 1) : subWeeks(prev, 1)
-                    );
-                  }}
-                >
-                  Prev
-                </Button>
-                <Button
-                  type="button"
-                  className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  onClick={() => {
-                    const todayDate = new Date(`${todayDateKey}T00:00:00`);
-                    const currentWeekStart = startOfWeek(todayDate, {
-                      weekStartsOn: normalizedWeekStart,
-                    });
-                    setCursorDate(currentWeekStart);
-                    setTimeout(() => {
-                      const todayTile = calendarGridRef.current?.querySelector(
-                        '[data-is-today="true"]'
-                      );
-                      if (todayTile) {
-                        todayTile.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                      }
-                    }, 0);
-                  }}
-                >
-                  Today
-                </Button>
-                <Button
-                  type="button"
-                  className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  onClick={() => {
-                    setCursorDate((prev) =>
-                      mode === "month" ? addMonths(prev, 1) : addWeeks(prev, 1)
-                    );
-                  }}
-                >
-                  Next
-                </Button>
-                <label className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
-                  <span className="sr-only">Jump to month</span>
-                  <input
-                    type="month"
-                    value={format(cursorDate, "yyyy-MM")}
-                    onChange={(event) => {
-                      const nextValue = event.target.value;
-                      if (!nextValue) {
-                        return;
-                      }
-                      const nextDate = new Date(`${nextValue}-01T00:00:00`);
-                      if (!Number.isNaN(nextDate.getTime())) {
-                        setCursorDate(nextDate);
-                      }
-                    }}
-                    className="focus-field rounded border-none p-0 text-sm focus:outline-none"
-                  />
-                </label>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
                 <label className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">
                   <span className="font-medium">View</span>
                   <select
@@ -1108,69 +1095,47 @@ export default function CalendarPage() {
                     </option>
                   </select>
                 </label>
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                  <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
-                    <button
-                      type="button"
-                      className={segmentedControlItemClass({ isActive: hasBlogsEnabled })}
-                      onClick={() => {
-                        setContentFilters((previous) =>
-                          previous.includes("blogs")
-                            ? previous.filter((item) => item !== "blogs")
-                            : [...previous, "blogs"]
-                        );
-                      }}
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        {hasBlogsEnabled ? (
-                          <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                        ) : null}
-                        Blogs
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className={segmentedControlItemClass({
-                        isActive: hasSocialPostsEnabled,
-                      })}
-                      onClick={() => {
-                        setContentFilters((previous) =>
-                          previous.includes("social_posts")
-                            ? previous.filter((item) => item !== "social_posts")
-                            : [...previous, "social_posts"]
-                        );
-                      }}
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        {hasSocialPostsEnabled ? (
-                          <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                        ) : null}
-                        Social Posts
-                      </span>
-                    </button>
-                  </div>
-                  <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
-                    <button
-                      type="button"
-                      className={segmentedControlItemClass({ isActive: mode === "month" })}
-                      onClick={() => {
-                        setMode("month");
-                      }}
-                    >
-                      Month
-                    </button>
-                    <button
-                      type="button"
-                      className={segmentedControlItemClass({ isActive: mode === "week" })}
-                      onClick={() => {
-                        setMode("week");
-                      }}
-                    >
-                      Week
-                    </button>
-                  </div>
+                <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
+                  <button
+                    type="button"
+                    className={segmentedControlItemClass({ isActive: hasBlogsEnabled })}
+                    onClick={() => {
+                      setContentFilters((previous) =>
+                        previous.includes("blogs")
+                          ? previous.filter((item) => item !== "blogs")
+                          : [...previous, "blogs"]
+                      );
+                    }}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {hasBlogsEnabled ? (
+                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                      ) : null}
+                      Blogs
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={segmentedControlItemClass({
+                      isActive: hasSocialPostsEnabled,
+                    })}
+                    onClick={() => {
+                      setContentFilters((previous) =>
+                        previous.includes("social_posts")
+                          ? previous.filter((item) => item !== "social_posts")
+                          : [...previous, "social_posts"]
+                      );
+                    }}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {hasSocialPostsEnabled ? (
+                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                      ) : null}
+                      Social Posts
+                    </span>
+                  </button>
                 </div>
-              </>
+              </div>
             }
             filters={
               <select
@@ -1191,12 +1156,41 @@ export default function CalendarPage() {
             }
           />
           <DataPageFilterPills pills={activeFilterPills} />
-
-          <p className="text-sm font-semibold text-slate-800 tabular-nums">
-            {mode === "month"
-              ? format(cursorDate, "MMMM yyyy")
-              : `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`}
-          </p>
+          <CalendarControlBar
+            periodLabel={
+              mode === "month"
+                ? format(cursorDate, "MMMM yyyy")
+                : `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`
+            }
+            mode={mode}
+            monthInputValue={format(cursorDate, "yyyy-MM")}
+            onPrev={() => {
+              setCursorDate((prev) => (mode === "month" ? subMonths(prev, 1) : subWeeks(prev, 1)));
+            }}
+            onToday={() => {
+              const todayDate = new Date(`${todayDateKey}T00:00:00`);
+              setCursorDate(todayDate);
+              setFocusedDateKey(todayDateKey);
+              if (typeof window !== "undefined") {
+                window.requestAnimationFrame(() => {
+                  scrollTodayTileIntoView();
+                });
+              }
+            }}
+            onNext={() => {
+              setCursorDate((prev) => (mode === "month" ? addMonths(prev, 1) : addWeeks(prev, 1)));
+            }}
+            onMonthInputChange={(nextValue) => {
+              if (!nextValue) {
+                return;
+              }
+              const nextDate = new Date(`${nextValue}-01T00:00:00`);
+              if (!Number.isNaN(nextDate.getTime())) {
+                setCursorDate(nextDate);
+              }
+            }}
+            onModeChange={setMode}
+          />
 
           {isLoading ? (
             <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">

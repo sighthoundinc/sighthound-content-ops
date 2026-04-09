@@ -437,103 +437,106 @@ export default function BlogDetailPage() {
     }
   }, []);
 
-  const updateBlog = async (
-    updates: Record<string, unknown>,
-    message: string,
-    notify?: () => Promise<void>
-  ) => {
-    if (!blog) {
-      return;
-    }
+  const updateBlog = useCallback(
+    async (
+      updates: Record<string, unknown>,
+      message: string,
+      notify?: () => Promise<void>
+    ) => {
+      if (!blog) {
+        return;
+      }
 
-    setIsSaving(true);
-    setError(null);
-    setSuccessMessage(null);
+      setIsSaving(true);
+      setError(null);
+      setSuccessMessage(null);
 
-    // Prevent race condition: check if blog was modified by another client
-    if (blogVersion && blog.updated_at !== blogVersion) {
-      setError(
-        "Blog was modified by another user. Please refresh to see the latest changes."
+      // Prevent race condition: check if blog was modified by another client
+      if (blogVersion && blog.updated_at !== blogVersion) {
+        setError(
+          "Blog was modified by another user. Please refresh to see the latest changes."
+        );
+        setIsSaving(false);
+        return;
+      }
+      if (!session?.access_token) {
+        setError("Session expired. Refresh and try again.");
+        setIsSaving(false);
+        return;
+      }
+      const response = await fetch(`/api/blogs/${blog.id}/transition`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      }).catch(() => null);
+      if (!response) {
+        setError("Couldn't save changes. Please try again.");
+        setIsSaving(false);
+        return;
+      }
+      const payload = await parseApiResponseJson<{ blog?: Record<string, unknown> }>(
+        response
       );
-      setIsSaving(false);
-      return;
-    }
-    if (!session?.access_token) {
-      setError("Session expired. Refresh and try again.");
-      setIsSaving(false);
-      return;
-    }
-    const response = await fetch(`/api/blogs/${blog.id}/transition`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${session.access_token}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(updates),
-    }).catch(() => null);
-    if (!response) {
-      setError("Couldn't save changes. Please try again.");
-      setIsSaving(false);
-      return;
-    }
-    const payload = await parseApiResponseJson<{ blog?: Record<string, unknown> }>(
-      response
-    );
-    if (isApiFailure(response, payload)) {
-      setError(getApiErrorMessage(payload, "Couldn't save changes. Please try again."));
-      setIsSaving(false);
-      return;
-    }
-    const data =
-      payload.blog && typeof payload.blog === "object" ? payload.blog : null;
-    if (!data) {
-      setError("Couldn't save changes. Please try again.");
-      setIsSaving(false);
-      return;
-    }
+      if (isApiFailure(response, payload)) {
+        setError(getApiErrorMessage(payload, "Couldn't save changes. Please try again."));
+        setIsSaving(false);
+        return;
+      }
+      const data =
+        payload.blog && typeof payload.blog === "object" ? payload.blog : null;
+      if (!data) {
+        setError("Couldn't save changes. Please try again.");
+        setIsSaving(false);
+        return;
+      }
 
-    const supabase = getSupabaseBrowserClient();
-    const nextBlog = normalizeBlogRow(
-      (data ?? {}) as Record<string, unknown>
-    ) as unknown as BlogRecord;
-    setBlog(nextBlog);
-    // Update version after successful save to prevent stale version on concurrent changes
-    setBlogVersion(nextBlog.updated_at);
-    const nextForm = {
-      title: nextBlog.title,
-      site: nextBlog.site,
-      writer_id: nextBlog.writer_id ?? "",
-      publisher_id: nextBlog.publisher_id ?? "",
-      writer_status: nextBlog.writer_status,
-      publisher_status: nextBlog.publisher_status,
-      google_doc_url: nextBlog.google_doc_url ?? "",
-      live_url: nextBlog.live_url ?? "",
-      scheduled_publish_date: formatDateInput(nextBlog.scheduled_publish_date),
-      display_published_date: formatDateInput(nextBlog.display_published_date),
-      actual_published_at: toDateTimeLocalInput(
-        nextBlog.actual_published_at ?? nextBlog.published_at
-      ),
-      is_archived: nextBlog.is_archived,
-    };
-    setForm(nextForm);
-    setSavedFormSnapshot(createBlogFormSnapshot(nextForm));
-    setSuccessMessage(message);
+      const supabase = getSupabaseBrowserClient();
+      const nextBlog = normalizeBlogRow(
+        (data ?? {}) as Record<string, unknown>
+      ) as unknown as BlogRecord;
+      setBlog(nextBlog);
+      // Update version after successful save to prevent stale version on concurrent changes
+      setBlogVersion(nextBlog.updated_at);
+      const nextForm = {
+        title: nextBlog.title,
+        site: nextBlog.site,
+        writer_id: nextBlog.writer_id ?? "",
+        publisher_id: nextBlog.publisher_id ?? "",
+        writer_status: nextBlog.writer_status,
+        publisher_status: nextBlog.publisher_status,
+        google_doc_url: nextBlog.google_doc_url ?? "",
+        live_url: nextBlog.live_url ?? "",
+        scheduled_publish_date: formatDateInput(nextBlog.scheduled_publish_date),
+        display_published_date: formatDateInput(nextBlog.display_published_date),
+        actual_published_at: toDateTimeLocalInput(
+          nextBlog.actual_published_at ?? nextBlog.published_at
+        ),
+        is_archived: nextBlog.is_archived,
+      };
+      setForm(nextForm);
+      setSavedFormSnapshot(createBlogFormSnapshot(nextForm));
+      setSuccessMessage(message);
 
-    if (notify) {
-      await notify();
-    }
+      if (notify) {
+        await notify();
+      }
 
-    const { data: historyData } = await supabase
-      .from("blog_assignment_history")
-      .select("*")
-      .eq("blog_id", blog.id)
-      .order("changed_at", { ascending: false })
-      .limit(50);
-    setHistory((historyData ?? []) as BlogHistoryRecord[]);
-    setIsSaving(false);
-  };
+      const { data: historyData } = await supabase
+        .from("blog_assignment_history")
+        .select("*")
+        .eq("blog_id", blog.id)
+        .order("changed_at", { ascending: false })
+        .limit(50);
+      setHistory((historyData ?? []) as BlogHistoryRecord[]);
+      setIsSaving(false);
+    },
+    [blog, blogVersion, session?.access_token]
+  );
 
-  const saveDetailsChanges = async () => {
+  const saveDetailsChanges = useCallback(async () => {
     if (!form || !blog || !canSaveDetails || isSaving) {
       return;
     }
@@ -650,7 +653,26 @@ export default function BlogDetailPage() {
           }
         : undefined
     );
-  };
+  }, [
+    blog,
+    canArchiveBlog,
+    canChangePublisherAssignment,
+    canChangeWriterAssignment,
+    canEditDisplayDate,
+    canEditScheduledDate,
+    canMetadataEdit,
+    canOverrideWorkflow,
+    canSaveDetails,
+    form,
+    isSaving,
+    profile?.full_name,
+    pushNotification,
+    selectedPublisher,
+    selectedWriter,
+    updateBlog,
+    user?.id,
+    users,
+  ]);
   const handleDetailsSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await saveDetailsChanges();

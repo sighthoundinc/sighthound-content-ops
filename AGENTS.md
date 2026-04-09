@@ -33,6 +33,15 @@ For every non-trivial UI or workflow change:
 5. **Accessibility by Default**: Ensure keyboard navigation, visible focus states, and correct ARIA semantics for changed controls.
 6. **Safe Evolution**: Do not change enum keys, persisted values, or API contracts unless explicitly required.
 
+## React Hook Dependency Contract (MUST)
+
+1. Treat `react-hooks/exhaustive-deps` warnings as correctness issues, not optional cleanup.
+2. Do not suppress hook dependency warnings with inline eslint disables unless there is no practical alternative and the rationale is documented in code comments.
+3. Any component-scope function referenced by `useEffect`, `useMemo`, or another `useCallback` must be stabilized with `useCallback` (with complete dependencies) or moved inside the consuming hook when single-use.
+4. Dependency arrays must include all referenced props/state/derived values used by the hook logic (including debounced values used for filtering or fetching).
+5. For debounced search/filter flows, effects/callbacks must depend on the debounced value intended to drive side effects, not only on the raw input.
+6. No new hook dependency warnings are allowed in touched files before merge.
+
 ## Iconography Standard (MUST)
 
 1. Emoji-based icons are not allowed for UI controls, status markers, or notifications.

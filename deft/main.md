@@ -29,6 +29,7 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 - Testing: [coding/testing.md](./coding/testing.md)
 
 **Advanced:**
+- Contracts: [contracts/hierarchy.md](./contracts/hierarchy.md), [contracts/boundary-maps.md](./contracts/boundary-maps.md)
 - Multi-agent: [swarm/swarm.md](./swarm/swarm.md)
 - Templates: [templates/](./templates/)
 - Meta: [meta/](./meta/)
@@ -46,7 +47,18 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 - ~ Question assumptions and probe for clarity
 - ! Explain tradeoffs when multiple approaches exist
 - ~ Suggest improvements even when not asked
-- ! Before implementing any planned change that touches 3+ files or has an accepted plan artifact, propose `/deft:change <name>` and wait for confirmation
+- ! Before implementing any planned change that touches 3+ files or has an accepted plan artifact, propose `/deft:change <name>` and present the change name for explicit confirmation (e.g. "Confirm? yes/no") — the user must reply with an affirmative (`yes`, `confirmed`, `approve`) to satisfy this gate; a broad 'proceed', 'do it', or 'go ahead' does NOT satisfy it
+- ? For solo projects (single contributor): the `/deft:change` proposal is RECOMMENDED but not mandatory for changes fully covered by the quality gate (`task check`); it remains mandatory for cross-cutting, architectural, or high-risk changes regardless of team size
+- ! No implementation is complete until tests are written and `task check` passes — this gate applies unconditionally and a general 'proceed' instruction does not waive it
+- ⊗ Commit or push directly to the default branch (master/main) — always create a feature branch and open a PR, even for single-commit changes. The only exception is if the user **explicitly** instructs a direct commit for the current task, or if `PROJECT.md` contains `Allow direct commits to master: true` under `## Branching`.
+- ⊗ Fix a discovered issue in-place mid-task without filing a GitHub issue — always file the issue and continue the current task; do not derail the active workflow to apply an instant fix (#198). **Carve-out**: if the discovered issue is a hard blocker (the current task literally cannot be completed without fixing it), fixing it in-scope is permitted, but a GitHub issue MUST be filed before or alongside the fix; nice-to-fix, quality improvements, and adjacent issues remain prohibited (#241)
+- ⊗ Continue executing a skill past its explicit instruction boundary — when a skill's steps are complete, stop and return to the calling context; do not drift into adjacent work (#198)
+- ! The end of a skill's final step is an exit condition — do not continue into adjacent work, even if it seems related or trivial
+
+**Adaptive Teaching:**
+- ~ When a recommendation is accepted without question, be concise
+- ! When a recommendation is questioned or overridden, explain the reasoning
+- ⊗ Lecture unprompted on every decision
 
 **Communication:**
 - ! Be concise and precise
@@ -63,6 +75,7 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 - ! Playbooks use `playbook-{name}.vbrief.json` (named, not ULID-suffixed)
 - ⊗ Use ULID-suffixed filenames for plan, todo, or continue files
 - ⊗ Place vBRIEF files at workspace root
+- ⊗ Write `SPECIFICATION.md` directly — it MUST be generated from `specification.vbrief.json`; creating or modifying `SPECIFICATION.md` without a corresponding vBRIEF source file is a workflow violation
 
 **See [vbrief/vbrief.md](./vbrief/vbrief.md) for the full taxonomy, lifecycle rules, and tool mappings.**
 

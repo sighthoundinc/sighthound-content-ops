@@ -52,9 +52,8 @@ import {
   getNextActor,
 } from "@/lib/status";
 import {
-  getAdminAssignmentTaskActionState,
+  getSocialTaskActionStateFromRow,
   getPublisherTaskActionState,
-  getSocialTaskActionState,
   getWriterTaskActionState,
   type TaskActionState,
 } from "@/lib/task-action-state";
@@ -253,6 +252,16 @@ function normalizeRelationObject<T>(value: unknown): T | null {
   return (value ?? null) as T | null;
 }
 
+function normalizeRecordRows(rows: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+  return rows.filter(
+    (row): row is Record<string, unknown> =>
+      typeof row === "object" && row !== null && !Array.isArray(row)
+  );
+}
+
 export default function MyTasksPage() {
   return (
     <Suspense fallback={<div className="p-4 text-sm text-slate-600">Loading your work…</div>}>
@@ -365,7 +374,15 @@ function MyTasksPageContent() {
   const [rowDensity, setRowDensity] = useState<"compact" | "comfortable">("compact");
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "personal" | "admin">("all");
   const [actionFilter, setActionFilter] = useState<"all" | TaskActionState>("all");
-  const [taskAssignments, setTaskAssignments] = useState<Map<string, { taskType: 'writer_review' | 'publisher_review'; assignedAt: string }>>(new Map());
+  const [taskAssignments, setTaskAssignments] = useState<
+    Map<
+      string,
+      Array<{
+        taskType: "writer_review" | "publisher_review";
+        assignedAt: string | null;
+      }>
+    >
+  >(new Map());
   const taskRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const loadTasks = useCallback(async () => {
     if (!user?.id || !session?.access_token) {
@@ -390,30 +407,31 @@ function MyTasksPageContent() {
       return;
     }
 
-    setBlogs(
-      normalizeBlogRows((queuePayload.blogs ?? []) as Array<Record<string, unknown>>) as BlogRecord[]
-    );
+    setBlogs(normalizeBlogRows(normalizeRecordRows(queuePayload.blogs)) as BlogRecord[]);
     const assignmentMap = new Map<
       string,
-      { taskType: "writer_review" | "publisher_review"; assignedAt: string }
+      Array<{
+        taskType: "writer_review" | "publisher_review";
+        assignedAt: string | null;
+      }>
     >();
     for (const assignment of queuePayload.assignments ?? []) {
       if (
         typeof assignment.blogId === "string" &&
-        typeof assignment.taskType === "string" &&
-        typeof assignment.assignedAt === "string"
+        typeof assignment.taskType === "string"
       ) {
-        assignmentMap.set(assignment.blogId, {
+        const entries = assignmentMap.get(assignment.blogId) ?? [];
+        entries.push({
           taskType: assignment.taskType,
-          assignedAt: assignment.assignedAt,
+          assignedAt:
+            typeof assignment.assignedAt === "string" ? assignment.assignedAt : null,
         });
+        assignmentMap.set(assignment.blogId, entries);
       }
     }
     setTaskAssignments(assignmentMap);
 
-    const normalizedSocialRows = (queuePayload.socialRows ?? []) as Array<
-      Record<string, unknown>
-    >;
+    const normalizedSocialRows = normalizeRecordRows(queuePayload.socialRows);
     const derivedSocialTasks = normalizedSocialRows
       .map((row) => {
         const status = row.status as SocialPostStatus;
@@ -435,24 +453,14 @@ function MyTasksPageContent() {
             ? associatedBlog.site
             : "sighthound.com";
         const nextActor = getNextActor(status);
-        const createdBy = typeof row.created_by === "string" ? row.created_by : null;
-        const workerUserId =
-          typeof row.worker_user_id === "string" ? row.worker_user_id : null;
-        const reviewerUserId =
-          typeof row.reviewer_user_id === "string" ? row.reviewer_user_id : null;
-        const assignedToUserId =
-          typeof row.assigned_to_user_id === "string" ? row.assigned_to_user_id : null;
-        const actionState = getSocialTaskActionState({
-          status,
+        const actionState = getSocialTaskActionStateFromRow({
+          row,
           userId: user.id,
           isAdmin,
-          createdBy,
-          workerUserId,
-          reviewerUserId,
-          assignedToUserId,
-          editorUserId: null,
-          adminOwnerId: null,
         });
+        if (!actionState) {
+          return null;
+        }
         return {
           id: String(row.id ?? ""),
           title: String(row.title ?? "Untitled social post"),
@@ -670,7 +678,7 @@ function MyTasksPageContent() {
           ? getDateDifferenceInDays(scheduledDate, todayDateKey)
           : null;
       const isDelayed = diffDays !== null && diffDays < 0;
-      const assignment = taskAssignments.get(blog.id);
+      const assignmentEntries = taskAssignments.get(blog.id) ?? [];
       const candidates: Array<
         TaskItem & { association: "writer" | "publisher" | "admin_assignment" }
       > = [];
@@ -747,15 +755,20 @@ function MyTasksPageContent() {
         });
       }
 
-      // Admin-assigned review task for current user
-      if (assignment) {
-        const taskKind: TaskKind = assignment.taskType === 'writer_review' ? 'writer' : 'publisher';
-        const blogStatus = taskKind === 'writer' ? blog.writer_status : blog.publisher_status;
-        const actionState = getAdminAssignmentTaskActionState(
-          assignment.taskType,
-          blog.writer_status,
-          blog.publisher_status
-        );
+      // Admin-assigned review tasks for current user
+      for (const assignment of assignmentEntries) {
+        const taskKind: TaskKind =
+          assignment.taskType === "writer_review" ? "writer" : "publisher";
+        const blogStatus =
+          taskKind === "writer" ? blog.writer_status : blog.publisher_status;
+        const actionState =
+          assignment.taskType === "writer_review"
+            ? blog.writer_status === "pending_review"
+              ? "action_required"
+              : "waiting_on_others"
+            : blog.publisher_status === "pending_review"
+              ? "action_required"
+              : "waiting_on_others";
         const statusPriority = getTaskStatusPriority(
           blogStatus,
           scheduledDate,
@@ -763,7 +776,7 @@ function MyTasksPageContent() {
         );
         candidates.push({
           association: "admin_assignment",
-          id: `${blog.id}:${taskKind}:admin`,
+          id: `${blog.id}:${taskKind}:admin:${assignment.assignedAt ?? "pending"}`,
           blogId: blog.id,
           site: blog.site,
           title: blog.title,
@@ -771,7 +784,10 @@ function MyTasksPageContent() {
           createdAt: blog.created_at,
           scheduledDate,
           isDelayed,
-          statusLabel: taskKind === 'writer' ? WRITER_STATUS_LABELS[blog.writer_status] : PUBLISHER_STATUS_LABELS[blog.publisher_status],
+          statusLabel:
+            taskKind === "writer"
+              ? WRITER_STATUS_LABELS[blog.writer_status]
+              : PUBLISHER_STATUS_LABELS[blog.publisher_status],
           statusValue: blogStatus,
           statusPriority,
           liveUrl: blog.live_url,
@@ -786,7 +802,7 @@ function MyTasksPageContent() {
           assignmentInfo: {
             isAdminAssignment: true,
             taskType: assignment.taskType,
-            assignmentDate: assignment.assignedAt,
+            assignmentDate: assignment.assignedAt ?? "",
           },
         });
       }

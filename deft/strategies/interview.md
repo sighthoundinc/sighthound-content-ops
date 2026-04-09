@@ -47,7 +47,7 @@ Present two groups sourced from the `Type` column in
 **Preparatory strategies** (type: `preparatory` — loops back to this gate on completion):
 - Research — investigate the domain, find libraries, identify pitfalls
 - Discuss — lock key decisions using Feynman technique
-- Map/Brownfield — analyze existing codebase conventions
+- Map — analyze existing codebase conventions
 
 **Switch spec-generating strategy** (type: `spec-generating` — replaces current pipeline):
 - Yolo — auto-pilot, Johnbot picks all answers
@@ -78,7 +78,7 @@ Ready to generate the specification. Before we proceed, would you like to:
 --- Preparatory (loops back) ---
 2. Run a research phase — investigate the domain, find libraries, identify pitfalls
 3. Run a discuss phase — lock key decisions using Feynman technique
-4. Run a map/brownfield phase — analyze existing codebase conventions
+4. Run a map phase — analyze existing codebase conventions
 
 --- Switch strategy ---
 5. Switch to yolo — auto-pilot picks all answers
@@ -152,6 +152,7 @@ flowchart LR
 - ~ Provide numbered answer options when appropriate
 - ! Include "other" option for custom/unknown responses
 - ! Indicate which option is RECOMMENDED
+- ! When making an opinionated recommendation, state the principle (1 sentence)
 - ! When done, append all questions asked and answers given to the working document
 
 ### Question Areas
@@ -372,6 +373,7 @@ options and wait for the user to choose.
 ### Options
 
 1. **Accept** — spec is approved, proceed to implementation
+   - ! Before handing off to implementation, verify the project toolchain is installed and functional — see [../coding/toolchain.md](../coding/toolchain.md); stop and report if any required tool is missing
 2. **Revise** — return to the [Chaining Gate](#chaining-gate) with all prior
    context preserved (completed strategies, artifacts). Run additional
    preparatory strategies or regenerate the spec.

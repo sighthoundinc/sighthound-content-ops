@@ -5,6 +5,8 @@ Full guidelines: main.md
 
 ## First Session (deft development)
 
+**Headless bypass**: If you have been dispatched with a specific task (e.g. cloud agent, CI agent, scheduled run), skip the onboarding checks below and proceed directly to your task. The onboarding flow is for interactive sessions only.
+
 Check what exists before doing anything else:
 
 **USER.md missing** (~/.config/deft/USER.md or %APPDATA%\deft\USER.md):
@@ -19,6 +21,61 @@ Check what exists before doing anything else:
 ## Returning Sessions
 
 When all config exists: read the guidelines, your USER.md preferences, and PROJECT.md, then continue with your task.
+
+~ Run `skills/deft-sync/SKILL.md` to pull latest framework updates and validate project files.
+
+### Deft Alignment Confirmation
+
+! At the start of each interactive session, after loading AGENTS.md, confirm to the user that Deft Directive is active. The confirmation must be unambiguous -- for example: "Deft Directive active -- AGENTS.md loaded."
+
+! If the agent detects a context window shift or is asked "are you using Deft?", re-confirm alignment by stating that Deft Directive is active and AGENTS.md was loaded.
+
+⊗ Begin an interactive session without confirming Deft alignment to the user.
+
+Note: A true UI indicator (e.g. Warp status bar) is deferred to Phase 5. This is a behavioral rule only.
+
+## Skill Completion Gate
+
+! When a skill's final step is complete, explicitly confirm skill exit and provide chaining instructions if applicable. The confirmation must be unambiguous -- for example: "{skill-name} complete -- exiting skill." followed by what the user/agent should do next (e.g. wait for PR review, return to monitor, chain into another skill).
+
+⊗ Exit a skill silently without confirming completion or providing next-step instructions.
+
+## Before Improvising
+
+- ! Before designing a multi-step workflow from scratch, scan `skills/` for an existing skill that covers the task — skills are versioned, tested, and encode lessons from prior runs
+- ⊗ Improvise a multi-step workflow without first checking `skills/` for coverage
+
+## Skill Routing
+
+When user input matches a trigger keyword, read the corresponding skill:
+
+- "review cycle" / "check reviews" / "run review cycle" → `skills/deft-review-cycle/SKILL.md`
+- "swarm" / "parallel agents" / "run agents" → `skills/deft-swarm/SKILL.md` — chains to `deft-review-cycle` at Phase 5
+- "roadmap refresh" / "triage" / "refresh roadmap" → `skills/deft-roadmap-refresh/SKILL.md` — chains to `deft-review-cycle` at exit
+- "build" / "implement" / "implement spec" → `skills/deft-build/SKILL.md`
+- "setup" / "bootstrap" / "onboard" → `skills/deft-setup/SKILL.md`
+- "sync" / "good morning" / "update deft" / "update vbrief" / "sync frameworks" → `skills/deft-sync/SKILL.md`
+
+## Development Process (always follow)
+
+**Before code changes:**
+- ! Read SPECIFICATION.md for existing task coverage of the issue being fixed
+- ! If no spec task exists for the work, add one before implementing
+- ⊗ Begin editing files before checking spec coverage and creating a feature branch — even if the user says "yes" or "proceed"
+
+**Before committing:**
+- Run `task check` (validate + lint + test) — this is the pre-commit gate
+- Add CHANGELOG.md entry under `[Unreleased]`
+- Verify .github/PULL_REQUEST_TEMPLATE.md checklist items are satisfied
+
+**Branching:**
+- ! Always work on a feature branch — never commit directly to master/main unless the user explicitly instructs it or `PROJECT.md` contains `Allow direct commits to master: true`
+
+**PR conventions:**
+- ROADMAP.md updates happen at release time — batch-move merged issues to Completed during the CHANGELOG promotion commit
+- Commit messages: `feat/fix/docs/chore` prefix, concise subject, bullet-point body
+- When running a review cycle on a PR, follow `skills/deft-review-cycle/SKILL.md`
+- ! After squash merge, verify issues actually closed: `gh issue view <N> --json state --jq .state`. Squash merges can silently fail to process closing keywords (`Closes #N`). If still open, close manually with a comment referencing the merged PR (#167)
 
 ## Commands
 

@@ -48,7 +48,8 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
   4. `deft/main.md` — framework guidelines
   5. `deft/coding/coding.md` — coding standards
   6. `deft/coding/testing.md` — testing requirements
-  7. `deft/languages/{language}.md` — only for languages this project uses
+  7. `deft/coding/toolchain.md` — toolchain validation rules
+  8. `deft/languages/{language}.md` — only for languages this project uses
 - ⊗ Read all language/interface/tool files upfront
 
 ## Rule Precedence
@@ -66,6 +67,16 @@ SPECIFICATION.md   ← LOWEST
 - ! USER.md Personal section always wins over any other file
 - ! For project-scoped settings, PROJECT.md overrides USER.md Defaults
 
+## Change Lifecycle Gate
+
+! Before any implementation that touches 3+ files, verify that a `/deft:change <name>` proposal exists and has been confirmed by the user:
+
+- ! Check `history/changes/` for an active change proposal matching this work
+- ! If no proposal exists: propose `/deft:change <name>` and present the change name for explicit confirmation (e.g. "Confirm? yes/no")
+- ! The user must reply with an affirmative (`yes`, `confirmed`, `approve`) — a general 'proceed', 'do it', or 'go ahead' does NOT satisfy this gate
+- ? For solo projects: this gate is RECOMMENDED but not mandatory for changes fully covered by `task check`; it remains mandatory for cross-cutting, architectural, or high-risk changes
+- ⊗ Skip this gate because the user has already said "proceed" or "go ahead"
+
 ## Build Process
 
 ### Step 1: Understand the Spec
@@ -76,7 +87,14 @@ SPECIFICATION.md   ← LOWEST
 
 > "Here's what I see: Phase 1: {name} ({N} tasks), Phase 2: {name} (depends on Phase 1). I'll start with Phase 1. Ready?"
 
-### Step 2: Build Phase by Phase
+### Step 2: Verify Toolchain
+
+- ! Before any implementation, verify all tools required by this project are installed and functional — see `deft/coding/toolchain.md` for full rules
+- ! At minimum: confirm task runner (`task --version`), language compiler/runtime, and platform SDK (if applicable) are available
+- ! If any required tool is missing, stop and report — do not proceed to Step 3
+- ⊗ Assume tools are available because the spec references them
+
+### Step 3: Build Phase by Phase
 
 For each phase:
 
@@ -88,7 +106,7 @@ For each phase:
 
 - ⊗ Move to next phase until current phase passes all checks
 
-### Step 3: Quality Gates
+### Step 4: Quality Gates
 
 After EVERY phase:
 
@@ -113,6 +131,16 @@ Read full files when you need detail:
 - ! Commits: Conventional Commits format; ! run `task check` before every commit
 
 See `deft/coding/coding.md` and `deft/coding/testing.md` for full rules.
+
+## Pre-Commit File Review
+
+! Before every commit, re-read ALL modified files and explicitly check for:
+
+1. ! **Encoding errors** -- em-dashes corrupted to replacement characters, BOM artifacts, mojibake from round-trip read/write
+2. ! **Unintended duplication** -- accidental double entries in CHANGELOG.md, SPECIFICATION.md, or structured data files
+3. ! **Structural issues** -- malformed CHANGELOG entries, broken table rows, mismatched index entries, invalid JSON/YAML
+
+⊗ Commit without re-reading all modified files first.
 
 ## Commit Strategy
 
@@ -149,3 +177,8 @@ feat(phase-2): add REST API endpoints with integration tests
 - ⊗ Move to next phase before current passes checks
 - ⊗ Make commits without running `task check`
 - ⊗ Proceed without USER.md — always run the USER.md Gate first
+- ⊗ Proceed with implementation when the build or test toolchain is unavailable — always run the Toolchain Gate (Step 2) first
+- ⊗ Proceed to next task or phase without tests passing — testing is a hard gate, not a cleanup step
+- ⊗ Skip the Change Lifecycle Gate because the user said "proceed" — broad approval does not satisfy the confirmation gate
+- ⊗ Write `SPECIFICATION.md` directly — always create `specification.vbrief.json` first and render from it
+- ⊗ Commit or push directly to the default branch — always create a feature branch first. Exception: user explicitly instructs a direct commit, or `PROJECT.md` contains `Allow direct commits to master: true` under `## Branching`

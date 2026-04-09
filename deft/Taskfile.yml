@@ -7,7 +7,7 @@ includes:
 
 vars:
   PROJECT_NAME: deft
-  VERSION: 0.5.2
+  VERSION: 0.14.0
 
 tasks:
   default:
@@ -18,6 +18,8 @@ tasks:
 
   validate:
     desc: Validate all markdown files
+    env:
+      PYTHONUTF8: "1"
     cmds:
       - cmd: >-
           uv run python -c "from pathlib import Path;
@@ -31,7 +33,7 @@ tasks:
       - uv run pytest tests/
 
   test:coverage:
-    desc: Run tests with coverage (fails if < 75%)
+    desc: Run tests with coverage (fails if < 85%)
     cmds:
       - uv run pytest tests/ --cov --cov-report=html
 

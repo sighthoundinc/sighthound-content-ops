@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 def _project_responses(project_path: Path, strategy_idx: str = "1") -> list:
-    """Build the standard 8-response queue for cmd_project.
+    """Build the standard 9-response queue for cmd_project.
 
     Assumes ./deft/ directory exists (no install prompt).
 
@@ -27,7 +27,8 @@ def _project_responses(project_path: Path, strategy_idx: str = "1") -> list:
       5. Coverage threshold                (read_input, default 85)
       6. Tech stack details                (read_input, optional)
       7. Strategy selection                (read_input, default "1")
-      8. Run 'run spec' now?              (read_yn)
+      8. Branching preference              (read_input, "1" = branch-based)
+      9. Run 'run spec' now?              (read_yn)
     """
     return [
         str(project_path),   # 1  output path
@@ -37,7 +38,8 @@ def _project_responses(project_path: Path, strategy_idx: str = "1") -> list:
         "85",                 # 5  coverage
         "Flask",              # 6  tech stack
         strategy_idx,         # 7  strategy
-        False,                # 8  don't chain to spec
+        "1",                  # 8  branch-based (default)
+        False,                # 9  don't chain to spec
     ]
 
 
@@ -94,6 +96,49 @@ def test_project_strategy_selection(
     )
 
 
+def test_project_trunk_based_emits_branching_section(
+    run_command, mock_user_input, isolated_env, deft_run_module, monkeypatch
+):
+    """Selecting trunk-based (option 2) emits Allow direct commits to master in PROJECT.md."""
+    monkeypatch.setattr(deft_run_module, "HAS_RICH", False)
+    (isolated_env / "deft").mkdir(exist_ok=True)
+    project_path = isolated_env / "PROJECT.md"
+    mock_user_input([
+        str(project_path),   # 1  output path
+        "TestProject",        # 2  project name
+        "1",                  # 3  CLI
+        "1",                  # 4  first language
+        "85",                 # 5  coverage
+        "Flask",              # 6  tech stack
+        "1",                  # 7  strategy
+        "2",                  # 8  trunk-based
+        False,                # 9  don't chain to spec
+    ])
+
+    run_command("cmd_project", [])
+
+    content = project_path.read_text(encoding="utf-8")
+    assert "Allow direct commits to master: true" in content
+    assert "## Branching" in content
+
+
+def test_project_branch_based_does_not_emit_branching_section(
+    run_command, mock_user_input, isolated_env, deft_run_module, monkeypatch
+):
+    """Selecting branch-based (option 1 / default) must NOT emit Allow direct commits."""
+    monkeypatch.setattr(deft_run_module, "HAS_RICH", False)
+    (isolated_env / "deft").mkdir(exist_ok=True)
+    project_path = isolated_env / "PROJECT.md"
+    mock_user_input([
+        str(project_path), "TestProject", "1", "1", "85", "Flask", "1",
+        "1",   # branch-based (default)
+        False,
+    ])
+    run_command("cmd_project", [])
+    content = project_path.read_text(encoding="utf-8")
+    assert "Allow direct commits to master" not in content
+
+
 def test_project_rejects_duplicate_types(
     run_command, mock_user_input, isolated_env, deft_run_module, monkeypatch
 ):
@@ -110,7 +155,8 @@ def test_project_rejects_duplicate_types(
         "85",                # 6  coverage
         "Flask",             # 7  tech stack
         "1",                 # 8  strategy
-        False,               # 9  don't chain to spec
+        "1",                 # 9  branch-based (default)
+        False,               # 10 don't chain to spec
     ])
 
     result = run_command("cmd_project", [])

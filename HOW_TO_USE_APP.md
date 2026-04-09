@@ -50,6 +50,7 @@ Mandatory gates:
 - `Draft → In Review`: Product, Type, Canva URL
 - Execution transitions: Product, Type, Canva URL, Platforms, Caption, Scheduled Publish Date
 - `Awaiting Live Link → Published`: at least one valid public live link
+- In Social Posts list view, `Delete Selected` processes selected posts in one batch and shows a single summary (deleted, skipped published, and failed if any).
 
 Rollback rule:
 - Execution rollback to `Changes Requested` requires a non-empty reason.
@@ -114,6 +115,7 @@ Home page consistency rule:
 - Advanced filters are context-aware:
   - Blog advanced filters affect only blog rows.
   - Social advanced filters affect only social rows.
+- Search applies a short debounce so filtering stays smooth while typing on larger datasets.
 
 ### Detail page section order
 Blog detail views:

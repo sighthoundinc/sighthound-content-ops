@@ -40,6 +40,13 @@ The product goal is predictable stage-based execution with explicit ownership an
 - `awaiting_live_link` → `published`
 - `awaiting_live_link` → `changes_requested`
 
+### Centralized UI mapping contract
+- `src/lib/status.ts` social workflow display mappings must remain sourced from `src/lib/social-post-workflow.ts`:
+  - `SOCIAL_POST_STATUS_LABELS`
+  - `SOCIAL_POST_NEXT_ACTION_LABELS`
+  - `SOCIAL_POST_ALLOWED_TRANSITIONS`
+- Regression guardrail: `src/lib/social-post-workflow.contract.test.ts`.
+
 ### Draft creation contract
 - New social posts are created in `draft`.
 - Required at create: `product`, `type`, `worker_user_id` (assigned owner), `reviewer_user_id`.
@@ -96,6 +103,7 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
   - `GET /api/dashboard/tasks-snapshot`
   - `GET /api/dashboard/overview-metrics`
 - `GET /api/dashboard/overview-metrics` computes metric buckets server-side in single-pass reductions (no repeated multi-filter bucket scans).
+- Client filtering contract: `/dashboard` and `/social-posts` list search uses short debounced input (standard: `180ms`) before expensive row filtering/sorting.
 - Database performance contract for task/query paths:
   - `social_posts(status, assigned_to_user_id, worker_user_id, reviewer_user_id, created_by)`
   - `blogs(is_archived, overall_status, writer_id, publisher_id, scheduled_publish_date)`

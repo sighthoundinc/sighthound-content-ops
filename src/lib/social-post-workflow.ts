@@ -259,10 +259,10 @@ export const STATUS_LABELS: Record<SocialPostStatus, string> = {
  */
 export const NEXT_ACTION_LABELS: Record<SocialPostStatus, string> = {
   draft: "Submit for Review",
-  in_review: "Review & Approve",
+  in_review: "Admin Review Needed",
   changes_requested: "Apply Changes",
-  creative_approved: "Move to Ready",
-  ready_to_publish: "Mark Awaiting Link",
+  creative_approved: "Add Caption & Schedule",
+  ready_to_publish: "Publish Post",
   awaiting_live_link: "Submit Link",
   published: "Done",
 };

@@ -1,12 +1,12 @@
 "use client";
 
-import { format } from "date-fns";
 
 import {
   WRITER_STATUS_LABELS,
   PUBLISHER_STATUS_LABELS,
 } from "@/lib/status";
 import { getSiteShortLabel } from "@/lib/site";
+import { formatDateInTimezone } from "@/lib/format-date";
 import type { BlogSite } from "@/lib/types";
 type QuickQueueKey =
   | "writer_in_progress"
@@ -41,6 +41,7 @@ export function DashboardSidebar({
   quickQueueCounts,
   activeQuickQueue,
   recentlyPublished,
+  timezone,
   onApplyQuickQueueFilter,
   onOpenBlog,
   isWriterFilterOpen,
@@ -51,6 +52,7 @@ export function DashboardSidebar({
   quickQueueCounts: QuickQueueCounts;
   activeQuickQueue: QuickQueueKey | null;
   recentlyPublished: RecentlyPublishedItem | null;
+  timezone?: string | null;
   onApplyQuickQueueFilter: (queue: QuickQueueKey) => void;
   onOpenBlog: (blogId: string) => void;
   isWriterFilterOpen: boolean;
@@ -108,7 +110,7 @@ export function DashboardSidebar({
   const publishedAt =
     recentlyPublished?.actual_published_at ?? recentlyPublished?.published_at ?? null;
   const publishedDateLabel =
-    publishedAt ? format(new Date(publishedAt), "MMM d") : null;
+    publishedAt ? formatDateInTimezone(publishedAt, timezone ?? undefined, "MMM d") : null;
   const siteIndicator = recentlyPublished?.site
     ? getSiteShortLabel(recentlyPublished.site)
     : "";

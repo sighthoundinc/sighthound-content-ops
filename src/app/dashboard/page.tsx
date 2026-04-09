@@ -112,7 +112,8 @@ import {
   parseApiResponseJson,
 } from "@/lib/api-response";
 import { useAuth } from "@/providers/auth-provider";
-import { useSystemFeedback } from "@/providers/system-feedback-provider";
+import { useAlerts } from "@/providers/alerts-provider";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { logDashboardVisitEvent } from "@/app/actions/log-dashboard-visit";
 
 type BlogCommentRecord = {
@@ -755,7 +756,7 @@ const normalizeSavedLensShortcuts = (value: unknown): SavedLensShortcut[] => {
 export default function DashboardPage() {
   const router = useRouter();
   const { hasPermission, profile, session, user } = useAuth();
-  const { showError, showSuccess, showWarning } = useSystemFeedback();
+  const { showError, showSuccess, showWarning } = useAlerts();
   useEffect(() => {
     if (!user?.id) {
       return;
@@ -800,6 +801,7 @@ export default function DashboardPage() {
     Array<Pick<ProfileRecord, "id" | "full_name" | "email">>
   >([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 180);
   const [siteFilters, setSiteFilters] = useState<BlogSite[]>([]);
   const [contentTypeFilters, setContentTypeFilters] = useState<
     DashboardContentTypeFilter[]
@@ -1790,7 +1792,7 @@ export default function DashboardPage() {
       nextSevenDaysEnd.setHours(23, 59, 59, 999);
       const sevenDaysAgo = new Date(now);
       sevenDaysAgo.setDate(now.getDate() - 7);
-      const effectiveSearch = (overrides.search ?? search).toLowerCase().trim();
+      const effectiveSearch = (overrides.search ?? debouncedSearch).toLowerCase().trim();
       const effectiveSiteFilters = overrides.siteFilters ?? siteFilters;
       const effectiveContentTypeFilters =
         overrides.contentTypeFilters ?? contentTypeFilters;

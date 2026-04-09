@@ -199,6 +199,17 @@ const TASK_TABLE_COLUMN_LABELS: Record<TaskTableColumnKey, string> = {
   publish_date: "Publish Date",
   options: "Options",
 };
+const TASK_STATUS_FILTER_OPTIONS: Array<{
+  value: WriterStageStatus | PublisherStageStatus;
+  label: string;
+}> = [
+  { value: "not_started", label: "Not Started" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "pending_review", label: "Pending Review" },
+  { value: "needs_revision", label: "Needs Revision" },
+  { value: "publisher_approved", label: "Publishing Approved" },
+  { value: "completed", label: "Completed" },
+];
 const isTaskTableColumnKey = (value: string): value is TaskTableColumnKey =>
   value in TASK_TABLE_COLUMN_LABELS;
 
@@ -1654,17 +1665,17 @@ function MyTasksPageContent() {
                   aria-label="Task Status"
                   value={statusFilter}
                   onChange={(event) => {
-                    setStatusFilter(
-                      event.target.value as "all" | "in_progress" | "not_started" | "needs_revision"
-                    );
+                    setStatusFilter(event.target.value as "all" | WriterStageStatus | PublisherStageStatus);
                     setCurrentPage(1);
                   }}
                   className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
                 >
                   <option value="all">All Statuses</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="not_started">Not Started</option>
-                  <option value="needs_revision">Needs Revision</option>
+                  {TASK_STATUS_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
                 <select
                   aria-label="Social Task Status"

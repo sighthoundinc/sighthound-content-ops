@@ -117,6 +117,7 @@ import {
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 import { useNotifications } from "@/providers/notifications-provider";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type SocialPostsView = "board" | "list" | "calendar";
 type SocialCalendarMode = "month" | "week";
@@ -626,6 +627,7 @@ function SocialPostsPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<SocialPostsView>("list");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 180);
   const [statusFilter, setStatusFilter] = useState<SocialPostStatus | "all">("all");
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeMonth, setActiveMonth] = useState(new Date());
@@ -967,7 +969,7 @@ function SocialPostsPageContent() {
   }, [postLinks]);
 
   const filteredPosts = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    const normalizedSearch = debouncedSearch.trim().toLowerCase();
     return posts.filter((post) => {
       const matchesStatus = statusFilter === "all" || post.status === statusFilter;
       if (!matchesStatus) {
@@ -990,7 +992,7 @@ function SocialPostsPageContent() {
         .toLowerCase();
       return haystack.includes(normalizedSearch);
     });
-  }, [posts, search, statusFilter]);
+  }, [debouncedSearch, posts, statusFilter]);
 
   const postsByStatus = useMemo(() => {
     return SOCIAL_POST_STATUSES.reduce<Record<SocialPostStatus, SocialPostWithRelations[]>>(
@@ -2163,25 +2165,31 @@ function SocialPostsPageContent() {
       return;
     }
 
-    let successCount = 0;
-    let failureCount = 0;
+    const deleteResults = await Promise.allSettled(
+      pendingDeleteRequest.postIds.map(async (postId) => {
+        const response = await fetch(`/api/social-posts/${postId}`, {
+          method: "DELETE",
+          headers: {
+            authorization: `Bearer ${session.access_token}`,
+            "content-type": "application/json",
+          },
+        });
+        const payload = await parseApiResponseJson<Record<string, unknown>>(response);
+        const isFailure = isApiFailure(response, payload);
+        return { postId, isFailure } as const;
+      })
+    );
+
     const successfulPostIds: string[] = [];
-    for (const postId of pendingDeleteRequest.postIds) {
-      const response = await fetch(`/api/social-posts/${postId}`, {
-        method: "DELETE",
-        headers: {
-          authorization: `Bearer ${session.access_token}`,
-          "content-type": "application/json",
-        },
-      });
-      const payload = await parseApiResponseJson<Record<string, unknown>>(response);
-      if (isApiFailure(response, payload)) {
+    let failureCount = 0;
+    for (const result of deleteResults) {
+      if (result.status === "rejected" || result.value.isFailure) {
         failureCount += 1;
-      } else {
-        successCount += 1;
-        successfulPostIds.push(postId);
+        continue;
       }
+      successfulPostIds.push(result.value.postId);
     }
+    const successCount = successfulPostIds.length;
 
     if (successfulPostIds.length > 0) {
       const deletedIdSet = new Set(successfulPostIds);

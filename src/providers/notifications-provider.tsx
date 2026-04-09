@@ -33,7 +33,7 @@ interface NotificationsContextValue {
   clearedNotifications: NotificationItem[];
   allNotifications: NotificationItem[];
   unreadCount: number;
-  pushNotification: (notification: NotificationInput) => void;
+  pushNotification: (notification: NotificationInput) => Promise<void>;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotification: (id: string) => void;
@@ -174,13 +174,15 @@ export function NotificationsProvider({
   const pushNotification = useCallback(
     async (notification: NotificationInput) => {
       try {
-        // Get current user from Supabase session
-        const supabase = getSupabaseBrowserClient();
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userId = sessionData?.session?.user?.id || userIdCache;
-
-        if (userId && userId !== userIdCache) {
-          setUserIdCache(userId);
+        let userId = userIdCache;
+        if (!userId) {
+          // Resolve session only when cache is empty to avoid repeated network/storage calls.
+          const supabase = getSupabaseBrowserClient();
+          const { data: sessionData } = await supabase.auth.getSession();
+          userId = sessionData?.session?.user?.id ?? null;
+          if (userId) {
+            setUserIdCache(userId);
+          }
         }
 
         // Check preferences before emitting

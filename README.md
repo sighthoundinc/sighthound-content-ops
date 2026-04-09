@@ -34,6 +34,7 @@ Social posts must include at least one valid public live link before they can mo
 - Social ownership classification on home/snapshot reads current assignee ownership first and falls back safely to legacy owner columns when needed.
 - Dashboard overview social metrics also use ownership fallback behavior so social counts stay visible during temporary schema-cache drift.
 - Dashboard summary/snapshot/overview APIs use short-lived per-user caching (30s) to reduce repeated query load during frequent page switching.
+- Dashboard and Social Posts list search use a short debounce (`180ms`) so filtering remains responsive while typing.
 
 ## Core pages
 - `Dashboard`: cross-content queue and filter view, with overview cards loaded from server aggregation (`/api/dashboard/overview-metrics`)
@@ -46,6 +47,7 @@ Social posts must include at least one valid public live link before they can mo
 - `My Tasks`: assignment-first execution queue
 - `Blogs`: blog workflow list and details
 - `Social Posts`: list/board/calendar and full social editor
+  - list bulk delete runs selected requests concurrently and returns one aggregated deleted/skipped/failed summary
 - `Ideas`: intake and conversion to blogs/social posts
 - `Calendar`: schedule planning and conflict visibility
 - `Settings`: profile, timezone, notifications, connected services
@@ -54,6 +56,7 @@ Detail page ordering rule:
 - Blogs: `Comments` → `Links` → `Assignment & Changes`.
 - Social Posts: `Setup` → `Assignment` → `Associated Blog` → `Write Caption` → `Review & Publish` → `Comments` → `Current Snapshot` → `Checklist` → `Assignment & Changes`.
 - On social post surfaces, use `Assignment & Changes` instead of `Activity`.
+- Social workflow labels, next-action copy, and transition mappings in `src/lib/status.ts` are centralized from `src/lib/social-post-workflow.ts` and guarded by `src/lib/social-post-workflow.contract.test.ts`.
 - Both detail pages include:
   - top `Next Action` strip (primary CTA + owner handoff context + preflight)
   - `Jump to` section navigator

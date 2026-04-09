@@ -154,21 +154,23 @@ export function AppShell({
   }, []);
   const syncActivityFeedToInbox = useCallback(
     async (feedItems: ActivityFeedItem[]) => {
-      for (const activity of feedItems.slice(0, 10)) {
-        await pushNotification({
-          sourceId: `activity:${activity.id}`,
-          type: mapActivityToNotificationType(activity.event_type),
-          title: activity.event_title,
-          message:
-            activity.event_summary ??
-            `${activity.content_title}${activity.changed_by_name ? ` • ${activity.changed_by_name}` : ""}`,
-          href:
-            activity.content_type === "blog"
-              ? `/blogs/${activity.content_id}`
-              : `/social-posts/${activity.content_id}`,
-          timestamp: new Date(activity.changed_at).getTime(),
-        });
-      }
+      await Promise.allSettled(
+        feedItems.slice(0, 10).map((activity) =>
+          pushNotification({
+            sourceId: `activity:${activity.id}`,
+            type: mapActivityToNotificationType(activity.event_type),
+            title: activity.event_title,
+            message:
+              activity.event_summary ??
+              `${activity.content_title}${activity.changed_by_name ? ` • ${activity.changed_by_name}` : ""}`,
+            href:
+              activity.content_type === "blog"
+                ? `/blogs/${activity.content_id}`
+                : `/social-posts/${activity.content_id}`,
+            timestamp: new Date(activity.changed_at).getTime(),
+          })
+        )
+      );
     },
     [mapActivityToNotificationType, pushNotification]
   );

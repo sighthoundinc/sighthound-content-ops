@@ -18,6 +18,7 @@ This runbook describes how to operate Content Relay safely in day-to-day environ
   - `GET /api/dashboard/tasks-snapshot`
   - `GET /api/dashboard/overview-metrics`
 - Keep overview aggregation server-side and single-pass; do not reintroduce repeated metric-bucket `.filter()` chains in client dashboard code.
+- Dashboard and Social Posts list search filtering should remain debounced at the client (current standard: `180ms`) to avoid expensive recomputation on every keypress.
 
 ## 2) Environments and release gate
 ### Recommended flow
@@ -88,6 +89,8 @@ npm run check:full
 - Workflow reminders and notifications should be emitted through centralized event paths.
 - Notification preference toggles should be respected at emission time.
 - Delivery failures should degrade safely without blocking core workflow transitions.
+- Bell activity feed syncing should fan out top activity entries to inbox notifications concurrently (`Promise.allSettled`) so one failed emit does not block others.
+- Notification emission should prefer cached user identity (`userIdCache`) and only fetch session identity when cache is empty.
 
 ### Slack delivery details
 - Edge function: `supabase/functions/slack-notify/index.ts`.
@@ -120,6 +123,7 @@ Dashboard filtering operating model:
 - `Lens shortcuts` are optional user-saved quick actions for one-click lens reapplication.
 - `More filters` reveals advanced controls (delivery + detailed blog/social filters).
 - Advanced controls are scope-aware: blog controls only affect blog rows; social controls only affect social rows.
+- Social Posts bulk delete operations are processed concurrently per selected row and must always return a single aggregated success/failure/skip summary.
 
 ## 9) Database and migration operations
 - Treat `supabase/migrations` as append-only.

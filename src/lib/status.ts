@@ -9,6 +9,11 @@ import type {
   WorkflowStage,
   WriterStageStatus,
 } from "@/lib/types";
+import {
+  NEXT_ACTION_LABELS as SOCIAL_WORKFLOW_NEXT_ACTION_LABELS,
+  STATUS_LABELS as SOCIAL_WORKFLOW_STATUS_LABELS,
+  TRANSITION_GRAPH as SOCIAL_WORKFLOW_TRANSITION_GRAPH,
+} from "@/lib/social-post-workflow";
 
 export const SITES = ["sighthound.com", "redactor.com"] as const;
 export const SOCIAL_POST_STATUSES: SocialPostStatus[] = [
@@ -69,22 +74,10 @@ export const STATUS_LABELS: Record<OverallBlogStatus, string> = {
   published: "Published",
 };
 export const SOCIAL_POST_STATUS_LABELS: Record<SocialPostStatus, string> = {
-  draft: "Draft",
-  in_review: "In Review",
-  changes_requested: "Changes Requested",
-  creative_approved: "Creative Approved",
-  ready_to_publish: "Ready to Publish",
-  awaiting_live_link: "Awaiting Live Link",
-  published: "Published",
+  ...SOCIAL_WORKFLOW_STATUS_LABELS,
 };
 export const SOCIAL_POST_NEXT_ACTION_LABELS: Record<SocialPostStatus, string> = {
-  draft: "Submit for Review",
-  in_review: "Admin Review Needed",
-  changes_requested: "Apply Changes",
-  creative_approved: "Add Caption & Schedule",
-  ready_to_publish: "Publish Post",
-  awaiting_live_link: "Submit Link",
-  published: "Done",
+  ...SOCIAL_WORKFLOW_NEXT_ACTION_LABELS,
 };
 export const SOCIAL_POST_PRODUCT_LABELS: Record<SocialPostProduct, string> = {
   alpr_plus: "ALPR+",
@@ -130,13 +123,7 @@ export const STATUS_COLORS: Record<OverallBlogStatus, string> = {
   published: "bg-green-100 text-green-700 border border-green-200",
 };
 export const SOCIAL_POST_ALLOWED_TRANSITIONS: Record<SocialPostStatus, SocialPostStatus[]> = {
-  draft: ["in_review"],
-  in_review: ["changes_requested", "creative_approved"],
-  changes_requested: ["in_review"],
-  creative_approved: ["ready_to_publish"],
-  ready_to_publish: ["awaiting_live_link", "changes_requested"],
-  awaiting_live_link: ["published", "changes_requested"],
-  published: [],
+  ...SOCIAL_WORKFLOW_TRANSITION_GRAPH,
 };
 export function getNextActor(status: SocialPostStatus): SocialNextActor {
   if (

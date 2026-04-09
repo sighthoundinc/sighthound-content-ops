@@ -335,6 +335,7 @@ For every non-trivial UI or workflow change:
 3. **Workflow Contracts are locked**:
    - Stage transitions and required fields must be centralized and enforced by API/DB authority.
    - UI may guide transitions but cannot bypass workflow constraints.
+   - Social workflow UI mappings in `src/lib/status.ts` (`SOCIAL_POST_STATUS_LABELS`, `SOCIAL_POST_NEXT_ACTION_LABELS`, `SOCIAL_POST_ALLOWED_TRANSITIONS`) must remain sourced from `src/lib/social-post-workflow.ts`; guard regressions with `src/lib/social-post-workflow.contract.test.ts`.
 4. **UX Contracts are locked**:
    - Tables, drawers, toasts, and navigation patterns must remain behaviorally consistent across pages.
    - New pages reuse existing interaction contracts instead of introducing variants.
@@ -508,6 +509,7 @@ These rules apply to all table implementations (DataTable, DashboardTable, etc.)
 1. Search supports partial, case-insensitive matching.
 2. Results should update in near real-time with debounced input where appropriate.
 3. Show meaningful empty-state feedback when no results are found.
+4. Dashboard and Social Posts list filtering must use short client-side debounce before expensive row filtering (current standard: `180ms`).
 
 ## Filter Pills and Bulk Panel Pattern (MUST)
 
@@ -647,6 +649,7 @@ To keep idea intake predictable and avoid split editing patterns:
 - **Failure Handling**: Preferences failures are logged but don't block notifications (fail-open)
 - **Backward Compatibility**: Defaults to all-enabled if preferences don't exist
 - **Cache Invalidation**: Called on PATCH to ensure subsequent emissions use fresh data
+- **Runtime performance guardrail**: Notification emission should reuse cached user identity (`userIdCache`) and only call `supabase.auth.getSession()` when cache is empty.
 
 ### Implementation
 - **No emoji icons**: All feedback uses `AppIcon` from `src/lib/icons.tsx`
@@ -699,6 +702,7 @@ In addition to real-time notifications, the bell drawer displays a unified activ
 - **Load trigger**: Activity feed is fetched when the notification panel opens
 - **Display limit**: Shows up to 10 most recent activities merged from all sources; full history available via "View History" link
 - **Sorting**: Activities are merged and sorted by timestamp (most recent first) across all content types
+- **Inbox sync performance contract**: Bell activity fan-out to in-app notifications must process the top 10 entries concurrently (`Promise.allSettled`) so one failed emit cannot block the rest.
 
 ## Activity History Filtering (Multi-Select) (MUST)
 

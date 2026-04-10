@@ -1119,7 +1119,7 @@ export default function DashboardPage() {
       setSocialPosts([]);
     } else {
       const socialPostStatusSet = new Set<SocialPostStatus>(SOCIAL_POST_STATUSES);
-      const nextSocialPosts = ((socialPostsData ?? []) as Array<Record<string, unknown>>)
+      const mappedSocialPosts: (DashboardSocialPostMetric | null)[] = ((socialPostsData ?? []) as Array<Record<string, unknown>>)
         .map((row) => {
           const associatedBlog = normalizeRelationObject<{ site?: unknown }>(
             row.associated_blog
@@ -1180,9 +1180,9 @@ export default function DashboardPage() {
                 : null,
             has_live_link: false,
             published_transition_at: null,
-          } satisfies DashboardSocialPostMetric;
-        })
-        .filter((row): row is DashboardSocialPostMetric => row !== null);
+          } as DashboardSocialPostMetric;
+        });
+      const nextSocialPosts = mappedSocialPosts.filter((row): row is DashboardSocialPostMetric => row !== null);
       if (nextSocialPosts.length === 0) {
         setSocialPosts(nextSocialPosts);
       } else {

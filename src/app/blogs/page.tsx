@@ -836,7 +836,10 @@ function BlogLibraryPageContent() {
             );
           }
           if (column === "associated_social_posts") {
-            const socialPostCount = (blog as any).social_post_count ?? 0;
+            const blogWithCount = blog as unknown as { social_post_count?: number };
+            const socialPostCount = typeof blogWithCount.social_post_count === "number"
+              ? blogWithCount.social_post_count
+              : 0;
             const displayValue = socialPostCount > 0 
               ? `${socialPostCount} post${socialPostCount !== 1 ? "s" : ""}`
               : "—";

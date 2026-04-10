@@ -23,13 +23,11 @@ interface AssociatedBlog {
 export interface AssociatedBlogContextCardProps {
   blogId: string | null;
   loading?: boolean;
-  timezone?: string | null;
 }
 
 export function AssociatedBlogContextCard({
   blogId,
   loading,
-  timezone,
 }: AssociatedBlogContextCardProps) {
   const { session } = useAuth();
   const [blog, setBlog] = useState<AssociatedBlog | null>(null);

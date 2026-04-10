@@ -360,21 +360,21 @@ export default function ResourcesPage() {
             <p className="font-medium text-slate-900">Navigate between linked blogs and social posts</p>
             <ul className="list-disc space-y-2 pl-5">
               <li>
-                <span className="font-medium text-slate-900">Dashboard:</span> Click the "Associated Content" badge
+                <span className="font-medium text-slate-900">Dashboard:</span> Click the &quot;Associated Content&quot; badge
                 on any row to navigate between blogs and their linked social posts. Blog rows show a count badge;
                 social rows show the associated blog title.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Blog detail drawer:</span> Open the "Associated Social Posts"
+                <span className="font-medium text-slate-900">Blog detail drawer:</span> Open the &quot;Associated Social Posts&quot;
                 section to see all social posts linked to that blog. Click any post title to open its full editor.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Social post editor:</span> View the "Associated Blog"
-                context card (before Comments) to see the linked blog's workflow status, scheduled dates, and quick
+                <span className="font-medium text-slate-900">Social post editor:</span> View the &quot;Associated Blog&quot;
+                context card (before Comments) to see the linked blog&apos;s workflow status, scheduled dates, and quick
                 links to draft doc and live blog.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Social posts list filter:</span> Use the "Associated Blog"
+                <span className="font-medium text-slate-900">Social posts list filter:</span> Use the &quot;Associated Blog&quot;
                 dropdown to filter social posts by linked blog. Combine with Status filter for precise triage.
               </li>
               <li>

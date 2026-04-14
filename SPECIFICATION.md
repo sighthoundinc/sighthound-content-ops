@@ -122,14 +122,14 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 
 ### Calendar
 - Date-based schedule view for planning and rescheduling.
-- Top section hierarchy contract:
-  - Primary navigation row is sticky while scrolling and contains grouped `Prev`, `Today`, `Next` controls, month picker popover, and `Month/Week` mode toggle.
-  - `Today` is visually primary; `Prev/Next` are lighter navigation actions with directional icons.
-  - Primary navigation shows a compact `Today · <date>` chip next to month selection.
-  - Secondary control strip contains neutral labels only: `View`, content toggles, and `Assigned to`.
-  - Removable filter pills render in a secondary area below legend chips to reduce top-of-page layout jumps.
+- Top section hierarchy contract (two-row design):
+  - **Row 1 (Navigation)**: Month label (left) | Navigation cluster with `← Prev`, `Today` (highlighted primary button), `Next →` (center) | `Today · <date>` chip (center-right) | `Month/Week` toggle (right)
+  - `Today` button uses distinct indigo styling; `Prev/Next` use lighter neutral styling with directional chevron icons.
+  - Month label displays full month name + year when in month mode, empty in week mode.
+  - **Row 2 (Filters)**: Neutral labels only: `View` dropdown (my tasks / all tasks), `Blogs`/`Social Posts` content toggles, and `Assigned to` user selector.
+  - Legend filters (SH Blog, RED Blog, SH Social, RED Social) and removable filter pills render below the weekday header row to reduce top-of-page layout jumps.
   - Filter-pill container is fully hidden when no pills are active (no placeholder height).
-  - Top control area uses one outer shell with subtle internal separation, avoiding stacked heavy borders.
+  - Top control rows use individual outer containers with subtle internal separation, avoiding stacked heavy borders.
   - The previous `This Week` summary card is removed, and day-header count badges are not shown in month tiles to reduce clutter.
   - Month tiles in month mode apply a subtle current-week background band for orientation.
   - Calendar event cards show one metadata line by default; additional actor/context details are tooltip-first.

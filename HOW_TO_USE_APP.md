@@ -92,15 +92,15 @@ What “explicit updates” means:
 | [Calendar](/calendar) | Scheduled workload by date | Planning and sequencing |
 | Notifications | Assignment and stage updates | Respond to change quickly |
 
-Calendar overview behavior:
+Calendar overview and top navigation:
 - `Overview` includes scheduled items from previous month, current month, and next month.
 - Status pills use one normalized language/color system for mixed blog/social rows (`In Progress`, `In Review`, `Ready`, `Awaiting Live Link`, `Published`, `Changes Requested`).
 - Overview row titles are single-line truncated with full-title tooltip on hover.
 - Unscheduled cards with zero items no longer show expand chevrons and display passive empty-state copy (`No unscheduled blogs`, `No unscheduled social posts`).
-- Top calendar controls follow one hierarchy:
-  - sticky primary nav row: `← Prev`, `Today`, `Next →`, month picker popover, and `Month/Week`
-  - secondary compact control row: `View`, content toggles, `Assigned to`
-- `Today · <date>` chip appears near the month picker for fast temporal orientation.
+- Top calendar controls are organized in two compact horizontal rows:
+  - **Row 1** (navigation): Month label (left), navigation cluster with `← Prev`, `Today` (highlighted), `Next →` (center), `Today · <date>` chip (center-right), and `Month/Week` toggle (right)
+  - **Row 2** (filters): `View` dropdown, `Blogs`/`Social Posts` content toggles, and `Assigned to` user selector
+- Legend filters (SH Blog, RED Blog, SH Social, RED Social) and active filter pills appear directly below the weekday header row
 - The `This Week` summary card is intentionally removed to reduce visual density.
 - Day headers no longer show item count badges (reduced clutter), and month view applies a subtle current-week background band.
 - The top header no longer repeats timezone/week-start text, and top controls use neutral labels (no role-heavy wording).

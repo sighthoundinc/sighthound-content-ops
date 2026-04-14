@@ -91,11 +91,11 @@ npm run check:full
   - verify overview rows cover previous/current/next-month scheduled items.
   - verify mixed blog/social status pills use normalized labels and consistent color semantics.
   - verify unscheduled cards at zero count are non-expandable and show passive empty-state copy.
-  - verify grouped nav controls are sticky and ordered `Prev`, `Today`, `Next`, month picker popover, then `Month/Week`.
-  - verify `Today` is visually primary and `Prev/Next` use lighter navigation styling with directional icons.
-  - verify `Today · <date>` chip is visible near month selection.
-  - verify secondary control strip stays compact with neutral labels (`View`, content toggles, `Assigned to`).
-  - verify removable filter pills render below legend chips (not in the top control strip) to reduce layout jumps.
+  - verify two-row control layout: Row 1 with month label (left), navigation cluster (Prev/Today/Next), Today chip, and Month/Week toggle (right); Row 2 with View, content toggles, and Assigned to.
+  - verify `Today` button is visually primary (indigo background) and `Prev/Next` use lighter neutral styling with directional chevron icons.
+  - verify `Today · <date>` chip displays near the mode toggle.
+  - verify Row 2 control strip stays compact with neutral labels (`View`, content toggles, `Assigned to`).
+  - verify removable filter pills and legend filters render below the weekday header row (not in the top control rows) to reduce layout jumps.
   - verify no pill-row placeholder renders when no active filter pills exist.
   - verify top controls use a single outer shell with lighter inner separation (avoid stacked heavy borders).
   - verify `This Week` summary card and day-header item count badges are absent.

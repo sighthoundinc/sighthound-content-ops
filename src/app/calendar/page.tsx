@@ -29,7 +29,6 @@ import {
 } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { CalendarControlBar } from "@/components/calendar-control-bar";
 import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
 import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -1504,45 +1503,79 @@ export default function CalendarPage() {
             }
           />
           <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
-            <CalendarControlBar
-              periodLabel={
-                mode === "month"
-                  ? format(cursorDate, "MMMM yyyy")
-                  : `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`
-              }
-              mode={mode}
-              monthInputValue={format(cursorDate, "yyyy-MM")}
-              todayChipLabel={todayChipLabel}
-              showPeriodLabel={false}
-              className="sticky top-2 z-20 border-0 bg-transparent p-0 shadow-none backdrop-blur supports-[backdrop-filter]:bg-slate-50/80"
-              onPrev={() => {
-                setCursorDate((prev) => (mode === "month" ? subMonths(prev, 1) : subWeeks(prev, 1)));
-              }}
-              onToday={() => {
-                const todayDate = new Date(`${todayDateKey}T00:00:00`);
-                setCursorDate(todayDate);
-                setFocusedDateKey(todayDateKey);
-                if (typeof window !== "undefined") {
-                  window.requestAnimationFrame(() => {
-                    scrollTodayTileIntoView();
-                  });
-                }
-              }}
-              onNext={() => {
-                setCursorDate((prev) => (mode === "month" ? addMonths(prev, 1) : addWeeks(prev, 1)));
-              }}
-              onMonthInputChange={(nextValue) => {
-                if (!nextValue) {
-                  return;
-                }
-                const nextDate = new Date(`${nextValue}-01T00:00:00`);
-                if (!Number.isNaN(nextDate.getTime())) {
-                  setCursorDate(nextDate);
-                }
-              }}
-              onModeChange={setMode}
-            />
-            <div className="flex flex-wrap items-center gap-3 rounded-md bg-white/85 p-2">
+            {/* Row 1: Month Navigation + Today Chip + Mode Toggle */}
+            <div className="flex items-center justify-between gap-4 rounded-md bg-white/85 p-3">
+              {/* Month label (left) */}
+              <div className="text-sm font-semibold text-slate-900">
+                {mode === "month" ? format(cursorDate, "MMMM yyyy") : ""}
+              </div>
+
+              {/* Navigation cluster (center) */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCursorDate((prev) => (mode === "month" ? subMonths(prev, 1) : subWeeks(prev, 1)));
+                  }}
+                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                  title="Previous"
+                >
+                  <AppIcon name="chevronLeft" boxClassName="h-4 w-4" size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const todayDate = new Date(`${todayDateKey}T00:00:00`);
+                    setCursorDate(todayDate);
+                    setFocusedDateKey(todayDateKey);
+                    if (typeof window !== "undefined") {
+                      window.requestAnimationFrame(() => {
+                        scrollTodayTileIntoView();
+                      });
+                    }
+                  }}
+                  className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 active:bg-indigo-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCursorDate((prev) => (mode === "month" ? addMonths(prev, 1) : addWeeks(prev, 1)));
+                  }}
+                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                  title="Next"
+                >
+                  <AppIcon name="chevronRight" boxClassName="h-4 w-4" size={14} />
+                </button>
+              </div>
+
+              {/* Today date chip (center-right) */}
+              <div className="text-xs font-medium text-slate-600">
+                Today · {todayChipLabel}
+              </div>
+
+              {/* Mode toggle (right) */}
+              <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
+                <button
+                  type="button"
+                  className={segmentedControlItemClass({ isActive: mode === "month" })}
+                  onClick={() => setMode("month")}
+                >
+                  Month
+                </button>
+                <button
+                  type="button"
+                  className={segmentedControlItemClass({ isActive: mode === "week" })}
+                  onClick={() => setMode("week")}
+                >
+                  Week
+                </button>
+              </div>
+            </div>
+
+            {/* Row 2: Filter Controls */}
+            <div className="flex flex-wrap items-center gap-3 rounded-md bg-white/85 p-3">
               <label className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
                 <span className="font-medium">View</span>
                 <select
@@ -1634,6 +1667,11 @@ export default function CalendarPage() {
                     {dragPreviewMessage}
                   </p>
                 ) : null}
+                <CalendarWeekdayHeaderRow
+                  labels={weekdayLabels}
+                  todayColumnIndex={todayWeekdayColumnIndex}
+                />
+                {/* Legend filters and filter pills below weekday header */}
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
                   {[
                     {
@@ -1688,10 +1726,6 @@ export default function CalendarPage() {
                     <DataPageFilterPills pills={activeFilterPills} />
                   </div>
                 ) : null}
-                <CalendarWeekdayHeaderRow
-                  labels={weekdayLabels}
-                  todayColumnIndex={todayWeekdayColumnIndex}
-                />
                 {!hasBlogsEnabled && !hasSocialPostsEnabled ? (
                   <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
                     Enable <span className="font-semibold">Blogs</span> or{" "}

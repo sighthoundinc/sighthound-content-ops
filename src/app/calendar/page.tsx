@@ -1640,26 +1640,6 @@ export default function CalendarPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] leading-5 text-slate-500">
-                        <span className="font-medium">Keyboard:</span> <br />
-                        <span>
-                          <KbdShortcut className="text-[9px]">M</KbdShortcut>
-                          {" "}
-                          <KbdShortcut className="text-[9px]">W</KbdShortcut>
-                          {" "}
-                          <KbdShortcut className="text-[9px]">T</KbdShortcut>
-                          {" "}
-                          <KbdShortcut className="text-[9px]">↑↓←→</KbdShortcut>
-                          <br />
-                          <KbdShortcut className="text-[9px]">J/K</KbdShortcut>
-                          {" "}
-                          <KbdShortcut className="text-[9px]">Enter</KbdShortcut>
-                          {" "}
-                          <KbdShortcut className="text-[9px]">Esc</KbdShortcut>
-                        </span>
-                      </p>
-                    </div>
                   </div>
                 </div>
                 <CalendarWeekdayHeaderRow

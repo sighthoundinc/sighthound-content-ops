@@ -739,6 +739,8 @@ export default function CalendarPage() {
       dayOfWeek: item.dayOfWeek,
     })) as CalendarExportItem[];
   }, [overviewItems]);
+  // Phase 2: Wire to toolbar export button
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleExportCSV = useCallback(() => {
     if (exportItems.length === 0) {
       return;
@@ -747,6 +749,8 @@ export default function CalendarPage() {
     exportToCSV(exportItems, `calendar-overview-${monthLabel}.csv`);
     showSuccess(`Exported ${exportItems.length} items to CSV`);
   }, [exportItems, todayDateKey, showSuccess]);
+  // Phase 2: Wire to toolbar export menu
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleExportICS = useCallback(() => {
     if (exportItems.length === 0) {
       return;

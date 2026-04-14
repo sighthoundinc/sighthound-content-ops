@@ -81,6 +81,7 @@ import type {
   SocialPostType,
 } from "@/lib/types";
 import { toTitleCase } from "@/lib/utils";
+import { exportToICS, exportToCSV, type CalendarExportItem } from "@/lib/calendar-export";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
@@ -375,7 +376,7 @@ function CalendarSocialEventCard({
 
 export default function CalendarPage() {
   const { hasPermission, profile, user } = useAuth();
-  const { showSaving, showError, updateAlert: updateStatus } = useAlerts();
+  const { showSaving, showError, updateAlert: updateStatus, showAlert } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -725,6 +726,40 @@ export default function CalendarPage() {
     });
     return items;
   }, [filteredBlogs, filteredSocialPosts, overviewMonthRange]);
+  const exportItems = useMemo(() => {
+    return overviewItems.map((item) => ({
+      id: item.type === "blog" ? item.blog.id : item.social.id,
+      title: item.type === "blog" ? item.blog.title : item.social.title,
+      scheduledDate: item.date,
+      type: item.type,
+      status: item.type === "blog" 
+        ? toTitleCase(getWorkflowStage({ writerStatus: item.blog.writer_status, publisherStatus: item.blog.publisher_status }))
+        : SOCIAL_POST_STATUS_LABELS[item.social.status],
+      site: item.type === "blog" ? item.blog.site : getSocialSite(item.social),
+      dayOfWeek: item.dayOfWeek,
+    })) as CalendarExportItem[];
+  }, [overviewItems]);
+  const handleExportCSV = useCallback(() => {
+    if (exportItems.length === 0) {
+      return;
+    }
+    const monthLabel = format(new Date(`${todayDateKey}T00:00:00`), "yyyy-MM");
+    exportToCSV(exportItems, `calendar-overview-${monthLabel}.csv");
+    showAlert({
+      type: "success",
+      message: `Exported ${exportItems.length} items to CSV`,
+    });
+  }, [exportItems, todayDateKey, showAlert]);
+  const handleExportICS = useCallback(() => {
+    if (exportItems.length === 0) {
+      return;
+    }
+    exportToICS(exportItems, timezone, "calendar.ics");
+    showAlert({
+      type: "success",
+      message: `Exported ${exportItems.length} events to calendar`,
+    });
+  }, [exportItems, timezone, showAlert]);
 
   const range = useMemo(() => {
     if (mode === "month") {

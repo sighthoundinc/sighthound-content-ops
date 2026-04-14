@@ -861,6 +861,9 @@ export default function CalendarPage() {
     }
     return { blogCount, socialCount, busyDays };
   }, [calendarItemsByDate, currentWeekRange]);
+  const daysWithItems = useMemo(() => {
+    return Object.keys(calendarItemsByDate).sort();
+  }, [calendarItemsByDate]);
   // Keyboard navigation handler
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -882,6 +885,25 @@ export default function CalendarPage() {
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (event.key === "m" || event.key === "M") {
+        setMode("month");
+        return;
+      }
+      if (event.key === "w" || event.key === "W") {
+        setMode("week");
+        return;
+      }
+      if (event.key === "t" || event.key === "T") {
+        const todayDate = new Date(`${todayDateKey}T00:00:00`);
+        setFocusedDateKey(todayDateKey);
+        setCursorDate(todayDate);
+        if (typeof window !== "undefined") {
+          window.requestAnimationFrame(() => {
+            scrollTodayTileIntoView();
+          });
+        }
         return;
       }
       if (!focusedDateKey || calendarGridRef.current === null) {
@@ -915,9 +937,51 @@ export default function CalendarPage() {
       } else if (event.key === "ArrowDown") {
         nextDate = addDays(currentDate, 7);
       } else if (event.key === "k" || event.key === "K") {
-        nextDate = addDays(currentDate, -1);
+        const currentIndex = daysWithItems.indexOf(focusedDateKey);
+        if (currentIndex > 0) {
+          const nextKey = daysWithItems[currentIndex - 1];
+          setFocusedDateKey(nextKey);
+          const nextDate_ = new Date(`${nextKey}T00:00:00`);
+          setCursorDate((prev) => {
+            if (mode === "month" && nextDate_.getMonth() !== prev.getMonth()) {
+              return nextDate_;
+            }
+            if (
+              mode === "week" &&
+              !isWithinInterval(nextDate_, {
+                start: startOfWeek(prev, { weekStartsOn: normalizedWeekStart }),
+                end: endOfWeek(prev, { weekStartsOn: normalizedWeekStart }),
+              })
+            ) {
+              return nextDate_;
+            }
+            return prev;
+          });
+        }
+        return;
       } else if (event.key === "j" || event.key === "J") {
-        nextDate = addDays(currentDate, 1);
+        const currentIndex = daysWithItems.indexOf(focusedDateKey);
+        if (currentIndex < daysWithItems.length - 1) {
+          const nextKey = daysWithItems[currentIndex + 1];
+          setFocusedDateKey(nextKey);
+          const nextDate_ = new Date(`${nextKey}T00:00:00`);
+          setCursorDate((prev) => {
+            if (mode === "month" && nextDate_.getMonth() !== prev.getMonth()) {
+              return nextDate_;
+            }
+            if (
+              mode === "week" &&
+              !isWithinInterval(nextDate_, {
+                start: startOfWeek(prev, { weekStartsOn: normalizedWeekStart }),
+                end: endOfWeek(prev, { weekStartsOn: normalizedWeekStart }),
+              })
+            ) {
+              return nextDate_;
+            }
+            return prev;
+          });
+        }
+        return;
       } else if (event.key === "Home") {
         const todayDate = new Date(`${todayDateKey}T00:00:00`);
         setFocusedDateKey(todayDateKey);
@@ -979,6 +1043,7 @@ export default function CalendarPage() {
     calendarItemsByDate,
     scrollTodayTileIntoView,
     todayDateKey,
+    daysWithItems,
   ]);
   const noPublishDateBlogs = useMemo(
     () => filteredBlogs.filter((blog) => !getBlogScheduledDate(blog)),
@@ -1509,19 +1574,43 @@ export default function CalendarPage() {
                   {liveLegendSummary}
                 </p>
                 <div className="rounded-xl border border-slate-200/90 bg-gradient-to-r from-white via-white to-indigo-50/35 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                  <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">This Week</h3>
-                  <div className="mt-2 flex flex-wrap items-center gap-5 text-sm text-slate-700">
-                    <div>
-                      <span className="font-semibold tabular-nums">{weeklySummary.blogCount}</span>{" "}
-                      <span className="text-slate-500">Blog{weeklySummary.blogCount !== 1 ? "s" : ""}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">This Week</h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-5 text-sm text-slate-700">
+                        <div>
+                          <span className="font-semibold tabular-nums">{weeklySummary.blogCount}</span>{" "}
+                          <span className="text-slate-500">Blog{weeklySummary.blogCount !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold tabular-nums">{weeklySummary.socialCount}</span>{" "}
+                          <span className="text-slate-500">Social{weeklySummary.socialCount !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold tabular-nums">{weeklySummary.busyDays}</span>{" "}
+                          <span className="text-slate-500">Busy Day{weeklySummary.busyDays !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-semibold tabular-nums">{weeklySummary.socialCount}</span>{" "}
-                      <span className="text-slate-500">Social{weeklySummary.socialCount !== 1 ? "s" : ""}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold tabular-nums">{weeklySummary.busyDays}</span>{" "}
-                      <span className="text-slate-500">Busy Day{weeklySummary.busyDays !== 1 ? "s" : ""}</span>
+                    <div className="text-right">
+                      <p className="text-[10px] leading-5 text-slate-500">
+                        <span className="font-medium">Keyboard:</span> <br />
+                        <span>
+                          <KbdShortcut className="text-[9px]">M</KbdShortcut>
+                          {" "}
+                          <KbdShortcut className="text-[9px]">W</KbdShortcut>
+                          {" "}
+                          <KbdShortcut className="text-[9px]">T</KbdShortcut>
+                          {" "}
+                          <KbdShortcut className="text-[9px]">↑↓←→</KbdShortcut>
+                          <br />
+                          <KbdShortcut className="text-[9px]">J/K</KbdShortcut>
+                          {" "}
+                          <KbdShortcut className="text-[9px]">Enter</KbdShortcut>
+                          {" "}
+                          <KbdShortcut className="text-[9px]">Esc</KbdShortcut>
+                        </span>
+                      </p>
                     </div>
                   </div>
                 </div>

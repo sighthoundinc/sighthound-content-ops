@@ -30,6 +30,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { CalendarControlBar } from "@/components/calendar-control-bar";
+import { MarkdownComment } from "@/components/markdown-comment";
 import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
 import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -2312,20 +2313,22 @@ function SocialPostsPageContent() {
     }
 
     return (
-      <ul className={depth === 0 ? "space-y-2" : "mt-2 space-y-2 border-l border-slate-200 pl-3"}>
+      <ul className={depth === 0 ? "space-y-3" : "mt-3 space-y-3 border-l-2 border-slate-200 pl-4"}>
         {comments.map((comment) => (
           <li
             key={comment.id}
-            className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+            className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
           >
             <p className="text-xs font-semibold text-slate-600">
-              {comment.author?.full_name ?? "Unknown"} —{" "}
-              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+              {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
+              <time className="font-normal text-slate-400">
+                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+              </time>
             </p>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
-              {comment.comment}
-            </p>
-            <div className="mt-2">
+            <div className="mt-2 text-sm text-slate-700">
+              <MarkdownComment content={comment.comment} />
+            </div>
+            <div className="mt-3">
               <Button
                 type="button"
                 variant="secondary"

@@ -11,6 +11,7 @@ import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
+import { MarkdownComment } from "@/components/markdown-comment";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { AppIcon } from "@/lib/icons";
@@ -2827,21 +2828,23 @@ export default function SocialPostEditorPage() {
                     No comments yet. Add context here to avoid handoff confusion.
                   </p>
                 ) : (
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {comments.slice(0, 20).map((comment) => (
                       <li
                         key={comment.id}
-                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                        className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
                       >
                         <p className="text-xs font-semibold text-slate-600">
-                          {comment.author?.full_name ?? "Unknown"} —{" "}
-                          {formatDistanceToNow(new Date(comment.created_at), {
-                            addSuffix: true,
-                          })}
+                          {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
+                          <time className="font-normal text-slate-400">
+                            {formatDistanceToNow(new Date(comment.created_at), {
+                              addSuffix: true,
+                            })}
+                          </time>
                         </p>
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
-                          {comment.comment}
-                        </p>
+                        <div className="mt-2 text-sm text-slate-700">
+                          <MarkdownComment content={comment.comment} />
+                        </div>
                       </li>
                     ))}
                   </ul>

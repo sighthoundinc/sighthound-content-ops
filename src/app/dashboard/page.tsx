@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { AppShell } from "@/components/app-shell";
 import { AssociatedSocialPostsSection } from "@/components/associated-social-posts-section";
 import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
+import { MarkdownComment } from "@/components/markdown-comment";
 import { BlogImportModal } from "@/components/blog-import-modal";
 import { BulkActionPreviewModal } from "@/components/bulk-action-preview-modal";
 import { Button } from "@/components/button";
@@ -5130,21 +5131,25 @@ export default function DashboardPage() {
                   {panelComments.length === 0 ? (
                     <p className="text-sm text-slate-500">No comments yet.</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                       {panelComments.map((comment) => (
-                        <li key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                          <div className="flex items-start gap-2">
-                            <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700">
+                        <li key={comment.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-start gap-3">
+                            <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
                               {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
                             </span>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold text-slate-600">
-                                {comment.author?.full_name ?? "Unknown"} —{" "}
-                                {formatDistanceToNow(new Date(comment.created_at), {
-                                  addSuffix: true,
-                                })}
+                                {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
+                                <time className="font-normal text-slate-400">
+                                  {formatDistanceToNow(new Date(comment.created_at), {
+                                    addSuffix: true,
+                                  })}
+                                </time>
                               </p>
-                              <p className="mt-1 text-sm text-slate-800">{comment.comment}</p>
+                              <div className="mt-2 text-sm text-slate-700">
+                                <MarkdownComment content={comment.comment} />
+                              </div>
                             </div>
                           </div>
                         </li>

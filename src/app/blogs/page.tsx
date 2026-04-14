@@ -16,6 +16,7 @@ import { AppShell } from "@/components/app-shell";
 import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
 import { BlogImportModal } from "@/components/blog-import-modal";
 import { Button, buttonClass } from "@/components/button";
+import { MarkdownComment } from "@/components/markdown-comment";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DetailDrawerField } from "@/components/detail-drawer";
 import { LinkQuickActions } from "@/components/link-quick-actions";
@@ -1819,16 +1820,20 @@ function BlogLibraryPageContent() {
                   ) : panelComments.length === 0 ? (
                     <p className="text-sm text-slate-500">No comments yet.</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                       {panelComments.map((comment) => (
-                        <li key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                        <li key={comment.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
                           <p className="text-xs font-semibold text-slate-600">
-                            {comment.author?.full_name ?? "Unknown"} —{" "}
-                            {formatDistanceToNow(new Date(comment.created_at), {
-                              addSuffix: true,
-                            })}
+                            {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
+                            <time className="font-normal text-slate-400">
+                              {formatDistanceToNow(new Date(comment.created_at), {
+                                addSuffix: true,
+                              })}
+                            </time>
                           </p>
-                          <p className="mt-1 text-sm text-slate-800">{comment.comment}</p>
+                          <div className="mt-2 text-sm text-slate-700">
+                            <MarkdownComment content={comment.comment} />
+                          </div>
                         </li>
                       ))}
                     </ul>

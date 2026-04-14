@@ -50,7 +50,6 @@ import {
   normalizeBlogRows,
 } from "@/lib/blog-schema";
 import {
-  canViewAllTaskScope,
   createUiPermissionContract,
 } from "@/lib/permissions/uiPermissions";
 import { getDateKeyInTimezone, getWeekdayLabels, normalizeWeekStart } from "@/lib/calendar";
@@ -174,6 +173,21 @@ function truncateWithEllipsis(value: string, maxLength: number) {
 function getBlogBarClass(site: BlogSite) {
   return site === "sighthound.com" ? "bg-blue-500" : "bg-purple-500";
 }
+function getSocialSite(post: SocialCalendarPost): BlogSite {
+  return post.associated_blog?.site === "redactor.com"
+    ? "redactor.com"
+    : "sighthound.com";
+}
+
+function getSocialBarClass(site: BlogSite) {
+  return site === "redactor.com" ? "bg-purple-500" : "bg-blue-500";
+}
+
+function getSocialBulletClass(site: BlogSite) {
+  return site === "redactor.com"
+    ? "border-2 border-purple-500 bg-white"
+    : "border-2 border-blue-500 bg-white";
+}
 
 function getBlogStageDotClass({
   stage,
@@ -193,22 +207,6 @@ function getBlogStageDotClass({
   }
   if (stage === "ready") {
     return "bg-indigo-500";
-  }
-  return "bg-slate-400";
-}
-
-function getSocialStatusDotClass(status: SocialPostStatus) {
-  if (status === "published") {
-    return "bg-emerald-500";
-  }
-  if (status === "in_review" || status === "creative_approved") {
-    return "bg-blue-500";
-  }
-  if (status === "changes_requested") {
-    return "bg-orange-500";
-  }
-  if (status === "ready_to_publish" || status === "awaiting_live_link") {
-    return "bg-amber-500";
   }
   return "bg-slate-400";
 }
@@ -330,15 +328,16 @@ function CalendarSocialEventCard({
   compact: boolean;
   onOpen: () => void;
 }) {
+  const socialSite = getSocialSite(post);
   const maxTitleLength = compact ? 24 : 64;
   return (
     <button
       type="button"
       onClick={onOpen}
       className="relative flex w-full items-start gap-2 rounded-lg border border-slate-200/90 bg-white/95 px-2 py-1.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)]"
-      title={`${post.title}\nType · ${SOCIAL_POST_TYPE_LABELS[post.type]}\nStatus · ${SOCIAL_POST_STATUS_LABELS[post.status]}\nScheduled · ${post.scheduled_date ?? "Unscheduled"}`}
+      title={`${post.title}\nSite · ${getSiteLabel(socialSite)}\nType · ${SOCIAL_POST_TYPE_LABELS[post.type]}\nStatus · ${SOCIAL_POST_STATUS_LABELS[post.status]}\nScheduled · ${post.scheduled_date ?? "Unscheduled"}`}
     >
-      <span className="self-stretch w-1 rounded-full bg-orange-500" />
+      <span className={`self-stretch w-1 rounded-full ${getSocialBarClass(socialSite)}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1 text-[11px] text-slate-600">
           <AppIcon
@@ -347,7 +346,7 @@ function CalendarSocialEventCard({
             size={12}
             className="text-slate-500"
           />
-          <span className="font-semibold">Social</span>
+          <span className="font-semibold">{getSiteShortLabel(socialSite)} Social</span>
         </div>
         <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
           {SOCIAL_POST_TYPE_LABELS[post.type]}: {truncateWithEllipsis(post.title, maxTitleLength)}
@@ -357,7 +356,7 @@ function CalendarSocialEventCard({
         </p>
       </div>
       <span
-        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getSocialStatusDotClass(post.status)}`}
+        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getSocialBulletClass(socialSite)}`}
       />
     </button>
   );
@@ -372,7 +371,7 @@ export default function CalendarPage() {
   );
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [socialPosts, setSocialPosts] = useState<SocialCalendarPost[]>([]);
-  const [viewScope, setViewScope] = useState<CalendarViewScope>("mine");
+  const [viewScope, setViewScope] = useState<CalendarViewScope>("all");
   const [mode, setMode] = useState<CalendarMode>("month");
   const [contentFilters, setContentFilters] = useState<ContentTypeFilter[]>([
     "blogs",
@@ -411,11 +410,6 @@ export default function CalendarPage() {
     })
   );
   const canDragCalendarBlogs = permissionContract.canCalendarDragReschedule;
-  const canViewAllTasks = useMemo(() => canViewAllTaskScope(profile), [profile]);
-
-  useEffect(() => {
-    setViewScope(canViewAllTasks ? "all" : "mine");
-  }, [canViewAllTasks]);
   useEffect(() => {
     setCursorDate((prev) => {
       const currentWeekStart = startOfWeek(new Date(), {
@@ -1090,9 +1084,7 @@ export default function CalendarPage() {
                     className="focus-field rounded border-none bg-transparent p-0 text-sm focus:outline-none"
                   >
                     <option value="mine">My tasks</option>
-                    <option value="all" disabled={!canViewAllTasks}>
-                      All tasks
-                    </option>
+                    <option value="all">All tasks</option>
                   </select>
                 </label>
                 <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
@@ -1219,8 +1211,12 @@ export default function CalendarPage() {
                     RED Blog
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/90 bg-white/90 px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                    <span className="h-2 w-2 rounded-full bg-orange-500" />
-                    Social Post
+                    <span className="h-2 w-2 rounded-full border-2 border-blue-500 bg-white" />
+                    SH Social Post
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/90 bg-white/90 px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+                    <span className="h-2 w-2 rounded-full border-2 border-purple-500 bg-white" />
+                    RED Social Post
                   </span>
                 </div>
                 <div className="rounded-xl border border-slate-200/90 bg-gradient-to-r from-white via-white to-indigo-50/35 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">

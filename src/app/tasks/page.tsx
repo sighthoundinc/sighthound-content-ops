@@ -385,6 +385,7 @@ function MyTasksPageContent() {
   const [rowDensity, setRowDensity] = useState<"compact" | "comfortable">("compact");
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "personal" | "admin">("all");
   const [actionFilter, setActionFilter] = useState<"all" | TaskActionState>("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [taskAssignments, setTaskAssignments] = useState<
     Map<
       string,
@@ -1111,6 +1112,16 @@ function MyTasksPageContent() {
       (el as HTMLDetailsElement).open = false;
     });
   };
+  const activeAdvancedFilterCount = useMemo(
+    () =>
+      [
+        socialStatusFilter !== "all",
+        kindFilter !== "all",
+        siteFilter !== "all",
+        contentFilter !== "all",
+      ].filter(Boolean).length,
+    [contentFilter, kindFilter, siteFilter, socialStatusFilter]
+  );
   const resetTaskFilters = useCallback(() => {
     setSearchQuery("");
     setKindFilter("all");
@@ -1120,6 +1131,7 @@ function MyTasksPageContent() {
     setSiteFilter("all");
     setAssignmentFilter("all");
     setActionFilter("all");
+    setShowAdvancedFilters(false);
     setCurrentPage(1);
   }, []);
   const copyAllTasks = async (field: "title" | "url") => {
@@ -1624,14 +1636,30 @@ function MyTasksPageContent() {
             }}
             searchPlaceholder="Search blog and social tasks"
             actions={
-              <Button
-                type="button"
-                onClick={resetTaskFilters}
-                variant="secondary"
-                size="sm"
-              >
-                Clear all filters
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setShowAdvancedFilters((previous) => !previous);
+                  }}
+                >
+                  {showAdvancedFilters
+                    ? "Hide advanced filters"
+                    : activeAdvancedFilterCount > 0
+                      ? `More filters (${activeAdvancedFilterCount})`
+                      : "More filters"}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={resetTaskFilters}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Clear all filters
+                </Button>
+              </div>
             }
             filters={
               <>
@@ -1677,64 +1705,68 @@ function MyTasksPageContent() {
                     </option>
                   ))}
                 </select>
-                <select
-                  aria-label="Social Task Status"
-                  value={socialStatusFilter}
-                  onChange={(event) => {
-                    setSocialStatusFilter(event.target.value as "all" | SocialPostStatus);
-                    setCurrentPage(1);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  <option value="all">All Social Statuses</option>
-                  {SOCIAL_POST_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {SOCIAL_POST_STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Task Type"
-                  value={kindFilter}
-                  onChange={(event) => {
-                    setKindFilter(event.target.value as TaskKind | "all");
-                    setCurrentPage(1);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  <option value="all">All Task Types</option>
-                  <option value="writer">Writing</option>
-                  <option value="publisher">Publishing</option>
-                </select>
-                <select
-                  aria-label="Task Site"
-                  value={siteFilter}
-                  onChange={(event) => {
-                    setSiteFilter(event.target.value as "all" | "sighthound.com" | "redactor.com");
-                    setCurrentPage(1);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  <option value="all">All Sites</option>
-                  <option value="sighthound.com">Sighthound (SH)</option>
-                  <option value="redactor.com">Redactor (RED)</option>
-                </select>
-                <select
-                  aria-label="Content Type"
-                  value={contentFilter}
-                  onChange={(event) => {
-                    setContentFilter(event.target.value as "all" | MixedContentFilterValue);
-                    setCurrentPage(1);
-                  }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  <option value="all">All Content</option>
-                  {MIXED_CONTENT_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                {showAdvancedFilters ? (
+                  <>
+                    <select
+                      aria-label="Social Task Status"
+                      value={socialStatusFilter}
+                      onChange={(event) => {
+                        setSocialStatusFilter(event.target.value as "all" | SocialPostStatus);
+                        setCurrentPage(1);
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    >
+                      <option value="all">All Social Statuses</option>
+                      {SOCIAL_POST_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {SOCIAL_POST_STATUS_LABELS[status]}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Task Type"
+                      value={kindFilter}
+                      onChange={(event) => {
+                        setKindFilter(event.target.value as TaskKind | "all");
+                        setCurrentPage(1);
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    >
+                      <option value="all">All Task Types</option>
+                      <option value="writer">Writing</option>
+                      <option value="publisher">Publishing</option>
+                    </select>
+                    <select
+                      aria-label="Task Site"
+                      value={siteFilter}
+                      onChange={(event) => {
+                        setSiteFilter(event.target.value as "all" | "sighthound.com" | "redactor.com");
+                        setCurrentPage(1);
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    >
+                      <option value="all">All Sites</option>
+                      <option value="sighthound.com">Sighthound (SH)</option>
+                      <option value="redactor.com">Redactor (RED)</option>
+                    </select>
+                    <select
+                      aria-label="Content Type"
+                      value={contentFilter}
+                      onChange={(event) => {
+                        setContentFilter(event.target.value as "all" | MixedContentFilterValue);
+                        setCurrentPage(1);
+                      }}
+                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    >
+                      <option value="all">All Content</option>
+                      {MIXED_CONTENT_FILTER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : null}
               </>
             }
           />
@@ -1762,7 +1794,7 @@ function MyTasksPageContent() {
           ) : (
             <>
               <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                <h3 className="text-sm font-semibold text-slate-700">
                   Next Tasks
                 </h3>
                 {nextTasks.length === 0 ? (
@@ -1844,7 +1876,7 @@ function MyTasksPageContent() {
                         </summary>
                         <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-md">
                           <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            <p className="text-[11px] font-medium text-slate-500">
                               Show Columns
                             </p>
                             <button
@@ -1858,7 +1890,7 @@ function MyTasksPageContent() {
                             </button>
                           </div>
                           <div className="mt-2 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            <span className="text-[11px] font-medium text-slate-500">
                               Density
                             </span>
                             <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>

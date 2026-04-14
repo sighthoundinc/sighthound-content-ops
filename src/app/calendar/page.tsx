@@ -464,6 +464,7 @@ export default function CalendarPage() {
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [socialPosts, setSocialPosts] = useState<SocialCalendarPost[]>([]);
   const [viewScope, setViewScope] = useState<CalendarViewScope>("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [mode, setMode] = useState<CalendarMode>("month");
   const [contentFilters, setContentFilters] = useState<ContentTypeFilter[]>([
     "blogs",
@@ -627,6 +628,16 @@ export default function CalendarPage() {
     const scopeLabel = viewScope === "all" ? "All tasks" : "My tasks";
     return `Showing ${contentLabel}. Scope: ${scopeLabel}.`;
   }, [viewScope, visibleLegendLabels]);
+  const activeAdvancedFilterCount = useMemo(() => {
+    let count = 0;
+    if (viewScope !== "all") {
+      count += 1;
+    }
+    if (legendFilters.length !== CALENDAR_LEGEND_FILTER_ORDER.length) {
+      count += 1;
+    }
+    return count;
+  }, [legendFilters.length, viewScope]);
   const toggleLegendFilter = useCallback((filter: CalendarLegendFilter) => {
     setLegendFilters((previous) => {
       const next = previous.includes(filter)
@@ -1574,21 +1585,8 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {/* Row 2: Filter Controls */}
+            {/* Row 2: Core filter controls */}
             <div className="flex flex-wrap items-center gap-3 rounded-md bg-white/85 p-3">
-              <label className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
-                <span className="font-medium">View</span>
-                <select
-                  value={viewScope}
-                  onChange={(event) => {
-                    setViewScope(event.target.value as CalendarViewScope);
-                  }}
-                  className="focus-field rounded border-none bg-transparent p-0 text-sm focus:outline-none"
-                >
-                  <option value="mine">My tasks</option>
-                  <option value="all">All tasks</option>
-                </select>
-              </label>
               <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
                 <button
                   type="button"
@@ -1647,7 +1645,86 @@ export default function CalendarPage() {
                   ))}
                 </select>
               </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAdvancedFilters((previous) => !previous);
+                }}
+                className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                {showAdvancedFilters
+                  ? "Hide advanced filters"
+                  : activeAdvancedFilterCount > 0
+                    ? `More filters (${activeAdvancedFilterCount})`
+                    : "More filters"}
+              </button>
             </div>
+            {showAdvancedFilters ? (
+              <div className="space-y-3 rounded-md bg-white/85 p-3">
+                <label className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                  <span className="font-medium">View</span>
+                  <select
+                    value={viewScope}
+                    onChange={(event) => {
+                      setViewScope(event.target.value as CalendarViewScope);
+                    }}
+                    className="focus-field rounded border-none bg-transparent p-0 text-sm focus:outline-none"
+                  >
+                    <option value="mine">My tasks</option>
+                    <option value="all">All tasks</option>
+                  </select>
+                </label>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                  {[
+                    {
+                      id: "sh_blog" as CalendarLegendFilter,
+                      label: "SH Blog",
+                      markerClassName: "h-2 w-2 rounded-full bg-blue-500",
+                      isVisible: hasShBlogsVisible,
+                    },
+                    {
+                      id: "red_blog" as CalendarLegendFilter,
+                      label: "RED Blog",
+                      markerClassName: "h-2 w-2 rounded-full bg-purple-500",
+                      isVisible: hasRedBlogsVisible,
+                    },
+                    {
+                      id: "sh_social_post" as CalendarLegendFilter,
+                      label: "SH Social Post",
+                      markerClassName: "h-2 w-2 rounded-full border-2 border-blue-500 bg-white",
+                      isVisible: hasShSocialPostsVisible,
+                    },
+                    {
+                      id: "red_social_post" as CalendarLegendFilter,
+                      label: "RED Social Post",
+                      markerClassName: "h-2 w-2 rounded-full border-2 border-purple-500 bg-white",
+                      isVisible: hasRedSocialPostsVisible,
+                    },
+                  ].map((legendItem) => (
+                    <button
+                      key={legendItem.id}
+                      type="button"
+                      aria-pressed={legendItem.isVisible}
+                      aria-label={`${legendItem.isVisible ? "Hide" : "Show"} ${legendItem.label}`}
+                      onClick={() => {
+                        toggleLegendFilter(legendItem.id);
+                      }}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
+                        legendItem.isVisible
+                          ? "border-slate-200/90 bg-white/90 text-slate-700 hover:border-slate-300 hover:bg-white"
+                          : "border-slate-200 bg-slate-100 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+                      }`}
+                    >
+                      <span className={legendItem.markerClassName} />
+                      {legendItem.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <p className="sr-only" role="status" aria-live="polite">
+              {liveLegendSummary}
+            </p>
           </section>
 
           {isLoading ? (

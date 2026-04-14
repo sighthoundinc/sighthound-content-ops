@@ -22,11 +22,6 @@ import {
 import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon, type AppIconName } from "@/lib/icons";
-import {
-  getApiErrorMessage,
-  isApiFailure,
-  parseApiResponseJson,
-} from "@/lib/api-response";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/tooltip";
 import { useAuth } from "@/providers/auth-provider";
@@ -68,26 +63,6 @@ type QuickCreateItem = {
   shortcut: string;
   isDirectShortcut: boolean;
 };
-type TaskShortcutItem = {
-  id: string;
-  title: string;
-  kind: "blog" | "social";
-  href: string;
-  statusLabel: string;
-  scheduledDate: string | null;
-  actionState: "action_required" | "waiting_on_others";
-};
-type ActivityFeedItem = {
-  id: string;
-  content_type: "blog" | "social_post";
-  content_id: string;
-  content_title: string;
-  event_type: string;
-  event_title: string;
-  event_summary: string | null;
-  changed_by_name: string | null;
-  changed_at: string;
-};
 
 function formatNotificationAge(createdAt: number) {
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - createdAt) / 1000));
@@ -115,19 +90,14 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { hasPermission, profile, session, signOut, user } = useAuth();
+  const { hasPermission, profile, signOut, user } = useAuth();
   const {
     notifications,
-    allNotifications,
     unreadCount,
-    pushNotification,
     markAsRead,
-    markAllAsRead,
-    clearAll,
   } = useNotifications();
   const { collapsed, setCollapsed } = useSidebarState();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
-  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [activeQuickCreateIndex, setActiveQuickCreateIndex] = useState(0);
@@ -136,51 +106,12 @@ export function AppShell({
     null
   );
   const [quickViewError, setQuickViewError] = useState<string | null>(null);
-  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
-  const [requiredTaskShortcuts, setRequiredTaskShortcuts] = useState<TaskShortcutItem[]>(
-    []
-  );
-  const mapActivityToNotificationType = useCallback((eventType: string) => {
-    if (eventType.includes("assignment")) {
-      return "assignment_changed" as const;
-    }
-    if (eventType.includes("awaiting") || eventType.includes("reminder")) {
-      return "awaiting_action" as const;
-    }
-    if (eventType.includes("published")) {
-      return "published" as const;
-    }
-    return "stage_changed" as const;
-  }, []);
-  const syncActivityFeedToInbox = useCallback(
-    async (feedItems: ActivityFeedItem[]) => {
-      await Promise.allSettled(
-        feedItems.slice(0, 10).map((activity) =>
-          pushNotification({
-            sourceId: `activity:${activity.id}`,
-            type: mapActivityToNotificationType(activity.event_type),
-            title: activity.event_title,
-            message:
-              activity.event_summary ??
-              `${activity.content_title}${activity.changed_by_name ? ` • ${activity.changed_by_name}` : ""}`,
-            href:
-              activity.content_type === "blog"
-                ? `/blogs/${activity.content_id}`
-                : `/social-posts/${activity.content_id}`,
-            timestamp: new Date(activity.changed_at).getTime(),
-          })
-        )
-      );
-    },
-    [mapActivityToNotificationType, pushNotification]
-  );
   const broadcastGlobalPopoverClose = useCallback(() => {
     window.dispatchEvent(new CustomEvent("app:close-popovers"));
   }, []);
   const [headerLogoSourceIndex, setHeaderLogoSourceIndex] = useState(0);
   const [headerLogoLoaded, setHeaderLogoLoaded] = useState(false);
   const notificationPanelRef = useRef<HTMLDivElement | null>(null);
-  const helpMenuRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
@@ -191,7 +122,6 @@ export function AppShell({
     [hasPermission]
   );
   const canCreateBlogs = permissionContract.canCreateBlog;
-  const requiredByLabel = profile?.display_name || profile?.full_name || "You";
   const userRoles = getUserRoles(profile);
   const isAdmin = userRoles.includes("admin");
   const canManagePermissions = isAdmin;
@@ -206,7 +136,7 @@ export function AppShell({
     .join("");
   const activeHeaderLogo = APP_SHELL_LOGO_SEQUENCE[headerLogoSourceIndex] ?? null;
   const headerMenuTriggerClass =
-    "inline-flex min-h-10 items-center justify-center rounded-md px-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset";
+    "inline-flex min-h-9 items-center justify-center rounded-md px-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset";
   const headerMenuItemClass =
     "flex w-full items-center rounded-md px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset";
   const closeOpenDetailsMenus = useCallback(
@@ -388,10 +318,9 @@ export function AppShell({
       if (event.key === "Escape") {
         broadcastGlobalPopoverClose();
         closeOpenDetailsMenus();
-        if (isNotificationPanelOpen || isHelpMenuOpen || isProfileMenuOpen) {
+        if (isNotificationPanelOpen || isProfileMenuOpen) {
           event.preventDefault();
           setIsNotificationPanelOpen(false);
-          setIsHelpMenuOpen(false);
           setIsProfileMenuOpen(false);
           return;
         }
@@ -503,7 +432,6 @@ export function AppShell({
     executeQuickCreateItem,
     activeQuickCreateIndex,
     isQuickCreateOpen,
-    isHelpMenuOpen,
     isNotificationPanelOpen,
     isProfileMenuOpen,
     isShortcutModalOpen,
@@ -535,9 +463,6 @@ export function AppShell({
       ) {
         setIsNotificationPanelOpen(false);
       }
-      if (isHelpMenuOpen && !helpMenuRef.current?.contains(targetNode)) {
-        setIsHelpMenuOpen(false);
-      }
       if (isProfileMenuOpen && !profileMenuRef.current?.contains(targetNode)) {
         setIsProfileMenuOpen(false);
       }
@@ -548,7 +473,6 @@ export function AppShell({
     };
   }, [
     closeOpenDetailsMenus,
-    isHelpMenuOpen,
     isNotificationPanelOpen,
     isProfileMenuOpen,
   ]);
@@ -565,7 +489,6 @@ export function AppShell({
       broadcastGlobalPopoverClose();
       closeOpenDetailsMenus(target);
       setIsNotificationPanelOpen(false);
-      setIsHelpMenuOpen(false);
       setIsProfileMenuOpen(false);
     };
     document.addEventListener("toggle", handleDetailsToggle, true);
@@ -578,7 +501,6 @@ export function AppShell({
     const handleCustomDropdownOpened = () => {
       closeOpenDetailsMenus();
       setIsNotificationPanelOpen(false);
-      setIsHelpMenuOpen(false);
       setIsProfileMenuOpen(false);
     };
     window.addEventListener(
@@ -604,80 +526,6 @@ export function AppShell({
     setQuickViewSnapshot(readQuickViewSnapshot());
     setQuickViewError(null);
   }, [user?.id]);
-
-  const loadBellData = useCallback(async () => {
-    if (!session?.access_token) {
-      setRequiredTaskShortcuts([]);
-      setActivityFeed([]);
-      return;
-    }
-    try {
-      const [shortcutResponse, activityResponse] = await Promise.all([
-        fetch("/api/dashboard/tasks-snapshot", {
-          headers: {
-            authorization: `Bearer ${session.access_token}`,
-          },
-        }),
-        fetch("/api/activity-feed"),
-      ]);
-      const shortcutPayload = await parseApiResponseJson<{
-        requiredByMe?: TaskShortcutItem[];
-      }>(shortcutResponse);
-      if (!isApiFailure(shortcutResponse, shortcutPayload)) {
-        setRequiredTaskShortcuts(shortcutPayload.requiredByMe ?? []);
-      } else {
-        setRequiredTaskShortcuts([]);
-      }
-      const activityPayload = await parseApiResponseJson<{
-        data?: { activities?: ActivityFeedItem[] };
-      }>(activityResponse);
-      if (isApiFailure(activityResponse, activityPayload)) {
-        throw new Error(
-          getApiErrorMessage(activityPayload, "Failed to load activity feed.")
-        );
-      }
-      const nextActivityFeed = activityPayload.data?.activities ?? [];
-      setActivityFeed(nextActivityFeed);
-      await syncActivityFeedToInbox(nextActivityFeed);
-    } catch (error) {
-      console.error("Failed to load bell data:", error);
-      setRequiredTaskShortcuts([]);
-      setActivityFeed([]);
-    }
-  }, [session?.access_token, syncActivityFeedToInbox]);
-
-  useEffect(() => {
-    if (!isNotificationPanelOpen) {
-      return;
-    }
-    void loadBellData();
-  }, [isNotificationPanelOpen, loadBellData]);
-
-  useEffect(() => {
-    if (!session?.access_token) {
-      return;
-    }
-    const runRefresh = () => {
-      if (document.visibilityState === "hidden") {
-        return;
-      }
-      void loadBellData();
-    };
-    runRefresh();
-    const intervalId = window.setInterval(runRefresh, 45_000);
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        runRefresh();
-      }
-    };
-    window.addEventListener("focus", runRefresh);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", runRefresh);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [loadBellData, session?.access_token]);
 
   const returnToAdminFromQuickView = async () => {
     const snapshot = readQuickViewSnapshot();
@@ -736,20 +584,6 @@ export function AppShell({
     setHeaderLogoLoaded(false);
     setHeaderLogoSourceIndex((currentIndex) => currentIndex + 1);
   }, []);
-  const notificationSourceIds = useMemo(
-    () =>
-      new Set(
-        allNotifications.map((notification) => notification.sourceId).filter(Boolean)
-      ),
-    [allNotifications]
-  );
-  const recentActivityItems = useMemo(
-    () =>
-      activityFeed
-        .filter((activity) => !notificationSourceIds.has(`activity:${activity.id}`))
-        .slice(0, 10),
-    [activityFeed, notificationSourceIds]
-  );
   const unreadNotificationItems = useMemo(
     () => notifications.filter((notification) => !notification.read).slice(0, 5),
     [notifications]
@@ -758,10 +592,10 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-[#fcfcfe]">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3">
           <Link
             href="/"
-            className="flex items-center gap-3 rounded-md px-1 py-1 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-slate-50"
             aria-label="Sighthound Content Relay"
           >
             <div className="relative flex h-9 w-16 shrink-0 items-center">
@@ -808,8 +642,7 @@ export function AppShell({
             </span>
           </Link>
 
-          <div className="flex items-center gap-4">
-            {/* Notifications - Plain icon with badge */}
+          <div className="flex items-center gap-2">
             <div className="relative" ref={notificationPanelRef}>
               <button
                 type="button"
@@ -821,7 +654,6 @@ export function AppShell({
                 onClick={() => {
                   broadcastGlobalPopoverClose();
                   closeOpenDetailsMenus();
-                  setIsHelpMenuOpen(false);
                   setIsProfileMenuOpen(false);
                   setIsNotificationPanelOpen((previous) => !previous);
                 }}
@@ -836,248 +668,68 @@ export function AppShell({
               {isNotificationPanelOpen ? (
                 <div
                   id="header-notifications-menu"
-                  className="absolute right-0 z-40 mt-2 w-[360px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                  className="absolute right-0 z-40 mt-2 w-[320px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
                   role="menu"
                   aria-label="Notifications menu"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsNotificationPanelOpen(false);
-                          router.push("/updates");
-                        }}
-                        className="text-xs text-slate-600 transition hover:text-slate-900"
-                        title="View all updates"
-                      >
-                        View All
-                      </button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="xs"
-                        onClick={() => {
-                          markAllAsRead();
-                        }}
-                      >
-                        Mark all read
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="xs"
-                        onClick={() => {
-                          clearAll();
-                        }}
-                      >
-                        Clear my inbox
-                      </Button>
-                    </div>
+                    <h3 className="text-sm font-semibold text-slate-900">Updates</h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsNotificationPanelOpen(false);
+                        router.push("/updates");
+                      }}
+                      className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
+                    >
+                      Open inbox
+                    </button>
                   </div>
-                  {unreadNotificationItems.length === 0 &&
-                  recentActivityItems.length === 0 &&
-                  requiredTaskShortcuts.length === 0 ? (
+                  {unreadNotificationItems.length === 0 ? (
                     <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
-                      No updates or activity.
+                      No unread updates.
                     </p>
                   ) : (
-                    <div className="mt-2 space-y-3 max-h-[400px] overflow-y-auto">
-                      {requiredTaskShortcuts.length > 0 ? (
-                        <div>
-                          <p className="mb-1 text-xs font-semibold uppercase text-slate-500">
-                            Required by: {requiredByLabel}
-                          </p>
-                          <ul className="space-y-1">
-                            {requiredTaskShortcuts.slice(0, 5).map((task) => (
-                              <li key={task.id}>
-                                <button
-                                  type="button"
-                                  className="w-full rounded-md border border-emerald-200 bg-emerald-50 px-2 py-2 text-left text-xs transition hover:bg-emerald-100"
-                                  onClick={() => {
-                                    setIsNotificationPanelOpen(false);
-                                    router.push(task.href);
-                                  }}
-                                >
-                                  <p className="truncate font-medium text-slate-900">
-                                    {task.title}
-                                  </p>
-                                  <p className="mt-0.5 truncate text-slate-700">
-                                    {task.kind === "blog" ? "Blog" : "Social"} •{" "}
-                                    {task.statusLabel}
-                                  </p>
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                      {/* Real-time notifications */}
-                      {unreadNotificationItems.length > 0 && (
-                        <div>
-                          <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Updates</p>
-                          <ul className="space-y-1">
-                            {unreadNotificationItems.map((notification) => (
-                              <li key={notification.id}>
-                                <button
-                                  type="button"
-                                  className={cn(
-                                    "w-full rounded-md border px-2 py-2 text-left transition hover:bg-slate-50",
-                                    notification.read
-                                      ? "border-slate-200 bg-white"
-                                      : "border-indigo-200 bg-indigo-50"
-                                  )}
-                                  onClick={() => {
-                                    markAsRead(notification.id);
-                                    setIsNotificationPanelOpen(false);
-                                    if (notification.href) {
-                                      router.push(notification.href);
-                                    }
-                                  }}
-                                >
-                                  <div className="flex items-start gap-2">
-                                    <span className="mt-0.5 inline-flex shrink-0">
-                                      <AppIcon
-                                        name="bell"
-                                        boxClassName="h-4 w-4"
-                                        size={14}
-                                        className="text-blue-600"
-                                      />
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-medium text-slate-900 text-sm">{notification.title}</p>
-                                      <p className="mt-0.5 text-sm text-slate-700">{notification.message}</p>
-                                      <p className="mt-1 text-xs text-slate-500">
-                                        {formatNotificationAge(notification.createdAt)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Activity history */}
-                      {recentActivityItems.length > 0 && (
-                        <div>
-                          <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Recent Activity</p>
-                          <ul className="space-y-1">
-                            {recentActivityItems.map((activity) => {
-                              const href =
-                                activity.content_type === "blog"
-                                  ? `/blogs/${activity.content_id}`
-                                  : `/social-posts/${activity.content_id}`;
-                              const icon =
-                                activity.content_type === "blog" ? "blog" : "social";
-                              return (
-                                <li key={activity.id}>
-                                  <button
-                                    type="button"
-                                    className="w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-left text-xs transition hover:bg-slate-50"
-                                    onClick={() => {
-                                      setIsNotificationPanelOpen(false);
-                                      router.push(href);
-                                    }}
-                                  >
-                                    <div className="flex items-start gap-2">
-                                      <span className="mt-0.5 inline-flex shrink-0">
-                                        <AppIcon
-                                          name={icon}
-                                          boxClassName="h-4 w-4"
-                                          size={12}
-                                          className="text-slate-400"
-                                        />
-                                      </span>
-                                      <div className="min-w-0 flex-1">
-                                        <p className="font-medium text-slate-900">
-                                          {activity.event_title}
-                                        </p>
-                                        {activity.event_summary ? (
-                                          <p className="mt-0.5 truncate text-slate-700">
-                                            {activity.event_summary}
-                                          </p>
-                                        ) : null}
-                                        <p className="mt-0.5 truncate text-slate-500">
-                                          {activity.content_title}
-                                          {activity.changed_by_name
-                                            ? ` • ${activity.changed_by_name}`
-                                            : ""}
-                                        </p>
-                                        <p className="mt-1 text-slate-500">
-                                          {formatNotificationAge(new Date(activity.changed_at).getTime())}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
+                    <ul className="mt-2 max-h-[340px] space-y-1 overflow-y-auto">
+                      {unreadNotificationItems.map((notification) => (
+                        <li key={notification.id}>
+                          <button
+                            type="button"
+                            className="w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-left transition hover:bg-slate-50"
+                            onClick={() => {
+                              markAsRead(notification.id);
+                              setIsNotificationPanelOpen(false);
+                              if (notification.href) {
+                                router.push(notification.href);
+                              }
+                            }}
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className="mt-0.5 inline-flex shrink-0">
+                                <AppIcon
+                                  name="bell"
+                                  boxClassName="h-4 w-4"
+                                  size={14}
+                                  className="text-blue-600"
+                                />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-slate-900">
+                                  {notification.title}
+                                </p>
+                                <p className="mt-0.5 line-clamp-2 text-sm text-slate-700">
+                                  {notification.message}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {formatNotificationAge(notification.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </div>
-              ) : null}
-            </div>
-            <div className="relative" ref={helpMenuRef}>
-              <button
-                type="button"
-                className={cn(headerMenuTriggerClass, "gap-1.5")}
-                aria-label="Help menu"
-                aria-haspopup="menu"
-                aria-expanded={isHelpMenuOpen}
-                aria-controls="header-help-menu"
-                onClick={() => {
-                  broadcastGlobalPopoverClose();
-                  closeOpenDetailsMenus();
-                  setIsNotificationPanelOpen(false);
-                  setIsProfileMenuOpen(false);
-                  setIsHelpMenuOpen((previous) => !previous);
-                }}
-              >
-                <span>Help</span>
-                <AppIcon
-                  name="chevronRight"
-                  boxClassName="h-4 w-4"
-                  size={12}
-                  className={cn(
-                    "text-slate-500 transition-transform",
-                    isHelpMenuOpen ? "rotate-90" : null
-                  )}
-                />
-              </button>
-              {isHelpMenuOpen ? (
-                <div
-                  id="header-help-menu"
-                  className="absolute right-0 z-40 mt-2 w-44 rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
-                  role="menu"
-                  aria-label="Help menu"
-                >
-                  <button
-                    type="button"
-                    className={headerMenuItemClass}
-                    role="menuitem"
-                    onClick={() => {
-                      setIsHelpMenuOpen(false);
-                      setIsShortcutModalOpen(true);
-                    }}
-                  >
-                    Shortcuts
-                  </button>
-                  <Link
-                    href="/resources"
-                    className={headerMenuItemClass}
-                    role="menuitem"
-                    onClick={() => {
-                      setIsHelpMenuOpen(false);
-                    }}
-                  >
-                    User Manual
-                  </Link>
                 </div>
               ) : null}
             </div>
@@ -1093,7 +745,6 @@ export function AppShell({
                   broadcastGlobalPopoverClose();
                   closeOpenDetailsMenus();
                   setIsNotificationPanelOpen(false);
-                  setIsHelpMenuOpen(false);
                   setIsProfileMenuOpen((previous) => !previous);
                 }}
               >
@@ -1118,6 +769,27 @@ export function AppShell({
                   role="menu"
                   aria-label="Profile menu"
                 >
+                  <button
+                    type="button"
+                    className={headerMenuItemClass}
+                    role="menuitem"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      setIsShortcutModalOpen(true);
+                    }}
+                  >
+                    Shortcuts
+                  </button>
+                  <Link
+                    href="/resources"
+                    className={headerMenuItemClass}
+                    role="menuitem"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                    }}
+                  >
+                    User Manual
+                  </Link>
                   <Link
                     href="/settings"
                     className={headerMenuItemClass}
@@ -1199,7 +871,7 @@ export function AppShell({
               </Tooltip>
             ) : (
               <div className="flex items-center justify-between">
-                <span className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Menu</span>
+                <span className="px-1 text-xs font-medium text-slate-500">Menu</span>
                 <Tooltip
                   content="Close sidebar"
                   delay={100}
@@ -1315,7 +987,7 @@ export function AppShell({
         </aside>
         <div className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-7xl px-6 py-6">
-            <main className="min-w-0 rounded-lg border border-slate-200 bg-white p-5">
+            <main className="min-w-0">
               {children}
             </main>
           </div>

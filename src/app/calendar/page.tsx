@@ -376,7 +376,7 @@ function CalendarSocialEventCard({
 
 export default function CalendarPage() {
   const { hasPermission, profile, user } = useAuth();
-  const { showSaving, showError, updateAlert: updateStatus, showAlert } = useAlerts();
+  const { showSaving, showError, updateAlert: updateStatus, showSuccess } = useAlerts();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -744,22 +744,16 @@ export default function CalendarPage() {
       return;
     }
     const monthLabel = format(new Date(`${todayDateKey}T00:00:00`), "yyyy-MM");
-    exportToCSV(exportItems, `calendar-overview-${monthLabel}.csv");
-    showAlert({
-      type: "success",
-      message: `Exported ${exportItems.length} items to CSV`,
-    });
-  }, [exportItems, todayDateKey, showAlert]);
+    exportToCSV(exportItems, `calendar-overview-${monthLabel}.csv`);
+    showSuccess(`Exported ${exportItems.length} items to CSV`);
+  }, [exportItems, todayDateKey, showSuccess]);
   const handleExportICS = useCallback(() => {
     if (exportItems.length === 0) {
       return;
     }
     exportToICS(exportItems, timezone, "calendar.ics");
-    showAlert({
-      type: "success",
-      message: `Exported ${exportItems.length} events to calendar`,
-    });
-  }, [exportItems, timezone, showAlert]);
+    showSuccess(`Exported ${exportItems.length} events to calendar`);
+  }, [exportItems, timezone, showSuccess]);
 
   const range = useMemo(() => {
     if (mode === "month") {

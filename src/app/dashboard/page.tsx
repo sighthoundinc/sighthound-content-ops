@@ -90,7 +90,6 @@ import {
   type MixedContentFilterValue,
 } from "@/lib/content-classification";
 import { getSiteBadgeClasses, getSiteLabel, getSiteShortLabel } from "@/lib/site";
-import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
 import { AppIcon } from "@/lib/icons";
 import type {
   BlogSite,

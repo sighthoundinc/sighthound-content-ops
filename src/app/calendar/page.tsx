@@ -62,7 +62,6 @@ import {
   getWorkflowStage,
 } from "@/lib/status";
 import { getSiteLabel, getSiteShortLabel } from "@/lib/site";
-import { MAIN_CREATE_SHORTCUTS } from "@/lib/shortcuts";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon } from "@/lib/icons";
 import {
@@ -492,8 +491,8 @@ export default function CalendarPage() {
     );
     if (settingsData) {
       setWeekStart(settingsData.week_start ?? 1);
-      setTimezone(profile?.timezone ?? settingsData.timezone ?? "America/New_York");
     }
+    setTimezone(profile?.timezone ?? "America/New_York");
     setIsLoading(false);
   }, [profile?.timezone]);
 
@@ -738,8 +737,6 @@ export default function CalendarPage() {
       dayOfWeek: item.dayOfWeek,
     })) as CalendarExportItem[];
   }, [overviewItems]);
-  // Phase 2: Wire to toolbar export button
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleExportCSV = useCallback(() => {
     if (exportItems.length === 0) {
       return;
@@ -748,8 +745,6 @@ export default function CalendarPage() {
     exportToCSV(exportItems, `calendar-overview-${monthLabel}.csv`);
     showSuccess(`Exported ${exportItems.length} items to CSV`);
   }, [exportItems, todayDateKey, showSuccess]);
-  // Phase 2: Wire to toolbar export menu
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleExportICS = useCallback(() => {
     if (exportItems.length === 0) {
       return;

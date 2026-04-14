@@ -79,7 +79,9 @@ For every non-trivial UI or workflow change:
 3. Do not rely on system/browser timezone for user-facing timestamps.
 4. Use centralized timezone-aware formatters (`src/lib/format-date.ts`) for rendering date/time values.
 5. Apply this rule consistently across tables, badges, detail pages, history timelines, comments, notifications, and any date/time UI.
-6. **Date-Only Formatting Contract (CRITICAL)**:
+6. Relative time and timeline/comment timestamps must still resolve from the user's selected timezone context; do not render these from implicit browser-local assumptions.
+7. Exception: admin-facing Activity History in Settings may use UTC for cross-user operational consistency; this exception is limited to that admin history surface.
+8. **Date-Only Formatting Contract (CRITICAL)**:
    - For date-only fields (YYYY-MM-DD format or ISO timestamps with date components), use `formatDateOnly()` from `src/lib/utils.ts`.
    - `formatDateOnly()` parses the date part directly without timezone conversion to prevent day-shift bugs in behind-UTC timezones (e.g., showing Feb 10 instead of Feb 11).
    - Apply to all date-only display surfaces: Dashboard (scheduled, published dates), Blogs, Tasks, Social Posts, import/export, and all UI tables.

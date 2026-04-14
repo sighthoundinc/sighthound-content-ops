@@ -84,6 +84,14 @@ npm run check:full
 - Render user-facing date/time from user timezone preferences.
 - Use shared date formatting utilities for consistency.
 - Keep date-only rendering on date-only formatters to prevent timezone day shift.
+- Comments, timelines, and record-level assignment/history timestamps must also render in the user’s selected timezone.
+- Calendar timezone selection must use `profiles.timezone` first, with `America/New_York` fallback only.
+- Admin Activity History in Settings is the single allowed UTC-rendered exception.
+- Calendar month overview QA checks:
+  - verify month overview rows only contain active-month scheduled items.
+  - verify mixed blog/social status pills use normalized labels and consistent color semantics.
+  - verify marker legend remains aligned with tile markers (filled = blog, outlined = social; SH blue, RED purple).
+  - verify unscheduled cards at zero count are non-expandable and show passive empty-state copy.
 
 ## 7) Notification and reminder behavior
 - Workflow reminders and notifications should be emitted through centralized event paths.

@@ -92,6 +92,13 @@ What “explicit updates” means:
 | [Calendar](/calendar) | Scheduled workload by date | Planning and sequencing |
 | Notifications | Assignment and stage updates | Respond to change quickly |
 
+Calendar month overview behavior:
+- `Overview` now shows only items scheduled in the active month.
+- Status pills use one normalized language/color system for mixed blog/social rows (`In Progress`, `In Review`, `Ready`, `Awaiting Live Link`, `Published`, `Changes Requested`).
+- Marker legend is shown above the table (filled markers for blogs, outlined markers for social posts; blue = SH, purple = RED).
+- Overview row titles are single-line truncated with full-title tooltip on hover.
+- Unscheduled cards with zero items no longer show expand chevrons and display passive empty-state copy (`No unscheduled blogs`, `No unscheduled social posts`).
+
 Home page consistency rule:
 - The top standup cards and `My Tasks Snapshot` use the same assignment/action-state model.
 - If a review assignment appears under `Required by me`, the matching status count should also be reflected in the standup cards.
@@ -157,6 +164,8 @@ Shared detail-page usability helpers:
 - Assign clear ownership before first transition.
 - Confirm first-stage required fields at creation time.
 - Use [Settings](/settings) to configure profile/timezone/notifications.
+- Your selected timezone in Settings is used across comments, timelines, tables, calendar, and record history displays.
+- The only UTC exception is admin Activity History in Settings, which stays in UTC for cross-user operations.
 - Keep deployments on latest database migrations so dashboard/task queues remain responsive at higher data volume.
 - Protected pages require a valid signed-in session; if your session expires you’ll be redirected to [Login](/login) and can continue after signing in again.
 

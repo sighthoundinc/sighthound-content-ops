@@ -122,6 +122,12 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 
 ### Calendar
 - Date-based schedule view for planning and rescheduling.
+- Month overview contract:
+  - Includes only records scheduled within the active month window.
+  - Uses normalized mixed-content status labels + color mapping in table rows (`In Progress`, `In Review`, `Changes Requested`, `Ready`, `Awaiting Live Link`, `Published`).
+  - Uses calendar-consistent type markers (filled blog marker, outlined social marker; SH blue, RED purple).
+  - Uses fixed-width table layout with single-line title truncation + hover tooltip to prevent row-height drift.
+  - Unscheduled cards with zero count are non-expandable and show passive empty-state messages.
 
 ## 6) Link behavior contract
 - Internal links open in same tab.
@@ -165,6 +171,9 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 ## 8) Date and timezone contract
 - User-facing timestamps are rendered by user timezone preference.
 - Date-only values use date-only formatter utilities to avoid timezone day shifts.
+- Comments, timelines, and assignment/history surfaces follow the same user-timezone rendering rule.
+- Calendar timezone rendering must resolve from `profiles.timezone` first, with `America/New_York` as the only fallback.
+- Exception: admin Activity History in Settings may render UTC for cross-user operational consistency.
 
 ## 9) Import behavior contract
 - Import supports selective column inclusion.

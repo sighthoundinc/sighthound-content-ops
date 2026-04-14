@@ -50,6 +50,9 @@ Social posts must include at least one valid public live link before they can mo
   - list bulk delete runs selected requests concurrently and returns one aggregated deleted/skipped/failed summary
 - `Ideas`: intake and conversion to blogs/social posts
 - `Calendar`: schedule planning and conflict visibility
+  - month overview table is current-month only with normalized status pills across blog/social rows
+  - month overview shows marker legend for SH/RED + Blog/Social marker style parity with calendar tiles
+  - unscheduled cards with zero count are passive (no expand chevron)
 - `Settings`: profile, timezone, notifications, connected services
 
 Detail page ordering rule:
@@ -69,6 +72,12 @@ Detail page ordering rule:
 - Work stages are owned by the execution owner
 - Review stages are owned by reviewer
 - Terminal stages are complete and have no active owner
+
+## Timezone display contract
+- User-facing date/time/timestamp values render in the logged-in user’s selected timezone (`profiles.timezone`).
+- Fallback timezone is `America/New_York` when a user timezone is not set.
+- Comments, timelines, and record history follow the same user-timezone rule.
+- Exception: admin Activity History in Settings may display UTC for cross-user operational consistency.
 
 ## Slack workflow alerts
 - Workflow Slack notifications are posted to `#content-ops-alerts`.

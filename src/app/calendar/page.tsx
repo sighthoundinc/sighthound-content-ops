@@ -78,7 +78,7 @@ import type {
   SocialPostStatus,
   SocialPostType,
 } from "@/lib/types";
-import { toTitleCase } from "@/lib/utils";
+import { formatDateOnly, toTitleCase } from "@/lib/utils";
 import { exportToICS, exportToCSV, type CalendarExportItem } from "@/lib/calendar-export";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
@@ -119,11 +119,30 @@ type SocialCalendarPost = Pick<
 };
 
 function formatCalendarDateLabel(dateKey: string) {
-  const parsed = new Date(`${dateKey}T00:00:00`);
+  const parsed = parseDateOnlyLocal(dateKey);
   if (Number.isNaN(parsed.getTime())) {
     return dateKey;
   }
   return format(parsed, "MMM d");
+}
+
+function parseDateOnlyLocal(value: string) {
+  const [yearPart, monthPart, dayPart] = value.slice(0, 10).split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  const day = Number(dayPart);
+  if (
+    Number.isNaN(year) ||
+    Number.isNaN(month) ||
+    Number.isNaN(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return new Date(Number.NaN);
+  }
+  return new Date(year, month - 1, day);
 }
 
 function normalizeRelationObject<T>(value: unknown): T | null {
@@ -197,6 +216,77 @@ function getSocialBulletClass(site: BlogSite) {
   return site === "redactor.com"
     ? "border-2 border-purple-500 bg-white"
     : "border-2 border-blue-500 bg-white";
+}
+
+type CalendarOverviewStatusKey =
+  | "in_progress"
+  | "in_review"
+  | "changes_requested"
+  | "ready"
+  | "awaiting_live_link"
+  | "published";
+
+const CALENDAR_OVERVIEW_STATUS_META: Record<
+  CalendarOverviewStatusKey,
+  { label: string; className: string }
+> = {
+  in_progress: {
+    label: "In Progress",
+    className: "bg-blue-100 text-blue-700 border border-blue-200",
+  },
+  in_review: {
+    label: "In Review",
+    className: "bg-indigo-100 text-indigo-700 border border-indigo-200",
+  },
+  changes_requested: {
+    label: "Changes Requested",
+    className: "bg-orange-100 text-orange-700 border border-orange-200",
+  },
+  ready: {
+    label: "Ready",
+    className: "bg-violet-100 text-violet-700 border border-violet-200",
+  },
+  awaiting_live_link: {
+    label: "Awaiting Live Link",
+    className: "bg-amber-100 text-amber-700 border border-amber-200",
+  },
+  published: {
+    label: "Published",
+    className: "bg-green-100 text-green-700 border border-green-200",
+  },
+};
+
+function getOverviewStatusFromBlogStage(
+  stage: ReturnType<typeof getWorkflowStage>
+): CalendarOverviewStatusKey {
+  if (stage === "published") {
+    return "published";
+  }
+  if (stage === "ready") {
+    return "ready";
+  }
+  return "in_progress";
+}
+
+function getOverviewStatusFromSocialStatus(
+  status: SocialPostStatus
+): CalendarOverviewStatusKey {
+  if (status === "published") {
+    return "published";
+  }
+  if (status === "in_review") {
+    return "in_review";
+  }
+  if (status === "changes_requested") {
+    return "changes_requested";
+  }
+  if (status === "ready_to_publish") {
+    return "ready";
+  }
+  if (status === "awaiting_live_link") {
+    return "awaiting_live_link";
+  }
+  return "in_progress";
 }
 
 function getBlogStageDotClass({
@@ -643,11 +733,9 @@ export default function CalendarPage() {
   ]);
   const overviewMonthRange = useMemo(() => {
     const currentMonthStart = startOfMonth(new Date(`${todayDateKey}T00:00:00`));
-    const prevMonthStart = startOfMonth(subMonths(currentMonthStart, 1));
-    const nextMonthEnd = endOfMonth(addMonths(currentMonthStart, 1));
     return {
-      start: prevMonthStart,
-      end: nextMonthEnd,
+      start: currentMonthStart,
+      end: endOfMonth(currentMonthStart),
     };
   }, [todayDateKey]);
   const overviewItems = useMemo(() => {
@@ -672,7 +760,10 @@ export default function CalendarPage() {
       if (!scheduledDate) {
         continue;
       }
-      const dateObj = new Date(`${scheduledDate}T00:00:00`);
+      const dateObj = parseDateOnlyLocal(scheduledDate);
+      if (Number.isNaN(dateObj.getTime())) {
+        continue;
+      }
       if (
         !isWithinInterval(dateObj, {
           start: overviewMonthRange.start,
@@ -693,7 +784,10 @@ export default function CalendarPage() {
       if (!post.scheduled_date) {
         continue;
       }
-      const dateObj = new Date(`${post.scheduled_date}T00:00:00`);
+      const dateObj = parseDateOnlyLocal(post.scheduled_date);
+      if (Number.isNaN(dateObj.getTime())) {
+        continue;
+      }
       if (
         !isWithinInterval(dateObj, {
           start: overviewMonthRange.start,
@@ -1874,26 +1968,54 @@ export default function CalendarPage() {
                 <section className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      This Month Overview
+                      Overview
                     </h3>
-                    <button
-                      type="button"
-                      onClick={handleExportCSV}
-                      disabled={exportItems.length === 0}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
-                      title="Export this month's overview as CSV"
-                    >
-                      <AppIcon
-                        name="download"
-                        boxClassName="h-3.5 w-3.5"
-                        size={12}
-                        className="text-slate-600"
-                      />
-                      <span>Export CSV</span>
-                    </button>
+                    <div className="ml-auto flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={handleExportCSV}
+                        disabled={exportItems.length === 0}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                        title="Export this month's overview as CSV"
+                      >
+                        <AppIcon
+                          name="download"
+                          boxClassName="h-3.5 w-3.5"
+                          size={12}
+                          className="text-slate-600"
+                        />
+                        <span>Export CSV</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-600">
+                    <span className="font-semibold uppercase tracking-wide text-slate-500">Legend</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-blue-500" aria-hidden />
+                      SH Blog
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-purple-500" aria-hidden />
+                      RED Blog
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full border-2 border-blue-500 bg-white" aria-hidden />
+                      SH Social Post
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full border-2 border-purple-500 bg-white" aria-hidden />
+                      RED Social Post
+                    </span>
                   </div>
                   <div className="rounded-md border border-slate-200/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                    <table className="w-full">
+                    <table className="w-full table-fixed">
+                      <colgroup>
+                        <col className="w-20 sm:w-24" />
+                        <col className="w-12 sm:w-14" />
+                        <col className="w-28 sm:w-36" />
+                        <col />
+                        <col className="w-28 sm:w-36" />
+                      </colgroup>
                       <thead>
                         <tr className="border-b border-slate-200/90 bg-slate-50/80">
                           <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Date</th>
@@ -1905,13 +2027,17 @@ export default function CalendarPage() {
                       </thead>
                       <tbody className="divide-y divide-slate-200/90">
                         {overviewItems.map((item) => {
-                          const dateObj = new Date(`${item.date}T00:00:00`);
-                          const formattedDate = format(dateObj, "d MMM");
+                          const dateObj = parseDateOnlyLocal(item.date);
+                          const formattedDate = formatDateOnly(item.date);
+                          const shortDate =
+                            formattedDate.length > 0 ? formattedDate.replace(/,\s\d{4}$/, "") : format(dateObj, "d MMM");
                           if (item.type === "blog") {
                             const stage = getWorkflowStage({
                               writerStatus: item.blog.writer_status,
                               publisherStatus: item.blog.publisher_status,
                             });
+                            const statusMeta =
+                              CALENDAR_OVERVIEW_STATUS_META[getOverviewStatusFromBlogStage(stage)];
                             return (
                               <tr
                                 key={item.key}
@@ -1921,7 +2047,7 @@ export default function CalendarPage() {
                                   setActiveSocialPostId(null);
                                 }}
                               >
-                                <td className="px-3 py-2.5 text-sm font-medium text-slate-700">{formattedDate}</td>
+                                <td className="px-3 py-2.5 text-sm font-semibold text-slate-800">{shortDate}</td>
                                 <td className="px-2 py-2.5 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex items-center gap-1.5 text-xs">
@@ -1929,18 +2055,26 @@ export default function CalendarPage() {
                                     <span className="font-medium text-slate-700">{getSiteShortLabel(item.blog.site)} Blog</span>
                                   </div>
                                 </td>
-                                <td className="px-3 py-2.5 min-w-0 flex-1">
-                                  <p className="text-sm text-slate-800 truncate" title={item.blog.title}>
+                                <td className="px-3 py-2.5">
+                                  <p className="truncate text-sm font-medium text-slate-900" title={item.blog.title}>
                                     {item.blog.title}
                                   </p>
                                 </td>
                                 <td className="px-3 py-2.5">
-                                  <WorkflowStageBadge stage={stage} />
+                                  <span
+                                    className={`inline-flex items-center justify-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${statusMeta.className}`}
+                                  >
+                                    {statusMeta.label}
+                                  </span>
                                 </td>
                               </tr>
                             );
                           } else {
                             const socialSite = getSocialSite(item.social);
+                            const statusMeta =
+                              CALENDAR_OVERVIEW_STATUS_META[
+                                getOverviewStatusFromSocialStatus(item.social.status)
+                              ];
                             return (
                               <tr
                                 key={item.key}
@@ -1950,7 +2084,7 @@ export default function CalendarPage() {
                                   setActiveBlogId(null);
                                 }}
                               >
-                                <td className="px-3 py-2.5 text-sm font-medium text-slate-700">{formattedDate}</td>
+                                <td className="px-3 py-2.5 text-sm font-semibold text-slate-800">{shortDate}</td>
                                 <td className="px-2 py-2.5 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex items-center gap-1.5 text-xs">
@@ -1958,15 +2092,20 @@ export default function CalendarPage() {
                                     <span className="font-medium text-slate-700">{getSiteShortLabel(socialSite)} Social</span>
                                   </div>
                                 </td>
-                                <td className="px-3 py-2.5 min-w-0 flex-1">
-                                  <p className="text-sm text-slate-800 truncate" title={`${SOCIAL_POST_TYPE_LABELS[item.social.type]}: ${item.social.title}`}>
+                                <td className="px-3 py-2.5">
+                                  <p
+                                    className="truncate text-sm font-medium text-slate-900"
+                                    title={`${SOCIAL_POST_TYPE_LABELS[item.social.type]}: ${item.social.title}`}
+                                  >
                                     <span className="text-slate-500 font-medium">{SOCIAL_POST_TYPE_LABELS[item.social.type]}:</span>{" "}
                                     {item.social.title}
                                   </p>
                                 </td>
                                 <td className="px-3 py-2.5">
-                                  <span className="inline-flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                                    {SOCIAL_POST_STATUS_LABELS[item.social.status]}
+                                  <span
+                                    className={`inline-flex items-center justify-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${statusMeta.className}`}
+                                  >
+                                    {statusMeta.label}
                                   </span>
                                 </td>
                               </tr>
@@ -1986,136 +2125,154 @@ export default function CalendarPage() {
                 <div className="grid gap-3 xl:grid-cols-2">
                   {hasBlogsEnabled && (hasShBlogsVisible || hasRedBlogsVisible) ? (
                     <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                      <button
-                        type="button"
-                        aria-expanded={isUnscheduledBlogsExpanded}
-                        onClick={() => {
-                          setIsUnscheduledBlogsExpanded((previous) => !previous);
-                        }}
-                        className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
-                      >
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Unscheduled Blogs ({noPublishDateBlogs.length})
-                        </span>
-                        <AppIcon
-                          name="chevronRight"
-                          boxClassName="h-4 w-4"
-                          size={14}
-                          className={`text-slate-500 transition-transform ${
-                            isUnscheduledBlogsExpanded ? "rotate-90" : ""
-                          }`}
-                        />
-                      </button>
-                      {isUnscheduledBlogsExpanded ? (
-                        noPublishDateBlogs.length === 0 ? (
-                          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
-                            All blogs are scheduled.
-                          </p>
-                        ) : (
-                          <>
-                            <ul className="space-y-2">
-                              {pagedNoPublishDateBlogs.map((blog) => (
-                                <li
-                                  key={blog.id}
-                                  className="rounded-md border border-slate-200 px-3 py-2"
-                                >
-                                  <Link
-                                    href={`/blogs/${blog.id}`}
-                                    className="interactive-link font-medium text-slate-800"
+                      {noPublishDateBlogs.length > 0 ? (
+                        <>
+                          <button
+                            type="button"
+                            aria-expanded={isUnscheduledBlogsExpanded}
+                            onClick={() => {
+                              setIsUnscheduledBlogsExpanded((previous) => !previous);
+                            }}
+                            className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                          >
+                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Unscheduled Blogs ({noPublishDateBlogs.length})
+                            </span>
+                            <AppIcon
+                              name="chevronRight"
+                              boxClassName="h-4 w-4"
+                              size={14}
+                              className={`text-slate-500 transition-transform ${
+                                isUnscheduledBlogsExpanded ? "rotate-90" : ""
+                              }`}
+                            />
+                          </button>
+                          {isUnscheduledBlogsExpanded ? (
+                            <>
+                              <ul className="space-y-2">
+                                {pagedNoPublishDateBlogs.map((blog) => (
+                                  <li
+                                    key={blog.id}
+                                    className="rounded-md border border-slate-200 px-3 py-2"
                                   >
-                                    {blog.title}
-                                  </Link>
-                                  <p className="mt-1 text-xs text-slate-600">{getNoPublishReason(blog)}</p>
-                                  <div className="mt-1">
-                                    <WorkflowStageBadge
-                                      stage={getWorkflowStage({
-                                        writerStatus: blog.writer_status,
-                                        publisherStatus: blog.publisher_status,
-                                      })}
-                                    />
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
-                            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                              <TableRowLimitSelect
-                                value={noDateRowLimit}
-                                onChange={(value) => {
-                                  setNoDateRowLimit(value);
-                                }}
-                              />
-                              <TablePaginationControls
-                                currentPage={noDateCurrentPage}
-                                pageCount={noDatePageCount}
-                                onPageChange={setNoDateCurrentPage}
-                              />
-                            </div>
-                          </>
-                        )
+                                    <Link
+                                      href={`/blogs/${blog.id}`}
+                                      className="interactive-link font-medium text-slate-800"
+                                    >
+                                      {blog.title}
+                                    </Link>
+                                    <p className="mt-1 text-xs text-slate-600">{getNoPublishReason(blog)}</p>
+                                    <div className="mt-1">
+                                      <WorkflowStageBadge
+                                        stage={getWorkflowStage({
+                                          writerStatus: blog.writer_status,
+                                          publisherStatus: blog.publisher_status,
+                                        })}
+                                      />
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                                <TableRowLimitSelect
+                                  value={noDateRowLimit}
+                                  onChange={(value) => {
+                                    setNoDateRowLimit(value);
+                                  }}
+                                />
+                                <TablePaginationControls
+                                  currentPage={noDateCurrentPage}
+                                  pageCount={noDatePageCount}
+                                  onPageChange={setNoDateCurrentPage}
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <p className="rounded-md border border-dashed border-slate-200 bg-white px-3 py-3 text-sm text-slate-500">
+                              Expand to review unscheduled blogs.
+                            </p>
+                          )}
+                        </>
                       ) : (
-                        <p className="rounded-md border border-dashed border-slate-200 bg-white px-3 py-3 text-sm text-slate-500">
-                          Expand to review unscheduled blogs.
-                        </p>
+                        <>
+                          <div className="flex w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Unscheduled Blogs (0)
+                            </span>
+                          </div>
+                          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                            No unscheduled blogs.
+                          </p>
+                        </>
                       )}
                     </div>
                   ) : null}
                   {hasSocialPostsEnabled &&
                   (hasShSocialPostsVisible || hasRedSocialPostsVisible) ? (
                     <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                      <button
-                        type="button"
-                        aria-expanded={isUnscheduledSocialPostsExpanded}
-                        onClick={() => {
-                          setIsUnscheduledSocialPostsExpanded((previous) => !previous);
-                        }}
-                        className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
-                      >
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Unscheduled Social Posts ({unscheduledSocialPosts.length})
-                        </span>
-                        <AppIcon
-                          name="chevronRight"
-                          boxClassName="h-4 w-4"
-                          size={14}
-                          className={`text-slate-500 transition-transform ${
-                            isUnscheduledSocialPostsExpanded ? "rotate-90" : ""
-                          }`}
-                        />
-                      </button>
-                      {isUnscheduledSocialPostsExpanded ? (
-                        unscheduledSocialPosts.length === 0 ? (
-                          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
-                            All social posts are scheduled.
-                          </p>
-                        ) : (
-                          <ul className="space-y-2">
-                            {unscheduledSocialPosts.map((post) => (
-                              <li
-                                key={post.id}
-                                className="rounded-md border border-slate-200 px-3 py-2"
-                              >
-                                <button
-                                  type="button"
-                                  className="w-full text-left"
-                                  onClick={() => {
-                                    setActiveBlogId(null);
-                                    setActiveSocialPostId(post.id);
-                                  }}
+                      {unscheduledSocialPosts.length > 0 ? (
+                        <>
+                          <button
+                            type="button"
+                            aria-expanded={isUnscheduledSocialPostsExpanded}
+                            onClick={() => {
+                              setIsUnscheduledSocialPostsExpanded((previous) => !previous);
+                            }}
+                            className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                          >
+                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Unscheduled Social Posts ({unscheduledSocialPosts.length})
+                            </span>
+                            <AppIcon
+                              name="chevronRight"
+                              boxClassName="h-4 w-4"
+                              size={14}
+                              className={`text-slate-500 transition-transform ${
+                                isUnscheduledSocialPostsExpanded ? "rotate-90" : ""
+                              }`}
+                            />
+                          </button>
+                          {isUnscheduledSocialPostsExpanded ? (
+                            <ul className="space-y-2">
+                              {unscheduledSocialPosts.map((post) => (
+                                <li
+                                  key={post.id}
+                                  className="rounded-md border border-slate-200 px-3 py-2"
                                 >
-                                  <p className="font-medium text-slate-800">{post.title}</p>
-                                  <p className="text-xs text-slate-500">
-                                    {SOCIAL_POST_TYPE_LABELS[post.type]} ·{" "}
-                                    {SOCIAL_POST_STATUS_LABELS[post.status]}
-                                  </p>
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        )
+                                  <button
+                                    type="button"
+                                    className="w-full text-left"
+                                    onClick={() => {
+                                      setActiveBlogId(null);
+                                      setActiveSocialPostId(post.id);
+                                    }}
+                                  >
+                                    <p className="font-medium text-slate-800">{post.title}</p>
+                                    <p className="text-xs text-slate-500">
+                                      {SOCIAL_POST_TYPE_LABELS[post.type]} ·{" "}
+                                      {SOCIAL_POST_STATUS_LABELS[post.status]}
+                                    </p>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="rounded-md border border-dashed border-slate-200 bg-white px-3 py-3 text-sm text-slate-500">
+                              Expand to review unscheduled social posts.
+                            </p>
+                          )}
+                        </>
                       ) : (
-                        <p className="rounded-md border border-dashed border-slate-200 bg-white px-3 py-3 text-sm text-slate-500">
-                          Expand to review unscheduled social posts.
-                        </p>
+                        <>
+                          <div className="flex w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Unscheduled Social Posts (0)
+                            </span>
+                          </div>
+                          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                            No unscheduled social posts.
+                          </p>
+                        </>
                       )}
                     </div>
                   ) : null}

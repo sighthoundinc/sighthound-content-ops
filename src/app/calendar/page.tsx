@@ -642,6 +642,89 @@ export default function CalendarPage() {
     hasSocialPostsEnabled,
     scopedSocialPosts,
   ]);
+  const overviewMonthRange = useMemo(() => {
+    const currentMonthStart = startOfMonth(new Date(`${todayDateKey}T00:00:00`));
+    const prevMonthStart = startOfMonth(subMonths(currentMonthStart, 1));
+    const nextMonthEnd = endOfMonth(addMonths(currentMonthStart, 1));
+    return {
+      start: prevMonthStart,
+      end: nextMonthEnd,
+    };
+  }, [todayDateKey]);
+  const overviewItems = useMemo(() => {
+    const items: Array<
+      | {
+          type: "blog";
+          key: string;
+          date: string;
+          dayOfWeek: string;
+          blog: BlogRecord;
+        }
+      | {
+          type: "social";
+          key: string;
+          date: string;
+          dayOfWeek: string;
+          social: SocialCalendarPost;
+        }
+    > = [];
+    for (const blog of filteredBlogs) {
+      const scheduledDate = getBlogScheduledDate(blog);
+      if (!scheduledDate) {
+        continue;
+      }
+      const dateObj = new Date(`${scheduledDate}T00:00:00`);
+      if (
+        !isWithinInterval(dateObj, {
+          start: overviewMonthRange.start,
+          end: overviewMonthRange.end,
+        })
+      ) {
+        continue;
+      }
+      items.push({
+        type: "blog",
+        key: `blog-${blog.id}`,
+        date: scheduledDate,
+        dayOfWeek: format(dateObj, "EEE"),
+        blog,
+      });
+    }
+    for (const post of filteredSocialPosts) {
+      if (!post.scheduled_date) {
+        continue;
+      }
+      const dateObj = new Date(`${post.scheduled_date}T00:00:00`);
+      if (
+        !isWithinInterval(dateObj, {
+          start: overviewMonthRange.start,
+          end: overviewMonthRange.end,
+        })
+      ) {
+        continue;
+      }
+      items.push({
+        type: "social",
+        key: `social-${post.id}`,
+        date: post.scheduled_date,
+        dayOfWeek: format(dateObj, "EEE"),
+        social: post,
+      });
+    }
+    items.sort((left, right) => {
+      const dateCompare = left.date.localeCompare(right.date);
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+      if (left.type !== right.type) {
+        return left.type === "blog" ? -1 : 1;
+      }
+      const leftTitle = left.type === "blog" ? left.blog.title : left.social.title;
+      const rightTitle = right.type === "blog" ? right.blog.title : right.social.title;
+      return leftTitle.localeCompare(rightTitle);
+    });
+    return items;
+  }, [filteredBlogs, filteredSocialPosts, overviewMonthRange]);
 
   const range = useMemo(() => {
     if (mode === "month") {
@@ -1688,6 +1771,98 @@ export default function CalendarPage() {
                   </DndContext>
                 )}
               </section>
+
+              {overviewItems.length > 0 ? (
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    This Month Overview
+                  </h3>
+                  <div className="rounded-md border border-slate-200/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200/90 bg-slate-50/80">
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Date</th>
+                          <th className="px-2 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide w-12">Day</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Type</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide flex-1 min-w-0">Title</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200/90">
+                        {overviewItems.map((item) => {
+                          const dateObj = new Date(`${item.date}T00:00:00`);
+                          const formattedDate = format(dateObj, "d MMM");
+                          if (item.type === "blog") {
+                            const stage = getWorkflowStage({
+                              writerStatus: item.blog.writer_status,
+                              publisherStatus: item.blog.publisher_status,
+                            });
+                            return (
+                              <tr
+                                key={item.key}
+                                className="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  setActiveBlogId(item.blog.id);
+                                  setActiveSocialPostId(null);
+                                }}
+                              >
+                                <td className="px-3 py-2 text-sm font-medium text-slate-700">{formattedDate}</td>
+                                <td className="px-2 py-2 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-1.5 text-xs">
+                                    <span className={`h-2 w-2 shrink-0 rounded-full ${getBlogBarClass(item.blog.site)}`} />
+                                    <span className="font-medium text-slate-700">{getSiteShortLabel(item.blog.site)} Blog</span>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 min-w-0 flex-1">
+                                  <p className="text-sm text-slate-800 truncate" title={item.blog.title}>
+                                    {item.blog.title}
+                                  </p>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <WorkflowStageBadge stage={stage} />
+                                </td>
+                              </tr>
+                            );
+                          } else {
+                            const socialSite = getSocialSite(item.social);
+                            return (
+                              <tr
+                                key={item.key}
+                                className="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  setActiveSocialPostId(item.social.id);
+                                  setActiveBlogId(null);
+                                }}
+                              >
+                                <td className="px-3 py-2 text-sm font-medium text-slate-700">{formattedDate}</td>
+                                <td className="px-2 py-2 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-1.5 text-xs">
+                                    <span className={`h-2 w-2 shrink-0 rounded-full border border-slate-200 ${getSocialBulletClass(socialSite)}`} />
+                                    <span className="font-medium text-slate-700">{getSiteShortLabel(socialSite)} Social</span>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 min-w-0 flex-1">
+                                  <p className="text-sm text-slate-800 truncate" title={`${SOCIAL_POST_TYPE_LABELS[item.social.type]}: ${item.social.title}`}>
+                                    <span className="text-slate-500 font-medium">{SOCIAL_POST_TYPE_LABELS[item.social.type]}:</span>{" "}
+                                    {item.social.title}
+                                  </p>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                    {SOCIAL_POST_STATUS_LABELS[item.social.status]}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          }
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ) : null}
 
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">

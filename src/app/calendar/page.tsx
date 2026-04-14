@@ -1430,6 +1430,21 @@ export default function CalendarPage() {
             searchPlaceholder=""
             actions={
               <div className="ml-auto flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportICS}
+                  disabled={exportItems.length === 0}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                  title="Export calendar to iCalendar format for Outlook, Apple Calendar, or Google Calendar"
+                >
+                  <AppIcon
+                    name="download"
+                    boxClassName="h-4 w-4"
+                    size={14}
+                    className="text-slate-600"
+                  />
+                  <span>Export to Calendar</span>
+                </button>
                 <label className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">
                   <span className="font-medium">View</span>
                   <select
@@ -1896,9 +1911,26 @@ export default function CalendarPage() {
 
               {overviewItems.length > 0 ? (
                 <section className="space-y-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    This Month Overview
-                  </h3>
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      This Month Overview
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleExportCSV}
+                      disabled={exportItems.length === 0}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                      title="Export this month's overview as CSV"
+                    >
+                      <AppIcon
+                        name="download"
+                        boxClassName="h-3.5 w-3.5"
+                        size={12}
+                        className="text-slate-600"
+                      />
+                      <span>Export CSV</span>
+                    </button>
+                  </div>
                   <div className="rounded-md border border-slate-200/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
                     <table className="w-full">
                       <thead>

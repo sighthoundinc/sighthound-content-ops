@@ -42,7 +42,6 @@ import {
 import { ProtectedPage } from "@/components/protected-page";
 import { WorkflowStageBadge } from "@/components/status-badge";
 import { TablePaginationControls, TableRowLimitSelect } from "@/components/table-controls";
-import { KbdShortcut } from "@/components/kbd-shortcut";
 import {
   BLOG_SELECT_WITH_DATES,
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
@@ -1738,12 +1737,7 @@ export default function CalendarPage() {
                                         setQuickCreateDateKey(null);
                                       }}
                                     >
-                                      <span className="flex items-center justify-between gap-2">
-                                        <span>New Blog</span>
-                                        <KbdShortcut className="text-[10px]">
-                                          {MAIN_CREATE_SHORTCUTS.newBlog}
-                                        </KbdShortcut>
-                                      </span>
+                                      New Blog
                                     </Link>
                                     <Link
                                       href={`/social-posts?view=calendar&create=1&scheduled_date=${key}`}
@@ -1752,12 +1746,7 @@ export default function CalendarPage() {
                                         setQuickCreateDateKey(null);
                                       }}
                                     >
-                                      <span className="flex items-center justify-between gap-2">
-                                        <span>New Social Post</span>
-                                        <KbdShortcut className="text-[10px]">
-                                          {MAIN_CREATE_SHORTCUTS.newSocialPost}
-                                        </KbdShortcut>
-                                      </span>
+                                      New Social Post
                                     </Link>
                                   </div>
                                 ) : null}
@@ -1857,10 +1846,7 @@ export default function CalendarPage() {
                                               );
                                             })}
                                           </ul>
-                                          <div className="mt-2 flex items-center justify-between gap-2">
-                                            <span className="text-[10px] text-slate-500">
-                                              Shift+click jumps to week view
-                                            </span>
+                                          <div className="mt-2 flex justify-end">
                                             <button
                                               type="button"
                                               className="rounded border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"

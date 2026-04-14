@@ -29,7 +29,6 @@ import {
   DataPageToolbar,
 } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
-import { KbdShortcut } from "@/components/kbd-shortcut";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   PublisherStatusBadge,
@@ -3987,12 +3986,7 @@ export default function DashboardPage() {
                               router.push("/ideas");
                             }}
                           >
-                            <span className="flex items-center justify-between gap-3">
-                              <span>New Idea</span>
-                              <KbdShortcut className="border-slate-200 bg-slate-50 text-slate-500">
-                                {MAIN_CREATE_SHORTCUTS.newIdea}
-                              </KbdShortcut>
-                            </span>
+                            New Idea
                           </button>
                           <button
                             type="button"
@@ -4002,12 +3996,7 @@ export default function DashboardPage() {
                               router.push("/blogs/new");
                             }}
                           >
-                            <span className="flex items-center justify-between gap-3">
-                              <span>New Blog</span>
-                              <KbdShortcut className="border-slate-200 bg-slate-50 text-slate-500">
-                                {MAIN_CREATE_SHORTCUTS.newBlog}
-                              </KbdShortcut>
-                            </span>
+                            New Blog
                           </button>
                         </>
                       ) : null}
@@ -4020,12 +4009,7 @@ export default function DashboardPage() {
                             router.push("/social-posts?create=1");
                           }}
                         >
-                          <span className="flex items-center justify-between gap-3">
-                            <span>New Social Post</span>
-                            <KbdShortcut className="border-slate-200 bg-slate-50 text-slate-500">
-                              {MAIN_CREATE_SHORTCUTS.newSocialPost}
-                            </KbdShortcut>
-                          </span>
+                          New Social Post
                         </button>
                       ) : null}
                     </div>

@@ -88,10 +88,20 @@ npm run check:full
 - Calendar timezone selection must use `profiles.timezone` first, with `America/New_York` fallback only.
 - Admin Activity History in Settings is the single allowed UTC-rendered exception.
 - Calendar month overview QA checks:
-  - verify month overview rows only contain active-month scheduled items.
+  - verify overview rows cover previous/current/next-month scheduled items.
   - verify mixed blog/social status pills use normalized labels and consistent color semantics.
-  - verify marker legend remains aligned with tile markers (filled = blog, outlined = social; SH blue, RED purple).
   - verify unscheduled cards at zero count are non-expandable and show passive empty-state copy.
+  - verify grouped nav controls are sticky and ordered `Prev`, `Today`, `Next`, month picker popover, then `Month/Week`.
+  - verify `Today` is visually primary and `Prev/Next` use lighter navigation styling with directional icons.
+  - verify `Today · <date>` chip is visible near month selection.
+  - verify secondary control strip stays compact with neutral labels (`View`, content toggles, `Assigned to`).
+  - verify removable filter pills render below legend chips (not in the top control strip) to reduce layout jumps.
+  - verify no pill-row placeholder renders when no active filter pills exist.
+  - verify top controls use a single outer shell with lighter inner separation (avoid stacked heavy borders).
+  - verify `This Week` summary card and day-header item count badges are absent.
+  - verify month view applies a subtle current-week background band without overpowering event cards.
+  - verify calendar event cards show one metadata line by default and preserve detail in tooltip text.
+  - verify unscheduled zero-count states render as quiet single-line muted messages.
 
 ## 7) Notification and reminder behavior
 - Workflow reminders and notifications should be emitted through centralized event paths.

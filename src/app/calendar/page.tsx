@@ -37,7 +37,6 @@ import {
   DATA_PAGE_STACK_CLASS,
   DataPageFilterPills,
   DataPageHeader,
-  DataPageToolbar,
 } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import { WorkflowStageBadge } from "@/components/status-badge";
@@ -405,9 +404,6 @@ function CalendarBlogEventCard({
         <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
           {truncateWithEllipsis(blog.title, maxTitleLength)}
         </p>
-        <p className="mt-0.5 truncate text-[11px] text-slate-500">
-          {blog.writer?.full_name ?? "Unassigned"}
-        </p>
       </div>
       <span
         className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getBlogStageDotClass({
@@ -450,9 +446,6 @@ function CalendarSocialEventCard({
         </div>
         <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
           {SOCIAL_POST_TYPE_LABELS[post.type]}: {truncateWithEllipsis(post.title, maxTitleLength)}
-        </p>
-        <p className="mt-0.5 truncate text-[11px] text-slate-500">
-          {post.creator?.full_name ?? "Unassigned"}
         </p>
       </div>
       <span
@@ -733,9 +726,11 @@ export default function CalendarPage() {
   ]);
   const overviewMonthRange = useMemo(() => {
     const currentMonthStart = startOfMonth(new Date(`${todayDateKey}T00:00:00`));
+    const prevMonthStart = startOfMonth(subMonths(currentMonthStart, 1));
+    const nextMonthEnd = endOfMonth(addMonths(currentMonthStart, 1));
     return {
-      start: currentMonthStart,
-      end: endOfMonth(currentMonthStart),
+      start: prevMonthStart,
+      end: nextMonthEnd,
     };
   }, [todayDateKey]);
   const overviewItems = useMemo(() => {
@@ -904,6 +899,9 @@ export default function CalendarPage() {
     const todayDate = new Date(`${todayDateKey}T00:00:00`);
     return (todayDate.getDay() - normalizedWeekStart + 7) % 7;
   }, [normalizedWeekStart, todayDateKey]);
+  const todayChipLabel = useMemo(() => {
+    return formatDateOnly(todayDateKey).replace(/,\s\d{4}$/, "");
+  }, [todayDateKey]);
   const scrollTodayTileIntoView = useCallback(() => {
     const todayTile = calendarGridRef.current?.querySelector('[data-is-today="true"]');
     if (!todayTile) {
@@ -962,26 +960,6 @@ export default function CalendarPage() {
     }
     return byDate;
   }, [filteredBlogs, filteredSocialPosts]);
-  const weeklySummary = useMemo(() => {
-    let blogCount = 0;
-    let socialCount = 0;
-    let busyDays = 0;
-    for (const day of eachDayOfInterval(currentWeekRange)) {
-      const key = format(day, "yyyy-MM-dd");
-      const items = calendarItemsByDate[key] ?? [];
-      if (items.length > 1) {
-        busyDays += 1;
-      }
-      for (const item of items) {
-        if (item.type === "blog") {
-          blogCount += 1;
-        } else {
-          socialCount += 1;
-        }
-      }
-    }
-    return { blogCount, socialCount, busyDays };
-  }, [calendarItemsByDate, currentWeekRange]);
   const daysWithItems = useMemo(() => {
     return Object.keys(calendarItemsByDate).sort();
   }, [calendarItemsByDate]);
@@ -1476,7 +1454,7 @@ export default function CalendarPage() {
         writerFilter !== "all"
           ? {
               id: "writer",
-              label: `Writer: ${
+              label: `Assigned to: ${
                 writerOptions.find(([id]) => id === writerFilter)?.[1] ?? writerFilter
               }`,
               onRemove: () => {
@@ -1507,141 +1485,137 @@ export default function CalendarPage() {
         <div className={DATA_PAGE_STACK_CLASS}>
           <DataPageHeader
             title="Calendar"
-            description={`${timezone} timezone • week starts on ${
-              ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][normalizedWeekStart]
-            }`}
+            primaryAction={
+              <button
+                type="button"
+                onClick={handleExportICS}
+                disabled={exportItems.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                title="Export calendar to iCalendar format for Outlook, Apple Calendar, or Google Calendar"
+              >
+                <AppIcon
+                  name="download"
+                  boxClassName="h-4 w-4"
+                  size={14}
+                  className="text-slate-600"
+                />
+                <span>Export to Calendar</span>
+              </button>
+            }
           />
-          <DataPageToolbar
-            showSearch={false}
-            searchValue=""
-            onSearchChange={() => {}}
-            searchPlaceholder=""
-            actions={
-              <div className="ml-auto flex flex-wrap items-center gap-2">
+          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+            <CalendarControlBar
+              periodLabel={
+                mode === "month"
+                  ? format(cursorDate, "MMMM yyyy")
+                  : `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`
+              }
+              mode={mode}
+              monthInputValue={format(cursorDate, "yyyy-MM")}
+              todayChipLabel={todayChipLabel}
+              showPeriodLabel={false}
+              className="sticky top-2 z-20 border-0 bg-transparent p-0 shadow-none backdrop-blur supports-[backdrop-filter]:bg-slate-50/80"
+              onPrev={() => {
+                setCursorDate((prev) => (mode === "month" ? subMonths(prev, 1) : subWeeks(prev, 1)));
+              }}
+              onToday={() => {
+                const todayDate = new Date(`${todayDateKey}T00:00:00`);
+                setCursorDate(todayDate);
+                setFocusedDateKey(todayDateKey);
+                if (typeof window !== "undefined") {
+                  window.requestAnimationFrame(() => {
+                    scrollTodayTileIntoView();
+                  });
+                }
+              }}
+              onNext={() => {
+                setCursorDate((prev) => (mode === "month" ? addMonths(prev, 1) : addWeeks(prev, 1)));
+              }}
+              onMonthInputChange={(nextValue) => {
+                if (!nextValue) {
+                  return;
+                }
+                const nextDate = new Date(`${nextValue}-01T00:00:00`);
+                if (!Number.isNaN(nextDate.getTime())) {
+                  setCursorDate(nextDate);
+                }
+              }}
+              onModeChange={setMode}
+            />
+            <div className="flex flex-wrap items-center gap-3 rounded-md bg-white/85 p-2">
+              <label className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                <span className="font-medium">View</span>
+                <select
+                  value={viewScope}
+                  onChange={(event) => {
+                    setViewScope(event.target.value as CalendarViewScope);
+                  }}
+                  className="focus-field rounded border-none bg-transparent p-0 text-sm focus:outline-none"
+                >
+                  <option value="mine">My tasks</option>
+                  <option value="all">All tasks</option>
+                </select>
+              </label>
+              <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
                 <button
                   type="button"
-                  onClick={handleExportICS}
-                  disabled={exportItems.length === 0}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
-                  title="Export calendar to iCalendar format for Outlook, Apple Calendar, or Google Calendar"
+                  className={segmentedControlItemClass({ isActive: hasBlogsEnabled })}
+                  onClick={() => {
+                    setContentFilters((previous) =>
+                      previous.includes("blogs")
+                        ? previous.filter((item) => item !== "blogs")
+                        : [...previous, "blogs"]
+                    );
+                  }}
                 >
-                  <AppIcon
-                    name="download"
-                    boxClassName="h-4 w-4"
-                    size={14}
-                    className="text-slate-600"
-                  />
-                  <span>Export to Calendar</span>
+                  <span className="inline-flex items-center gap-1">
+                    {hasBlogsEnabled ? (
+                      <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                    ) : null}
+                    Blogs
+                  </span>
                 </button>
-                <label className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700">
-                  <span className="font-medium">View</span>
-                  <select
-                    value={viewScope}
-                    onChange={(event) => {
-                      setViewScope(event.target.value as CalendarViewScope);
-                    }}
-                    className="focus-field rounded border-none bg-transparent p-0 text-sm focus:outline-none"
-                  >
-                    <option value="mine">My tasks</option>
-                    <option value="all">All tasks</option>
-                  </select>
-                </label>
-                <div className={`${SEGMENTED_CONTROL_CLASS} text-sm`}>
-                  <button
-                    type="button"
-                    className={segmentedControlItemClass({ isActive: hasBlogsEnabled })}
-                    onClick={() => {
-                      setContentFilters((previous) =>
-                        previous.includes("blogs")
-                          ? previous.filter((item) => item !== "blogs")
-                          : [...previous, "blogs"]
-                      );
-                    }}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {hasBlogsEnabled ? (
-                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                      ) : null}
-                      Blogs
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className={segmentedControlItemClass({
-                      isActive: hasSocialPostsEnabled,
-                    })}
-                    onClick={() => {
-                      setContentFilters((previous) =>
-                        previous.includes("social_posts")
-                          ? previous.filter((item) => item !== "social_posts")
-                          : [...previous, "social_posts"]
-                      );
-                    }}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {hasSocialPostsEnabled ? (
-                        <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
-                      ) : null}
-                      Social Posts
-                    </span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className={segmentedControlItemClass({
+                    isActive: hasSocialPostsEnabled,
+                  })}
+                  onClick={() => {
+                    setContentFilters((previous) =>
+                      previous.includes("social_posts")
+                        ? previous.filter((item) => item !== "social_posts")
+                        : [...previous, "social_posts"]
+                    );
+                  }}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {hasSocialPostsEnabled ? (
+                      <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                    ) : null}
+                    Social Posts
+                  </span>
+                </button>
               </div>
-            }
-            filters={
-              <select
-                aria-label="Writer"
-                value={writerFilter}
-                onChange={(event) => {
-                  setWriterFilter(event.target.value);
-                }}
-                className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-              >
-                <option value="all">Writers</option>
-                {writerOptions.map(([writerId, writerName]) => (
-                  <option key={writerId} value={writerId}>
-                    {writerName}
-                  </option>
-                ))}
-              </select>
-            }
-          />
-          <DataPageFilterPills pills={activeFilterPills} />
-          <CalendarControlBar
-            periodLabel={
-              mode === "month"
-                ? format(cursorDate, "MMMM yyyy")
-                : `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`
-            }
-            mode={mode}
-            monthInputValue={format(cursorDate, "yyyy-MM")}
-            onPrev={() => {
-              setCursorDate((prev) => (mode === "month" ? subMonths(prev, 1) : subWeeks(prev, 1)));
-            }}
-            onToday={() => {
-              const todayDate = new Date(`${todayDateKey}T00:00:00`);
-              setCursorDate(todayDate);
-              setFocusedDateKey(todayDateKey);
-              if (typeof window !== "undefined") {
-                window.requestAnimationFrame(() => {
-                  scrollTodayTileIntoView();
-                });
-              }
-            }}
-            onNext={() => {
-              setCursorDate((prev) => (mode === "month" ? addMonths(prev, 1) : addWeeks(prev, 1)));
-            }}
-            onMonthInputChange={(nextValue) => {
-              if (!nextValue) {
-                return;
-              }
-              const nextDate = new Date(`${nextValue}-01T00:00:00`);
-              if (!Number.isNaN(nextDate.getTime())) {
-                setCursorDate(nextDate);
-              }
-            }}
-            onModeChange={setMode}
-          />
+              <label className="flex min-w-[15rem] flex-1 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                <span className="font-medium">Assigned to</span>
+                <select
+                  aria-label="Assigned to"
+                  value={writerFilter}
+                  onChange={(event) => {
+                    setWriterFilter(event.target.value);
+                  }}
+                  className="focus-field min-w-0 flex-1 rounded border-none bg-transparent p-0 text-sm focus:outline-none"
+                >
+                  <option value="all">All assignees</option>
+                  {writerOptions.map(([writerId, writerName]) => (
+                    <option key={writerId} value={writerId}>
+                      {writerName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
 
           {isLoading ? (
             <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
@@ -1709,27 +1683,11 @@ export default function CalendarPage() {
                 <p className="sr-only" role="status" aria-live="polite">
                   {liveLegendSummary}
                 </p>
-                <div className="rounded-xl border border-slate-200/90 bg-gradient-to-r from-white via-white to-indigo-50/35 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">This Week</h3>
-                      <div className="mt-2 flex flex-wrap items-center gap-5 text-sm text-slate-700">
-                        <div>
-                          <span className="font-semibold tabular-nums">{weeklySummary.blogCount}</span>{" "}
-                          <span className="text-slate-500">Blog{weeklySummary.blogCount !== 1 ? "s" : ""}</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold tabular-nums">{weeklySummary.socialCount}</span>{" "}
-                          <span className="text-slate-500">Social{weeklySummary.socialCount !== 1 ? "s" : ""}</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold tabular-nums">{weeklySummary.busyDays}</span>{" "}
-                          <span className="text-slate-500">Busy Day{weeklySummary.busyDays !== 1 ? "s" : ""}</span>
-                        </div>
-                      </div>
-                    </div>
+                {activeFilterPills.length > 0 ? (
+                  <div className="px-1">
+                    <DataPageFilterPills pills={activeFilterPills} />
                   </div>
-                </div>
+                ) : null}
                 <CalendarWeekdayHeaderRow
                   labels={weekdayLabels}
                   todayColumnIndex={todayWeekdayColumnIndex}
@@ -1772,6 +1730,12 @@ export default function CalendarPage() {
                           const isToday = key === todayDateKey;
                           const isCurrentMonth = day.getMonth() === cursorDate.getMonth();
                           const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                          const isCurrentWeekBand =
+                            mode === "month" &&
+                            isWithinInterval(day, {
+                              start: currentWeekRange.start,
+                              end: currentWeekRange.end,
+                            });
                           const isMorePopoverOpen = expandedMoreDateKey === key;
 
                           return (
@@ -1788,6 +1752,8 @@ export default function CalendarPage() {
                                 hasEvents={false}
                                 isFocused={focusedDateKey === key}
                                 className={`${compact ? "" : "min-h-[18rem]"}${
+                                  isCurrentWeekBand && !isToday ? " bg-indigo-50/30" : ""
+                                }${
                                   isWeekend && !isToday ? " bg-slate-50/70" : ""
                                 }`}
                                 headerClassName={isWeekend && !isToday ? "bg-slate-100/60" : undefined}
@@ -1795,11 +1761,6 @@ export default function CalendarPage() {
                                 bodyScrollable={!compact}
                                 headerAction={
                                   <div className="flex items-center gap-1.5">
-                                    {items.length > 0 ? (
-                                      <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
-                                        {items.length}
-                                      </span>
-                                    ) : null}
                                     <button
                                       type="button"
                                       className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
@@ -1988,25 +1949,6 @@ export default function CalendarPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-600">
-                    <span className="font-semibold uppercase tracking-wide text-slate-500">Legend</span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-blue-500" aria-hidden />
-                      SH Blog
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-purple-500" aria-hidden />
-                      RED Blog
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full border-2 border-blue-500 bg-white" aria-hidden />
-                      SH Social Post
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full border-2 border-purple-500 bg-white" aria-hidden />
-                      RED Social Post
-                    </span>
-                  </div>
                   <div className="rounded-md border border-slate-200/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
                     <table className="w-full table-fixed">
                       <colgroup>
@@ -2194,16 +2136,9 @@ export default function CalendarPage() {
                           )}
                         </>
                       ) : (
-                        <>
-                          <div className="flex w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left">
-                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Unscheduled Blogs (0)
-                            </span>
-                          </div>
-                          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
-                            No unscheduled blogs.
-                          </p>
-                        </>
+                        <p className="px-1 py-1 text-sm text-slate-500">
+                          No unscheduled blogs.
+                        </p>
                       )}
                     </div>
                   ) : null}
@@ -2263,16 +2198,9 @@ export default function CalendarPage() {
                           )}
                         </>
                       ) : (
-                        <>
-                          <div className="flex w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left">
-                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Unscheduled Social Posts (0)
-                            </span>
-                          </div>
-                          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
-                            No unscheduled social posts.
-                          </p>
-                        </>
+                        <p className="px-1 py-1 text-sm text-slate-500">
+                          No unscheduled social posts.
+                        </p>
                       )}
                     </div>
                   ) : null}

@@ -92,12 +92,22 @@ What “explicit updates” means:
 | [Calendar](/calendar) | Scheduled workload by date | Planning and sequencing |
 | Notifications | Assignment and stage updates | Respond to change quickly |
 
-Calendar month overview behavior:
-- `Overview` now shows only items scheduled in the active month.
+Calendar overview behavior:
+- `Overview` includes scheduled items from previous month, current month, and next month.
 - Status pills use one normalized language/color system for mixed blog/social rows (`In Progress`, `In Review`, `Ready`, `Awaiting Live Link`, `Published`, `Changes Requested`).
-- Marker legend is shown above the table (filled markers for blogs, outlined markers for social posts; blue = SH, purple = RED).
 - Overview row titles are single-line truncated with full-title tooltip on hover.
 - Unscheduled cards with zero items no longer show expand chevrons and display passive empty-state copy (`No unscheduled blogs`, `No unscheduled social posts`).
+- Top calendar controls follow one hierarchy:
+  - sticky primary nav row: `← Prev`, `Today`, `Next →`, month picker popover, and `Month/Week`
+  - secondary compact control row: `View`, content toggles, `Assigned to`
+- `Today · <date>` chip appears near the month picker for fast temporal orientation.
+- The `This Week` summary card is intentionally removed to reduce visual density.
+- Day headers no longer show item count badges (reduced clutter), and month view applies a subtle current-week background band.
+- The top header no longer repeats timezone/week-start text, and top controls use neutral labels (no role-heavy wording).
+- Active filter pills are hidden completely when there are no active filters (no reserved blank row).
+- Top controls use a single outer container with lighter inner separation (reduced border noise).
+- Calendar event cards now show one metadata line by default; secondary details remain in hover tooltips.
+- Unscheduled zero-count states are muted single-line messages without extra box chrome.
 
 Home page consistency rule:
 - The top standup cards and `My Tasks Snapshot` use the same assignment/action-state model.

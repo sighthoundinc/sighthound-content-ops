@@ -50,8 +50,16 @@ Social posts must include at least one valid public live link before they can mo
   - list bulk delete runs selected requests concurrently and returns one aggregated deleted/skipped/failed summary
 - `Ideas`: intake and conversion to blogs/social posts
 - `Calendar`: schedule planning and conflict visibility
-  - month overview table is current-month only with normalized status pills across blog/social rows
-  - month overview shows marker legend for SH/RED + Blog/Social marker style parity with calendar tiles
+  - top controls follow one hierarchy: sticky grouped `Prev/Today/Next` + month picker popover + `Month/Week`, then a compact secondary strip
+  - a compact `Today · <date>` chip appears next to month selection for orientation
+  - secondary strip uses neutral labels (`View`, content toggles, `Assigned to`) and avoids role-heavy wording
+  - top controls use one outer container with lighter internal separation (lower border density)
+  - active filter-pill row only renders when filters are active (no empty placeholder row)
+  - `This Week` summary metrics card is removed and day header count badges are hidden to reduce visual clutter
+  - month mode includes a subtle current-week background band for orientation
+  - event cards use one metadata line by default (extra context in tooltip)
+  - unscheduled empty states use quiet one-line muted messages
+  - overview table includes previous/current/next-month scheduled items with normalized status pills across blog/social rows
   - unscheduled cards with zero count are passive (no expand chevron)
 - `Settings`: profile, timezone, notifications, connected services
 

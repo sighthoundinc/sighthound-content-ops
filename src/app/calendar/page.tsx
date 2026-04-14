@@ -1926,20 +1926,20 @@ export default function CalendarPage() {
                                   setActiveSocialPostId(null);
                                 }}
                               >
-                                <td className="px-3 py-2 text-sm font-medium text-slate-700">{formattedDate}</td>
-                                <td className="px-2 py-2 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
-                                <td className="px-3 py-2">
+                                <td className="px-3 py-2.5 text-sm font-medium text-slate-700">{formattedDate}</td>
+                                <td className="px-2 py-2.5 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
+                                <td className="px-3 py-2.5">
                                   <div className="flex items-center gap-1.5 text-xs">
                                     <span className={`h-2 w-2 shrink-0 rounded-full ${getBlogBarClass(item.blog.site)}`} />
                                     <span className="font-medium text-slate-700">{getSiteShortLabel(item.blog.site)} Blog</span>
                                   </div>
                                 </td>
-                                <td className="px-3 py-2 min-w-0 flex-1">
+                                <td className="px-3 py-2.5 min-w-0 flex-1">
                                   <p className="text-sm text-slate-800 truncate" title={item.blog.title}>
                                     {item.blog.title}
                                   </p>
                                 </td>
-                                <td className="px-3 py-2">
+                                <td className="px-3 py-2.5">
                                   <WorkflowStageBadge stage={stage} />
                                 </td>
                               </tr>
@@ -1955,22 +1955,22 @@ export default function CalendarPage() {
                                   setActiveBlogId(null);
                                 }}
                               >
-                                <td className="px-3 py-2 text-sm font-medium text-slate-700">{formattedDate}</td>
-                                <td className="px-2 py-2 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
-                                <td className="px-3 py-2">
+                                <td className="px-3 py-2.5 text-sm font-medium text-slate-700">{formattedDate}</td>
+                                <td className="px-2 py-2.5 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
+                                <td className="px-3 py-2.5">
                                   <div className="flex items-center gap-1.5 text-xs">
-                                    <span className={`h-2 w-2 shrink-0 rounded-full border border-slate-200 ${getSocialBulletClass(socialSite)}`} />
+                                    <span className={`h-2 w-2 shrink-0 rounded-full ${getSocialBulletClass(socialSite)}`} />
                                     <span className="font-medium text-slate-700">{getSiteShortLabel(socialSite)} Social</span>
                                   </div>
                                 </td>
-                                <td className="px-3 py-2 min-w-0 flex-1">
+                                <td className="px-3 py-2.5 min-w-0 flex-1">
                                   <p className="text-sm text-slate-800 truncate" title={`${SOCIAL_POST_TYPE_LABELS[item.social.type]}: ${item.social.title}`}>
                                     <span className="text-slate-500 font-medium">{SOCIAL_POST_TYPE_LABELS[item.social.type]}:</span>{" "}
                                     {item.social.title}
                                   </p>
                                 </td>
-                                <td className="px-3 py-2">
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                <td className="px-3 py-2.5">
+                                  <span className="inline-flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
                                     {SOCIAL_POST_STATUS_LABELS[item.social.status]}
                                   </span>
                                 </td>

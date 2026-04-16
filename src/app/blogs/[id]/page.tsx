@@ -12,7 +12,6 @@ import { MarkdownComment } from "@/components/markdown-comment";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import { validateAuthor } from "@/lib/shape-validation";
-import { AppIcon } from "@/lib/icons";
 import {
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   isMissingBlogCommentsTableError,

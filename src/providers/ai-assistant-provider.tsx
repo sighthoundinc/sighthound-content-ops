@@ -1,7 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { useAIContext } from '@/hooks/use-ai-context';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 export interface AIResponse {
   currentState: string;
@@ -41,7 +40,6 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<AIResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const context = useAIContext();
 
   const togglePanel = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -75,12 +73,6 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt,
-            context: {
-              entityType: context.entityType,
-              entityId: context.entityId,
-              userId: context.userId,
-              userRole: context.userRole,
-            },
           }),
         });
 
@@ -98,7 +90,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         setIsLoading(false);
       }
     },
-    [context]
+    []
   );
 
   // Clear response on navigation

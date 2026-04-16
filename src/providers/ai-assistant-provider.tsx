@@ -132,8 +132,10 @@ interface AIAssistantContextType {
   isLoading: boolean;
   response: AIResponse | null;
   error: string | null;
+  lastPrompt: string | null;
   togglePanel: () => void;
   askAI: (prompt?: string) => Promise<void>;
+  retryLast: () => Promise<void>;
   closePanel: () => void;
   reset: () => void;
 }
@@ -145,6 +147,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<AIResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastPrompt, setLastPrompt] = useState<string | null>(null);
   const pathname = usePathname();
   const params = useParams();
   const { user, profile } = useAuth();
@@ -199,6 +202,8 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         return;
       }
 
+      const effectivePrompt = prompt || 'What should I do next?';
+      setLastPrompt(effectivePrompt);
       setIsLoading(true);
       setError(null);
       try {
@@ -228,7 +233,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
             entityId,
             userId: user.id,
             userRole,
-            prompt: prompt || 'What should I do next?',
+            prompt: effectivePrompt,
           }),
         });
 
@@ -268,6 +273,10 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  const retryLast = useCallback(async () => {
+    await askAI(lastPrompt ?? undefined);
+  }, [askAI, lastPrompt]);
+
   return (
     <AIAssistantContext.Provider
       value={{
@@ -275,8 +284,10 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         isLoading,
         response,
         error,
+        lastPrompt,
         togglePanel,
         askAI,
+        retryLast,
         closePanel,
         reset,
       }}

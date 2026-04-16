@@ -1109,6 +1109,7 @@ When blog import rows are missing selected values, apply deterministic fallbacks
 5. Deterministic prompt routing must always remain available as fallback so guidance works without external AI dependencies:
    - Gemini failures/timeouts/unavailability must degrade safely to deterministic output
    - Deterministic blocker and gate analysis remains authoritative regardless of response source
+   - Optional flag `ASK_AI_REQUIRE_GEMINI=true` (dev/staging only) disables the fallback and returns `503` when Gemini is unavailable; do not enable this in production.
 6. Prompt-aware responses must include:
    - `questionIntent`
    - `answer`

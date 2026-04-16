@@ -7,7 +7,8 @@ import { AIQuickPrompts } from './ai-quick-prompts';
 import { AppIcon } from '@/lib/icons';
 
 export function AIChatPanel() {
-  const { isOpen, closePanel, response, isLoading, error } = useAIAssistant();
+  const { isOpen, closePanel, response, isLoading, error, retryLast, lastPrompt } =
+    useAIAssistant();
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -62,16 +63,26 @@ export function AIChatPanel() {
               <p className="text-sm text-slate-600">Analyzing...</p>
             </div>
           ) : error ? (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
-              <button
-                onClick={closePanel}
-                className="px-4 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 text-sm font-medium"
-              >
-                Try Again
-              </button>
+              <div className="flex items-center gap-2">
+                {lastPrompt && (
+                  <button
+                    onClick={() => retryLast()}
+                    className="px-3 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 text-sm font-medium"
+                  >
+                    Retry
+                  </button>
+                )}
+                <button
+                  onClick={closePanel}
+                  className="px-3 py-2 border border-slate-300 text-slate-700 rounded hover:bg-slate-50 text-sm font-medium"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           ) : response ? (
             <AIMessage response={response} />

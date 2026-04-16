@@ -454,6 +454,16 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       if (typeof geminiGuidance.confidence === "number") {
         confidence = geminiGuidance.confidence;
       }
+    } else if (process.env.ASK_AI_REQUIRE_GEMINI === "true") {
+      // Gemini-only mode: do not fall back to deterministic routing.
+      console.warn("[AI Assistant] Gemini unavailable and ASK_AI_REQUIRE_GEMINI=true; returning 503");
+      return NextResponse.json(
+        createErrorResponse(
+          "INTERNAL_ERROR",
+          "Ask AI is temporarily unavailable. Please try again shortly."
+        ),
+        { status: 503 }
+      );
     } else {
       const routedPrompt = routePrompt({
         prompt: normalizedPrompt,

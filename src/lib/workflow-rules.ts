@@ -17,24 +17,31 @@ export interface WorkflowDefinition {
 /**
  * Blog Workflow Definition
  *
- * Stages: draft -> writer_review -> publisher_review -> completed
+ * Uses the unified workflow stages derived from writer_status + publisher_status
+ * (see `src/lib/status.ts#getWorkflowStage`):
+ *   writing -> ready -> publishing -> published
+ *
+ * `writing`   : writer_status has not yet reached "completed"
+ * `ready`     : writer_status = "completed" and publisher_status = "not_started"
+ * `publishing`: publisher_status in (in_progress | pending_review | publisher_approved)
+ * `published` : publisher_status = "completed" (terminal)
  */
 export const BLOG_WORKFLOW: WorkflowDefinition = {
   entityType: "blog",
-  stages: ["draft", "writer_review", "publisher_review", "completed"],
+  stages: ["writing", "ready", "publishing", "published"],
   transitions: {
-    draft: ["writer_review"],
-    writer_review: ["publisher_review"],
-    publisher_review: ["completed"],
-    completed: []
+    writing: ["ready"],
+    ready: ["publishing"],
+    publishing: ["published"],
+    published: []
   },
   requiredFieldsByStage: {
-    draft: ["title", "writer_id"],
-    writer_review: ["title", "draft_doc_link", "writer_id"],
-    publisher_review: ["title", "draft_doc_link", "writer_id", "publisher_id"],
-    completed: ["title", "draft_doc_link", "writer_id", "publisher_id"]
+    writing: ["title", "writer_id"],
+    ready: ["title", "writer_id", "draft_doc_link"],
+    publishing: ["title", "writer_id", "draft_doc_link", "publisher_id"],
+    published: ["title", "writer_id", "draft_doc_link", "publisher_id"]
   },
-  description: "Blog publishing workflow: Draft -> Writer Review -> Publisher Review -> Completed"
+  description: "Blog workflow: Writing -> Ready -> Publishing -> Published"
 };
 
 /**
@@ -146,10 +153,10 @@ export function getRequiredRoleForStatus(
 ): string {
   // Map statuses to required roles
   const roleMap: Record<string, string> = {
-    // Blog roles
-    draft: "writer",
-    writer_review: "editor",
-    publisher_review: "publisher",
+    // Blog roles (unified stages)
+    writing: "writer",
+    ready: "editor",
+    publishing: "publisher",
 
     // Social post roles
     in_review: "editor",
@@ -174,11 +181,10 @@ export function getStatusDescription(
   status: string
 ): string {
   const descriptions: Record<string, string> = {
-    // Blog
-    draft: "In draft, ready for writer review",
-    writer_review: "Awaiting editor review",
-    publisher_review: "Awaiting publisher review",
-    completed: "Published and complete",
+    // Blog (unified stages)
+    writing: "Writer is still working on the draft",
+    ready: "Writing is approved and ready for publishing",
+    publishing: "Publisher is finalizing the post",
 
     // Social post
     in_review: "Awaiting editor review",
@@ -186,7 +192,7 @@ export function getStatusDescription(
     creative_approved: "Creative approved, ready for scheduling",
     ready_to_publish: "Scheduled and ready to post",
     awaiting_live_link: "Posted, awaiting live link submission",
-    published: "Published with live link",
+    published: "Published",
 
     // Idea
     idea: "Idea in triage"

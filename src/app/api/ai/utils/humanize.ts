@@ -6,16 +6,20 @@
  */
 
 const STATUS_LABELS: Record<string, string> = {
+  // Unified blog stages (see src/lib/status.ts#getWorkflowStage)
+  writing: "Writing",
+  ready: "Ready for Publishing",
+  publishing: "Publishing",
+  // Social post stages
   draft: "Draft",
-  writer_review: "Writer Review",
-  publisher_review: "Publisher Review",
-  completed: "Completed",
   in_review: "In Review",
   changes_requested: "Changes Requested",
   creative_approved: "Creative Approved",
   ready_to_publish: "Ready to Publish",
   awaiting_live_link: "Awaiting Live Link",
   published: "Published",
+  // Shared / fallback values
+  completed: "Completed",
   not_started: "Not Started",
   idea: "Idea",
 };

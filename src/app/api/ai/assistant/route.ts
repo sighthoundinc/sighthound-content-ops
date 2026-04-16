@@ -56,6 +56,8 @@ import { getGeminiGuidance } from "@/app/api/ai/utils/gemini-client";
 import { normalizePrompt, routePrompt } from "@/app/api/ai/utils/prompt-router";
 import type { AskAIIntent } from "@/app/api/ai/types";
 import { isMissingSocialOwnershipColumnsError } from "@/lib/social-post-schema";
+import { getWorkflowStage } from "@/lib/status";
+import type { PublisherStageStatus, WriterStageStatus } from "@/lib/types";
 
 /**
  * Entity state interface for DB mapping
@@ -141,10 +143,14 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
       throw new EntityStateError("not_found", "Blog not found");
     }
 
-    // Map DB fields to DetectorInput format
-    // Use writer_status as primary status indicator
+    // Derive unified lifecycle stage from writer_status + publisher_status
+    // to keep Ask AI aligned with the app's actual blog workflow model.
+    const writerStatus = (data.writer_status || "not_started") as WriterStageStatus;
+    const publisherStatus = (data.publisher_status || "not_started") as PublisherStageStatus;
+    const stage = getWorkflowStage({ writerStatus, publisherStatus });
+
     return {
-      status: data.writer_status || "not_started",
+      status: stage,
       fields: {
         title: !!data.title,
         writer_id: !!data.writer_id,

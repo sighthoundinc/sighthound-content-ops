@@ -117,6 +117,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
             entityId,
             userId: user.id,
             userRole,
+            prompt: prompt || 'What should I do next?',
           }),
         });
 

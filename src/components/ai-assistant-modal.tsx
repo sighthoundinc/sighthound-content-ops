@@ -8,7 +8,6 @@ import {
   isApiFailure,
   parseApiResponseJson,
 } from "@/lib/api-response";
-import type { BlogRecord, SocialPostStatus } from "@/lib/types";
 
 export type BlockerSeverity = "critical" | "warning" | "info";
 

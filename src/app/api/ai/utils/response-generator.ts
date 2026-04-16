@@ -19,7 +19,6 @@ export interface ResponseGeneratorInput {
   context: ExtractedContext;
   blockers: Blocker[];
   qualityIssues: QualityIssue[];
-  qualityScore: number;
 }
 
 export interface DeterministicResult {
@@ -42,7 +41,7 @@ export interface DeterministicResult {
  * Returns structured deterministic output ready for formatting or display.
  */
 export function generateResponse(input: ResponseGeneratorInput): DeterministicResult {
-  const { context, blockers, qualityIssues, qualityScore } = input;
+  const { context, blockers, qualityIssues } = input;
 
   // Generate next steps based on current state
   const nextSteps = generateNextSteps(context, blockers);

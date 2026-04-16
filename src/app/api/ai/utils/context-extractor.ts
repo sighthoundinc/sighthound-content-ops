@@ -12,7 +12,7 @@
  * - User permissions and ownership
  */
 
-import { getWorkflowDefinition } from "@/lib/workflow-rules";
+import { getWorkflowDefinition, type WorkflowDefinition } from "@/lib/workflow-rules";
 
 export interface ContextInput {
   entityType: "blog" | "social_post" | "idea";
@@ -31,7 +31,7 @@ export interface ExtractedContext {
   userIsReviewer: boolean;
   fields: Record<string, boolean>; // field name -> is present
   nextAllowedStages: string[];
-  workflowDefinition: any;
+  workflowDefinition: WorkflowDefinition;
   extractedAt: string;
 }
 

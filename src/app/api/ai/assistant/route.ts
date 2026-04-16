@@ -226,8 +226,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
     const result = generateResponse({
       context,
       blockers: blockerResult.blockers,
-      qualityIssues: qualityResult.issues,
-      qualityScore: qualityResult.qualityScore
+      qualityIssues: qualityResult.issues
     });
 
     // Convert to API response

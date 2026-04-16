@@ -31,6 +31,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { 
   AskAIRequest, 
   AskAIResponse, 
@@ -59,11 +60,29 @@ interface EntityState {
  * Get entity state from Supabase with RLS enforcement
  * RLS ensures user can only access content they own or are assigned to
  */
-async function getEntityState(entityType: string, entityId: string, userId: string): Promise<EntityState> {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  );
+async function getEntityState(entityType: string, entityId: string, userId: string, authToken?: string): Promise<EntityState> {
+  let supabase;
+  
+  // Use authenticated client if token provided, otherwise use service role
+  if (authToken) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        }
+      }
+    );
+  } else {
+    // Fall back to service role for server-side operations
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    );
+  }
 
   if (entityType === "blog") {
     // Query blogs table with RLS
@@ -148,11 +167,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
     }
 
     const request = body as AskAIRequest;
+    
+    // Extract auth token from request headers for RLS
+    const authHeader = req.headers.get('authorization');
+    const authToken = authHeader?.replace('Bearer ', '');
 
     // Get entity state from Supabase with RLS enforcement
     let entityState: EntityState;
     try {
-      entityState = await getEntityState(request.entityType, request.entityId, request.userId);
+      entityState = await getEntityState(request.entityType, request.entityId, request.userId, authToken);
     } catch (dbError) {
       const dbErrorMsg = (dbError as Error).message;
       // Check if it's an RLS denial or not found

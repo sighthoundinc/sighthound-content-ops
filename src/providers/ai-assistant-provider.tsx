@@ -109,9 +109,16 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
           return;
         }
 
+        // Get the user's session to send auth token
+        const { data: { session } } = await (await import('@/lib/supabase/browser')).getSupabaseBrowserClient().auth.getSession();
+        const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+
         const response = await fetch('/api/ai/assistant', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...authHeader
+          },
           body: JSON.stringify({
             entityType,
             entityId,

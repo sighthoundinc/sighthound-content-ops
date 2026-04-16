@@ -173,7 +173,7 @@ Shared detail-page usability helpers:
   - current stage context,
   - blockers and missing gates,
   - recommended next steps.
-- Responses use Gemini interpretation when configured; otherwise the app falls back to deterministic workflow logic.
+- Responses attempt Gemini interpretation first when configured; otherwise (or on Gemini failure) the app falls back to deterministic workflow logic.
 
 ## 7) Transition gates reference
 - Never transition without required target-stage fields.

@@ -295,7 +295,7 @@ For each scenario, collect user feedback on:
 **Actual result**: [what did happen]  
 **Severity**: [critical/high/medium/low]  
 **Screenshot**: [if applicable]  
-**Blocker**: [yes/no - does this block Step 3?]
+**Blocker**: [yes/no - does this block runtime hardening?]
 
 ---
 
@@ -323,7 +323,7 @@ For each scenario, collect user feedback on:
 | Phase 2: Stakeholder Testing | 1 week | Week of 4/16-4/22 | User feedback report |
 | Phase 3: Edge Case Discovery | 1 week | Week of 4/23-4/29 | Edge case documentation |
 | **Analysis & Fixes** | 3-5 days | Week of 4/23-4/29 | Updated feature, resolved issues |
-| **Step 3 Kickoff** | After validation | 4/30+ | Gemini formatter layer |
+| **Runtime Hardening Kickoff** | After validation | 4/30+ | Gemini-first quality tuning + fallback reliability |
 
 ---
 
@@ -333,14 +333,14 @@ For each scenario, collect user feedback on:
 1. ✅ Mark "AI Assistant" feature as production-ready
 2. ✅ Create user documentation (HOW_TO_USE_APP.md)
 3. ✅ Update AGENTS.md with any findings
-4. ✅ Proceed to Step 3 (Gemini formatter layer)
+4. ✅ Proceed to runtime hardening (Gemini prompt tuning + deterministic fallback QA)
 
 ### If Issues Found
 1. 🔧 Categorize by severity (critical/high/medium/low)
 2. 🔧 Fix critical/high severity issues (max 2-3 days)
 3. 🔧 Retest affected scenarios
 4. 🔧 Document lessons learned
-5. 🔧 Decide: proceed to Step 3 or do another iteration
+5. 🔧 Decide: proceed to runtime hardening or do another iteration
 
 ---
 
@@ -376,5 +376,5 @@ For each scenario, collect user feedback on:
 5. **Analyze results** (categorize by severity, impact)
 6. **Fix issues** (prioritize critical/high)
 7. **Retest if needed** (validate fixes)
-8. **Proceed to Step 3** (Gemini formatter layer)
+8. **Proceed to runtime hardening** (Gemini prompt tuning + fallback checks)
 

@@ -186,8 +186,8 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
   - optional `prompt` (natural-language question, max 500 chars)
 - Deterministic context extraction + blocker detection remain authoritative.
 - Prompt interpretation path:
-  - local deterministic intent routing always runs,
-  - Gemini enrichment is optional and only used when configured/available.
+  - Gemini interpretation is attempted first when configured/available,
+  - local deterministic intent routing is the required fallback path.
 - Response includes deterministic workflow data plus prompt-specific metadata:
   - `questionIntent`
   - `answer`

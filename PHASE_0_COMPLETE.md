@@ -105,9 +105,9 @@ User Request
 ├─ Quality Checking
 └─ Response Generation
     ↓
-[Output with Next Steps + Confidence Score]
-    ↓
-[Optional Gemini Formatter] (Phase 1)
+[Gemini Prompt Interpretation] (primary when configured)
+    ↓ (fallback path on Gemini failure/unavailability)
+[Deterministic Prompt Routing]
     ↓
 User Response
 ```
@@ -191,9 +191,9 @@ Response:
 ## Next Steps (Not Required for Phase 0)
 
 ### Phase 1: Gemini Integration
-- Add optional Gemini formatter
-- Graceful fallback to deterministic output
-- Response phrasing only (no logic changes)
+- Add Gemini-primary prompt interpretation
+- Keep graceful fallback to deterministic output
+- Preserve deterministic blocker/gate logic as authority
 
 ### Phase 2: Database Integration
 - Replace mock DB with Supabase RLS
@@ -224,7 +224,7 @@ The deterministic workflow intelligence system:
 - ✅ Provides production-ready API endpoint
 - ✅ Has zero external API dependencies
 
-No further implementation required for Phase 0. System is ready for immediate deployment as a standalone workflow guidance layer, with optional Gemini enhancement in Phase 1.
+No further implementation required for Phase 0. System is ready for immediate deployment as a standalone workflow guidance layer, with Gemini-primary prompt interpretation and deterministic fallback supported in the post-Phase-0 runtime.
 
 ---
 

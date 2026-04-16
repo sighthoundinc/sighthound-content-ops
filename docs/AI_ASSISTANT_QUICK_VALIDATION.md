@@ -87,6 +87,7 @@
 - [ ] Status reflects actual post status
 - [ ] Blockers are relevant to post
 - [ ] Next steps make sense for social workflow
+- [ ] Response source behavior is correct (Gemini when configured, deterministic fallback on Gemini failure/unavailability)
 - **Result**: ✅ PASS / ❌ FAIL
 
 ---

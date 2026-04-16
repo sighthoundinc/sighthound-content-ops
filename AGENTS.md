@@ -1056,10 +1056,10 @@ When blog import rows are missing selected values, apply deterministic fallbacks
    - no workflow transition side effects
    - no content generation
 3. Deterministic context extraction, blocker detection, and required-field gate logic remain authoritative.
-4. Prompt interpretation must always have a deterministic local path so guidance works without external AI dependencies.
-5. Gemini integration is optional enrichment:
-   - enabled when `GEMINI_API_KEY` is configured
-   - failures/timeouts must degrade safely to deterministic output
+4. Prompt interpretation is Gemini-primary when available (`GEMINI_API_KEY` configured).
+5. Deterministic prompt routing must always remain available as fallback so guidance works without external AI dependencies:
+   - Gemini failures/timeouts/unavailability must degrade safely to deterministic output
+   - Deterministic blocker and gate analysis remains authoritative regardless of response source
 6. Prompt-aware responses must include:
    - `questionIntent`
    - `answer`

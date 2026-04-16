@@ -8,9 +8,9 @@
 
 ## Executive Summary
 
-The AI Assistant feature is complete and production-ready for user testing. The deterministic workflow intelligence system analyzes blog and social post states to detect blockers and guide users toward completion. All components have been implemented, integrated into the UI, and validated with real Supabase data.
+The AI Assistant feature is complete and production-ready for user testing. Deterministic workflow intelligence analyzes blog and social post states to detect blockers and guide users toward completion, while prompt interpretation now runs Gemini-primary with deterministic fallback. All components have been implemented, integrated into the UI, and validated with real Supabase data.
 
-**Key Achievement**: Delivered a complete, testable feature with 99% confidence deterministic engine + full UI integration + comprehensive testing framework in 2 weeks.
+**Key Achievement**: Delivered a complete, testable feature with deterministic workflow authority + Gemini-primary prompt interpretation (deterministic fallback) + full UI integration + comprehensive testing framework.
 
 ---
 
@@ -252,7 +252,7 @@ docs/
 - All testing complete and analyzed
 - Issues categorized by severity
 - Critical/high issues fixed
-- **GO/NO-GO decision for Step 3 (Gemini formatter layer)**
+- **GO/NO-GO decision for runtime hardening (Gemini prompt tuning + fallback reliability)**
 
 ---
 
@@ -265,10 +265,11 @@ docs/
 - ✅ RLS-enforced access control
 - ✅ Blog + Social Post coverage
 - ✅ Error handling
+- ✅ Gemini-first prompt interpretation (`responseSource: gemini` when available)
+- ✅ Deterministic prompt-routing fallback (`responseSource: deterministic` when Gemini fails/unavailable)
 
-### Out of Scope (Step 3+)
-- 🔄 Gemini AI for content-aware analysis
-- 🔄 Formatter layer for message polish
+### Out of Scope (Next Iteration+)
+- 🔄 Additional Gemini prompt-quality tuning
 - 🔄 Multi-turn conversation
 - 🔄 AI-generated content (not implemented)
 - 🔄 Ideas workflow (detected, not yet guided)
@@ -304,7 +305,7 @@ docs/
 # Analyze all feedback
 # Fix critical/high issues
 # Re-test if needed
-# Make go/no-go decision for Step 3
+# Make go/no-go decision for runtime hardening scope
 ```
 
 ---
@@ -352,7 +353,11 @@ Response:
     nextSteps: string[],
     qualityIssues: Array<{ field, message, severity }>,
     canProceed: boolean,
-    confidence: number
+    confidence: number,
+    questionIntent: string,
+    answer: string,
+    responseSource: "gemini" | "deterministic",
+    aiModel?: string
   },
   error?: { code, message },
   generatedAt: string
@@ -410,9 +415,9 @@ Response:
 **Recommended Action**: 
 1. Run quick validation today (15 min)
 2. Schedule Phase 1 internal testing (2 hours)
-3. Target Step 3 kickoff: April 30
+3. Target runtime hardening kickoff: April 30
 
-**Next Phase**: Step 3 (Gemini AI formatter layer) - estimated 3-5 days with existing testing infrastructure
+**Next Phase**: Runtime hardening (Gemini prompt tuning + fallback reliability) - estimated 3-5 days with existing testing infrastructure
 
 ---
 

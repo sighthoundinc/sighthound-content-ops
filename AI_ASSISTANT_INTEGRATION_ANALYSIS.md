@@ -1,5 +1,6 @@
 # AI Assistant Integration Analysis
 **Content Ops Dashboard with Gemini AI**
+**Current runtime note**: `POST /api/ai/assistant` now attempts Gemini prompt interpretation first (when configured) and falls back to deterministic routing if Gemini is unavailable or fails; deterministic blocker/gate analysis remains authoritative.
 
 ## Executive Summary
 

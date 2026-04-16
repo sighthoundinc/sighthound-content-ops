@@ -8,7 +8,9 @@
 
 ## Executive Summary
 
-Phase 0 delivers a **deterministic-first AI workflow assistant** that guides users through content workflows (blogs, social posts, ideas) without generating content or modifying state. The system operates offline-safe with zero external API calls in the deterministic layer, making it suitable for client-side or edge execution.
+Phase 0 delivered the **deterministic core** of the AI workflow assistant that guides users through content workflows (blogs, social posts, ideas) without generating content or modifying state. The deterministic layer operates offline-safe with zero external API calls, making it suitable for client-side or edge execution.
+
+**Current Runtime Note (post-Phase 0)**: Ask AI now uses **Gemini-primary prompt interpretation** when configured, with **deterministic prompt-routing fallback** when Gemini is unavailable or fails. Deterministic blocker/gate analysis remains authoritative.
 
 **Key Metrics**:
 - **1,255+ lines** of production code
@@ -32,7 +34,9 @@ User Request
 ├─ Quality Checking
 └─ Response Generation
     ↓
-[Optional Gemini Formatter] (Formatting only, fails gracefully)
+[Gemini Prompt Interpretation] (primary when configured)
+    ↓ (fallback path on Gemini failure/unavailability)
+[Deterministic Prompt Routing]
     ↓
 User Response
 ```
@@ -141,6 +145,7 @@ idea (single stage, triage point)
 **POST /api/ai/assistant**:
 - Request validation with specific error messages
 - Deterministic processing pipeline
+- Gemini-first prompt interpretation with deterministic fallback
 - Type-safe response handling
 - Error codes: INVALID_INPUT, NOT_FOUND, UNAUTHORIZED, INTERNAL_ERROR
 
@@ -315,14 +320,14 @@ $ npm run typecheck
 ✅ **930+ LOC** test code
 ✅ **API Ready** with contract definition
 ✅ **Offline-Safe** suitable for edge/client execution
-✅ **Graceful Fallback** when optional Gemini unavailable
+✅ **Graceful Fallback** from Gemini prompt interpretation to deterministic routing
 
 ---
 
 ## Known Limitations (Phase 0)
 
 1. Mock DB dependency — Real Supabase integration pending
-2. No Gemini integration — Optional formatter awaiting Phase 1
+2. Gemini behavior was not part of pure Phase 0 scope (added after Phase 0)
 3. No persistence — In-memory only
 4. Test environment — No production database connection
 5. Webhook events — No external notifications yet
@@ -332,9 +337,9 @@ $ npm run typecheck
 ## Next Steps (Post-Phase 0)
 
 ### Phase 1: Gemini Integration
-- Add Gemini formatter layer (optional, not required)
-- Graceful fallback to deterministic output
-- Response phrasing improvement only
+- Add Gemini-primary prompt interpretation
+- Keep graceful fallback to deterministic output
+- Preserve deterministic blocker/gate authority
 
 ### Phase 2: Database Integration
 - Replace mock DB dependency with Supabase
@@ -357,7 +362,7 @@ $ npm run typecheck
 
 **Phase 0 is production-ready for immediate deployment as a deterministic workflow guidance system.** The pure logic layer requires no external services, operates offline-safe, and has been validated across 12 real-world scenarios with 96 comprehensive test cases. All code passes TypeScript strict mode with zero errors.
 
-The system provides a solid foundation for Phase 1 Gemini integration and beyond, with a clean architecture that separates deterministic logic (source of truth) from optional AI formatting.
+The system provides a solid foundation for Gemini integration and beyond, with a clean architecture that keeps deterministic logic as source of truth and AI interpretation as an enhancement layer.
 
 ---
 

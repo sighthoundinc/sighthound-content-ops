@@ -1,8 +1,9 @@
 # Global Floating AI Assistant
 **Upgrade**: Transform modal-based "Ask AI" into a persistent, context-aware floating assistant.
 **Goal**: Premium, always-accessible workflow guidance across the entire app.
+**Current runtime note**: Ask AI uses Gemini-primary prompt interpretation with deterministic fallback; deterministic blocker/gate logic remains authoritative.
 # Current State
-* ✅ Deterministic backend working: `/api/ai/assistant` returns blockers, next steps, quality issues
+* ✅ Gemini-primary backend working: `/api/ai/assistant` returns blockers, next steps, quality issues with deterministic fallback
 * ✅ Modal component exists: `src/components/ai-assistant-modal.tsx`
 * ✅ Blog detail page integrated with button + modal
 * ✅ Social post modal component ready but not integrated
@@ -171,7 +172,7 @@ src/
 * No conversation history or memory
 * No persistent state across sessions
 * No streaming or async updates
-* Backend remains unchanged (deterministic only)
+* Backend workflow authority remains deterministic; Gemini prompt interpretation is primary with deterministic fallback
 * Must work on all primary workspace pages
 # Future Enhancements (Out of Scope)
 * Typing indicators

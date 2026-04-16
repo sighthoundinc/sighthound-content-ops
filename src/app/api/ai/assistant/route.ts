@@ -3,7 +3,7 @@
  *
  * POST /api/ai/assistant
  * 
- * Deterministic-first workflow intelligence for blogs, social posts, and ideas.
+ * Gemini-first workflow guidance for blogs, social posts, and ideas with deterministic fallback.
  * No content generation. Only guidance, blocker detection, and next steps.
  * 
  * Request:
@@ -53,7 +53,8 @@ import { checkQuality, type QualityCheckResult } from "@/lib/quality-checker";
 import { generateResponse } from "@/app/api/ai/utils/response-generator";
 import { getRequiredFieldsForStatus, getNextStagesForStatus } from "@/lib/workflow-rules";
 import { getGeminiGuidance } from "@/app/api/ai/utils/gemini-client";
-import { routePrompt } from "@/app/api/ai/utils/prompt-router";
+import { normalizePrompt, routePrompt } from "@/app/api/ai/utils/prompt-router";
+import type { AskAIIntent } from "@/app/api/ai/types";
 import { isMissingSocialOwnershipColumnsError } from "@/lib/social-post-schema";
 
 /**
@@ -281,7 +282,7 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
 
 /**
  * POST /api/ai/assistant
- * Deterministic workflow guidance
+ * Gemini-first workflow guidance with deterministic fallback
  */
 export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse | APIErrorResponse>> {
   try {
@@ -408,50 +409,53 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       qualityIssues: qualityResult.issues
     });
 
-    // Route prompt to intent-aware guidance (local deterministic path)
-    const routedPrompt = routePrompt({
-      prompt: request.prompt,
-      context,
-      blockers: blockerResult.blockers,
-      qualityIssues: qualityResult.issues,
-      deterministicNextSteps: deterministicResult.nextSteps,
-      canProceed: deterministicResult.canProceed
-    });
-
-    let answer = routedPrompt.answer;
-    let questionIntent = routedPrompt.intent;
-    let nextSteps = routedPrompt.nextSteps;
+    const normalizedPrompt = normalizePrompt(request.prompt);
+    let answer = deterministicResult.nextSteps[0] || "No additional guidance available.";
+    let questionIntent: AskAIIntent = "general";
+    let nextSteps = deterministicResult.nextSteps;
     let responseSource: "deterministic" | "gemini" = "deterministic";
     let aiModel: string | undefined;
     let confidence = deterministicResult.confidence;
-
-    // Optional Gemini enhancement for natural language interpretation
+    // Gemini-first prompt interpretation (deterministic fallback if unavailable/fails)
     const geminiGuidance = await getGeminiGuidance({
-      prompt: routedPrompt.prompt,
+      prompt: normalizedPrompt,
       context,
       blockers: blockerResult.blockers,
       qualityIssues: qualityResult.issues,
-      nextSteps,
+      nextSteps: deterministicResult.nextSteps,
       canProceed: deterministicResult.canProceed
     });
 
     if (geminiGuidance) {
       answer = geminiGuidance.answer;
       questionIntent = geminiGuidance.intent;
-      nextSteps = mergeUniqueSteps(geminiGuidance.nextSteps, routedPrompt.nextSteps);
+      nextSteps = mergeUniqueSteps(geminiGuidance.nextSteps, deterministicResult.nextSteps);
       responseSource = "gemini";
       aiModel = geminiGuidance.model;
 
       if (typeof geminiGuidance.confidence === "number") {
-        confidence = Math.round((deterministicResult.confidence + geminiGuidance.confidence) / 2);
+        confidence = geminiGuidance.confidence;
       }
+    } else {
+      const routedPrompt = routePrompt({
+        prompt: normalizedPrompt,
+        context,
+        blockers: blockerResult.blockers,
+        qualityIssues: qualityResult.issues,
+        deterministicNextSteps: deterministicResult.nextSteps,
+        canProceed: deterministicResult.canProceed
+      });
+
+      answer = routedPrompt.answer;
+      questionIntent = routedPrompt.intent;
+      nextSteps = routedPrompt.nextSteps;
     }
 
     const result = {
       ...deterministicResult,
       nextSteps,
       confidence,
-      prompt: routedPrompt.prompt,
+      prompt: normalizedPrompt,
       questionIntent,
       answer,
       responseSource,

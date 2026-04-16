@@ -1,5 +1,6 @@
 # Deterministic Workflow Intelligence Layer (Phase 0)
 **Before AI: Build the deterministic core**
+**Historical note**: This file documents Phase 0 planning. Current runtime behavior is Gemini-primary prompt interpretation with deterministic fallback; deterministic blocker/gate logic remains authoritative.
 ## Goal
 Create a bulletproof workflow reasoning system that is:
 * 100% rule-based
@@ -109,7 +110,7 @@ tests/
 * If user.role ≠ publisher AND status = published → add blocker
 * If caption.length > platform.max → add quality issue
 **Later** (after review):
-* Optional: pass response through Gemini formatter
+* Optional: pass response through Gemini prompt interpretation
 * Optional: UI layer on top
 ## Validation Checklist
 Before Day 7 review:

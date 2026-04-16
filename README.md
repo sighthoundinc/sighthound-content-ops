@@ -70,6 +70,7 @@ Social posts must include at least one valid public live link before they can mo
   - `questionIntent` (what the question was interpreted as),
   - `answer` (direct contextual explanation),
   - `responseSource` (`gemini` when Gemini is available, otherwise `deterministic` fallback).
+- Prompt interpretation is Gemini-primary when configured; deterministic prompt routing is the built-in fallback.
 - Deterministic blocker and gate analysis remains the authority even when Gemini interpretation is enabled.
 
 Detail page ordering rule:

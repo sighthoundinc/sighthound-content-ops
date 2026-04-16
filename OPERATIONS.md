@@ -78,9 +78,9 @@ npm run check:full
 - Request contract includes optional `prompt` (max 500 chars) for natural-language workflow questions.
 - Endpoint must remain read-only and advisory: no workflow transitions, no record mutations.
 - Response contract includes `questionIntent`, `answer`, and `responseSource` in addition to blocker/next-step payloads.
-- Deterministic blocker detection and stage-gate logic remain authoritative; Gemini output is enrichment only.
+- Deterministic blocker detection and stage-gate logic remain authoritative even when Gemini is used for prompt interpretation.
 - Runtime behavior:
-  - If `GEMINI_API_KEY` is present, Ask AI attempts Gemini interpretation.
+  - If `GEMINI_API_KEY` is present, Ask AI attempts Gemini interpretation first.
   - If Gemini fails/unavailable, endpoint must degrade gracefully to deterministic prompt routing.
 
 ## 5) Import operations

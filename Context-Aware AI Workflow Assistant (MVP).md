@@ -1,5 +1,6 @@
 # Context-Aware AI Workflow Assistant
 **MVP: A guidance-only AI helper for self-explaining software**
+**Current runtime note**: Ask AI now attempts Gemini interpretation first (when configured) and falls back to deterministic routing if Gemini is unavailable or fails.
 ## Philosophy
 AI guides, not executes. Users ask "What do I do next?" and get precise, context-aware answers based on their exact situation (page, status, role, blockers). No content generation, no automation, no state changes.
 ## Success Criteria

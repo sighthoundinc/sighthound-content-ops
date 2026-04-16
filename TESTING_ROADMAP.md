@@ -2,7 +2,7 @@
 
 **Status**: Ready for validation  
 **Date**: 2026-04-16  
-**Objective**: Comprehensive user testing before Step 3 (Gemini formatter layer)
+**Objective**: Comprehensive user testing for Gemini-primary Ask AI behavior with deterministic fallback
 
 ---
 
@@ -115,7 +115,7 @@
 - User cannot complete workflow
 - Security/privacy issue
 
-**High (Important)** — Fix before Step 3
+**High (Important)** — Fix before runtime hardening rollout
 - Major functionality incorrect
 - Misleading guidance
 - Confusing error messages
@@ -145,7 +145,7 @@
 ✅ Mark "AI Assistant" as production-ready  
 ✅ Create user documentation  
 ✅ Update AGENTS.md with findings  
-✅ **Proceed to Step 3 (Gemini formatter layer)** — Target: 4/30
+✅ **Proceed to runtime hardening** (Gemini prompt quality tuning + fallback reliability checks)
 
 ### If Issues Found
 🔧 Apply fixes (critical/high priority)  
@@ -195,7 +195,7 @@
 | Phase 2 (stakeholders) | Week of 4/16-4/22 | 🔵 Scheduled |
 | Phase 3 (edge cases) | Week of 4/23-4/29 | 🔵 Scheduled |
 | Analysis & fixes | 3-5 days | 🔵 Scheduled |
-| **Step 3 kickoff** | **4/30+** | 🟢 Target |
+| **Runtime hardening kickoff** | **4/30+** | 🟢 Target |
 
 ---
 
@@ -204,7 +204,7 @@
 ### Project Lead
 - Approve testing schedule
 - Review test results
-- Make go/no-go decision for Step 3
+- Make go/no-go decision for runtime hardening scope
 - Assign resources
 
 ### QA/Testers
@@ -231,7 +231,7 @@
 
 ### Risk: Validation takes longer than expected
 - **Mitigation**: Parallelize Phase 2 across multiple users
-- **Backup**: Start Step 3 with Phase 1/2 results; iterate in parallel
+- **Backup**: Start runtime hardening with Phase 1/2 results; iterate in parallel
 
 ### Risk: Major issues found late in testing
 - **Mitigation**: Do quick validation first; escalate critical issues immediately
@@ -243,7 +243,7 @@
 
 ### Risk: Performance issues at scale
 - **Mitigation**: Monitor response times during Phase 2
-- **Backup**: Cache blockers for common scenarios (Step 3)
+- **Backup**: Cache blockers for common scenarios (runtime hardening)
 
 ---
 
@@ -263,7 +263,7 @@
 ### Stakeholder Updates
 - Pre-testing: Share testing plan, expected timeline
 - During: Brief updates on progress
-- Post-testing: Share results, decision on Step 3
+- Post-testing: Share results, decision on runtime hardening scope
 
 ---
 
@@ -278,9 +278,9 @@
 5. ✅ <10 significant issues found across all phases
 6. ✅ No security/privacy concerns
 7. ✅ Stakeholders agree feature is valuable
-8. ✅ Team confidence in proceeding to Step 3
+8. ✅ Team confidence in proceeding to runtime hardening
 
-**If all criteria met → Proceed to Step 3 immediately**
+**If all criteria met → Proceed to runtime hardening immediately**
 
 **If 1-2 criteria not met → Fix and re-test (max 3-5 days)**
 
@@ -308,7 +308,7 @@
 2. [ ] Phase 3 edge case discovery
 3. [ ] Analyze all feedback
 4. [ ] Fix critical/high issues
-5. [ ] Final decision on Step 3
+5. [ ] Final decision on runtime hardening
 
 ---
 

@@ -1,6 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { usePathname, useParams } from 'next/navigation';
+import { useAuth } from '@/providers/auth-provider';
+import { getUserRoles } from '@/lib/roles';
 
 export interface AIResponse {
   currentState: string;
@@ -40,6 +43,30 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<AIResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pathname = usePathname();
+  const params = useParams();
+  const { user, profile } = useAuth();
+  const userRoles = profile ? getUserRoles(profile) : [];
+  const userRole = userRoles.includes('admin') ? 'admin' : userRoles[0] || 'writer';
+
+  // Detect context from current page
+  const getContext = useCallback(() => {
+    let entityType: 'blog' | 'social_post' | 'idea' | 'dashboard' | 'tasks' = 'dashboard';
+    let entityId: string | null = null;
+
+    if (pathname?.includes('/blogs/')) {
+      entityType = 'blog';
+      entityId = (params?.id as string) || null;
+    } else if (pathname?.includes('/social-posts/')) {
+      entityType = 'social_post';
+      entityId = (params?.id as string) || null;
+    } else if (pathname?.includes('/ideas/')) {
+      entityType = 'idea';
+      entityId = (params?.id as string) || null;
+    }
+
+    return { entityType, entityId };
+  }, [pathname, params]);
 
   const togglePanel = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -65,32 +92,51 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
 
   const askAI = useCallback(
     async (prompt: string) => {
+      if (!user?.id) {
+        setError('You must be logged in to use the AI assistant');
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       try {
+        const { entityType, entityId } = getContext();
+
+        // Only send request if on a detail page with an entity
+        if (!entityId || entityType === 'dashboard' || entityType === 'tasks') {
+          setError('AI assistant is only available on content detail pages');
+          setIsLoading(false);
+          return;
+        }
+
         const response = await fetch('/api/ai/assistant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt,
+            entityType,
+            entityId,
+            userId: user.id,
+            userRole,
           }),
         });
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          throw new Error(data.error || 'Failed to get AI response');
+          const errorMsg = data.error?.message || data.error || 'Failed to get AI response';
+          throw new Error(errorMsg);
         }
 
         const data = (await response.json()) as AIResponse;
         setResponse(data);
         setIsOpen(true);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        const errorMsg = err instanceof Error ? err.message : 'An error occurred';
+        setError(errorMsg);
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [user, getContext, userRole]
   );
 
   // Clear response on navigation

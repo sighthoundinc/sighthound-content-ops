@@ -68,6 +68,24 @@ interface EntityState {
   caption?: string;
   platforms?: string[];
 }
+type SocialEntityStateRow = {
+  id: string | null;
+  status: string | null;
+  product: string | null;
+  type: string | null;
+  canva_url: string | null;
+  canva_page: number | null;
+  caption: string | null;
+  platforms: unknown;
+  scheduled_date: string | null;
+  created_by: string | null;
+  worker_user_id: string | null;
+  reviewer_user_id: string | null;
+  assigned_to_user_id?: string | null;
+  title: string | null;
+  associated_blog_id: string | null;
+  updated_at: string | null;
+};
 type EntityStateErrorCode = "not_found" | "unauthorized" | "query_error";
 class EntityStateError extends Error {
   code: EntityStateErrorCode;
@@ -159,18 +177,24 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
     `;
 
     // Query social_posts table with RLS (fallback for legacy ownership schema)
-    let { data, error } = await supabase
-      .from("social_posts")
-      .select(socialSelectWithOwnership)
-      .eq("id", entityId)
-      .maybeSingle();
+    let data: SocialEntityStateRow | null = null;
+    let error: PostgrestError | null = null;
+    {
+      const result = await supabase
+        .from("social_posts")
+        .select(socialSelectWithOwnership)
+        .eq("id", entityId)
+        .maybeSingle();
+      data = result.data as SocialEntityStateRow | null;
+      error = result.error;
+    }
     if (isMissingSocialOwnershipColumnsError(error)) {
       const fallbackResult = await supabase
         .from("social_posts")
         .select(socialSelectLegacy)
         .eq("id", entityId)
         .maybeSingle();
-      data = fallbackResult.data;
+      data = fallbackResult.data as SocialEntityStateRow | null;
       error = fallbackResult.error;
     }
 

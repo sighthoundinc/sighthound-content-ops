@@ -42,6 +42,12 @@ export interface BlockerResult {
 export function detectBlockers(input: DetectorInput): BlockerResult {
   const blockers: Blocker[] = [];
 
+  // Ideas are intake-only (no workflow). Surface no workflow blockers at all
+  // so Ask AI doesn't falsely claim they're "at the final stage".
+  if (input.entityType === "idea") {
+    return { blockers, canProceedToNextStage: true };
+  }
+
   // 1. Check for missing required fields
   detectMissingFields(input, blockers);
 

@@ -82,63 +82,107 @@ export async function getGeminiGuidance(input: GeminiGuidanceInput): Promise<Gem
     }
   };
 
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(9000)
-    });
+  const MAX_ATTEMPTS = 2;
+  const RETRY_DELAY_MS = 400;
 
-    if (!response.ok) {
-      let errorBody = "";
-      try {
-        errorBody = await response.text();
-      } catch {
-        // ignore read failure
-      }
-      console.warn("[AI Assistant Gemini] non-200 response", {
-        status: response.status,
-        model,
-        body: errorBody.slice(0, 500)
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const isFinalAttempt = attempt === MAX_ATTEMPTS;
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(9000)
       });
+
+      if (!response.ok) {
+        let errorBody = "";
+        try {
+          errorBody = await response.text();
+        } catch {
+          // ignore read failure
+        }
+        const transient = response.status === 429 || response.status >= 500;
+        console.warn("[AI Assistant Gemini] non-200 response", {
+          status: response.status,
+          model,
+          attempt,
+          transient,
+          body: errorBody.slice(0, 500)
+        });
+        if (transient && !isFinalAttempt) {
+          await delay(RETRY_DELAY_MS);
+          continue;
+        }
+        return null;
+      }
+
+      const json = (await response.json()) as GeminiResponsePayload;
+      const rawText = json.candidates?.[0]?.content?.parts
+        ?.map((part) => part.text || "")
+        .join("\n")
+        .trim();
+
+      if (!rawText) {
+        console.warn("[AI Assistant Gemini] empty response text", { model, attempt });
+        return null;
+      }
+
+      const parsedJson = parseJsonFromGemini(rawText);
+      if (!parsedJson) {
+        console.warn("[AI Assistant Gemini] unable to parse JSON", {
+          model,
+          attempt,
+          rawPreview: rawText.slice(0, 200),
+        });
+        return null;
+      }
+
+      const parsed = GeminiAssistantSchema.safeParse(parsedJson);
+      if (!parsed.success) {
+        console.warn("[AI Assistant Gemini] invalid output schema", {
+          model,
+          attempt,
+          issues: parsed.error.issues.slice(0, 3),
+          rawPreview: rawText.slice(0, 200),
+        });
+        return null;
+      }
+
+      return {
+        intent: parsed.data.intent,
+        answer: parsed.data.answer.trim(),
+        nextSteps: parsed.data.nextSteps || [],
+        confidence: parsed.data.confidence,
+        model
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const transient =
+        error instanceof Error &&
+        (error.name === "AbortError" ||
+          error.name === "TimeoutError" ||
+          /fetch|network|timeout|ECONN|ENOTFOUND/i.test(message));
+      console.warn("[AI Assistant Gemini] request threw", {
+        model,
+        attempt,
+        transient,
+        message,
+      });
+      if (transient && !isFinalAttempt) {
+        await delay(RETRY_DELAY_MS);
+        continue;
+      }
       return null;
     }
-
-    const json = (await response.json()) as GeminiResponsePayload;
-    const rawText = json.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || "")
-      .join("\n")
-      .trim();
-
-    if (!rawText) {
-      return null;
-    }
-
-    const parsedJson = parseJsonFromGemini(rawText);
-    if (!parsedJson) {
-      return null;
-    }
-
-    const parsed = GeminiAssistantSchema.safeParse(parsedJson);
-    if (!parsed.success) {
-      console.warn("[AI Assistant Gemini] invalid output schema");
-      return null;
-    }
-
-    return {
-      intent: parsed.data.intent,
-      answer: parsed.data.answer.trim(),
-      nextSteps: parsed.data.nextSteps || [],
-      confidence: parsed.data.confidence,
-      model
-    };
-  } catch (error) {
-    console.warn("[AI Assistant Gemini] fallback to deterministic guidance", error);
-    return null;
   }
+  return null;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildGeminiPrompt(input: GeminiGuidanceInput): string {

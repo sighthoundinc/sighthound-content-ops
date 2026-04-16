@@ -58,7 +58,7 @@ import type { AskAIIntent } from "@/app/api/ai/types";
 import { isMissingSocialOwnershipColumnsError } from "@/lib/social-post-schema";
 import { getWorkflowStage } from "@/lib/status";
 import type { PublisherStageStatus, WriterStageStatus } from "@/lib/types";
-import { fetchBlogFacts, type FactContext } from "@/app/api/ai/utils/fact-provider";
+import { fetchFacts, type FactContext } from "@/app/api/ai/utils/fact-provider";
 
 /**
  * Entity state interface for DB mapping
@@ -359,19 +359,23 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       );
     }
 
-    // Fetch grounded RAG facts for factual Q&A (blogs for now).
-    // Fact retrieval failures must never break the main guidance flow.
+    // Fetch grounded RAG facts for every entity type. Failures must never
+    // break the main guidance flow; fetchFacts() already swallows errors.
     let facts: FactContext = null;
-    if (request.entityType === "blog") {
-      try {
-        facts = await fetchBlogFacts(supabase, request.entityId);
-      } catch (factError) {
-        console.warn(
-          "[AI Assistant] fact provider failed",
-          factError instanceof Error ? factError.message : factError
-        );
-      }
+    try {
+      facts = await fetchFacts(supabase, request.entityType, request.entityId);
+    } catch (factError) {
+      console.warn(
+        "[AI Assistant] fact provider failed",
+        factError instanceof Error ? factError.message : factError
+      );
     }
+
+    // Normalize user timezone; default to America/New_York per app date contract.
+    const userTimezone =
+      typeof request.userTimezone === "string" && request.userTimezone.trim().length > 0
+        ? request.userTimezone.trim()
+        : "America/New_York";
 
     // Extract context (grounded facts ride along for factual intents)
     const context = extractContextSync(
@@ -382,7 +386,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
         userRole: request.userRole
       },
       entityState,
-      facts
+      facts,
+      userTimezone
     );
 
     // Get required fields and next stages
@@ -453,15 +458,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
 
       if (typeof geminiGuidance.confidence === "number") {
         confidence = geminiGuidance.confidence;
-      }
-    } else if (process.env.ASK_AI_REQUIRE_GEMINI === "true") {
+      }     } else if (process.env.ASK_AI_REQUIRE_GEMINI === "true") {
       // Gemini-only mode: do not fall back to deterministic routing.
-      console.warn("[AI Assistant] Gemini unavailable and ASK_AI_REQUIRE_GEMINI=true; returning 503");
+      const geminiConfigured = !!process.env.GEMINI_API_KEY?.trim();
+      const userMessage = geminiConfigured
+        ? "Ask AI is temporarily unavailable. Please try again shortly."
+        : "Ask AI isn’t configured yet. Please contact an administrator.";
+      console.warn(
+        "[AI Assistant] Gemini guidance unavailable with ASK_AI_REQUIRE_GEMINI=true",
+        { geminiConfigured }
+      );
       return NextResponse.json(
-        createErrorResponse(
-          "INTERNAL_ERROR",
-          "Ask AI is temporarily unavailable. Please try again shortly."
-        ),
+        createErrorResponse("INTERNAL_ERROR", userMessage),
         { status: 503 }
       );
     } else {

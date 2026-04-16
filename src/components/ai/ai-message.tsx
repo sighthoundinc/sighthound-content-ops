@@ -13,6 +13,10 @@ interface AIMessageProps {
 export function AIMessage({ response }: AIMessageProps) {
   const isFactual = !!response.isFactual;
   const answerHeading = isFactual ? 'Answer' : 'Current State';
+  // Confidence is a deterministic-workflow signal. Hide it for factual
+  // answers and for Gemini-authored prose (where the 99% default is misleading).
+  const showConfidence =
+    !isFactual && response.responseSource !== 'gemini' && response.confidence > 0;
 
   return (
     <div className="space-y-6">
@@ -51,8 +55,8 @@ export function AIMessage({ response }: AIMessageProps) {
         <AINextStepsCard steps={response.nextSteps} />
       )}
 
-      {/* Workflow confidence is not meaningful for factual retrieval */}
-      {!isFactual && response.confidence > 0 && (
+      {/* Workflow confidence is not meaningful for factual or Gemini answers */}
+      {showConfidence && (
         <div className="pt-4 border-t border-slate-200">
           <p className="text-xs text-slate-500">
             Confidence: {Math.round(response.confidence * 100)}%

@@ -17,6 +17,8 @@ export interface AskAIRequest {
   userId: string;
   userRole: "writer" | "publisher" | "editor" | "admin";
   prompt?: string;
+  /** Optional IANA timezone for date-formatting in responses. */
+  userTimezone?: string;
 }
 
 /**
@@ -185,6 +187,20 @@ export function validateAIRequest(data: unknown): { valid: boolean; errors?: Val
       errors.push({ field: "prompt", message: "prompt cannot be empty when provided" });
     } else if (req.prompt.trim().length > 500) {
       errors.push({ field: "prompt", message: "prompt must be 500 characters or fewer" });
+    }
+  }
+
+  if (req.userTimezone !== undefined) {
+    if (typeof req.userTimezone !== "string") {
+      errors.push({
+        field: "userTimezone",
+        message: "userTimezone must be a string when provided",
+      });
+    } else if (req.userTimezone.length > 64) {
+      errors.push({
+        field: "userTimezone",
+        message: "userTimezone must be 64 characters or fewer",
+      });
     }
   }
 

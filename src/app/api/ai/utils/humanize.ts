@@ -82,16 +82,27 @@ export function humanizeFieldList(values: string[]): string {
   return `${cleaned.slice(0, -1).join(", ")}, and ${cleaned[cleaned.length - 1]}`;
 }
 
+const DEFAULT_TZ = "America/New_York";
+
 /**
  * Humanize an ISO timestamp or date-only string into a friendly
- * month-day-year label. Parses date-only strings safely without
- * a timezone conversion so "2026-04-02" renders as "Apr 2, 2026".
+ * month-day-year label.
+ *
+ * - Pure date-only strings (`YYYY-MM-DD`) are rendered as-is without any
+ *   timezone conversion to avoid day-shift bugs.
+ * - Full ISO timestamps are rendered in the supplied timezone
+ *   (`profiles.timezone`), falling back to `America/New_York`.
+ * - Invalid values are returned unchanged only as a last resort and a safer
+ *   fallback string is used when parsing completely fails.
  */
-export function humanizeDateOnly(value?: string | null): string {
+export function humanizeDateOnly(
+  value?: string | null,
+  timezone?: string | null
+): string {
   if (!value) return "an unknown date";
-  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  if (dateOnlyMatch) {
-    const [, y, m, d] = dateOnlyMatch;
+  const pureDateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (pureDateOnlyMatch) {
+    const [, y, m, d] = pureDateOnlyMatch;
     const parsed = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
     return parsed.toLocaleDateString("en-US", {
       month: "short",
@@ -101,12 +112,24 @@ export function humanizeDateOnly(value?: string | null): string {
     });
   }
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  if (Number.isNaN(parsed.getTime())) {
+    return "an unknown date";
+  }
+  try {
+    return parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: timezone || DEFAULT_TZ,
+    });
+  } catch {
+    return parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: DEFAULT_TZ,
+    });
+  }
 }
 
 /**

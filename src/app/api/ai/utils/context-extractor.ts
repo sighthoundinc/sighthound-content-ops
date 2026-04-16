@@ -36,6 +36,8 @@ export interface ExtractedContext {
   extractedAt: string;
   /** Optional grounded metadata (RAG facts) for factual Q&A. */
   facts?: FactContext;
+  /** IANA timezone from `profiles.timezone` (defaults to America/New_York). */
+  userTimezone?: string;
 }
 
 export interface ContextExtractorDeps {
@@ -103,7 +105,8 @@ export function extractContextSync(
     ownerId: string;
     reviewerId?: string;
   },
-  facts: FactContext = null
+  facts: FactContext = null,
+  userTimezone?: string
 ): ExtractedContext {
   const workflowDefinition = getWorkflowDefinition(input.entityType);
   if (!workflowDefinition) {
@@ -126,6 +129,7 @@ export function extractContextSync(
     nextAllowedStages,
     workflowDefinition,
     extractedAt: new Date().toISOString(),
-    facts
+    facts,
+    userTimezone
   };
 }

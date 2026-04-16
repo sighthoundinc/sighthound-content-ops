@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { usePathname, useParams } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
 import { getUserRoles } from '@/lib/roles';
@@ -38,6 +38,7 @@ export interface AIResponse {
   confidence: number;
   intent?: AIResponseIntent;
   isFactual?: boolean;
+  responseSource?: 'deterministic' | 'gemini';
 }
 
 interface AssistantApiData {
@@ -64,6 +65,7 @@ interface AssistantApiData {
   confidence: number;
   answer?: string;
   questionIntent?: AIResponseIntent;
+  responseSource?: 'deterministic' | 'gemini';
 }
 
 const FACTUAL_INTENTS: ReadonlySet<AIResponseIntent> = new Set([
@@ -76,6 +78,24 @@ function toTitleCase(value: string): string {
   return value
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+/**
+ * Defensive extractor for the error envelope returned by /api/ai/assistant.
+ * Handles legacy shapes and guarantees a string (no `[object Object]`).
+ */
+function extractErrorMessage(data: unknown): string {
+  if (data && typeof data === 'object') {
+    const maybeError = (data as { error?: unknown }).error;
+    if (typeof maybeError === 'string' && maybeError.trim()) {
+      return maybeError;
+    }
+    if (maybeError && typeof maybeError === 'object') {
+      const msg = (maybeError as { message?: unknown }).message;
+      if (typeof msg === 'string' && msg.trim()) return msg;
+    }
+  }
+  return 'Failed to get AI response';
 }
 
 function mapSeverity(value: string): 'critical' | 'warning' | 'info' {
@@ -124,6 +144,7 @@ function mapApiDataToAIResponse(data: AssistantApiData): AIResponse {
     confidence: data.confidence / 100,
     intent,
     isFactual,
+    responseSource: data.responseSource,
   };
 }
 
@@ -154,6 +175,10 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   const { user, profile } = useAuth();
   const userRoles = profile ? getUserRoles(profile) : [];
   const userRole = userRoles.includes('admin') ? 'admin' : userRoles[0] || 'writer';
+  const userTimezone = profile?.timezone || undefined;
+  // Request de-duplication: aborts any in-flight Ask AI request when a new
+  // one is issued, so rapid clicks don't race back to UI in the wrong order.
+  const inflightRef = useRef<AbortController | null>(null);
 
   // Detect context from current page
   const getContext = useCallback(() => {
@@ -207,6 +232,12 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
       setLastPrompt(effectivePrompt);
       setIsLoading(true);
       setError(null);
+
+      // Cancel any in-flight request so double-clicks don't race.
+      inflightRef.current?.abort();
+      const controller = new AbortController();
+      inflightRef.current = controller;
+
       try {
         const { entityType, entityId } = getContext();
 
@@ -229,18 +260,20 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         const response = await fetch('/api/ai/assistant', {
           method: 'POST',
           headers,
+          signal: controller.signal,
           body: JSON.stringify({
             entityType,
             entityId,
             userId: user.id,
             userRole,
             prompt: effectivePrompt,
+            userTimezone,
           }),
         });
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          const errorMsg = data.error?.message || data.error || 'Failed to get AI response';
+          const errorMsg = extractErrorMessage(data);
           throw new Error(errorMsg);
         }
 
@@ -251,19 +284,41 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
           throw new Error('Invalid response format from AI assistant');
         }
 
+        // Ignore results from superseded requests.
+        if (controller.signal.aborted) {
+          return;
+        }
+
         setResponse(mapApiDataToAIResponse(data));
         setIsOpen(true);
       } catch (err) {
+        // Silently swallow aborts caused by the de-dupe logic.
+        if (err instanceof Error && (err.name === 'AbortError' || controller.signal.aborted)) {
+          return;
+        }
         const errorMsg = err instanceof Error ? err.message : 'An error occurred';
         setError(errorMsg);
       } finally {
+        if (inflightRef.current === controller) {
+          inflightRef.current = null;
+        }
         setIsLoading(false);
       }
     },
-    [user, getContext, userRole]
+    [user, getContext, userRole, userTimezone]
   );
 
-  // Clear response on navigation
+  // Clear response when user navigates to a different entity/page so the
+  // panel never shows stale guidance from the previously-viewed record.
+  useEffect(() => {
+    inflightRef.current?.abort();
+    setResponse(null);
+    setError(null);
+    setIsLoading(false);
+    setLastPrompt(null);
+  }, [pathname, params?.id]);
+
+  // Also clear response on full-page unload.
   useEffect(() => {
     const handleBeforeUnload = () => {
       setResponse(null);
@@ -280,11 +335,12 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
 
   // Clear the current answer/error so the panel returns to the quick-prompt
   // state, without closing the panel. Powers the "Ask another question" button.
+  // `lastPrompt` is intentionally preserved so a follow-up Retry can replay it.
   const clearResponse = useCallback(() => {
+    inflightRef.current?.abort();
     setResponse(null);
     setError(null);
     setIsLoading(false);
-    setLastPrompt(null);
   }, []);
 
   return (

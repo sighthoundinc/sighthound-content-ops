@@ -58,10 +58,17 @@ const INTENT_KEYWORDS: Array<{ intent: AskAIIntent; keywords: string[] }> = [
       "who is the publisher",
       "who's the publisher",
       "who published",
+      "who created",
+      "who's the creator",
+      "whos the creator",
+      "who is the creator",
+      "who submitted",
+      "who posted",
       "who is assigned",
       "who is the assignee",
       "writer of this",
       "publisher of this",
+      "creator of this",
     ],
   },
   {
@@ -179,6 +186,7 @@ function buildFactualAnswer(
 ): string | null {
   const facts = input.context.facts;
   if (!facts) return null;
+  const tz = input.context.userTimezone ?? null;
 
   if (facts.kind === "blog") {
     switch (intent) {
@@ -193,8 +201,16 @@ function buildFactualAnswer(
       }
       case "people": {
         const parts: string[] = [];
-        if (facts.writerName) parts.push(`${facts.writerName} wrote it`);
-        if (facts.publisherName) parts.push(`${facts.publisherName} handled publishing`);
+        if (facts.writerName) {
+          parts.push(`${facts.writerName} wrote it`);
+        } else if (facts.writerUnavailable) {
+          parts.push("a writer is assigned (name isn’t available to you)");
+        }
+        if (facts.publisherName) {
+          parts.push(`${facts.publisherName} handled publishing`);
+        } else if (facts.publisherUnavailable) {
+          parts.push("a publisher is assigned (name isn’t available to you)");
+        }
         if (parts.length > 0) {
           return `${parts.join(" and ")}.`;
         }
@@ -203,7 +219,7 @@ function buildFactualAnswer(
       case "timeline": {
         const bits: string[] = [];
         if (facts.createdAt) {
-          bits.push(`drafted ${humanizeDateOnly(facts.createdAt)}`);
+          bits.push(`drafted ${humanizeDateOnly(facts.createdAt, tz)}`);
         }
         // Prefer the authoritative publish event (actualPublishedAt) over the
         // cosmetic display date. If the two clearly differ, mention both so
@@ -215,15 +231,16 @@ function buildFactualAnswer(
         if (actualLabel) {
           if (displayDay && displayDay !== actualDay) {
             bits.push(
-              `published ${humanizeDateOnly(actualLabel)} (shown as ${humanizeDateOnly(
-                displayLabel
+              `published ${humanizeDateOnly(actualLabel, tz)} (shown as ${humanizeDateOnly(
+                displayLabel,
+                tz
               )})`
             );
           } else {
-            bits.push(`published ${humanizeDateOnly(actualLabel)}`);
+            bits.push(`published ${humanizeDateOnly(actualLabel, tz)}`);
           }
         } else if (displayLabel) {
-          bits.push(`published ${humanizeDateOnly(displayLabel)}`);
+          bits.push(`published ${humanizeDateOnly(displayLabel, tz)}`);
         }
         if (typeof facts.timeToPublishDays === "number") {
           bits.push(
@@ -231,14 +248,108 @@ function buildFactualAnswer(
           );
         } else if (facts.scheduledPublishDate && !actualLabel && !displayLabel) {
           bits.push(
-            `scheduled for ${humanizeDateOnly(facts.scheduledPublishDate)}`
+            `scheduled for ${humanizeDateOnly(facts.scheduledPublishDate, tz)}`
           );
         }
         if (bits.length === 0) {
           return "I don’t have enough timeline info for this blog.";
         }
-        // Capitalize first letter for readability.
         const sentence = bits.join(", ");
+        return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
+      }
+      default:
+        return null;
+    }
+  }
+
+  if (facts.kind === "social_post") {
+    switch (intent) {
+      case "identity": {
+        const kindLabel = facts.type
+          ? `${humanizeField(facts.type)} social post`.trim()
+          : "social post";
+        const productLabel = facts.product ? ` for ${humanizeField(facts.product)}` : "";
+        if (facts.title) {
+          return `This is the ${kindLabel}${productLabel} titled “${facts.title}”.`;
+        }
+        return `This is a ${kindLabel}${productLabel}.`;
+      }
+      case "people": {
+        const parts: string[] = [];
+        if (facts.creatorName) {
+          parts.push(`${facts.creatorName} created it`);
+        } else if (facts.creatorUnavailable) {
+          parts.push("a creator is assigned (name isn’t available to you)");
+        }
+        if (facts.reviewerName) {
+          parts.push(`${facts.reviewerName} is the reviewer`);
+        } else if (facts.reviewerUnavailable) {
+          parts.push("a reviewer is assigned (name isn’t available to you)");
+        }
+        if (facts.assignedToName) {
+          parts.push(`currently assigned to ${facts.assignedToName}`);
+        } else if (facts.assignedToUnavailable) {
+          parts.push("currently assigned to someone whose name isn’t available to you");
+        }
+        if (parts.length > 0) {
+          return `${parts.join(", ")}.`;
+        }
+        return "I don’t know who’s working on this post yet.";
+      }
+      case "timeline": {
+        const bits: string[] = [];
+        if (facts.createdAt) {
+          bits.push(`created ${humanizeDateOnly(facts.createdAt, tz)}`);
+        }
+        if (facts.scheduledDate) {
+          bits.push(`scheduled for ${humanizeDateOnly(facts.scheduledDate, tz)}`);
+        }
+        if (facts.status === "published" && facts.updatedAt) {
+          bits.push(`last updated ${humanizeDateOnly(facts.updatedAt, tz)}`);
+        }
+        if (bits.length === 0) {
+          return "I don’t have enough timeline info for this social post.";
+        }
+        const sentence = bits.join(", ");
+        return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
+      }
+      default:
+        return null;
+    }
+  }
+
+  if (facts.kind === "idea") {
+    switch (intent) {
+      case "identity": {
+        if (!facts.title) {
+          return "I don’t have a title on record for this idea.";
+        }
+        if (facts.site) {
+          return `This idea is “${facts.title}” (site: ${facts.site}).`;
+        }
+        return `This idea is “${facts.title}”.`;
+      }
+      case "people": {
+        if (facts.creatorName) {
+          return `${facts.creatorName} submitted this idea.`;
+        }
+        if (facts.creatorUnavailable) {
+          return "Someone submitted this idea, but the name isn’t available to you.";
+        }
+        return "I don’t know who submitted this idea.";
+      }
+      case "timeline": {
+        const bits: string[] = [];
+        if (facts.createdAt) {
+          bits.push(`submitted ${humanizeDateOnly(facts.createdAt, tz)}`);
+        }
+        if (facts.isConverted) {
+          bits.push("and has been converted to a blog");
+        }
+        if (bits.length === 0) {
+          return "I don’t have enough timeline info for this idea.";
+        }
+        const sentence = bits.join(" ");
         return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
       }
       default:

@@ -6,12 +6,15 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { AiAssistantModal } from "@/components/ai-assistant-modal";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import { validateAuthor } from "@/lib/shape-validation";
+import { AppIcon } from "@/lib/icons";
+import { getUserRoles } from "@/lib/roles";
 import {
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   isMissingBlogCommentsTableError,
@@ -193,6 +196,7 @@ export default function BlogDetailPage() {
   >(null);
   const [blogVersion, setBlogVersion] = useState<string | null>(null);
   const [savedFormSnapshot, setSavedFormSnapshot] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   useEffect(() => {
     if (!error) {
@@ -1197,6 +1201,15 @@ export default function BlogDetailPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(true)}
+                className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center gap-2"
+                title="Ask AI for workflow guidance"
+              >
+                <AppIcon name="info" className="w-4 h-4" />
+                Ask AI
+              </button>
               <WorkflowStageBadge
                 stage={getWorkflowStage({
                   writerStatus: blog.writer_status,
@@ -2016,6 +2029,16 @@ export default function BlogDetailPage() {
             </aside>
           </div>
         </div>
+        <AiAssistantModal
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          entityType="blog"
+          entityId={blogId}
+          userRole={hasPermission("manage_users") ? "admin" : "writer"}
+          onRefresh={() => {
+            // Optional: refresh blog data after modal closes
+          }}
+        />
         <ConfirmationModal
           isOpen={pendingCompletionAction !== null}
           title={

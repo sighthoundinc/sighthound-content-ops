@@ -58,6 +58,7 @@ import type { AskAIIntent } from "@/app/api/ai/types";
 import { isMissingSocialOwnershipColumnsError } from "@/lib/social-post-schema";
 import { getWorkflowStage } from "@/lib/status";
 import type { PublisherStageStatus, WriterStageStatus } from "@/lib/types";
+import { fetchBlogFacts, type FactContext } from "@/app/api/ai/utils/fact-provider";
 
 /**
  * Entity state interface for DB mapping
@@ -358,7 +359,21 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       );
     }
 
-    // Extract context
+    // Fetch grounded RAG facts for factual Q&A (blogs for now).
+    // Fact retrieval failures must never break the main guidance flow.
+    let facts: FactContext = null;
+    if (request.entityType === "blog") {
+      try {
+        facts = await fetchBlogFacts(supabase, request.entityId);
+      } catch (factError) {
+        console.warn(
+          "[AI Assistant] fact provider failed",
+          factError instanceof Error ? factError.message : factError
+        );
+      }
+    }
+
+    // Extract context (grounded facts ride along for factual intents)
     const context = extractContextSync(
       {
         entityType: request.entityType,
@@ -366,7 +381,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
         userId: request.userId,
         userRole: request.userRole
       },
-      entityState
+      entityState,
+      facts
     );
 
     // Get required fields and next stages

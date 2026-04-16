@@ -6,6 +6,9 @@ export const ASK_AI_INTENTS = [
   "transition",
   "quality",
   "status",
+  "identity",
+  "people",
+  "timeline",
   "general"
 ] as const;
 export type AskAIIntent = (typeof ASK_AI_INTENTS)[number];

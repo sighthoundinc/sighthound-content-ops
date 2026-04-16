@@ -13,6 +13,7 @@
  */
 
 import { getWorkflowDefinition, type WorkflowDefinition } from "@/lib/workflow-rules";
+import type { FactContext } from "./fact-provider";
 
 export interface ContextInput {
   entityType: "blog" | "social_post" | "idea";
@@ -33,6 +34,8 @@ export interface ExtractedContext {
   nextAllowedStages: string[];
   workflowDefinition: WorkflowDefinition;
   extractedAt: string;
+  /** Optional grounded metadata (RAG facts) for factual Q&A. */
+  facts?: FactContext;
 }
 
 export interface ContextExtractorDeps {
@@ -99,7 +102,8 @@ export function extractContextSync(
     fields: Record<string, boolean>;
     ownerId: string;
     reviewerId?: string;
-  }
+  },
+  facts: FactContext = null
 ): ExtractedContext {
   const workflowDefinition = getWorkflowDefinition(input.entityType);
   if (!workflowDefinition) {
@@ -121,6 +125,7 @@ export function extractContextSync(
     fields: entityState.fields,
     nextAllowedStages,
     workflowDefinition,
-    extractedAt: new Date().toISOString()
+    extractedAt: new Date().toISOString(),
+    facts
   };
 }

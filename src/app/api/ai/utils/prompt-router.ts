@@ -2,7 +2,13 @@ import { DEFAULT_ASK_AI_PROMPT, type AskAIIntent } from "../types";
 import type { ExtractedContext } from "./context-extractor";
 import type { Blocker } from "@/lib/blocker-detector";
 import type { QualityIssue } from "@/lib/quality-checker";
-import { humanizeField, humanizeFieldList, humanizeStatus } from "./humanize";
+import {
+  humanizeDateOnly,
+  humanizeDuration,
+  humanizeField,
+  humanizeFieldList,
+  humanizeStatus,
+} from "./humanize";
 
 export interface PromptRoutingInput {
   prompt?: string;
@@ -20,7 +26,58 @@ export interface PromptRoutingResult {
   nextSteps: string[];
 }
 
+// Factual intents are checked first so questions like "what is the title"
+// don't get intercepted by generic keywords such as "title" under "quality".
 const INTENT_KEYWORDS: Array<{ intent: AskAIIntent; keywords: string[] }> = [
+  {
+    intent: "identity",
+    keywords: [
+      "what is the name",
+      "what's the name",
+      "whats the name",
+      "what is the title",
+      "what's the title",
+      "whats the title",
+      "blog name",
+      "blog title",
+      "what is this blog",
+      "what's this blog",
+      "name of this",
+      "title of this",
+    ],
+  },
+  {
+    intent: "people",
+    keywords: [
+      "who wrote",
+      "who's the writer",
+      "whos the writer",
+      "who is the writer",
+      "who is the author",
+      "who's the author",
+      "who is the publisher",
+      "who's the publisher",
+      "who published",
+      "who is assigned",
+      "who is the assignee",
+      "writer of this",
+      "publisher of this",
+    ],
+  },
+  {
+    intent: "timeline",
+    keywords: [
+      "when was",
+      "when did",
+      "publish date",
+      "published on",
+      "how long",
+      "how many days",
+      "created on",
+      "draft to publish",
+      "time to publish",
+    ],
+  },
   {
     intent: "blockers",
     keywords: ["why can't", "why cant", "cannot", "can't", "blocked", "blocking", "stuck", "why not", "issue"]
@@ -51,6 +108,12 @@ const INTENT_KEYWORDS: Array<{ intent: AskAIIntent; keywords: string[] }> = [
   }
 ];
 
+const FACTUAL_INTENTS: ReadonlySet<AskAIIntent> = new Set([
+  "identity",
+  "people",
+  "timeline",
+]);
+
 export function normalizePrompt(prompt?: string): string {
   if (typeof prompt !== "string") {
     return DEFAULT_ASK_AI_PROMPT;
@@ -79,6 +142,21 @@ export function parsePromptIntent(prompt: string): AskAIIntent {
 export function routePrompt(input: PromptRoutingInput): PromptRoutingResult {
   const prompt = normalizePrompt(input.prompt);
   const intent = parsePromptIntent(prompt);
+
+  // Factual intents read strictly from grounded facts to avoid hallucination.
+  if (FACTUAL_INTENTS.has(intent)) {
+    const factualAnswer = buildFactualAnswer(intent, input);
+    if (factualAnswer) {
+      return {
+        prompt,
+        intent,
+        answer: factualAnswer,
+        nextSteps: [],
+      };
+    }
+    // If facts are unavailable, fall through to workflow-style answer.
+  }
+
   const answer = buildAnswer(intent, input);
   const nextSteps = buildIntentAwareNextSteps(intent, input);
 
@@ -88,6 +166,72 @@ export function routePrompt(input: PromptRoutingInput): PromptRoutingResult {
     answer,
     nextSteps
   };
+}
+
+/**
+ * Build a factual answer strictly from the grounded FactContext.
+ * Returns null when the intent isn't covered by the current facts
+ * (caller falls back to workflow-style answer).
+ */
+function buildFactualAnswer(
+  intent: AskAIIntent,
+  input: PromptRoutingInput
+): string | null {
+  const facts = input.context.facts;
+  if (!facts) return null;
+
+  if (facts.kind === "blog") {
+    switch (intent) {
+      case "identity": {
+        if (!facts.title) {
+          return "I don’t have a title on record for this blog.";
+        }
+        if (facts.site) {
+          return `This blog is “${facts.title}” on ${facts.site}.`;
+        }
+        return `This blog is “${facts.title}”.`;
+      }
+      case "people": {
+        const parts: string[] = [];
+        if (facts.writerName) parts.push(`${facts.writerName} wrote it`);
+        if (facts.publisherName) parts.push(`${facts.publisherName} handled publishing`);
+        if (parts.length > 0) {
+          return `${parts.join(" and ")}.`;
+        }
+        return "I don’t know who’s assigned on this blog yet.";
+      }
+      case "timeline": {
+        const bits: string[] = [];
+        if (facts.createdAt) {
+          bits.push(`drafted ${humanizeDateOnly(facts.createdAt)}`);
+        }
+        const publishedLabel =
+          facts.displayPublishedDate ?? facts.actualPublishedAt;
+        if (publishedLabel) {
+          bits.push(`published ${humanizeDateOnly(publishedLabel)}`);
+        }
+        if (typeof facts.timeToPublishDays === "number") {
+          bits.push(
+            `took ${humanizeDuration(facts.timeToPublishDays)} from draft to publish`
+          );
+        } else if (facts.scheduledPublishDate && !publishedLabel) {
+          bits.push(
+            `scheduled for ${humanizeDateOnly(facts.scheduledPublishDate)}`
+          );
+        }
+        if (bits.length === 0) {
+          return "I don’t have enough timeline info for this blog.";
+        }
+        // Capitalize first letter for readability.
+        const sentence = bits.join(", ");
+        return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
+      }
+      default:
+        return null;
+    }
+  }
+
+  return null;
 }
 
 function buildAnswer(intent: AskAIIntent, input: PromptRoutingInput): string {

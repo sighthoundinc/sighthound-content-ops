@@ -81,3 +81,40 @@ export function humanizeFieldList(values: string[]): string {
   if (cleaned.length === 2) return `${cleaned[0]} and ${cleaned[1]}`;
   return `${cleaned.slice(0, -1).join(", ")}, and ${cleaned[cleaned.length - 1]}`;
 }
+
+/**
+ * Humanize an ISO timestamp or date-only string into a friendly
+ * month-day-year label. Parses date-only strings safely without
+ * a timezone conversion so "2026-04-02" renders as "Apr 2, 2026".
+ */
+export function humanizeDateOnly(value?: string | null): string {
+  if (!value) return "an unknown date";
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (dateOnlyMatch) {
+    const [, y, m, d] = dateOnlyMatch;
+    const parsed = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
+    return parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/**
+ * Humanize a day count into a friendly duration string.
+ */
+export function humanizeDuration(days?: number | null): string {
+  if (days === undefined || days === null) return "an unknown amount of time";
+  if (days <= 0) return "less than a day";
+  if (days === 1) return "1 day";
+  return `${days} days`;
+}

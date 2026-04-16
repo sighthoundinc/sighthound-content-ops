@@ -49,7 +49,11 @@ const GEMINI_SYSTEM_INSTRUCTIONS = [
   "Use friendly labels instead (e.g. 'Ready to Publish', 'Canva link', 'Google Doc link').",
   "Keep the answer to 1 short sentence.",
   "Keep each next step to a single short, actionable sentence.",
-  "Respond with strict JSON and no markdown."
+  "Respond with strict JSON and no markdown.",
+  // Factual-question grounding (RAG):
+  "When the user asks a factual question about this record (title, author, publisher, dates, how long something took), answer only from the 'facts' object in the snapshot.",
+  "If a requested fact is missing from 'facts', say you don't have that information on record — never invent titles, names, dates, or durations.",
+  "For factual questions you can omit the 'nextSteps' array or keep it empty.",
 ].join(" ");
 
 export async function getGeminiGuidance(input: GeminiGuidanceInput): Promise<GeminiGuidanceOutput | null> {
@@ -158,13 +162,17 @@ function buildGeminiPrompt(input: GeminiGuidanceInput): string {
       field: issue.field,
       message: issue.message
     })),
-    deterministicNextSteps: input.nextSteps
+    deterministicNextSteps: input.nextSteps,
+    // Grounded RAG-style facts (title, people, dates). May be null.
+    facts: input.context.facts ?? null
   };
 
   return [
-    "Interpret the question and provide workflow guidance from the given snapshot.",
+    "Interpret the question and provide guidance from the given snapshot.",
+    "If the user is asking a factual question about this record (title, author, publisher, dates, durations), answer from the 'facts' object only. Never invent values that are not present in 'facts'.",
+    "For workflow questions (blockers, next steps, transitions, ownership, quality, status), use the deterministic fields plus 'facts' for friendly names.",
     "Return JSON with this exact shape:",
-    "{\"intent\":\"blockers|next_steps|requirements|ownership|transition|quality|status|general\",\"answer\":\"string\",\"nextSteps\":[\"string\"],\"confidence\":0-100}",
+    "{\"intent\":\"blockers|next_steps|requirements|ownership|transition|quality|status|identity|people|timeline|general\",\"answer\":\"string\",\"nextSteps\":[\"string\"],\"confidence\":0-100}",
     "Keep answer concise (1-2 sentences) and keep each next step actionable.",
     `Snapshot: ${JSON.stringify(workflowSnapshot)}`
   ].join("\n");

@@ -15,6 +15,7 @@ import { ExtractedContext } from "./context-extractor";
 import { Blocker } from "@/lib/blocker-detector";
 import { QualityIssue } from "@/lib/quality-checker";
 import type { AskAIIntent } from "../types";
+import { humanizeField, humanizeFieldList, humanizeStatus } from "./humanize";
 
 export interface ResponseGeneratorInput {
   context: ExtractedContext;
@@ -86,13 +87,13 @@ function generateNextSteps(context: ExtractedContext, blockers: Blocker[]): stri
   if (criticalBlockers.length > 0) {
     criticalBlockers.forEach((blocker) => {
       if (blocker.type === "missing_field") {
-        steps.push(`Fill in the required field: ${blocker.field}`);
+        steps.push(`Add the ${humanizeField(blocker.field)}.`);
       } else if (blocker.type === "ownership") {
-        steps.push(`You are not the owner of this content. Contact the owner or an admin.`);
+        steps.push("Ask the current assignee to take this step, or request reassignment.");
       } else if (blocker.type === "invalid_transition") {
-        steps.push(`This content has reached its final stage and cannot be modified.`);
+        steps.push("This one’s already at the final stage — nothing further to do.");
       } else if (blocker.type === "permission") {
-        steps.push(`You do not have permission for this action.`);
+        steps.push("This action is outside what your role can do right now.");
       }
     });
   }
@@ -103,9 +104,11 @@ function generateNextSteps(context: ExtractedContext, blockers: Blocker[]): stri
     const requiredFields = getRequiredFieldsForStage(context, nextStage);
 
     if (requiredFields.length > 0) {
-      steps.push(`To move to "${nextStage}", ensure these fields are complete: ${requiredFields.join(", ")}`);
+      steps.push(
+        `Finish the ${humanizeFieldList(requiredFields)} to move to ${humanizeStatus(nextStage)}.`
+      );
     } else {
-      steps.push(`Ready to move to the next stage: "${nextStage}"`);
+      steps.push(`You’re ready to move to ${humanizeStatus(nextStage)}.`);
     }
   }
 
@@ -114,16 +117,18 @@ function generateNextSteps(context: ExtractedContext, blockers: Blocker[]): stri
   if (warnings.length > 0) {
     warnings.forEach((warning) => {
       if (warning.type === "permission") {
-        steps.push(`Note: You are not assigned as reviewer for this stage. A reviewer may need to approve next.`);
+        steps.push("Heads up: a reviewer still needs to approve this at the next stage.");
       } else if (warning.type === "reviewer_assignment") {
-        steps.push(`Note: Reviewer assignment is pending for this content.`);
+        steps.push("Heads up: a reviewer hasn’t been assigned yet.");
       }
     });
   }
 
   // If no steps generated, provide generic guidance
   if (steps.length === 0) {
-    steps.push(`Currently in "${context.currentStatus}" stage. Review the content and make any necessary updates.`);
+    steps.push(
+      `You’re in ${humanizeStatus(context.currentStatus)}. Review the content and make any needed updates.`
+    );
   }
 
   return steps;

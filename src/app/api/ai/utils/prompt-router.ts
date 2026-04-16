@@ -2,6 +2,7 @@ import { DEFAULT_ASK_AI_PROMPT, type AskAIIntent } from "../types";
 import type { ExtractedContext } from "./context-extractor";
 import type { Blocker } from "@/lib/blocker-detector";
 import type { QualityIssue } from "@/lib/quality-checker";
+import { humanizeField, humanizeFieldList, humanizeStatus } from "./humanize";
 
 export interface PromptRoutingInput {
   prompt?: string;
@@ -90,72 +91,81 @@ export function routePrompt(input: PromptRoutingInput): PromptRoutingResult {
 }
 
 function buildAnswer(intent: AskAIIntent, input: PromptRoutingInput): string {
-  const statusLabel = formatFieldLabel(input.context.currentStatus);
+  const statusLabel = humanizeStatus(input.context.currentStatus);
   const criticalBlockers = input.blockers.filter((blocker) => blocker.severity === "critical");
   const missingFields = getMissingFields(input.blockers);
 
   switch (intent) {
     case "blockers":
       if (criticalBlockers.length === 0) {
-        return `You are in ${statusLabel} with no critical blockers right now.`;
+        return `You’re in ${statusLabel} with nothing blocking you right now.`;
       }
 
-      return `You are blocked in ${statusLabel}. Main blockers: ${criticalBlockers
+      return `You’re stuck in ${statusLabel}. The main thing holding you up: ${criticalBlockers
         .slice(0, 2)
-        .map((blocker) => blocker.message || "workflow gate")
-        .join("; ")}.`;
+        .map((blocker) => humanizeBlockerMessage(blocker.message, blocker.field))
+        .join(" and ")}.`;
     case "requirements":
       if (missingFields.length === 0) {
-        return `All required fields for the next transition from ${statusLabel} are currently complete.`;
+        return `Nothing missing — the next move from ${statusLabel} is ready to go.`;
       }
 
-      return `Before moving forward from ${statusLabel}, complete: ${missingFields
-        .map(formatFieldLabel)
-        .join(", ")}.`;
+      return `Before you can move on from ${statusLabel}, finish the ${humanizeFieldList(missingFields)}.`;
     case "ownership":
       if (input.context.userRole === "admin") {
-        return `You can review and guide this record as an admin, even when you are not the current assignee.`;
+        return `As an admin, you can guide or unblock this record even when you aren’t the current assignee.`;
       }
 
       if (input.context.userIsOwner) {
-        return `You are currently assigned to this record and can perform the next workflow action if gates are satisfied.`;
+        return `You’re the one on this — once the checklist is satisfied, you can move it forward.`;
       }
 
-      return `You are not the current assignee, so transition actions may be blocked until ownership is reassigned.`;
+      return `You’re not the assignee right now, so the next transition has to come from whoever owns it.`;
     case "transition": {
       const nextStage = input.context.nextAllowedStages[0];
       if (!nextStage) {
-        return `This record is already in ${statusLabel}, which is a terminal stage with no next transition.`;
+        return `This one’s already at ${statusLabel} — it’s the final stage, there’s nothing further to move to.`;
       }
 
       if (criticalBlockers.length > 0) {
-        return `You cannot transition to ${formatFieldLabel(nextStage)} yet because required workflow gates are still failing.`;
+        return `You can’t move to ${humanizeStatus(nextStage)} yet — a couple of requirements still need to be wrapped up.`;
       }
 
-      return `You can transition from ${statusLabel} to ${formatFieldLabel(nextStage)} now.`;
+      return `You’re good to move from ${statusLabel} to ${humanizeStatus(nextStage)}.`;
     }
     case "quality":
       if (input.qualityIssues.length === 0) {
-        return `No quality warnings are currently detected for this record.`;
+        return `Quality looks good — no warnings on this one.`;
       }
 
-      return `Quality needs attention before handoff. Focus on: ${input.qualityIssues
+      return `A couple of quality things to tighten up: ${input.qualityIssues
         .slice(0, 2)
         .map((issue) => issue.message)
-        .join("; ")}.`;
+        .join(" and ")}.`;
     case "status":
-      return `This record is currently in ${statusLabel}. ${
-        input.canProceed ? "It is ready for the next transition." : "Some gates still need to be completed."
+      return `You’re in ${statusLabel}. ${
+        input.canProceed ? "Ready to move to the next step." : "A few things still need to be finished first."
       }`;
     case "next_steps":
     case "general":
     default:
       if (input.canProceed) {
-        return `You are in ${statusLabel}. Complete the next recommended action to move this record forward.`;
+        return `You’re in ${statusLabel} and clear to move forward — just take the next action.`;
       }
 
-      return `You are in ${statusLabel}. Resolve the listed blockers first, then continue with the next transition action.`;
+      return `You’re in ${statusLabel}. Clear the blockers below and you’ll be ready for the next step.`;
   }
+}
+
+/**
+ * Humanize a blocker message when it is a raw field-required string.
+ * Leaves custom human-written messages (ownership, permission) as-is.
+ */
+function humanizeBlockerMessage(message: string | undefined, field: string | undefined): string {
+  if (message && /is required$/i.test(message) && field) {
+    return `${humanizeField(field)} is still missing`;
+  }
+  return message || "a workflow requirement";
 }
 
 function buildIntentAwareNextSteps(intent: AskAIIntent, input: PromptRoutingInput): string[] {
@@ -164,7 +174,7 @@ function buildIntentAwareNextSteps(intent: AskAIIntent, input: PromptRoutingInpu
 
   if (intent === "requirements" && missingFields.length > 0) {
     return dedupeSteps([
-      ...missingFields.map((field) => `Complete required field: ${formatFieldLabel(field)}`),
+      ...missingFields.map((field) => `Add the ${humanizeField(field)}.`),
       ...input.deterministicNextSteps
     ]);
   }
@@ -179,22 +189,24 @@ function buildIntentAwareNextSteps(intent: AskAIIntent, input: PromptRoutingInpu
   if (intent === "status") {
     const nextStage = input.context.nextAllowedStages[0];
     return dedupeSteps([
-      `Current stage: ${formatFieldLabel(input.context.currentStatus)}`,
-      nextStage ? `Next allowed stage: ${formatFieldLabel(nextStage)}` : "No further transition available from this stage.",
+      `You’re currently in ${humanizeStatus(input.context.currentStatus)}.`,
+      nextStage
+        ? `Next up: ${humanizeStatus(nextStage)}.`
+        : "This is the final stage — nothing further to move to.",
       ...input.deterministicNextSteps
     ]);
   }
 
   if (intent === "ownership" && !input.context.userIsOwner && input.context.userRole !== "admin") {
     return dedupeSteps([
-      "Request reassignment to yourself or ask the current assignee to complete the transition.",
+      "Ask the current assignee to take the next step, or request reassignment.",
       ...input.deterministicNextSteps
     ]);
   }
 
   if (intent === "blockers" && input.blockers.length === 0) {
     return dedupeSteps([
-      "No blockers detected. Continue with the next transition.",
+      "Nothing’s in the way — go ahead with the next move.",
       ...input.deterministicNextSteps
     ]);
   }
@@ -206,10 +218,6 @@ function getMissingFields(blockers: Blocker[]): string[] {
   return blockers
     .filter((blocker) => blocker.type === "missing_field" && blocker.field)
     .map((blocker) => blocker.field as string);
-}
-
-function formatFieldLabel(value: string): string {
-  return value.replace(/_/g, " ");
 }
 
 function dedupeSteps(steps: string[]): string[] {

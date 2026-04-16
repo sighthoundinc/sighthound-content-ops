@@ -113,14 +113,6 @@ function isUnauthorizedEntityQueryError(
   );
 }
 
-function mergeUniqueSteps(primary: string[], fallback: string[]): string[] {
-  const merged = [...primary, ...fallback]
-    .map((step) => step.trim())
-    .filter(Boolean);
-
-  return [...new Set(merged)].slice(0, 5);
-}
-
 /**
  * Get entity state from Supabase using authenticated context
  * Uses auth token from client to respect RLS policies
@@ -429,7 +421,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
     if (geminiGuidance) {
       answer = geminiGuidance.answer;
       questionIntent = geminiGuidance.intent;
-      nextSteps = mergeUniqueSteps(geminiGuidance.nextSteps, deterministicResult.nextSteps);
+      // Prefer Gemini prose; only back-fill deterministic steps if Gemini returned none
+      nextSteps =
+        geminiGuidance.nextSteps.length > 0
+          ? geminiGuidance.nextSteps
+          : deterministicResult.nextSteps;
       responseSource = "gemini";
       aiModel = geminiGuidance.model;
 

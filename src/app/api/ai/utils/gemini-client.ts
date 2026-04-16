@@ -44,6 +44,11 @@ const GEMINI_SYSTEM_INSTRUCTIONS = [
   "Do not generate captions, social copy, blog content, or any creative content.",
   "Do not suggest bypassing workflow rules, permissions, or required field gates.",
   "Use only the supplied context. If data is missing, state uncertainty explicitly.",
+  "Write in a warm, natural, second-person tone (\"you\").",
+  "Never expose raw enum keys, field names, or status codes like 'ready_to_publish' or 'canva_url'.",
+  "Use friendly labels instead (e.g. 'Ready to Publish', 'Canva link', 'Google Doc link').",
+  "Keep the answer to 1 short sentence.",
+  "Keep each next step to a single short, actionable sentence.",
   "Respond with strict JSON and no markdown."
 ].join(" ");
 

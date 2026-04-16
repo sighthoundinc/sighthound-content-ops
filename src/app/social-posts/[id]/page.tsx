@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { AiAssistantModal } from "@/components/ai-assistant-modal";
 import { AssociatedBlogContextCard } from "@/components/associated-blog-context-card";
 import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -445,7 +444,6 @@ export default function SocialPostEditorPage() {
   const [editWorkerUserId, setEditWorkerUserId] = useState<string | null>(null);
   const [editReviewerUserId, setEditReviewerUserId] = useState<string | null>(null);
   const [isAssignmentSaving, setIsAssignmentSaving] = useState(false);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const getUserDisplayNameById = useCallback(
     (userId: string | null | undefined) => {
       if (!userId) {
@@ -1810,15 +1808,6 @@ export default function SocialPostEditorPage() {
             description="Build and refine your social post from concept to publication."
             primaryAction={
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAiModalOpen(true)}
-                  className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center gap-2"
-                  title="Ask AI for workflow guidance"
-                >
-                  <AppIcon name="info" className="w-4 h-4" />
-                  Ask AI
-                </button>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -3057,16 +3046,6 @@ export default function SocialPostEditorPage() {
             </aside>
           </div>
         </div>
-        <AiAssistantModal
-          isOpen={isAiModalOpen}
-          onClose={() => setIsAiModalOpen(false)}
-          entityType="social_post"
-          entityId={postId}
-          userRole={isAdmin ? "admin" : "writer"}
-          onRefresh={() => {
-            // Optional: refresh post data after modal closes
-          }}
-        />
       </AppShell>
     </ProtectedPage>
   );

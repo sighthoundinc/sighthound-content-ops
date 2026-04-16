@@ -126,7 +126,12 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
           throw new Error(errorMsg);
         }
 
-        const data = (await response.json()) as AIResponse;
+        const apiResponse = await response.json();
+        // Extract the data from the API response wrapper
+        const data = apiResponse?.data as AIResponse;
+        if (!data) {
+          throw new Error('Invalid response format from AI assistant');
+        }
         setResponse(data);
         setIsOpen(true);
       } catch (err) {

@@ -2033,6 +2033,7 @@ export default function BlogDetailPage() {
           onClose={() => setIsAiModalOpen(false)}
           entityType="blog"
           entityId={blogId}
+          userId={user?.id || ""}
           userRole={hasPermission("manage_users") ? "admin" : "writer"}
           onRefresh={() => {
             // Optional: refresh blog data after modal closes

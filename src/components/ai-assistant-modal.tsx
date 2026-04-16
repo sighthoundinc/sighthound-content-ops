@@ -43,6 +43,7 @@ type AiAssistantModalProps = {
   onClose: () => void;
   entityType: "blog" | "social_post";
   entityId: string;
+  userId: string;
   userRole: string;
   onRefresh?: () => void;
 };
@@ -64,6 +65,7 @@ export function AiAssistantModal({
   onClose,
   entityType,
   entityId,
+  userId,
   userRole,
   onRefresh,
 }: AiAssistantModalProps) {
@@ -83,6 +85,7 @@ export function AiAssistantModal({
         body: JSON.stringify({
           entityType,
           entityId,
+          userId,
           userRole,
         }),
       });
@@ -108,7 +111,7 @@ export function AiAssistantModal({
     } finally {
       setIsLoading(false);
     }
-  }, [entityType, entityId, userRole]);
+  }, [entityType, entityId, userId, userRole]);
 
   useEffect(() => {
     if (isOpen && !response && !error) {

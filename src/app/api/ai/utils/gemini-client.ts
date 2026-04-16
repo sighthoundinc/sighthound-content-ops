@@ -53,7 +53,7 @@ export async function getGeminiGuidance(input: GeminiGuidanceInput): Promise<Gem
     return null;
   }
 
-  const model = process.env.GEMINI_MODEL?.trim() || "gemini-1.5-flash";
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const payload = {
@@ -84,7 +84,17 @@ export async function getGeminiGuidance(input: GeminiGuidanceInput): Promise<Gem
     });
 
     if (!response.ok) {
-      console.warn("[AI Assistant Gemini] non-200 response", { status: response.status });
+      let errorBody = "";
+      try {
+        errorBody = await response.text();
+      } catch {
+        // ignore read failure
+      }
+      console.warn("[AI Assistant Gemini] non-200 response", {
+        status: response.status,
+        model,
+        body: errorBody.slice(0, 500)
+      });
       return null;
     }
 

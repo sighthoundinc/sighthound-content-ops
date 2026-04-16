@@ -74,6 +74,15 @@ npm run check:full
 - Legacy endpoint policy: `DELETE /api/ideas/[id]/delete` is retired and returns `410 Gone`; use `DELETE /api/ideas/[id]`.
 - Middleware auth gate validates Supabase session identity on protected routes (not just cookie presence) before allowing page access.
 
+### Ask AI guidance endpoint (`POST /api/ai/assistant`)
+- Request contract includes optional `prompt` (max 500 chars) for natural-language workflow questions.
+- Endpoint must remain read-only and advisory: no workflow transitions, no record mutations.
+- Response contract includes `questionIntent`, `answer`, and `responseSource` in addition to blocker/next-step payloads.
+- Deterministic blocker detection and stage-gate logic remain authoritative; Gemini output is enrichment only.
+- Runtime behavior:
+  - If `GEMINI_API_KEY` is present, Ask AI attempts Gemini interpretation.
+  - If Gemini fails/unavailable, endpoint must degrade gracefully to deterministic prompt routing.
+
 ## 5) Import operations
 - Import should support selective columns and selective rows.
 - Required key columns must be present for successful import.

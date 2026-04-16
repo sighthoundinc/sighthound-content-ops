@@ -11,7 +11,8 @@
  *   "entityType": "blog" | "social_post" | "idea",
  *   "entityId": "string",
  *   "userId": "string",
- *   "userRole": "writer" | "publisher" | "editor" | "admin"
+ *   "userRole": "writer" | "publisher" | "editor" | "admin",
+ *   "prompt": "Why can't I publish this?" // optional
  * }
  * 
  * Response:
@@ -23,14 +24,16 @@
  *     "nextSteps": [...],
  *     "qualityIssues": [...],
  *     "canProceed": boolean,
- *     "confidence": number
+ *     "confidence": number,
+ *     "questionIntent": "string",
+ *     "answer": "string",
+ *     "responseSource": "deterministic" | "gemini"
  *   },
  *   "generatedAt": "ISO8601"
  * }
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { 
   AskAIRequest, 
   AskAIResponse, 
@@ -44,6 +47,9 @@ import { detectBlockers } from "@/lib/blocker-detector";
 import { checkQuality, type QualityCheckResult } from "@/lib/quality-checker";
 import { generateResponse } from "@/app/api/ai/utils/response-generator";
 import { getRequiredFieldsForStatus, getNextStagesForStatus } from "@/lib/workflow-rules";
+import { getGeminiGuidance } from "@/app/api/ai/utils/gemini-client";
+import { routePrompt } from "@/app/api/ai/utils/prompt-router";
+import { createAdminClient } from "@/lib/supabase/server";
 
 /**
  * Entity state interface for DB mapping
@@ -53,19 +59,26 @@ interface EntityState {
   fields: Record<string, boolean>;
   ownerId: string;
   reviewerId?: string;
+  title?: string;
+  caption?: string;
+  platforms?: string[];
+}
+
+function mergeUniqueSteps(primary: string[], fallback: string[]): string[] {
+  const merged = [...primary, ...fallback]
+    .map((step) => step.trim())
+    .filter(Boolean);
+
+  return [...new Set(merged)].slice(0, 5);
 }
 
 /**
- * Get entity state from Supabase with RLS enforcement
- * Uses service role on server-side (client has already authenticated)
+ * Get entity state from Supabase server-side
+ * Uses service role on server-side to bypass RLS (client has already authenticated)
  */
-async function getEntityState(entityType: string, entityId: string, userId: string, authToken?: string): Promise<EntityState> {
-  // Use service role key on server for authenticated queries
-  // The client has already verified the user is logged in
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  );
+async function getEntityState(entityType: string, entityId: string, userId: string): Promise<EntityState> {
+  // Use admin client with service role key to bypass RLS
+  const supabase = createAdminClient();
 
   if (entityType === "blog") {
     // Query blogs table with RLS
@@ -89,12 +102,14 @@ async function getEntityState(entityType: string, entityId: string, userId: stri
       fields: {
         title: !!data.title,
         writer_id: !!data.writer_id,
+        draft_doc_link: !!data.google_doc_url,
         google_doc_url: !!data.google_doc_url,
         publisher_id: !!data.publisher_id,
         scheduled_publish_date: !!data.scheduled_publish_date
       },
       ownerId: data.writer_id || data.created_by || userId,
-      reviewerId: data.publisher_id
+      reviewerId: data.publisher_id,
+      title: data.title || undefined
     };
   } else if (entityType === "social_post") {
     // Query social_posts table with RLS
@@ -121,13 +136,16 @@ async function getEntityState(entityType: string, entityId: string, userId: stri
         canva_url: !!data.canva_url,
         canva_page: !!data.canva_page,
         caption: !!data.caption,
-        platforms: !!data.platforms,
+        platforms: Array.isArray(data.platforms) ? data.platforms.length > 0 : !!data.platforms,
         scheduled_publish_date: !!data.scheduled_publish_date,
         title: !!data.title,
         associated_blog_id: !!data.associated_blog_id
       },
       ownerId: data.created_by || userId,
-      reviewerId: data.editor_id
+      reviewerId: data.editor_id,
+      title: data.title || undefined,
+      caption: data.caption || undefined,
+      platforms: Array.isArray(data.platforms) ? data.platforms : []
     };
   }
 
@@ -150,15 +168,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
     }
 
     const request = body as AskAIRequest;
-    
-    // Extract auth token from request headers for RLS
-    const authHeader = req.headers.get('authorization');
-    const authToken = authHeader?.replace('Bearer ', '');
 
-    // Get entity state from Supabase with RLS enforcement
+    // Get entity state from Supabase
     let entityState: EntityState;
     try {
-      entityState = await getEntityState(request.entityType, request.entityId, request.userId, authToken);
+      entityState = await getEntityState(request.entityType, request.entityId, request.userId);
     } catch (dbError) {
       const dbErrorMsg = (dbError as Error).message;
       // Check if it's an RLS denial or not found
@@ -201,39 +215,77 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       nextAllowedStages
     });
 
-    // Check quality using real entity data from Supabase
+    // Check quality using entity snapshot data
     let qualityResult: QualityCheckResult = { issues: [], qualityScore: 100 };
     if (request.entityType === "blog") {
-      // Blog title already fetched above in entityState, use it
       qualityResult = checkQuality({
         entityType: "blog",
-        title: entityState.fields.title ? "Sample Title" : undefined
+        title: entityState.title
       });
     } else if (request.entityType === "social_post") {
-      // Get social post data for quality check
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-      );
-      const { data: socialData } = await supabase
-        .from("social_posts")
-        .select("caption, platforms")
-        .eq("id", request.entityId)
-        .single();
-      
       qualityResult = checkQuality({
         entityType: "social_post",
-        caption: socialData?.caption,
-        platforms: socialData?.platforms || []
+        caption: entityState.caption,
+        platforms: entityState.platforms || []
       });
     }
 
-    // Generate response
-    const result = generateResponse({
+    // Generate deterministic baseline response
+    const deterministicResult = generateResponse({
       context,
       blockers: blockerResult.blockers,
       qualityIssues: qualityResult.issues
     });
+
+    // Route prompt to intent-aware guidance (local deterministic path)
+    const routedPrompt = routePrompt({
+      prompt: request.prompt,
+      context,
+      blockers: blockerResult.blockers,
+      qualityIssues: qualityResult.issues,
+      deterministicNextSteps: deterministicResult.nextSteps,
+      canProceed: deterministicResult.canProceed
+    });
+
+    let answer = routedPrompt.answer;
+    let questionIntent = routedPrompt.intent;
+    let nextSteps = routedPrompt.nextSteps;
+    let responseSource: "deterministic" | "gemini" = "deterministic";
+    let aiModel: string | undefined;
+    let confidence = deterministicResult.confidence;
+
+    // Optional Gemini enhancement for natural language interpretation
+    const geminiGuidance = await getGeminiGuidance({
+      prompt: routedPrompt.prompt,
+      context,
+      blockers: blockerResult.blockers,
+      qualityIssues: qualityResult.issues,
+      nextSteps,
+      canProceed: deterministicResult.canProceed
+    });
+
+    if (geminiGuidance) {
+      answer = geminiGuidance.answer;
+      questionIntent = geminiGuidance.intent;
+      nextSteps = mergeUniqueSteps(geminiGuidance.nextSteps, routedPrompt.nextSteps);
+      responseSource = "gemini";
+      aiModel = geminiGuidance.model;
+
+      if (typeof geminiGuidance.confidence === "number") {
+        confidence = Math.round((deterministicResult.confidence + geminiGuidance.confidence) / 2);
+      }
+    }
+
+    const result = {
+      ...deterministicResult,
+      nextSteps,
+      confidence,
+      prompt: routedPrompt.prompt,
+      questionIntent,
+      answer,
+      responseSource,
+      aiModel
+    };
 
     // Convert to API response
     const apiResponse = resultToAPIResponse(result);
@@ -256,7 +308,7 @@ export async function GET(): Promise<NextResponse<Record<string, unknown>>> {
   return NextResponse.json({
     endpoint: "/api/ai/assistant",
     method: "POST",
-    description: "Deterministic workflow intelligence for content ops",
+    description: "Prompt-aware workflow intelligence for content ops",
     version: "0.1.0",
     status: "operational",
     documentation: {
@@ -264,7 +316,8 @@ export async function GET(): Promise<NextResponse<Record<string, unknown>>> {
         entityType: "blog | social_post | idea",
         entityId: "string",
         userId: "string",
-        userRole: "writer | publisher | editor | admin"
+        userRole: "writer | publisher | editor | admin",
+        prompt: "string (optional natural language question)"
       },
       response: {
         currentState: "object",
@@ -272,7 +325,11 @@ export async function GET(): Promise<NextResponse<Record<string, unknown>>> {
         nextSteps: "array",
         qualityIssues: "array",
         canProceed: "boolean",
-        confidence: "number"
+        confidence: "number",
+        prompt: "string",
+        questionIntent: "string",
+        answer: "string",
+        responseSource: "deterministic | gemini"
       }
     }
   });

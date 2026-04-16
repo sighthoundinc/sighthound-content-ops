@@ -163,6 +163,18 @@ Shared detail-page usability helpers:
   - `lg` and above: right rail is visible and sticky.
   - Below `lg`: right-rail cards move into the main vertical flow (no side column).
 
+## Ask AI (guidance-only)
+- Use Ask AI on detail pages when you need workflow help in plain language.
+- Example questions:
+  - `Why can't I publish this?`
+  - `What's blocking me right now?`
+  - `What do I need before moving to review?`
+- Ask AI does not edit records or run transitions. It only explains:
+  - current stage context,
+  - blockers and missing gates,
+  - recommended next steps.
+- Responses use Gemini interpretation when configured; otherwise the app falls back to deterministic workflow logic.
+
 ## 7) Transition gates reference
 - Never transition without required target-stage fields.
 - Never publish social content without a saved valid live link.

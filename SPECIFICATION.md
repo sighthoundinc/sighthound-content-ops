@@ -179,6 +179,21 @@ Writing flow → Writing Approved handoff → Publishing in Progress → Awaitin
 - Canonical ideas delete route is `DELETE /api/ideas/[id]`; legacy `DELETE /api/ideas/[id]/delete` is retired and returns `410 Gone`.
 - Middleware gate for protected pages validates Supabase session identity in addition to cookie presence.
 
+### 7.1) Ask AI contract (`POST /api/ai/assistant`)
+- Ask AI is workflow-advisory only and must not mutate record state.
+- Request shape includes:
+  - `entityType`, `entityId`, `userId`, `userRole`
+  - optional `prompt` (natural-language question, max 500 chars)
+- Deterministic context extraction + blocker detection remain authoritative.
+- Prompt interpretation path:
+  - local deterministic intent routing always runs,
+  - Gemini enrichment is optional and only used when configured/available.
+- Response includes deterministic workflow data plus prompt-specific metadata:
+  - `questionIntent`
+  - `answer`
+  - `responseSource` (`deterministic` or `gemini`)
+  - optional `aiModel` when Gemini is used
+
 ## 8) Date and timezone contract
 - User-facing timestamps are rendered by user timezone preference.
 - Date-only values use date-only formatter utilities to avoid timezone day shifts.

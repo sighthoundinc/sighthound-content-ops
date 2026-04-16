@@ -21,8 +21,14 @@ describe("Response Generator", () => {
       fields: { title: true, writer_id: true },
       nextAllowedStages: ["writer_review"],
       workflowDefinition: {
+        entityType: "blog",
+        stages: ["draft", "writer_review"],
         transitions: { draft: ["writer_review"], writer_review: [] },
-        requiredFieldsByStage: { writer_review: ["draft_doc_link"] }
+        requiredFieldsByStage: {
+          draft: ["title", "writer_id"],
+          writer_review: ["draft_doc_link"]
+        },
+        description: "Blog workflow"
       },
       extractedAt: new Date().toISOString(),
       ...overrides
@@ -34,7 +40,6 @@ describe("Response Generator", () => {
       context: createContext(),
       blockers: [],
       qualityIssues: [],
-      qualityScore: 100,
       ...overrides
     };
   }

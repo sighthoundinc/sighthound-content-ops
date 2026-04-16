@@ -6,7 +6,33 @@ import {
   isErrorResponse
 } from "@/app/api/ai/models";
 import { generateResponse } from "@/app/api/ai/utils/response-generator";
-import { extractContextSync } from "@/app/api/ai/utils/context-extractor";
+
+const BLOG_WORKFLOW_DEFINITION = {
+  entityType: "blog" as const,
+  stages: ["draft", "writer_review"],
+  transitions: { draft: ["writer_review"], writer_review: [] },
+  requiredFieldsByStage: {
+    draft: ["title", "writer_id"],
+    writer_review: ["title", "writer_id", "draft_doc_link"]
+  },
+  description: "Blog workflow"
+};
+
+function createBlogContext() {
+  return {
+    entityType: "blog" as const,
+    entityId: "blog-123",
+    userId: "user-456",
+    userRole: "writer" as const,
+    currentStatus: "draft",
+    userIsOwner: true,
+    userIsReviewer: false,
+    fields: { title: true, writer_id: true },
+    nextAllowedStages: ["writer_review"],
+    workflowDefinition: BLOG_WORKFLOW_DEFINITION,
+    extractedAt: new Date().toISOString()
+  };
+}
 
 describe("API Assistant Integration", () => {
   describe("Request Validation", () => {
@@ -94,29 +120,46 @@ describe("API Assistant Integration", () => {
 
       expect(result.valid).toBe(false);
     });
+
+    it("should accept optional prompt", () => {
+      const request = {
+        entityType: "blog",
+        entityId: "blog-123",
+        userId: "user-456",
+        userRole: "writer",
+        prompt: "Why can't I publish this?"
+      };
+      const result = validateAIRequest(request);
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toBeUndefined();
+    });
+
+    it("should reject non-string prompt", () => {
+      const request = {
+        entityType: "blog",
+        entityId: "blog-123",
+        userId: "user-456",
+        userRole: "writer",
+        prompt: 123
+      };
+      const result = validateAIRequest(request);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ field: "prompt" })
+      );
+    });
   });
 
   describe("Response Conversion", () => {
     it("should convert deterministic result to API response", () => {
-      const context = {
-        entityType: "blog" as const,
-        entityId: "blog-123",
-        userId: "user-456",
-        userRole: "writer" as const,
-        currentStatus: "draft",
-        userIsOwner: true,
-        userIsReviewer: false,
-        fields: { title: true, writer_id: true },
-        nextAllowedStages: ["writer_review"],
-        workflowDefinition: { transitions: {} },
-        extractedAt: new Date().toISOString()
-      };
+      const context = createBlogContext();
 
       const result = generateResponse({
         context,
         blockers: [],
-        qualityIssues: [],
-        qualityScore: 100
+        qualityIssues: []
       });
 
       const apiResponse = resultToAPIResponse(result);
@@ -127,25 +170,12 @@ describe("API Assistant Integration", () => {
     });
 
     it("should include all required fields in response", () => {
-      const context = {
-        entityType: "blog" as const,
-        entityId: "blog-123",
-        userId: "user-456",
-        userRole: "writer" as const,
-        currentStatus: "draft",
-        userIsOwner: true,
-        userIsReviewer: false,
-        fields: { title: true, writer_id: true },
-        nextAllowedStages: ["writer_review"],
-        workflowDefinition: { transitions: {} },
-        extractedAt: new Date().toISOString()
-      };
+      const context = createBlogContext();
 
       const result = generateResponse({
         context,
         blockers: [],
-        qualityIssues: [],
-        qualityScore: 100
+        qualityIssues: []
       });
 
       const apiResponse = resultToAPIResponse(result);
@@ -156,6 +186,10 @@ describe("API Assistant Integration", () => {
       expect(apiResponse.data?.qualityIssues).toBeDefined();
       expect(apiResponse.data?.canProceed).toBeDefined();
       expect(apiResponse.data?.confidence).toBeDefined();
+      expect(apiResponse.data?.prompt).toBeDefined();
+      expect(apiResponse.data?.questionIntent).toBeDefined();
+      expect(apiResponse.data?.answer).toBeDefined();
+      expect(apiResponse.data?.responseSource).toBeDefined();
     });
   });
 
@@ -181,25 +215,12 @@ describe("API Assistant Integration", () => {
 
   describe("Type Guards", () => {
     it("should identify success response", () => {
-      const context = {
-        entityType: "blog" as const,
-        entityId: "blog-123",
-        userId: "user-456",
-        userRole: "writer" as const,
-        currentStatus: "draft",
-        userIsOwner: true,
-        userIsReviewer: false,
-        fields: { title: true, writer_id: true },
-        nextAllowedStages: ["writer_review"],
-        workflowDefinition: { transitions: {} },
-        extractedAt: new Date().toISOString()
-      };
+      const context = createBlogContext();
 
       const result = generateResponse({
         context,
         blockers: [],
-        qualityIssues: [],
-        qualityScore: 100
+        qualityIssues: []
       });
 
       const apiResponse = resultToAPIResponse(result);

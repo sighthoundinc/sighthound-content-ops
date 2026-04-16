@@ -45,8 +45,7 @@ describe("End-to-End Scenarios", () => {
     const response = generateResponse({
       context,
       blockers: blockers.blockers,
-      qualityIssues: [],
-      qualityScore: 100
+      qualityIssues: []
     });
 
     expect(response.canProceed).toBe(false);
@@ -359,8 +358,7 @@ describe("End-to-End Scenarios", () => {
     const response = generateResponse({
       context,
       blockers: blockers.blockers,
-      qualityIssues: [],
-      qualityScore: 50
+      qualityIssues: []
     });
 
     expect(response.nextSteps.length).toBeGreaterThan(0);

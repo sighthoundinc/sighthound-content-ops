@@ -6,6 +6,7 @@
  */
 
 import { DeterministicResult } from "./utils/response-generator";
+import { DEFAULT_ASK_AI_PROMPT, type AskAIIntent } from "./types";
 
 /**
  * API Request Model
@@ -15,6 +16,7 @@ export interface AskAIRequest {
   entityId: string;
   userId: string;
   userRole: "writer" | "publisher" | "editor" | "admin";
+  prompt?: string;
 }
 
 /**
@@ -47,6 +49,11 @@ export interface AskAIResponse {
     }>;
     canProceed: boolean;
     confidence: number;
+    prompt: string;
+    questionIntent: AskAIIntent;
+    answer: string;
+    responseSource: "deterministic" | "gemini";
+    aiModel?: string;
   };
   error?: {
     code: string;
@@ -113,7 +120,12 @@ export function resultToAPIResponse(result: DeterministicResult): AskAIResponse 
       nextSteps: result.nextSteps,
       qualityIssues: result.qualityIssues,
       canProceed: result.canProceed,
-      confidence: result.confidence
+      confidence: result.confidence,
+      prompt: result.prompt || DEFAULT_ASK_AI_PROMPT,
+      questionIntent: result.questionIntent || "general",
+      answer: result.answer || result.nextSteps[0] || "No additional guidance available.",
+      responseSource: result.responseSource || "deterministic",
+      aiModel: result.aiModel
     },
     generatedAt: result.generatedAt
   };
@@ -164,6 +176,16 @@ export function validateAIRequest(data: unknown): { valid: boolean; errors?: Val
 
   if (!req.userRole || !["writer", "publisher", "editor", "admin"].includes(req.userRole as string)) {
     errors.push({ field: "userRole", message: "userRole is required and must be writer, publisher, editor, or admin" });
+  }
+
+  if (req.prompt !== undefined) {
+    if (typeof req.prompt !== "string") {
+      errors.push({ field: "prompt", message: "prompt must be a string when provided" });
+    } else if (!req.prompt.trim()) {
+      errors.push({ field: "prompt", message: "prompt cannot be empty when provided" });
+    } else if (req.prompt.trim().length > 500) {
+      errors.push({ field: "prompt", message: "prompt must be 500 characters or fewer" });
+    }
   }
 
   return {

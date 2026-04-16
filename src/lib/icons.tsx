@@ -33,6 +33,7 @@ import {
   Settings,
   Share2,
   Slack,
+  Sparkle,
   Upload,
   X,
 } from "lucide-react";
@@ -75,6 +76,7 @@ const APP_ICON_MAP = {
   loading: LoaderCircle,
   lock: Lock,
   arrowRight: ArrowRight,
+  sparkle: Sparkle,
 } satisfies Record<string, LucideIcon>;
 
 export type AppIconName = keyof typeof APP_ICON_MAP;

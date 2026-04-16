@@ -10,11 +10,11 @@ export function AIFloatingButton() {
   return (
     <button
       onClick={togglePanel}
-      className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200"
+      className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-12 h-12 rounded-full border-2 border-blue-500 bg-white text-blue-600 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
       aria-label="Ask AI Assistant"
-      title="Ask AI Assistant (Alt+A)"
+      title="Ask AI Assistant"
     >
-      <AppIcon name="idea" size={24} />
+      <AppIcon name="sparkle" size={20} />
     </button>
   );
 }

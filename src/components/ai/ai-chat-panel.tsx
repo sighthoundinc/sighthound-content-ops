@@ -7,8 +7,16 @@ import { AIQuickPrompts } from './ai-quick-prompts';
 import { AppIcon } from '@/lib/icons';
 
 export function AIChatPanel() {
-  const { isOpen, closePanel, response, isLoading, error, retryLast, lastPrompt } =
-    useAIAssistant();
+  const {
+    isOpen,
+    closePanel,
+    response,
+    isLoading,
+    error,
+    retryLast,
+    lastPrompt,
+    clearResponse,
+  } = useAIAssistant();
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -85,7 +93,19 @@ export function AIChatPanel() {
               </div>
             </div>
           ) : response ? (
-            <AIMessage response={response} />
+            <div className="flex flex-col gap-4">
+              <AIMessage response={response} />
+              <div className="pt-2">
+                <button
+                  onClick={clearResponse}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+                  aria-label="Ask another question"
+                >
+                  <span aria-hidden="true">←</span>
+                  Ask another question
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="text-center text-slate-500">
               <p className="text-sm">Ask a question to get started</p>

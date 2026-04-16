@@ -136,6 +136,7 @@ interface AIAssistantContextType {
   togglePanel: () => void;
   askAI: (prompt?: string) => Promise<void>;
   retryLast: () => Promise<void>;
+  clearResponse: () => void;
   closePanel: () => void;
   reset: () => void;
 }
@@ -277,6 +278,15 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
     await askAI(lastPrompt ?? undefined);
   }, [askAI, lastPrompt]);
 
+  // Clear the current answer/error so the panel returns to the quick-prompt
+  // state, without closing the panel. Powers the "Ask another question" button.
+  const clearResponse = useCallback(() => {
+    setResponse(null);
+    setError(null);
+    setIsLoading(false);
+    setLastPrompt(null);
+  }, []);
+
   return (
     <AIAssistantContext.Provider
       value={{
@@ -288,6 +298,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         togglePanel,
         askAI,
         retryLast,
+        clearResponse,
         closePanel,
         reset,
       }}

@@ -5,6 +5,19 @@ import { usePathname, useParams } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
 import { getUserRoles } from '@/lib/roles';
 
+export type AIResponseIntent =
+  | 'blockers'
+  | 'next_steps'
+  | 'requirements'
+  | 'ownership'
+  | 'transition'
+  | 'quality'
+  | 'status'
+  | 'identity'
+  | 'people'
+  | 'timeline'
+  | 'general';
+
 export interface AIResponse {
   currentState: string;
   blockers: Array<{
@@ -23,6 +36,8 @@ export interface AIResponse {
   }>;
   canProceed: boolean;
   confidence: number;
+  intent?: AIResponseIntent;
+  isFactual?: boolean;
 }
 
 interface AssistantApiData {
@@ -48,7 +63,14 @@ interface AssistantApiData {
   canProceed: boolean;
   confidence: number;
   answer?: string;
+  questionIntent?: AIResponseIntent;
 }
+
+const FACTUAL_INTENTS: ReadonlySet<AIResponseIntent> = new Set([
+  'identity',
+  'people',
+  'timeline',
+]);
 
 function toTitleCase(value: string): string {
   return value
@@ -90,6 +112,9 @@ function mapApiDataToAIResponse(data: AssistantApiData): AIResponse {
     data.currentState.isOwner ? 'You are assigned' : 'Another user is assigned'
   }`;
 
+  const intent = data.questionIntent;
+  const isFactual = intent ? FACTUAL_INTENTS.has(intent) : false;
+
   return {
     currentState: data.answer || fallbackCurrentState,
     blockers,
@@ -97,6 +122,8 @@ function mapApiDataToAIResponse(data: AssistantApiData): AIResponse {
     qualityIssues,
     canProceed: data.canProceed,
     confidence: data.confidence / 100,
+    intent,
+    isFactual,
   };
 }
 

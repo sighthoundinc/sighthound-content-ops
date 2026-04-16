@@ -134,7 +134,7 @@ function detectInvalidTransitions(input: DetectorInput, blockers: Blocker[]): vo
   if (input.nextAllowedStages.length === 0) {
     blockers.push({
       type: "invalid_transition",
-      message: `Cannot transition from ${input.status} (terminal stage)`,
+      message: "This record is already at the final stage.",
       severity: "critical"
     });
   }

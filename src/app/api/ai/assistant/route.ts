@@ -469,10 +469,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       nextSteps = routedPrompt.nextSteps;
     }
 
+    // Factual questions (identity/people/timeline) should not be cluttered with
+    // workflow blockers, quality issues, next steps, or workflow confidence.
+    const isFactualIntent =
+      questionIntent === "identity" ||
+      questionIntent === "people" ||
+      questionIntent === "timeline";
+
     const result = {
       ...deterministicResult,
-      nextSteps,
-      confidence,
+      blockers: isFactualIntent ? [] : deterministicResult.blockers,
+      qualityIssues: isFactualIntent ? [] : deterministicResult.qualityIssues,
+      nextSteps: isFactualIntent ? [] : nextSteps,
+      confidence: isFactualIntent ? 0 : confidence,
       prompt: normalizedPrompt,
       questionIntent,
       answer,

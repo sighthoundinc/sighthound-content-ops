@@ -205,16 +205,31 @@ function buildFactualAnswer(
         if (facts.createdAt) {
           bits.push(`drafted ${humanizeDateOnly(facts.createdAt)}`);
         }
-        const publishedLabel =
-          facts.displayPublishedDate ?? facts.actualPublishedAt;
-        if (publishedLabel) {
-          bits.push(`published ${humanizeDateOnly(publishedLabel)}`);
+        // Prefer the authoritative publish event (actualPublishedAt) over the
+        // cosmetic display date. If the two clearly differ, mention both so
+        // the user knows the displayed date was backdated/adjusted.
+        const actualLabel = facts.actualPublishedAt;
+        const displayLabel = facts.displayPublishedDate;
+        const actualDay = actualLabel ? actualLabel.slice(0, 10) : undefined;
+        const displayDay = displayLabel ? displayLabel.slice(0, 10) : undefined;
+        if (actualLabel) {
+          if (displayDay && displayDay !== actualDay) {
+            bits.push(
+              `published ${humanizeDateOnly(actualLabel)} (shown as ${humanizeDateOnly(
+                displayLabel
+              )})`
+            );
+          } else {
+            bits.push(`published ${humanizeDateOnly(actualLabel)}`);
+          }
+        } else if (displayLabel) {
+          bits.push(`published ${humanizeDateOnly(displayLabel)}`);
         }
         if (typeof facts.timeToPublishDays === "number") {
           bits.push(
             `took ${humanizeDuration(facts.timeToPublishDays)} from draft to publish`
           );
-        } else if (facts.scheduledPublishDate && !publishedLabel) {
+        } else if (facts.scheduledPublishDate && !actualLabel && !displayLabel) {
           bits.push(
             `scheduled for ${humanizeDateOnly(facts.scheduledPublishDate)}`
           );

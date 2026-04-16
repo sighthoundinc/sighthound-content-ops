@@ -11,18 +11,21 @@ interface AIMessageProps {
 }
 
 export function AIMessage({ response }: AIMessageProps) {
+  const isFactual = !!response.isFactual;
+  const answerHeading = isFactual ? 'Answer' : 'Current State';
+
   return (
     <div className="space-y-6">
-      {/* Current State */}
+      {/* Answer / Current State */}
       {response.currentState && (
         <div>
-          <h3 className="text-sm font-semibold text-slate-900 mb-2">Current State</h3>
+          <h3 className="text-sm font-semibold text-slate-900 mb-2">{answerHeading}</h3>
           <p className="text-sm text-slate-700">{response.currentState}</p>
         </div>
       )}
 
-      {/* Blockers */}
-      {response.blockers && response.blockers.length > 0 && (
+      {/* Workflow sections are hidden for factual Q&A */}
+      {!isFactual && response.blockers && response.blockers.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-slate-900 mb-3">Blockers</h3>
           <div className="space-y-2">
@@ -33,8 +36,7 @@ export function AIMessage({ response }: AIMessageProps) {
         </div>
       )}
 
-      {/* Quality Issues */}
-      {response.qualityIssues && response.qualityIssues.length > 0 && (
+      {!isFactual && response.qualityIssues && response.qualityIssues.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-slate-900 mb-3">Quality Issues</h3>
           <div className="space-y-2">
@@ -45,13 +47,12 @@ export function AIMessage({ response }: AIMessageProps) {
         </div>
       )}
 
-      {/* Next Steps */}
-      {response.nextSteps && response.nextSteps.length > 0 && (
+      {!isFactual && response.nextSteps && response.nextSteps.length > 0 && (
         <AINextStepsCard steps={response.nextSteps} />
       )}
 
-      {/* Confidence */}
-      {response.confidence > 0 && (
+      {/* Workflow confidence is not meaningful for factual retrieval */}
+      {!isFactual && response.confidence > 0 && (
         <div className="pt-4 border-t border-slate-200">
           <p className="text-xs text-slate-500">
             Confidence: {Math.round(response.confidence * 100)}%

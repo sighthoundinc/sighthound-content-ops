@@ -126,14 +126,38 @@ describe("Ask AI — RAG factual Q&A (blogs)", () => {
     expect(routed.answer).toContain("publishing");
   });
 
-  it("answers 'when was this published?' with a friendly date", () => {
+  it("answers 'when was this published?' with the actual publish event date", () => {
     const { routed } = runPipeline(
       "When was this blog published?",
       publishedFacts
     );
     expect(routed.intent).toBe("timeline");
     expect(routed.answer.toLowerCase()).toContain("published");
+    // Prefer actualPublishedAt over the cosmetic displayPublishedDate.
     expect(routed.answer).toContain("Apr 2, 2026");
+  });
+
+  it("prefers actualPublishedAt and surfaces a mismatched displayed date", () => {
+    const divergentFacts: BlogFacts = {
+      ...publishedFacts,
+      // Real publish event happened later than the cosmetic display date.
+      displayPublishedDate: "2026-02-04",
+      actualPublishedAt: "2026-04-15T16:48:00.000Z",
+      createdAt: "2026-04-04T15:43:00.000Z",
+      timeToPublishDays: 11,
+    };
+    const { routed } = runPipeline(
+      "When was this blog published?",
+      divergentFacts
+    );
+    expect(routed.intent).toBe("timeline");
+    // The authoritative publish date is surfaced first
+    expect(routed.answer).toContain("Apr 15, 2026");
+    // The cosmetic display date is disclosed but clearly tagged
+    expect(routed.answer).toContain("shown as");
+    expect(routed.answer).toContain("Feb 4, 2026");
+    // Math must still be consistent (draft Apr 4 -> actual Apr 15 = 11 days)
+    expect(routed.answer).toContain("11 days");
   });
 
   it("answers 'how long from draft to publish?' with a friendly duration", () => {

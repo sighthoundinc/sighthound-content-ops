@@ -34,7 +34,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type PostgrestError,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 import { 
   AskAIRequest, 
   AskAIResponse, 
@@ -50,6 +54,7 @@ import { generateResponse } from "@/app/api/ai/utils/response-generator";
 import { getRequiredFieldsForStatus, getNextStagesForStatus } from "@/lib/workflow-rules";
 import { getGeminiGuidance } from "@/app/api/ai/utils/gemini-client";
 import { routePrompt } from "@/app/api/ai/utils/prompt-router";
+import { isMissingSocialOwnershipColumnsError } from "@/lib/social-post-schema";
 
 /**
  * Entity state interface for DB mapping
@@ -62,6 +67,31 @@ interface EntityState {
   title?: string;
   caption?: string;
   platforms?: string[];
+}
+type EntityStateErrorCode = "not_found" | "unauthorized" | "query_error";
+class EntityStateError extends Error {
+  code: EntityStateErrorCode;
+
+  constructor(code: EntityStateErrorCode, message: string) {
+    super(message);
+    this.code = code;
+    this.name = "EntityStateError";
+  }
+}
+
+function isUnauthorizedEntityQueryError(
+  error: Pick<PostgrestError, "code" | "message" | "details" | "hint"> | null | undefined
+) {
+  if (!error) {
+    return false;
+  }
+  const code = (error.code ?? "").toUpperCase();
+  const text = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return (
+    code === "42501" ||
+    text.includes("permission denied") ||
+    text.includes("row-level security")
+  );
 }
 
 function mergeUniqueSteps(primary: string[], fallback: string[]): string[] {
@@ -87,11 +117,17 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
          writer_id, publisher_id, scheduled_publish_date, site, created_by, updated_at`
       )
       .eq("id", entityId)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
       console.error("[AI Assistant Blog Query Error]", { error, data });
-      throw new Error(`Blog query failed: ${error?.message || 'no data'}`);
+      if (isUnauthorizedEntityQueryError(error)) {
+        throw new EntityStateError("unauthorized", "Blog access denied");
+      }
+      throw new EntityStateError("query_error", `Blog query failed: ${error.message}`);
+    }
+    if (!data) {
+      throw new EntityStateError("not_found", "Blog not found");
     }
 
     // Map DB fields to DetectorInput format
@@ -111,23 +147,58 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
       title: data.title || undefined
     };
   } else if (entityType === "social_post") {
-    // Query social_posts table with RLS
-    const { data, error } = await supabase
-      .from("social_posts")
-      .select(
-        `id, status, product, type, canva_url, canva_page, caption,
-         platforms, scheduled_date, created_by, worker_user_id, reviewer_user_id,
-         assigned_to_user_id, title, associated_blog_id, updated_at`
-      )
-      .eq("id", entityId)
-      .single();
+    const socialSelectWithOwnership = `
+      id, status, product, type, canva_url, canva_page, caption,
+      platforms, scheduled_date, created_by, worker_user_id, reviewer_user_id,
+      assigned_to_user_id, title, associated_blog_id, updated_at
+    `;
+    const socialSelectLegacy = `
+      id, status, product, type, canva_url, canva_page, caption,
+      platforms, scheduled_date, created_by, worker_user_id, reviewer_user_id,
+      title, associated_blog_id, updated_at
+    `;
 
-    if (error || !data) {
+    // Query social_posts table with RLS (fallback for legacy ownership schema)
+    let { data, error } = await supabase
+      .from("social_posts")
+      .select(socialSelectWithOwnership)
+      .eq("id", entityId)
+      .maybeSingle();
+    if (isMissingSocialOwnershipColumnsError(error)) {
+      const fallbackResult = await supabase
+        .from("social_posts")
+        .select(socialSelectLegacy)
+        .eq("id", entityId)
+        .maybeSingle();
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    }
+
+    if (error) {
       console.error("[AI Assistant Social Post Query Error]", { error, data });
-      throw new Error(`Social post query failed: ${error?.message || 'no data'}`);
+      if (isUnauthorizedEntityQueryError(error)) {
+        throw new EntityStateError("unauthorized", "Social post access denied");
+      }
+      throw new EntityStateError("query_error", `Social post query failed: ${error.message}`);
+    }
+    if (!data) {
+      throw new EntityStateError("not_found", "Social post not found");
     }
 
     // Map DB fields to DetectorInput format
+    const reviewerUserId =
+      typeof data.reviewer_user_id === "string" ? data.reviewer_user_id : null;
+    const workerUserId =
+      typeof data.worker_user_id === "string" ? data.worker_user_id : null;
+    const assignedToUserId =
+      typeof data.assigned_to_user_id === "string" ? data.assigned_to_user_id : null;
+    const derivedOwnerId =
+      assignedToUserId ??
+      (data.status === "in_review" || data.status === "creative_approved"
+        ? reviewerUserId
+        : workerUserId) ??
+      (typeof data.created_by === "string" ? data.created_by : null) ??
+      userId;
     return {
       status: data.status || "draft",
       fields: {
@@ -141,15 +212,47 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
         title: !!data.title,
         associated_blog_id: !!data.associated_blog_id
       },
-      ownerId: data.assigned_to_user_id || data.worker_user_id || data.created_by || userId,
-      reviewerId: data.reviewer_user_id,
+      ownerId: derivedOwnerId,
+      reviewerId: reviewerUserId ?? undefined,
       title: data.title || undefined,
       caption: data.caption || undefined,
       platforms: Array.isArray(data.platforms) ? data.platforms : []
     };
+  } else if (entityType === "idea") {
+    const { data, error } = await supabase
+      .from("blog_ideas")
+      .select(
+        "id,title,site,description,created_by,is_converted,converted_blog_id,created_at"
+      )
+      .eq("id", entityId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[AI Assistant Idea Query Error]", { error, data });
+      if (isUnauthorizedEntityQueryError(error)) {
+        throw new EntityStateError("unauthorized", "Idea access denied");
+      }
+      throw new EntityStateError("query_error", `Idea query failed: ${error.message}`);
+    }
+    if (!data) {
+      throw new EntityStateError("not_found", "Idea not found");
+    }
+
+    return {
+      status: "idea",
+      fields: {
+        title: !!data.title,
+        site: !!data.site,
+        description: !!data.description,
+        converted_blog_id: !!data.converted_blog_id,
+      },
+      ownerId:
+        (typeof data.created_by === "string" ? data.created_by : null) || userId,
+      title: typeof data.title === "string" ? data.title : undefined,
+    };
   }
 
-  throw new Error(`Unknown entity type: ${entityType}`);
+  throw new EntityStateError("query_error", `Unknown entity type: ${entityType}`);
 }
 
 /**
@@ -172,6 +275,12 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
     // Extract auth token from request headers
     const authHeader = req.headers.get("Authorization") || "";
     const accessToken = authHeader.replace(/^Bearer\s+/i, "");
+    if (!accessToken) {
+      return NextResponse.json(
+        createErrorResponse("UNAUTHORIZED", "Please sign in to use the AI assistant"),
+        { status: 401 }
+      );
+    }
 
     // Create authenticated Supabase client with the user's token
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -190,18 +299,39 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
     try {
       entityState = await getEntityState(supabase, request.entityType, request.entityId, request.userId);
     } catch (dbError) {
-      const dbErrorMsg = (dbError as Error).message;
-      console.error("[AI Assistant DB Error]", dbErrorMsg);
-      // Check if it's an RLS denial or not found
-      if (dbErrorMsg.includes("access denied")) {
+      if (dbError instanceof EntityStateError) {
+        console.error("[AI Assistant DB Error]", {
+          code: dbError.code,
+          message: dbError.message,
+        });
+        if (dbError.code === "unauthorized") {
+          return NextResponse.json(
+            createErrorResponse("UNAUTHORIZED", "You do not have access to this content"),
+            { status: 403 }
+          );
+        }
+        if (dbError.code === "not_found") {
+          return NextResponse.json(
+            createErrorResponse("NOT_FOUND", "Content not found"),
+            { status: 404 }
+          );
+        }
         return NextResponse.json(
-          createErrorResponse("UNAUTHORIZED", "You do not have access to this content"),
-          { status: 403 }
+          createErrorResponse(
+            "INTERNAL_ERROR",
+            "Couldn't load content for AI guidance. Please try again."
+          ),
+          { status: 500 }
         );
       }
+      const dbErrorMsg = dbError instanceof Error ? dbError.message : "Unknown DB error";
+      console.error("[AI Assistant DB Error]", dbErrorMsg);
       return NextResponse.json(
-        createErrorResponse("NOT_FOUND", "Content not found"),
-        { status: 404 }
+        createErrorResponse(
+          "INTERNAL_ERROR",
+          "Couldn't load content for AI guidance. Please try again."
+        ),
+        { status: 500 }
       );
     }
 

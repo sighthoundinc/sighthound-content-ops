@@ -53,9 +53,12 @@ export function AIChatPanel() {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full gap-3">
-              <div className="animate-spin">
-                <AppIcon name="loading" size={24} className="text-blue-600" />
-              </div>
+              <AppIcon
+                name="loading"
+                size={22}
+                boxClassName="h-7 w-7"
+                className="text-blue-600 animate-[spin_1.5s_linear_infinite] motion-reduce:animate-none"
+              />
               <p className="text-sm text-slate-600">Analyzing...</p>
             </div>
           ) : error ? (

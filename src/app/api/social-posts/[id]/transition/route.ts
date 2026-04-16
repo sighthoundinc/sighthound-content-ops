@@ -109,7 +109,28 @@ export const POST = withApiContract(async function POST(
       .eq("id", id)
       .maybeSingle();
 
-    if (fetchError || !socialPost) {
+    if (fetchError) {
+      console.error(
+        "[POST /api/social-posts/[id]/transition] failed to load social post",
+        fetchError
+      );
+      const fetchErrorText = `${fetchError.message ?? ""} ${fetchError.details ?? ""} ${fetchError.hint ?? ""}`.toLowerCase();
+      if (
+        fetchError.code === "PGRST116" ||
+        fetchErrorText.includes("no rows") ||
+        fetchErrorText.includes("not found")
+      ) {
+        return NextResponse.json(
+          { error: "Social post not found" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(
+        { error: "Couldn't load social post. Please try again." },
+        { status: 500 }
+      );
+    }
+    if (!socialPost) {
       return NextResponse.json(
         { error: "Social post not found" },
         { status: 404 }
@@ -275,7 +296,7 @@ export const POST = withApiContract(async function POST(
       .update(updatePayload)
       .eq("id", id)
       .eq("status", currentStatus) // Concurrency protection: fails if status changed
-      .select("id, status, created_by, editor_user_id, admin_owner_id")
+      .select("id,status")
       .maybeSingle();
 
     if (updateError) {

@@ -116,8 +116,8 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
       .from("social_posts")
       .select(
         `id, status, product, type, canva_url, canva_page, caption,
-         platforms, scheduled_publish_date, created_by, editor_id,
-         title, associated_blog_id, updated_at`
+         platforms, scheduled_date, created_by, worker_user_id, reviewer_user_id,
+         assigned_to_user_id, title, associated_blog_id, updated_at`
       )
       .eq("id", entityId)
       .single();
@@ -137,12 +137,12 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
         canva_page: !!data.canva_page,
         caption: !!data.caption,
         platforms: Array.isArray(data.platforms) ? data.platforms.length > 0 : !!data.platforms,
-        scheduled_publish_date: !!data.scheduled_publish_date,
+        scheduled_publish_date: !!data.scheduled_date,
         title: !!data.title,
         associated_blog_id: !!data.associated_blog_id
       },
-      ownerId: data.created_by || userId,
-      reviewerId: data.editor_id,
+      ownerId: data.assigned_to_user_id || data.worker_user_id || data.created_by || userId,
+      reviewerId: data.reviewer_user_id,
       title: data.title || undefined,
       caption: data.caption || undefined,
       platforms: Array.isArray(data.platforms) ? data.platforms : []

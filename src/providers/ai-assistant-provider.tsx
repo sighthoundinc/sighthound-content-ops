@@ -31,7 +31,7 @@ interface AIAssistantContextType {
   response: AIResponse | null;
   error: string | null;
   togglePanel: () => void;
-  askAI: (prompt: string) => Promise<void>;
+  askAI: (prompt?: string) => Promise<void>;
   closePanel: () => void;
   reset: () => void;
 }
@@ -91,7 +91,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const askAI = useCallback(
-    async () => {
+    async (prompt?: string) => {
       if (!user?.id) {
         setError('You must be logged in to use the AI assistant');
         return;

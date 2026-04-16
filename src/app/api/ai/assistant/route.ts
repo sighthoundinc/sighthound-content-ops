@@ -41,7 +41,7 @@ import {
 } from "@/app/api/ai/models";
 import { extractContextSync } from "@/app/api/ai/utils/context-extractor";
 import { detectBlockers } from "@/lib/blocker-detector";
-import { checkQuality } from "@/lib/quality-checker";
+import { checkQuality, type QualityCheckResult } from "@/lib/quality-checker";
 import { generateResponse } from "@/app/api/ai/utils/response-generator";
 import { getRequiredFieldsForStatus, getNextStagesForStatus } from "@/lib/workflow-rules";
 
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
     });
 
     // Check quality using real entity data from Supabase
-    let qualityResult: { issues: any[]; qualityScore: number } = { issues: [], qualityScore: 100 };
+    let qualityResult: QualityCheckResult = { issues: [], qualityScore: 100 };
     if (request.entityType === "blog") {
       // Blog title already fetched above in entityState, use it
       qualityResult = checkQuality({
@@ -246,7 +246,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
  * GET /api/ai/assistant
  * Health check and documentation
  */
-export async function GET(): Promise<NextResponse<any>> {
+export async function GET(): Promise<NextResponse<Record<string, unknown>>> {
   return NextResponse.json({
     endpoint: "/api/ai/assistant",
     method: "POST",

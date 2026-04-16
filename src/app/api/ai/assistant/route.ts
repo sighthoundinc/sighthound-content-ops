@@ -34,7 +34,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { 
   AskAIRequest, 
   AskAIResponse, 
@@ -50,6 +49,7 @@ import { generateResponse } from "@/app/api/ai/utils/response-generator";
 import { getRequiredFieldsForStatus, getNextStagesForStatus } from "@/lib/workflow-rules";
 import { getGeminiGuidance } from "@/app/api/ai/utils/gemini-client";
 import { routePrompt } from "@/app/api/ai/utils/prompt-router";
+import { createAdminClient } from "@/lib/supabase/server";
 
 /**
  * Entity state interface for DB mapping
@@ -73,16 +73,12 @@ function mergeUniqueSteps(primary: string[], fallback: string[]): string[] {
 }
 
 /**
- * Get entity state from Supabase server-side
- * Uses service role on server-side (client has already authenticated)
+ * Get entity state from Supabase with RLS enforcement
+ * Uses service role key on server-side (client has already authenticated)
  */
 async function getEntityState(entityType: string, entityId: string, userId: string): Promise<EntityState> {
-  // Use service role key on server for authenticated queries
-  // The client has already verified the user is logged in
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  );
+  // Use admin client with service role key to bypass RLS
+  const supabase = createAdminClient();
 
   if (entityType === "blog") {
     // Query blogs table with RLS

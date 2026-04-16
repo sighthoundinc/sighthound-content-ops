@@ -91,7 +91,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const askAI = useCallback(
-    async (prompt: string) => {
+    async () => {
       if (!user?.id) {
         setError('You must be logged in to use the AI assistant');
         return;

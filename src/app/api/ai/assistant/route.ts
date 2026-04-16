@@ -34,7 +34,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { 
   AskAIRequest, 
   AskAIResponse, 
@@ -76,7 +76,7 @@ function mergeUniqueSteps(primary: string[], fallback: string[]): string[] {
  * Get entity state from Supabase using authenticated context
  * Uses auth token from client to respect RLS policies
  */
-async function getEntityState(supabase: any, entityType: string, entityId: string, userId: string): Promise<EntityState> {
+async function getEntityState(supabase: SupabaseClient, entityType: string, entityId: string, userId: string): Promise<EntityState> {
 
   if (entityType === "blog") {
     // Query blogs table with RLS

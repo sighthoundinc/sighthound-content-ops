@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { AppIcon } from "@/lib/icons";
+
 type MultiSelectOption = {
   value: string;
   label: string;
@@ -119,7 +121,12 @@ export function CheckboxMultiSelect({
         }}
       >
         <span className="truncate">{triggerText}</span>
-        <span className="ml-3 text-xs text-slate-500">{isOpen ? "▲" : "▼"}</span>
+        <AppIcon
+          name={isOpen ? "chevronUp" : "chevronDown"}
+          boxClassName="ml-3 h-3 w-3"
+          size={12}
+          className="text-slate-500"
+        />
       </button>
 
       {isOpen ? (

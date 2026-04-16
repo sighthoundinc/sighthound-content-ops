@@ -2918,7 +2918,7 @@ export default function DashboardPage() {
         })),
         ...writerFilters.map((writerId) => ({
           id: `writer-${writerId}`,
-          label: `Writing Assignee: ${
+          label: `Writer: ${
             filterUserOptions.find((writer) => writer.value === writerId)?.label ?? writerId
           }`,
           onRemove: () => {
@@ -2927,7 +2927,7 @@ export default function DashboardPage() {
         })),
         ...publisherFilters.map((publisherId) => ({
           id: `publisher-${publisherId}`,
-          label: `Publishing Assignee: ${
+          label: `Publisher: ${
             filterUserOptions.find((publisher) => publisher.value === publisherId)?.label ??
             publisherId
           }`,
@@ -2989,7 +2989,7 @@ export default function DashboardPage() {
         })),
         ...statusFilters.map((status) => ({
           id: `overall-status-${status}`,
-          label: `Blog Stage: ${STATUS_LABELS[status]}`,
+          label: `Stage: ${STATUS_LABELS[status]}`,
           onRemove: () => {
             setStatusFilters((previous) => previous.filter((value) => value !== status));
           },
@@ -4245,13 +4245,13 @@ export default function DashboardPage() {
                         {hasBlogFilterScope ? (
                           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                             <CheckboxMultiSelect
-                              label="Writing Assignees"
+                              label="Writers"
                               options={writerFilterOptionsWithCounts}
                               selectedValues={writerFilters}
                               onChange={setWriterFilters}
                             />
                             <CheckboxMultiSelect
-                              label="Publishing Assignees"
+                              label="Publishers"
                               options={publisherFilterOptionsWithCounts}
                               selectedValues={publisherFilters}
                               onChange={setPublisherFilters}
@@ -4560,8 +4560,14 @@ export default function DashboardPage() {
                           Save View
                         </button>
                         <details className="relative">
-                          <summary className="cursor-pointer list-none rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
-                            Load View ▼
+                          <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                            <span>Load View</span>
+                            <AppIcon
+                              name="chevronDown"
+                              boxClassName="h-3 w-3"
+                              size={12}
+                              className="text-slate-500"
+                            />
                           </summary>
                           <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
                             {sortedSavedViews.length === 0 ? (
@@ -4765,18 +4771,6 @@ export default function DashboardPage() {
                     onPageChange={setCurrentPage}
                   />
                 </div>
-                <button
-                  type="button"
-                  className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
-                  onClick={() => {
-                    tableContainerRef.current?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                  }}
-                >
-                  ↑ Move to top
-                </button>
               </div>
               <DataPageTableFeedback isVisible={isApplyingFilterFeedback} />
             </div>

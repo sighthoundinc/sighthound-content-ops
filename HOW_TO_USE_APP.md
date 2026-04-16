@@ -35,12 +35,12 @@ Ownership rule:
 ## 3) Social post pipeline
 | Status | Owner | Required action |
 |---|---|---|
-| Draft | Creator/Worker | Complete essentials and submit for review |
+| Draft | Assigned to | Complete essentials and submit for review |
 | In Review | Reviewer | Approve or request changes |
-| Changes Requested | Creator/Worker | Apply changes and resubmit |
+| Changes Requested | Assigned to | Apply changes and resubmit |
 | Creative Approved | Reviewer | Confirm handoff to execution |
-| Ready to Publish | Creator/Worker | Publish post |
-| Awaiting Live Link | Creator/Worker | Submit live-link proof |
+| Ready to Publish | Assigned to | Publish post |
+| Awaiting Live Link | Assigned to | Submit live-link proof |
 | Published | Terminal | Done |
 
 Mandatory gates:
@@ -61,16 +61,20 @@ Flow:
 ## 4) Blog pipeline
 | Stage | Owner | Required action |
 |---|---|---|
-| Writing stages | Assigned writing owner | Draft and refine content |
+| Not Started | Assigned Writer | Start writing work |
+| Writing in Progress | Assigned Writer | Draft and refine content |
+| Awaiting Writing Review | Reviewer | Review writing and approve or request revision |
+| Needs Revision | Assigned Writer | Address revision notes and resubmit |
 | Writing Approved | Handoff point | Transfer execution to publishing |
-| Publishing in Progress | Assigned publishing owner | Execute publishing prep |
-| Awaiting Publishing Approval | Reviewer checkpoint | Validate readiness |
-| Publishing Approved | Assigned publishing owner | Complete final publish action |
+| Publishing in Progress | Assigned Publisher | Execute publishing prep |
+| Awaiting Publishing Review | Reviewer | Validate readiness |
+| Approved for Publishing | Assigned Publisher | Complete final publish action |
 | Published | Terminal | Done |
 
 Key rule:
 - Publishing completion should not bypass writing completion and review checkpoint.
 - If Actual Published Date is empty, it is auto-captured when publishing is marked complete.
+- Role nouns (`Writer`, `Publisher`, `Reviewer`) only appear when labeling a specific user acting in that role; stages and statuses use the pipeline nouns `Writing` / `Publishing`.
 
 ## 5) Daily execution rhythm
 1. Open [My Tasks](/tasks)

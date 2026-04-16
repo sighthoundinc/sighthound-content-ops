@@ -1789,7 +1789,7 @@ export default function BlogDetailPage() {
                   setNewComment(event.target.value);
                 }}
                 className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-                placeholder="Add remarks or feedback…"
+                placeholder="Add context or feedback…"
                 maxLength={2000}
               />
               <div className="flex justify-end">
@@ -1802,7 +1802,7 @@ export default function BlogDetailPage() {
                   }
                   className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isCommentSaving ? "Adding..." : "Add Comment"}
+                  {isCommentSaving ? "Adding…" : "Add Comment"}
                 </button>
               </div>
             </form>
@@ -1814,7 +1814,7 @@ export default function BlogDetailPage() {
 
             {comments.length === 0 ? (
               <p className="mt-3 text-sm text-slate-500">
-                No comments yet. Add context for reviewers or owners to keep handoffs clear.
+                No comments yet. Add context to keep handoffs clear.
               </p>
             ) : (
               <ul className="mt-3 space-y-3">
@@ -1903,6 +1903,7 @@ export default function BlogDetailPage() {
                             ) : null;
                           })()}
                           <p className="text-xs text-slate-400">
+                            {(entry.changed_by && activityUserNameById[entry.changed_by]) || "System"} •{" "}
                             {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                           </p>
                         </li>

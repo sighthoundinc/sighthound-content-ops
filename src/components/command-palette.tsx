@@ -175,7 +175,7 @@ export function CommandPalette() {
             <div>Press ESC to close</div>
             <div className="flex gap-2">
               <kbd className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-semibold">
-                ↑↓
+                Up/Down
               </kbd>
               <kbd className="px-2 py-1 bg-white border border-gray-200 rounded text-xs font-semibold">
                 Enter

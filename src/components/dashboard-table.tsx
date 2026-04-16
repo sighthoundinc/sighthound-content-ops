@@ -4,6 +4,7 @@ import { formatDateOnly } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
 import { getWorkflowRowClassName } from "@/lib/table-row-tones";
 import { cn } from "@/lib/utils";
+import { AppIcon, type AppIconName } from "@/lib/icons";
 import {
   getTableBodyCellClass,
   TABLE_BASE_CLASS,
@@ -113,11 +114,11 @@ export function DashboardTable({
   const someSelected =
     rows.some((row) => selectedRowKeys.has(getRowKey(row))) && !allSelected;
 
-  const getColumnSortIndicator = (column: DashboardTableColumnKey) => {
+  const getColumnSortIndicatorIcon = (column: DashboardTableColumnKey): AppIconName => {
     if (sortField !== column) {
-      return "↕";
+      return "chevronsUpDown";
     }
-    return sortDirection === "asc" ? "↑" : "↓";
+    return sortDirection === "asc" ? "chevronUp" : "chevronDown";
   };
   const getColumnAriaSort = (column: DashboardTableColumnKey) => {
     if (sortField !== column) {
@@ -177,9 +178,12 @@ export function DashboardTable({
                   title={`Sort by ${DASHBOARD_COLUMN_LABELS[column]}`}
                 >
                   <span>{DASHBOARD_COLUMN_LABELS[column]}</span>
-                  <span aria-hidden="true" className="text-[11px] text-slate-500">
-                    {getColumnSortIndicator(column)}
-                  </span>
+                  <AppIcon
+                    name={getColumnSortIndicatorIcon(column)}
+                    boxClassName="h-3 w-3"
+                    size={12}
+                    className="text-slate-500"
+                  />
                 </button>
               </th>
             ))}

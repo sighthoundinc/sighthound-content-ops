@@ -9,8 +9,9 @@ Content Relay is a stage-based content operations app for managing blogs and soc
 
 ## Pipeline overview
 ### Blog track
-Writing flow → Writing Approved handoff → Publishing in Progress → Awaiting Publishing Approval → Publishing Approved → Published
+Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revision ↔ Awaiting Writing Review) → Writing Approved → Publishing in Progress → Awaiting Publishing Review → Approved for Publishing → Published
 - If Actual Published Date is blank, it is automatically captured when publishing is marked completed.
+- Role nouns (`Writer`, `Publisher`, `Reviewer`) appear only when labeling a specific user acting in that role; stages/statuses use pipeline nouns (`Writing`, `Publishing`).
 
 ### Social track
 Draft → In Review → Changes Requested → Creative Approved → Ready to Publish → Awaiting Live Link → Published

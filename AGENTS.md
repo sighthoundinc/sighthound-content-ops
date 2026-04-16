@@ -245,6 +245,55 @@ For every non-trivial UI or workflow change:
 - Error messages and user guidance should reference workflows, not roles
 - Keep the mapping centralized: if label changes, update in one place and apply globally
 
+## Global Vocabulary Contract (MUST)
+
+All user-visible strings are governed by the canonical vocabulary in `src/lib/ui-vocab.ts`. This is the single source of truth; new user-visible strings must either come from `UI_VOCAB` or match its rules exactly.
+
+**Product name**:
+- Canonical full form: `Sighthound Content Relay`.
+- Canonical short form: `Content Relay` (use where space/context is tight, e.g. header subtitle, breadcrumbs).
+- Forbidden variants: `Sighthound Content Ops`, `Content Ops Dashboard`.
+
+**Pipeline vs role nouns**:
+- Pipelines, stages, statuses, section titles, and filter groups use the pipeline noun form: `Writing` / `Publishing`.
+- The role nouns `Writer` / `Publisher` appear ONLY where the label refers to a specific user acting in that role (for example the filter pill `Writer: Jane Doe` or the drawer assignee select label `Writer`).
+- `Worker` is legacy and must not appear in UI copy; use `Assigned to`.
+- Filter pill grammar: `{Concept}: {value}`. Use role nouns (`Writer:`, `Publisher:`) when the value is a user name; use pipeline nouns (`Writing Status:`, `Publishing Status:`) when the value is a workflow state.
+- Forbidden filter pill variants: `Writing Assignee:`, `Publishing Assignee:`.
+
+**Status labels** (see `src/lib/status.ts`):
+- Writer: `Not Started`, `Writing in Progress`, `Awaiting Writing Review`, `Needs Revision`, `Writing Approved`.
+- Publisher: `Not Started`, `Publishing in Progress`, `Awaiting Publishing Review`, `Approved for Publishing`, `Published`.
+- Social labels stay canonical in `src/lib/social-post-workflow.ts`.
+- Contract tests in `src/lib/status.contract.test.ts` lock these labels.
+
+**Status color tokens** (see `src/lib/status.ts`):
+- review / pending-review → violet.
+- ready-to-publish / approval-ready → sky.
+- awaiting-live-link → amber.
+- changes-requested / needs-revision → rose.
+- in-progress writing/execution → blue.
+- published / completed terminal → emerald.
+- neutral / unknown → slate.
+- Workflow stage badges are soft pastel (never solid `bg-*-500 text-white`).
+
+**Section names and ordering**:
+- `Comments` always renders above `Links` and `Assignment & Changes`.
+- Record-level history section is always titled `Assignment & Changes` (never `Activity`).
+- Header bell popover heading is `Assignment & Changes`.
+
+**Iconography**:
+- Sort indicators and all other non-text glyphs must come from `AppIcon` in `src/lib/icons.tsx`.
+- Unicode glyph chars (`↕`, `↑`, `↓`, `▼`) must not appear in UI copy.
+
+**Scope**:
+- DB columns, API fields, event types, Slack payload keys, and internal helper names stay unchanged. This rule applies to user-visible strings only.
+
+**Enforcement**:
+- `src/lib/status.contract.test.ts` asserts status labels + color tokens.
+- `src/lib/ui-vocab.contract.test.ts` asserts `UI_VOCAB` contents and forbidden substrings.
+- `tests/ui/no-forbidden-strings.test.ts` greps `src/app` and `src/components` for forbidden substrings and unicode glyphs used outside `AppIcon`.
+
 ## Workflow-Critical Field Ownership (MUST)
 
 **Principle**: Workflow-critical fields (URLs, dates) are controlled by **ownership**, not independent permissions.

@@ -673,7 +673,7 @@ export function AppShell({
                   aria-label="Notifications menu"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-slate-900">Updates</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">Assignment & Changes</h3>
                     <button
                       type="button"
                       onClick={() => {
@@ -687,7 +687,7 @@ export function AppShell({
                   </div>
                   {unreadNotificationItems.length === 0 ? (
                     <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
-                      No unread updates.
+                      No unread assignments or changes.
                     </p>
                   ) : (
                     <ul className="mt-2 max-h-[340px] space-y-1 overflow-y-auto">
@@ -1065,7 +1065,7 @@ export function AppShell({
               </div>
             </div>
             <p className="mt-4 text-xs text-slate-500">
-              Use ↑/↓ to move and Enter to select.{" "}
+              Use <KbdShortcut>Up</KbdShortcut>/<KbdShortcut>Down</KbdShortcut> to move and <KbdShortcut>Enter</KbdShortcut> to select.{" "}
               <button
                 type="button"
                 className="font-medium text-slate-700 underline-offset-2 hover:underline"
@@ -1151,13 +1151,13 @@ export function AppShell({
                       <KbdShortcut>Q</KbdShortcut>
                     </div>
                     <p className="mt-1 text-[10px] text-slate-500">
-                      Opens Quick Create. Use ↑/↓ and Enter to select.
+                      Opens Quick Create. Use Up/Down arrow keys and Enter to select.
                     </p>
                   </div>
                 </div>
               </div>
               <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[10px] text-amber-800">
-                <p className="font-medium">Tip: Press Q, then ↑/↓ to navigate, Enter to select action</p>
+                <p className="font-medium">Tip: Press Q, then Up/Down arrow keys to navigate, Enter to select action</p>
               </div>
               <div>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">

@@ -4,8 +4,10 @@ import "./globals.css";
 import { AuthProvider } from "@/providers/auth-provider";
 import { AlertsProvider } from "@/providers/alerts-provider";
 import { NotificationsProvider } from "@/providers/notifications-provider";
+import { AIAssistantProvider } from "@/providers/ai-assistant-provider";
 import { CommandPalette } from "@/components/command-palette";
 import { GlobalQuickCreate } from "@/components/global-quick-create";
+import { AIFloatingAssistant } from "@/components/ai/ai-floating-assistant";
 
 const interSans = Inter({
   variable: "--font-inter-sans",
@@ -37,9 +39,12 @@ export default function RootLayout({
         <AlertsProvider>
           <NotificationsProvider>
             <AuthProvider>
-              {children}
-              <CommandPalette />
-              <GlobalQuickCreate />
+              <AIAssistantProvider>
+                {children}
+                <CommandPalette />
+                <GlobalQuickCreate />
+                <AIFloatingAssistant />
+              </AIAssistantProvider>
             </AuthProvider>
           </NotificationsProvider>
         </AlertsProvider>

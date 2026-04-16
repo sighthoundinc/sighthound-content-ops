@@ -94,6 +94,36 @@ describe("API Assistant Integration", () => {
 
       expect(result.valid).toBe(false);
     });
+
+    it("should accept optional prompt", () => {
+      const request = {
+        entityType: "blog",
+        entityId: "blog-123",
+        userId: "user-456",
+        userRole: "writer",
+        prompt: "Why can't I publish this?"
+      };
+      const result = validateAIRequest(request);
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toBeUndefined();
+    });
+
+    it("should reject non-string prompt", () => {
+      const request = {
+        entityType: "blog",
+        entityId: "blog-123",
+        userId: "user-456",
+        userRole: "writer",
+        prompt: 123
+      };
+      const result = validateAIRequest(request);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ field: "prompt" })
+      );
+    });
   });
 
   describe("Response Conversion", () => {
@@ -156,6 +186,10 @@ describe("API Assistant Integration", () => {
       expect(apiResponse.data?.qualityIssues).toBeDefined();
       expect(apiResponse.data?.canProceed).toBeDefined();
       expect(apiResponse.data?.confidence).toBeDefined();
+      expect(apiResponse.data?.prompt).toBeDefined();
+      expect(apiResponse.data?.questionIntent).toBeDefined();
+      expect(apiResponse.data?.answer).toBeDefined();
+      expect(apiResponse.data?.responseSource).toBeDefined();
     });
   });
 

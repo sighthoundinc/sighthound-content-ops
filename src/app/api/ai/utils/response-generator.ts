@@ -14,7 +14,7 @@
 import { ExtractedContext } from "./context-extractor";
 import { Blocker } from "@/lib/blocker-detector";
 import { QualityIssue } from "@/lib/quality-checker";
-import { AskAIIntent } from "../types";
+import type { AskAIIntent } from "../types";
 
 export interface ResponseGeneratorInput {
   context: ExtractedContext;

@@ -25,6 +25,81 @@ export interface AIResponse {
   confidence: number;
 }
 
+interface AssistantApiData {
+  currentState: {
+    entityType: string;
+    status: string;
+    userRole: string;
+    isOwner: boolean;
+  };
+  blockers: Array<{
+    type: string;
+    severity: string;
+    field?: string;
+    message?: string;
+  }>;
+  nextSteps: string[];
+  qualityIssues: Array<{
+    type: string;
+    severity: string;
+    field: string;
+    message: string;
+  }>;
+  canProceed: boolean;
+  confidence: number;
+  answer?: string;
+}
+
+function toTitleCase(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function mapSeverity(value: string): 'critical' | 'warning' | 'info' {
+  if (value === 'critical' || value === 'warning' || value === 'info') {
+    return value;
+  }
+
+  if (value === 'error') {
+    return 'critical';
+  }
+
+  return 'info';
+}
+
+function mapApiDataToAIResponse(data: AssistantApiData): AIResponse {
+  const blockers = data.blockers.map((blocker) => ({
+    severity: mapSeverity(blocker.severity),
+    title: blocker.field ? `${toTitleCase(blocker.field)} issue` : toTitleCase(blocker.type),
+    description: blocker.message || toTitleCase(blocker.type),
+  }));
+
+  const qualityIssues = data.qualityIssues.map((issue) => ({
+    severity: mapSeverity(issue.severity),
+    title: issue.field ? `${toTitleCase(issue.field)} quality` : 'Quality issue',
+    description: issue.message,
+  }));
+
+  const nextSteps = data.nextSteps.map((step, index) => ({
+    step: `Step ${index + 1}`,
+    action: step,
+  }));
+
+  const fallbackCurrentState = `Current stage: ${toTitleCase(data.currentState.status)} • ${
+    data.currentState.isOwner ? 'You are assigned' : 'Another user is assigned'
+  }`;
+
+  return {
+    currentState: data.answer || fallbackCurrentState,
+    blockers,
+    nextSteps,
+    qualityIssues,
+    canProceed: data.canProceed,
+    confidence: data.confidence / 100,
+  };
+}
+
 interface AIAssistantContextType {
   isOpen: boolean;
   isLoading: boolean;
@@ -138,11 +213,12 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
 
         const apiResponse = await response.json();
         // Extract the data from the API response wrapper
-        const data = apiResponse?.data as AIResponse;
+        const data = apiResponse?.data as AssistantApiData | undefined;
         if (!data) {
           throw new Error('Invalid response format from AI assistant');
         }
-        setResponse(data);
+
+        setResponse(mapApiDataToAIResponse(data));
         setIsOpen(true);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'An error occurred';

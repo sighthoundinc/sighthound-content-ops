@@ -1047,3 +1047,21 @@ When blog import rows are missing selected values, apply deterministic fallbacks
 2. Missing `draftDocLink` (only when `draftDocLink` column is selected) → `https://docs.google.com/`
 3. Missing `actualPublishDate` (only when `actualPublishDate` column is selected) → copy `displayPublishDate`
 4. Fallbacks must run in both client preview preprocessing and server import API to keep behavior consistent and authoritative.
+
+## Ask AI Workflow Assistant Contract (MUST)
+
+1. `POST /api/ai/assistant` must support an optional natural-language `prompt` input.
+2. Ask AI remains advisory-only:
+   - no data mutation
+   - no workflow transition side effects
+   - no content generation
+3. Deterministic context extraction, blocker detection, and required-field gate logic remain authoritative.
+4. Prompt interpretation must always have a deterministic local path so guidance works without external AI dependencies.
+5. Gemini integration is optional enrichment:
+   - enabled when `GEMINI_API_KEY` is configured
+   - failures/timeouts must degrade safely to deterministic output
+6. Prompt-aware responses must include:
+   - `questionIntent`
+   - `answer`
+   - `responseSource` (`deterministic` or `gemini`)
+   - optional `aiModel` when Gemini is used

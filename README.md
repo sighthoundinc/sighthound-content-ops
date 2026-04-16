@@ -63,6 +63,15 @@ Social posts must include at least one valid public live link before they can mo
   - unscheduled cards with zero count are passive (no expand chevron)
 - `Settings`: profile, timezone, notifications, connected services
 
+## Ask AI workflow helper
+- Ask AI is guidance-only: it explains current workflow state, blockers, and next steps without changing data.
+- `POST /api/ai/assistant` accepts an optional `prompt` so users can ask natural-language questions (for example: “Why can’t I publish this?”).
+- Response metadata now includes:
+  - `questionIntent` (what the question was interpreted as),
+  - `answer` (direct contextual explanation),
+  - `responseSource` (`gemini` when Gemini is available, otherwise `deterministic` fallback).
+- Deterministic blocker and gate analysis remains the authority even when Gemini interpretation is enabled.
+
 Detail page ordering rule:
 - Blogs: `Comments` → `Links` → `Assignment & Changes`.
 - Social Posts: `Setup` → `Assignment` → `Associated Blog` → `Write Caption` → `Review & Publish` → `Comments` → `Current Snapshot` → `Checklist` → `Assignment & Changes`.
@@ -111,6 +120,8 @@ npm install
 ```bash
 cp .env.example .env.local
 ```
+Optional:
+- Set `GEMINI_API_KEY` in `.env.local` to enable Gemini prompt interpretation for Ask AI.
 3. Start the app
 ```bash
 npm run dev

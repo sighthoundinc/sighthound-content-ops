@@ -168,16 +168,34 @@ Shared detail-page usability helpers:
   - Below `lg`: right-rail cards move into the main vertical flow (no side column).
 
 ## Ask AI (guidance-only)
-- Use Ask AI on detail pages when you need workflow help in plain language.
-- Example questions:
+Ask AI lives on blog, social post, and idea detail pages. It never edits records or runs transitions.
+
+### What you can ask
+- **Workflow questions** (what to do next, why you're stuck):
   - `Why can't I publish this?`
   - `What's blocking me right now?`
   - `What do I need before moving to review?`
-- Ask AI does not edit records or run transitions. It only explains:
-  - current stage context,
-  - blockers and missing gates,
-  - recommended next steps.
-- Responses attempt Gemini interpretation first when configured; otherwise (or on Gemini failure) the app falls back to deterministic workflow logic.
+- **Factual questions** about the record (grounded in DB metadata, never guessed):
+  - `What is the title of this blog?`
+  - `Who is the writer?` / `Who created this post?` / `Who submitted this idea?`
+  - `When was this published?` / `When was this scheduled?`
+  - `How long did it take from draft to publish?`
+- If a fact isn’t on record (or RLS hides it from you), Ask AI says so instead of inventing an answer.
+
+### In-panel controls
+- **Quick prompts** are context-aware (different suggestions for blogs, social posts, and ideas).
+- **Ask another question** (below any answer) returns the panel to quick prompts without closing it.
+- **Retry** (on errors) replays your last question.
+- The panel clears automatically when you navigate to a different record.
+
+### Stage-specific behavior
+- On **ideas**, Ask AI never shows workflow blockers — ideas are intake-only.
+- On **blogs**, timeline answers prefer the real publish event; if the displayed date differs (because admin backdated it) both are surfaced.
+- All dates render in the timezone you’ve set in [Settings](/settings).
+
+### Under the hood
+- Natural-language interpretation uses Gemini first when available; deterministic logic is the fallback.
+- Deterministic workflow analysis (blockers, gates, transitions) is always the authority regardless of which source phrased the answer.
 
 ## 7) Transition gates reference
 - Never transition without required target-stage fields.

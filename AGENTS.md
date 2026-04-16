@@ -1099,19 +1099,45 @@ When blog import rows are missing selected values, apply deterministic fallbacks
 
 ## Ask AI Workflow Assistant Contract (MUST)
 
-1. `POST /api/ai/assistant` must support an optional natural-language `prompt` input.
+1. `POST /api/ai/assistant` must support an optional natural-language `prompt` input and optional `userTimezone` (IANA string).
 2. Ask AI remains advisory-only:
    - no data mutation
    - no workflow transition side effects
    - no content generation
 3. Deterministic context extraction, blocker detection, and required-field gate logic remain authoritative.
-4. Prompt interpretation is Gemini-primary when available (`GEMINI_API_KEY` configured).
+4. Prompt interpretation is Gemini-primary when available (`GEMINI_API_KEY` configured). Default Gemini model is `gemini-2.5-flash` (override via `GEMINI_MODEL`).
 5. Deterministic prompt routing must always remain available as fallback so guidance works without external AI dependencies:
-   - Gemini failures/timeouts/unavailability must degrade safely to deterministic output
-   - Deterministic blocker and gate analysis remains authoritative regardless of response source
+   - Gemini failures/timeouts/unavailability must degrade safely to deterministic output.
+   - Deterministic blocker and gate analysis remains authoritative regardless of response source.
    - Optional flag `ASK_AI_REQUIRE_GEMINI=true` (dev/staging only) disables the fallback and returns `503` when Gemini is unavailable; do not enable this in production.
+   - When `ASK_AI_REQUIRE_GEMINI=true` and `GEMINI_API_KEY` is absent, the 503 message must clearly say “Ask AI isn’t configured yet” instead of “temporarily unavailable”.
 6. Prompt-aware responses must include:
    - `questionIntent`
    - `answer`
    - `responseSource` (`deterministic` or `gemini`)
    - optional `aiModel` when Gemini is used
+7. **RAG fact provider (grounded metadata).** Every request must attempt to load authoritative record metadata under the caller’s RLS via `fetchFacts(supabase, entityType, entityId)`:
+   - Coverage: `blog`, `social_post`, `idea`.
+   - Fact retrieval failures are non-fatal — guidance still returns without facts.
+   - Assignee UUIDs must be resolved to display names via relational joins to `profiles`.
+   - When an assignee UUID is present but the joined profile is missing (RLS-clipped), facts set a `*Unavailable` boolean so prose can disclose “name isn’t available to you” without inventing a name.
+8. **Factual intents (`identity`, `people`, `timeline`) must read strictly from `FactContext`**:
+   - Never invent titles, names, dates, or durations.
+   - For blog timeline answers, the authoritative publish date is `actualPublishedAt`; when `displayPublishedDate` differs, disclose it as “shown as …”.
+   - If a requested fact is missing from `facts`, Ask AI must state that it doesn’t have the information rather than falling back to a plausible guess.
+9. **Workflow-noise suppression.** When `questionIntent` is factual (`identity` | `people` | `timeline`):
+   - `blockers`, `qualityIssues`, `nextSteps` must be empty in the response payload.
+   - `confidence` must be `0` (UI hides the confidence meter).
+10. **Ideas never report workflow blockers.** `detectBlockers` short-circuits on `entityType === "idea"`; ideas are intake-only and must never surface a “terminal stage” blocker.
+11. **Timezone-aware prose.** `userTimezone` (default `America/New_York`) flows into `ExtractedContext` and controls date rendering in factual answers. Date-only strings are formatted without TZ conversion; full timestamps convert to the user’s timezone.
+12. **Gemini client resilience.**
+   - One-shot retry with ≈400ms backoff on 429, 5xx, or network/timeout errors.
+   - Non-200 responses log status, model, attempt, and the first 500 chars of the error body.
+   - JSON parse failures and Zod schema failures log a preview of the raw output (first 200 chars) to aid debugging.
+   - The Gemini system prompt must forbid exposing raw enum keys and must require answers from `facts` for factual questions.
+13. **Request de-duplication.** The Ask AI provider must abort any in-flight request when a new request is dispatched or when the user navigates to a different entity.
+14. **Panel state contract.**
+   - Route change clears `response`, `error`, `lastPrompt`, and aborts in-flight requests.
+   - `clearResponse()` (“Ask another question”) clears `response`/`error` but preserves `lastPrompt` so `Retry` can replay it.
+   - Confidence meter is hidden for factual intents and for Gemini-authored answers that don’t self-report confidence.
+15. **Server-side error messages must not render as `[object Object]`.** API error envelopes are normalized via a defensive extractor in the provider.

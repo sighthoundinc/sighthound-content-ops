@@ -65,14 +65,19 @@ Social posts must include at least one valid public live link before they can mo
 - `Settings`: profile, timezone, notifications, connected services
 
 ## Ask AI workflow helper
-- Ask AI is guidance-only: it explains current workflow state, blockers, and next steps without changing data.
-- `POST /api/ai/assistant` accepts an optional `prompt` so users can ask natural-language questions (for example: “Why can’t I publish this?”).
-- Response metadata now includes:
-  - `questionIntent` (what the question was interpreted as),
-  - `answer` (direct contextual explanation),
-  - `responseSource` (`gemini` when Gemini is available, otherwise `deterministic` fallback).
-- Prompt interpretation is Gemini-primary when configured; deterministic prompt routing is the built-in fallback.
-- Deterministic blocker and gate analysis remains the authority even when Gemini interpretation is enabled.
+- Ask AI is guidance-only: it explains current workflow state, answers factual questions, and never changes data.
+- `POST /api/ai/assistant` accepts an optional `prompt` (natural-language question) and optional `userTimezone`.
+- Gemini-primary interpretation (default model `gemini-2.5-flash`, override via `GEMINI_MODEL`) with deterministic fallback; `ASK_AI_REQUIRE_GEMINI=true` locks it to Gemini-only in dev/staging.
+- Workflow questions (“Why can’t I publish?”) return humanized blockers and next steps.
+- Factual questions (“What is the title?”, “Who wrote this?”, “When was this published?”) read strictly from grounded RAG metadata loaded from the DB under the caller’s RLS — covers blogs, social posts, and ideas. Missing facts are disclosed, never invented.
+- Ideas are intake-only: Ask AI never shows workflow blockers on an idea.
+- Dates render in the user’s timezone (`profiles.timezone`) with `America/New_York` fallback.
+- Response metadata includes:
+  - `questionIntent` (workflow intents plus factual intents `identity`, `people`, `timeline`),
+  - `answer`,
+  - `responseSource` (`gemini` when Gemini is available, otherwise `deterministic` fallback),
+  - optional `aiModel` when Gemini is used.
+- In-panel UX: context-aware quick prompts, **Ask another question** button, Retry on error (replays last prompt), panel clears on navigation, confidence meter hidden for factual/Gemini answers.
 
 Detail page ordering rule:
 - Blogs: `Comments` → `Links` → `Assignment & Changes`.

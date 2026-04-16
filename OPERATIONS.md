@@ -78,13 +78,27 @@ npm run check:full
 - Middleware auth gate validates Supabase session identity on protected routes (not just cookie presence) before allowing page access.
 
 ### Ask AI guidance endpoint (`POST /api/ai/assistant`)
-- Request contract includes optional `prompt` (max 500 chars) for natural-language workflow questions.
-- Endpoint must remain read-only and advisory: no workflow transitions, no record mutations.
-- Response contract includes `questionIntent`, `answer`, and `responseSource` in addition to blocker/next-step payloads.
+- Request contract includes optional `prompt` (max 500 chars) and optional `userTimezone` (IANA string).
+- Endpoint remains read-only and advisory: no workflow transitions, no record mutations.
+- Response contract includes `questionIntent`, `answer`, `responseSource`, optional `aiModel`, plus blocker/next-step/quality payloads.
 - Deterministic blocker detection and stage-gate logic remain authoritative even when Gemini is used for prompt interpretation.
 - Runtime behavior:
-  - If `GEMINI_API_KEY` is present, Ask AI attempts Gemini interpretation first.
-  - If Gemini fails/unavailable, endpoint must degrade gracefully to deterministic prompt routing.
+  - Default model is `gemini-2.5-flash` (`GEMINI_MODEL` overrides).
+  - If `GEMINI_API_KEY` is present, Ask AI attempts Gemini interpretation first with one retry on 429 / 5xx / network / timeout (≈400ms backoff).
+  - If Gemini fails/unavailable, endpoint degrades gracefully to deterministic prompt routing.
+  - `ASK_AI_REQUIRE_GEMINI=true` (dev/staging only) disables the fallback and returns `503`; message distinguishes “not configured” from “temporarily unavailable”. Do not enable in production.
+- Grounded RAG facts:
+  - Every request also calls `fetchFacts(entityType, entityId)` under the caller’s RLS.
+  - Coverage: blogs / social posts / ideas. Profile joins resolve assignee UUIDs to display names; RLS-clipped profiles surface as `*Unavailable` booleans so prose can say “name isn’t available to you” instead of inventing one.
+  - Fact fetch failures are logged (`[AI Assistant Facts] …`) and never break the main guidance flow.
+- Factual intents (`identity`, `people`, `timeline`) are answered strictly from facts; workflow noise (`blockers`, `nextSteps`, `qualityIssues`, `confidence`) is suppressed in the response.
+- Ideas never report workflow blockers; `detectBlockers` short-circuits for `entityType === "idea"`.
+- Observability (watch these log prefixes in production):
+  - `[AI Assistant Gemini] non-200 response` — Gemini health / quota / model retirement.
+  - `[AI Assistant Gemini] unable to parse JSON` or `invalid output schema` — prompt or model drift (raw preview logged).
+  - `[AI Assistant Gemini] request threw` — network/timeout (retry path).
+  - `[AI Assistant Facts] … fetch failed` — RLS / schema drift.
+  - Rising `responseSource: "deterministic"` rate in prod indicates Gemini degradation.
 
 ## 5) Import operations
 - Import should support selective columns and selective rows.

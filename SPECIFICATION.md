@@ -189,15 +189,33 @@ Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revis
 - Request shape includes:
   - `entityType`, `entityId`, `userId`, `userRole`
   - optional `prompt` (natural-language question, max 500 chars)
+  - optional `userTimezone` (IANA string, max 64 chars; default `America/New_York`)
 - Deterministic context extraction + blocker detection remain authoritative.
 - Prompt interpretation path:
-  - Gemini interpretation is attempted first when configured/available,
-  - local deterministic intent routing is the required fallback path.
+  - Gemini interpretation is attempted first when configured/available (default model `gemini-2.5-flash`).
+  - Gemini client performs one-shot retry on 429 / 5xx / network / timeout with ≈400ms backoff.
+  - Local deterministic intent routing is the required fallback path when Gemini is unavailable, fails, or returns invalid JSON/schema.
+  - `ASK_AI_REQUIRE_GEMINI=true` disables the fallback and returns `503`. The 503 message distinguishes “not configured” from “temporarily unavailable”.
+- Grounded RAG metadata:
+  - Every request also calls `fetchFacts(entityType, entityId)` to retrieve authoritative record metadata under the caller’s RLS.
+  - Coverage: blogs (title, site, writer/publisher names, created/scheduled/display/actual publish dates, duration), social posts (title, type, product, canva link, platforms, caption, creator/reviewer/assigned-to names, scheduled date, live links, associated blog), ideas (title, site, creator, created date, converted status).
+  - Assignee UUIDs are resolved to display names via profile joins. If RLS clips a joined profile, facts expose an `*Unavailable` flag so prose discloses “name isn’t available to you” instead of inventing a name.
+- Factual intents are grounded strictly in `FactContext` and must never hallucinate:
+  - `identity` answers title (and site/type/product for social posts).
+  - `people` answers writer / publisher / creator / reviewer / assignee.
+  - `timeline` answers creation, schedule, and publish dates plus draft-to-publish duration for blogs.
+- Blog timeline answers prefer `actualPublishedAt` over `displayPublishedDate`; when the two differ, the displayed date is disclosed as “shown as …”.
+- Ideas never report workflow blockers (including the terminal-stage blocker); ideas are intake-only.
+- When `questionIntent` is factual, `blockers`, `qualityIssues`, `nextSteps` are empty and `confidence` is `0`.
 - Response includes deterministic workflow data plus prompt-specific metadata:
-  - `questionIntent`
+  - `questionIntent` (includes `identity`, `people`, `timeline` in addition to workflow intents)
   - `answer`
   - `responseSource` (`deterministic` or `gemini`)
   - optional `aiModel` when Gemini is used
+- Provider/UI contract:
+  - The Ask AI provider uses an AbortController to dedupe in-flight requests; navigation/new requests cancel prior ones.
+  - Panel state clears on route change; `clearResponse()` preserves `lastPrompt` so the Retry button can replay it.
+  - UI heading switches between `Current State` (workflow) and `Answer` (factual); confidence meter is hidden for factual and for Gemini-authored responses that didn’t self-report confidence.
 
 ## 8) Date and timezone contract
 - User-facing timestamps are rendered by user timezone preference.

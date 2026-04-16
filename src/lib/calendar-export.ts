@@ -60,7 +60,7 @@ export function generateICS(
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Sighthound Content Ops//EN",
+    "PRODID:-//Sighthound Content Relay//EN",
     `CALSCALE:GREGORIAN`,
     `X-TIMEZONE:${timezone}`,
     events,

@@ -69,12 +69,17 @@ The product goal is predictable stage-based execution with explicit ownership an
 
 ## 4) Blog workflow contract
 ### Operational sequence
-Writing flow → Writing Approved handoff → Publishing in Progress → Awaiting Publishing Approval → Publishing Approved → Published
+Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revision ↔ Awaiting Writing Review) → Writing Approved → Publishing in Progress → Awaiting Publishing Review → Approved for Publishing → Published
+
+### Canonical status labels
+- Writing: `Not Started`, `Writing in Progress`, `Awaiting Writing Review`, `Needs Revision`, `Writing Approved`.
+- Publishing: `Not Started`, `Publishing in Progress`, `Awaiting Publishing Review`, `Approved for Publishing`, `Published`.
+- Role nouns (`Writer`, `Publisher`, `Reviewer`) are reserved for references to a specific user acting in that role.
 
 ### Behavior rules
 - Writing completion is the handoff trigger into publishing.
 - Publishing completion must not bypass writing prerequisites.
-- Reviewer checkpoint at `Awaiting Publishing Approval` is required before final completion.
+- Reviewer checkpoint at `Awaiting Publishing Review` is required before final completion.
 - When publishing transitions to `completed`, `actual_published_at` is auto-captured if empty.
 
 ## 5) Queue and visibility contract

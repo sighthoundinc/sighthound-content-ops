@@ -64,6 +64,9 @@ npm run check:full
 - Writing flow handoff to publishing remains enforced.
 - Publishing completion cannot bypass prerequisite writing completion and review checkpoint.
 - On first transition to publisher `completed`, `actual_published_at` is auto-captured when unset.
+- Canonical writing labels: `Not Started`, `Writing in Progress`, `Awaiting Writing Review`, `Needs Revision`, `Writing Approved`.
+- Canonical publishing labels: `Not Started`, `Publishing in Progress`, `Awaiting Publishing Review`, `Approved for Publishing`, `Published`.
+- Role nouns (`Writer`, `Publisher`, `Reviewer`) appear only where the label points to a specific user acting in that role.
 - Blog details preserve footer ordering: `Comments` → `Links` → `Assignment & Changes`.
 
 ## 4) API contract integrity

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { getWorkflowRowClassName } from "@/lib/table-row-tones";
+import { AppIcon, type AppIconName } from "@/lib/icons";
 import {
   getTableBodyCellClass,
   TABLE_BASE_CLASS,
@@ -136,11 +137,11 @@ export function DataTable<TData>({
     }
     onSort(columnId, newDirection);
   };
-  const getColumnSortIndicator = (columnId: string) => {
+  const getColumnSortIndicatorIcon = (columnId: string): AppIconName => {
     if (!sortField || sortField !== columnId) {
-      return "↕";
+      return "chevronsUpDown";
     }
-    return sortDirection === "asc" ? "↑" : "↓";
+    return sortDirection === "asc" ? "chevronUp" : "chevronDown";
   };
   const getColumnAriaSort = (columnId: string) => {
     if (!sortField || sortField !== columnId) {
@@ -217,9 +218,12 @@ export function DataTable<TData>({
                     title={`Sort by ${column.label}`}
                   >
                     <span>{column.label}</span>
-                    <span aria-hidden="true" className="text-[11px] text-slate-500">
-                      {getColumnSortIndicator(column.id)}
-                    </span>
+                    <AppIcon
+                      name={getColumnSortIndicatorIcon(column.id)}
+                      boxClassName="h-3 w-3"
+                      size={12}
+                      className="text-slate-500"
+                    />
                   </button>
                 ) : (
                   <span className="text-xs font-semibold leading-4 tracking-wide text-slate-600">{column.label}</span>

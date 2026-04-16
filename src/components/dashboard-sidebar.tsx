@@ -97,7 +97,7 @@ export function DashboardSidebar({
     },
     {
       key: "publisher_final_review",
-      label: `${PUBLISHER_STATUS_LABELS.pending_review} (Publisher)`,
+      label: PUBLISHER_STATUS_LABELS.pending_review,
       count: quickQueueCounts.publisherFinalReview,
     },
     {

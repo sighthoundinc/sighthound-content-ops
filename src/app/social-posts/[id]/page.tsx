@@ -441,7 +441,7 @@ export default function SocialPostEditorPage() {
     Array<{ id: string; full_name: string; email: string }>
   >([]);
   const [editingAssignment, setEditingAssignment] = useState(false);
-  const [editWorkerUserId, setEditWorkerUserId] = useState<string | null>(null);
+  const [editAssignedToUserId, setEditAssignedToUserId] = useState<string | null>(null);
   const [editReviewerUserId, setEditReviewerUserId] = useState<string | null>(null);
   const [isAssignmentSaving, setIsAssignmentSaving] = useState(false);
   const getUserDisplayNameById = useCallback(
@@ -889,7 +889,7 @@ export default function SocialPostEditorPage() {
   );
 
   const saveAssignments = useCallback(async () => {
-    if (!post || !editWorkerUserId || !editReviewerUserId) {
+    if (!post || !editAssignedToUserId || !editReviewerUserId) {
       showError("Assigned to and Reviewer are required before saving.");
       return;
     }
@@ -898,7 +898,7 @@ export default function SocialPostEditorPage() {
     const { data, error: saveError } = await supabase
       .from("social_posts")
       .update({
-        worker_user_id: editWorkerUserId,
+        worker_user_id: editAssignedToUserId,
         reviewer_user_id: editReviewerUserId,
       })
       .eq("id", post.id)
@@ -962,7 +962,7 @@ export default function SocialPostEditorPage() {
     await loadPost();
     showSuccess("Assignments saved.");
     setIsAssignmentSaving(false);
-  }, [post, editWorkerUserId, editReviewerUserId, showError, showSuccess, loadPost, user?.id, profile?.full_name, getUserDisplayNameById]);
+  }, [post, editAssignedToUserId, editReviewerUserId, showError, showSuccess, loadPost, user?.id, profile?.full_name, getUserDisplayNameById]);
 
   useEffect(() => {
     if (!form || !post || !canEditBrief || isSaving) {
@@ -2334,7 +2334,7 @@ export default function SocialPostEditorPage() {
                       variant="secondary"
                       size="sm"
                       onClick={() => {
-                        setEditWorkerUserId(post?.worker_user_id ?? null);
+                        setEditAssignedToUserId(post?.worker_user_id ?? null);
                         setEditReviewerUserId(post?.reviewer_user_id ?? null);
                         setEditingAssignment(true);
                       }}
@@ -2349,9 +2349,9 @@ export default function SocialPostEditorPage() {
                       <label className="block">
                         <span className="mb-1 block text-sm font-medium text-slate-700">Assigned to</span>
                         <select
-                          value={editWorkerUserId ?? ""}
+                          value={editAssignedToUserId ?? ""}
                           onChange={(event) => {
-                            setEditWorkerUserId(event.target.value || null);
+                            setEditAssignedToUserId(event.target.value || null);
                           }}
                           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         >
@@ -2698,92 +2698,6 @@ export default function SocialPostEditorPage() {
                     <p className="text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
                   ) : null}
                 </div>
-                <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Live Links
-                  </p>
-                  <div id="social-post-live-links" className="space-y-2 rounded-md border border-slate-200 bg-white p-2">
-                    <p className="text-xs text-slate-600">
-                      Paste once and auto-assign to LinkedIn, Facebook, or Instagram.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <input
-                        type="url"
-                        value={quickLiveLinkInput}
-                        onChange={(event) => {
-                          setQuickLiveLinkInput(event.target.value);
-                        }}
-                        className="focus-field min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-                        placeholder="Paste live URL..."
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="xs"
-                        onClick={handleQuickAddLiveLink}
-                      >
-                        Add Link
-                      </Button>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      Draft links ready: {liveLinkDraftCount} / {SOCIAL_PLATFORMS.length}
-                    </p>
-                  </div>
-                  <div className="grid gap-2 md:grid-cols-3">
-                    {SOCIAL_PLATFORMS.map((platform) => (
-                      <label key={platform} className="space-y-1 text-xs text-slate-600">
-                        <span className="font-medium text-slate-700">
-                          {SOCIAL_PLATFORM_LABELS[platform]}
-                        </span>
-                        <input
-                          type="url"
-                          value={liveLinkDrafts[platform] ?? ""}
-                          onChange={(event) => {
-                            setLiveLinkDrafts((previous) => ({
-                              ...previous,
-                              [platform]: event.target.value,
-                            }));
-                          }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-                          placeholder={`https://${platform}.com/...`}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  {liveLinks.length === 0 ? (
-                    <p className="text-xs text-slate-500">
-                      No live links saved yet.
-                    </p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {liveLinks.map((link) => (
-                        <li key={link.id} className="space-y-1 text-xs text-slate-600">
-                          <p className="font-medium text-slate-700">
-                            {SOCIAL_PLATFORM_LABELS[link.platform]}
-                          </p>
-                          <LinkQuickActions
-                            href={link.url}
-                            label={`${SOCIAL_PLATFORM_LABELS[link.platform]} live URL`}
-                            size="xs"
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="xs"
-                      disabled={isLiveLinksSaving}
-                      onClick={() => {
-                        void handleSaveLiveLinks();
-                      }}
-                    >
-                      {isLiveLinksSaving ? "Saving Links…" : "Save Links"}
-                    </Button>
-                  </div>
-                </div>
               </section>
               {post.associated_blog_id ? (
                 <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -2807,7 +2721,7 @@ export default function SocialPostEditorPage() {
                       setCommentDraft(event.target.value);
                     }}
                     className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    placeholder="Add discussion or feedback..."
+                    placeholder="Add context or feedback…"
                   />
                   <div className="flex justify-end">
                     <Button
@@ -2819,13 +2733,13 @@ export default function SocialPostEditorPage() {
                         void handleAddComment();
                       }}
                     >
-                      {isCommentSaving ? "Adding..." : "Add Comment"}
+                      {isCommentSaving ? "Adding…" : "Add Comment"}
                     </Button>
                   </div>
                 </div>
                 {comments.length === 0 ? (
                   <p className="text-sm text-slate-500">
-                    No comments yet. Add context here to avoid handoff confusion.
+                    No comments yet. Add context to keep handoffs clear.
                   </p>
                 ) : (
                   <ul className="space-y-3">
@@ -2849,6 +2763,93 @@ export default function SocialPostEditorPage() {
                     ))}
                   </ul>
                 )}
+              </section>
+              <section
+                id="social-editor-step-links"
+                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+              >
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Links</h3>
+                  <p className="text-sm text-slate-600">
+                    Paste once and auto-assign to LinkedIn, Facebook, or Instagram.
+                  </p>
+                </div>
+                <div id="social-post-live-links" className="space-y-2 rounded-md border border-slate-200 bg-white p-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="url"
+                      value={quickLiveLinkInput}
+                      onChange={(event) => {
+                        setQuickLiveLinkInput(event.target.value);
+                      }}
+                      className="focus-field min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                      placeholder="Paste live URL…"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      onClick={handleQuickAddLiveLink}
+                    >
+                      Add Link
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Draft links ready: {liveLinkDraftCount} / {SOCIAL_PLATFORMS.length}
+                  </p>
+                </div>
+                <div className="grid gap-2 md:grid-cols-3">
+                  {SOCIAL_PLATFORMS.map((platform) => (
+                    <label key={platform} className="space-y-1 text-xs text-slate-600">
+                      <span className="font-medium text-slate-700">
+                        {SOCIAL_PLATFORM_LABELS[platform]}
+                      </span>
+                      <input
+                        type="url"
+                        value={liveLinkDrafts[platform] ?? ""}
+                        onChange={(event) => {
+                          setLiveLinkDrafts((previous) => ({
+                            ...previous,
+                            [platform]: event.target.value,
+                          }));
+                        }}
+                        className="focus-field w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                        placeholder={`https://${platform}.com/...`}
+                      />
+                    </label>
+                  ))}
+                </div>
+                {liveLinks.length === 0 ? (
+                  <p className="text-xs text-slate-500">No live links saved yet.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {liveLinks.map((link) => (
+                      <li key={link.id} className="space-y-1 text-xs text-slate-600">
+                        <p className="font-medium text-slate-700">
+                          {SOCIAL_PLATFORM_LABELS[link.platform]}
+                        </p>
+                        <LinkQuickActions
+                          href={link.url}
+                          label={`${SOCIAL_PLATFORM_LABELS[link.platform]} live URL`}
+                          size="xs"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    disabled={isLiveLinksSaving}
+                    onClick={() => {
+                      void handleSaveLiveLinks();
+                    }}
+                  >
+                    {isLiveLinksSaving ? "Saving Links…" : "Save Links"}
+                  </Button>
+                </div>
               </section>
               <section
                 id="social-editor-step-assignment-changes"

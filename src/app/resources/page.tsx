@@ -46,64 +46,48 @@ export default function ResourcesPage() {
         <div className="mx-auto max-w-5xl space-y-4 sm:space-y-5">
           <DataPageHeader
             title="User Manual"
-            description="Simple, stage-based guide for how content moves, who acts next, and what is required at each handoff."
+            description="A friendly walkthrough of how work moves through Content Relay — who acts next, what each stage expects, and where to go when you get stuck."
           />
 
           <Section id="quick-nav" title="Quick navigation">
-            <p>Jump to any section directly:</p>
+            <p>Not sure where to start? Jump straight to the part you need:</p>
             <ul className="grid gap-2 sm:grid-cols-2 sm:gap-3">
               <li>
-                <a href="#what-this-app-does" className="font-medium text-sky-700 underline underline-offset-2">
-                  1) What this app does
-                </a>
+                <InternalPageLink href="#what-this-app-does">1) What this app does</InternalPageLink>
               </li>
               <li>
-                <a href="#key-concepts" className="font-medium text-sky-700 underline underline-offset-2">
-                  2) Key concepts and ownership
-                </a>
+                <InternalPageLink href="#key-concepts">2) Key concepts and ownership</InternalPageLink>
               </li>
               <li>
-                <a href="#social-pipeline" className="font-medium text-sky-700 underline underline-offset-2">
-                  3) Social post pipeline
-                </a>
+                <InternalPageLink href="#social-pipeline">3) Social post pipeline</InternalPageLink>
               </li>
               <li>
-                <a href="#blog-pipeline" className="font-medium text-sky-700 underline underline-offset-2">
-                  4) Blog pipeline
-                </a>
+                <InternalPageLink href="#blog-pipeline">4) Blog pipeline</InternalPageLink>
               </li>
               <li>
-                <a href="#daily-rhythm" className="font-medium text-sky-700 underline underline-offset-2">
-                  5) Daily execution rhythm
-                </a>
+                <InternalPageLink href="#daily-rhythm">5) Daily execution rhythm</InternalPageLink>
               </li>
               <li>
-                <a href="#tools" className="font-medium text-sky-700 underline underline-offset-2">
-                  6) Visibility tools
-                </a>
+                <InternalPageLink href="#tools">6) Visibility tools</InternalPageLink>
               </li>
               <li>
-                <a href="#gates" className="font-medium text-sky-700 underline underline-offset-2">
-                  7) Transition gates
-                </a>
+                <InternalPageLink href="#gates">7) Transition gates</InternalPageLink>
               </li>
               <li>
-                <a href="#sop-card" className="font-medium text-sky-700 underline underline-offset-2">
-                  8) SOP card
-                </a>
+                <InternalPageLink href="#sop-card">8) SOP card</InternalPageLink>
               </li>
               <li>
-                <a href="#associated-content" className="font-medium text-sky-700 underline underline-offset-2">
-                  9) Associated Content navigation
-                </a>
+                <InternalPageLink href="#associated-content">9) Associated Content navigation</InternalPageLink>
               </li>
             </ul>
           </Section>
 
           <Section id="what-this-app-does" title="1) What this app does">
             <p>
-              Content Relay is a stage-based workflow app for moving content from intake to
-              published output with clear ownership and required-field gates.
+              Content Relay is your shared home for moving content from rough idea to published
+              post. It keeps two tracks tidy — Blogs and Social Posts — so everyone knows what stage
+              a piece is in, who owns the next step, and what needs to happen before it can move
+              forward.
             </p>
             <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
               <table className="min-w-[640px] border-collapse text-left text-sm sm:min-w-full">
@@ -129,40 +113,49 @@ export default function ResourcesPage() {
               </table>
             </div>
             <p>
-              Open work in <InternalPageLink href="/tasks">My Tasks</InternalPageLink>, monitor queues in{" "}
-              <InternalPageLink href="/dashboard">Dashboard</InternalPageLink>, and plan timing in{" "}
-              <InternalPageLink href="/calendar">Calendar</InternalPageLink>.
+              A typical day looks like this: pick up what’s yours in{" "}
+              <InternalPageLink href="/tasks">My Tasks</InternalPageLink>, keep an eye on the bigger
+              picture in <InternalPageLink href="/dashboard">Dashboard</InternalPageLink>, and plan
+              timing in <InternalPageLink href="/calendar">Calendar</InternalPageLink>.
             </p>
           </Section>
 
           <Section id="key-concepts" title="2) Key concepts and ownership">
+            <p>
+              A few short definitions will make the rest of this manual click.
+            </p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                <span className="font-medium text-slate-900">Stage:</span> the current status in the
-                workflow.
+                <span className="font-medium text-slate-900">Stage:</span> where a piece of content
+                currently sits in its workflow.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Gate:</span> required fields or conditions
-                before a transition is allowed.
+                <span className="font-medium text-slate-900">Gate:</span> the small set of things
+                that must be true before the work can move to the next stage.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Handoff:</span> ownership change from one
-                actor to another.
+                <span className="font-medium text-slate-900">Handoff:</span> the moment ownership
+                passes from one person to the next.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Terminal stage:</span> done; no further
-                action required.
+                <span className="font-medium text-slate-900">Terminal stage:</span> the work is done
+                — nothing else is expected.
               </li>
             </ul>
-            <p className="font-medium text-slate-900">Ownership rule of thumb</p>
+            <p className="font-medium text-slate-900">Who acts when</p>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Work stage = execution owner acts</li>
-              <li>Review stage = reviewer acts</li>
-              <li>Terminal stage = complete</li>
+              <li>If it’s a work stage, the person assigned to do the work acts next.</li>
+              <li>If it’s a review stage, the reviewer acts next.</li>
+              <li>If it’s a terminal stage, you’re done — enjoy the win.</li>
             </ul>
           </Section>
 
           <Section id="social-pipeline" title="3) Social post pipeline">
+            <p>
+              Social posts move through seven stages. Creators draft and publish, reviewers approve
+              the creative, and the final stage only closes once a real live link is saved so we
+              always have proof of the post.
+            </p>
             <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
               <table className="min-w-[760px] border-collapse text-left text-sm sm:min-w-full">
                 <thead>
@@ -175,7 +168,7 @@ export default function ResourcesPage() {
                 <tbody>
                   <tr className="border-b border-slate-100">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Draft</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creator/Worker</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned to</td>
                     <td className="py-2">Complete essentials and submit for review</td>
                   </tr>
                   <tr className="border-b border-slate-100">
@@ -185,7 +178,7 @@ export default function ResourcesPage() {
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Changes Requested</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creator/Worker</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned to</td>
                     <td className="py-2">Apply changes and resubmit</td>
                   </tr>
                   <tr className="border-b border-slate-100">
@@ -195,12 +188,12 @@ export default function ResourcesPage() {
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Ready to Publish</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creator/Worker</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned to</td>
                     <td className="py-2">Publish the post</td>
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Live Link</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creator/Worker</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned to</td>
                     <td className="py-2">Submit at least one public live link</td>
                   </tr>
                   <tr>
@@ -211,29 +204,42 @@ export default function ResourcesPage() {
                 </tbody>
               </table>
             </div>
-            <p className="font-medium text-slate-900">Mandatory gates</p>
+            <p className="font-medium text-slate-900">What each transition expects</p>
             <ul className="list-disc space-y-1 pl-5">
-              <li>`Draft → In Review`: Product, Type, Canva URL</li>
               <li>
-                Later execution transitions: Product, Type, Canva URL, Platforms, Caption, Scheduled
-                Publish Date
+                Submitting a draft for review needs Product, Type, and a Canva URL.
               </li>
-              <li>`Awaiting Live Link → Published`: at least one valid public live link</li>
               <li>
-                Rollback from execution stages to `Changes Requested` requires a non-empty reason
+                Moving into execution (Creative Approved and beyond) also needs Platforms, Caption,
+                and the Scheduled Publish Date filled in.
+              </li>
+              <li>
+                Marking a post as Published requires at least one valid public live link saved on
+                the record.
+              </li>
+              <li>
+                If you need to send work back from an execution stage, add a short reason so the
+                next owner knows what to change.
               </li>
             </ul>
-            <p className="font-medium text-slate-900">
-              Flow: Draft → In Review → (Changes Requested ↔ In Review) → Creative Approved → Ready to
-              Publish → Awaiting Live Link → Published
+            <p className="font-medium text-slate-900">The happy path</p>
+            <p>
+              Draft → In Review → (Changes Requested ↔ In Review) → Creative Approved → Ready to
+              Publish → Awaiting Live Link → Published.
             </p>
             <p>
-              Work from <InternalPageLink href="/social-posts">Social Posts</InternalPageLink> and use{" "}
-              <InternalPageLink href="/tasks">My Tasks</InternalPageLink> for assignment-based priority.
+              Work directly from <InternalPageLink href="/social-posts">Social Posts</InternalPageLink>,
+              or let <InternalPageLink href="/tasks">My Tasks</InternalPageLink> surface whatever is
+              assigned to you first.
             </p>
           </Section>
 
           <Section id="blog-pipeline" title="4) Blog pipeline">
+            <p>
+              Blogs follow a two-phase flow: the writing side shapes the content, and the publishing
+              side takes it live. Each phase has its own review step so nothing ships without a second
+              set of eyes.
+            </p>
             <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
               <table className="min-w-[760px] border-collapse text-left text-sm sm:min-w-full">
                 <thead>
@@ -245,28 +251,33 @@ export default function ResourcesPage() {
                 </thead>
                 <tbody>
                   <tr className="border-b border-slate-100">
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writing stages</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned writing owner</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writing in Progress</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writer</td>
                     <td className="py-2">Draft and refine content</td>
                   </tr>
                   <tr className="border-b border-slate-100">
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Writing Review</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer</td>
+                    <td className="py-2">Approve or send back for revision</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writing Approved</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Handoff point</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Handoff</td>
                     <td className="py-2">Transfer execution to publishing flow</td>
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publishing in Progress</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned publishing owner</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publisher</td>
                     <td className="py-2">Prepare and execute publish steps</td>
                   </tr>
                   <tr className="border-b border-slate-100">
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Publishing Approval</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer checkpoint</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Publishing Review</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer</td>
                     <td className="py-2">Validate readiness before final completion</td>
                   </tr>
                   <tr className="border-b border-slate-100">
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publishing Approved</td>
-                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned publishing owner</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Approved for Publishing</td>
+                    <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publisher</td>
                     <td className="py-2">Complete final publication action</td>
                   </tr>
                   <tr>
@@ -278,86 +289,106 @@ export default function ResourcesPage() {
               </table>
             </div>
             <p>
-              Use <InternalPageLink href="/blogs">Blogs</InternalPageLink> for record-level workflow and{" "}
-              <InternalPageLink href="/tasks">My Tasks</InternalPageLink> to execute owned stages.
+              Open <InternalPageLink href="/blogs">Blogs</InternalPageLink> to work the full record,
+              or lean on <InternalPageLink href="/tasks">My Tasks</InternalPageLink> when you just
+              want to clear your plate.
             </p>
           </Section>
 
           <Section id="daily-rhythm" title="5) Daily execution rhythm">
+            <p>
+              A rhythm that works for most people:
+            </p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
-                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink>
+                Start your day in <InternalPageLink href="/tasks">My Tasks</InternalPageLink>.
               </li>
-              <li>Work `Required by me` first</li>
-              <li>Confirm required fields/checklist</li>
-              <li>Transition status when gate is satisfied</li>
-              <li>Track dependencies in `Waiting on Others`</li>
+              <li>Knock out everything in <span className="font-medium">Required by me</span> first.</li>
+              <li>
+                Before moving a piece forward, glance at the checklist to confirm the required
+                fields are in.
+              </li>
+              <li>Move the status forward once the gate is green.</li>
+              <li>
+                Keep an eye on <span className="font-medium">Waiting on Others</span> so nothing
+                quietly stalls.
+              </li>
             </ol>
             <p>
-              “Explicit updates” means transitions reflect true state, rollback reasons are included
-              when sending work back, and publish proof is attached before completion.
+              Keeping statuses honest, adding a quick reason when you send work back, and attaching
+              proof before you publish is what keeps the whole pipeline trustworthy.
             </p>
           </Section>
 
           <Section id="tools" title="6) Visibility tools">
+            <p>A quick tour of where to look for what:</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                <InternalPageLink href="/tasks">My Tasks</InternalPageLink>: what needs your action
-                now
+                <InternalPageLink href="/tasks">My Tasks</InternalPageLink> — the shortest answer to
+                “what should I do right now?”
               </li>
               <li>
-                <InternalPageLink href="/dashboard">Dashboard</InternalPageLink>: cross-content queue
-                health
+                <InternalPageLink href="/dashboard">Dashboard</InternalPageLink> — the cross-content
+                health view for triage and prioritization.
               </li>
               <li>
-                Dashboard overview and snapshot insights are tuned for speed and clarity, with
-                smooth background refresh to keep the experience responsive while you navigate.
+                Dashboard overview and snapshot insights refresh in the background, so the numbers
+                stay fresh while you keep working.
               </li>
               <li>
-                Dashboard filtering: start with <span className="font-medium">Lens</span>, then use
-                default filters (`Content Type`, `Status`, `Assigned to`, `Site`), and open{" "}
-                <span className="font-medium">More filters</span> only for advanced blog/social
-                filters.
+                For dashboard filtering, start with <span className="font-medium">Lens</span>, tune
+                with the default filters (<span className="font-medium">Content Type</span>,{" "}
+                <span className="font-medium">Status</span>,{" "}
+                <span className="font-medium">Assigned to</span>,{" "}
+                <span className="font-medium">Site</span>), and open{" "}
+                <span className="font-medium">More filters</span> only when you need advanced
+                blog/social controls.
               </li>
               <li>
-                Filter options show contextual counts, and <span className="font-medium">Lens shortcuts</span>{" "}
-                let you save frequently used lens views for one-click reuse.
+                Filter options show live counts, and{" "}
+                <span className="font-medium">Lens shortcuts</span> let you save the views you use
+                most for one-click reuse.
               </li>
               <li>
-                <InternalPageLink href="/calendar">Calendar</InternalPageLink>: scheduled workload and
-                timing
+                <InternalPageLink href="/calendar">Calendar</InternalPageLink> — the place to plan
+                timing and spot scheduling conflicts.
               </li>
               <li>
-                <InternalPageLink href="/settings">Settings</InternalPageLink>: personal preferences,
-                notifications, connectors
+                <InternalPageLink href="/settings">Settings</InternalPageLink> — your profile,
+                timezone, notifications, and connected services.
               </li>
             </ul>
           </Section>
 
           <Section id="gates" title="7) Transition gates (quick reference)">
+            <p>A handful of rules keep the pipeline honest. Think of these as friendly guardrails:</p>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Do not transition unless required target-stage fields are complete</li>
-              <li>Do not publish social content without a valid saved live link</li>
-              <li>Do not rollback execution-stage social work without a reason</li>
-              <li>Do not finalize blog publishing before writing handoff and review checkpoint</li>
+              <li>Fill in the required fields before moving a stage forward.</li>
+              <li>A social post can only be marked Published once a valid live link is saved.</li>
+              <li>When you send a social post back, add a short reason so the next owner knows what to fix.</li>
+              <li>Blog publishing can only finish after the writing handoff and review checkpoint are done.</li>
             </ul>
           </Section>
 
           <Section id="sop-card" title="8) SOP card">
-            <p className="font-medium text-slate-900">One-screen daily SOP</p>
+            <p className="font-medium text-slate-900">Your one-screen daily routine</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
-                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink>
+                Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink>.
               </li>
-              <li>Execute `Required by me`</li>
-              <li>Validate transition gates</li>
-              <li>Move stage forward</li>
-              <li>Confirm handoff or wait-state</li>
+              <li>Work through <span className="font-medium">Required by me</span>.</li>
+              <li>Double-check the transition gate before moving on.</li>
+              <li>Advance the stage.</li>
+              <li>Confirm the handoff or note what you’re waiting on.</li>
             </ol>
           </Section>
 
           <Section id="associated-content" title="9) Associated Content navigation">
-            <p className="font-medium text-slate-900">Navigate between linked blogs and social posts</p>
+            <p className="font-medium text-slate-900">Jumping between linked blogs and social posts</p>
+            <p>
+              A lot of social posts are promoting a specific blog. These shortcuts make moving
+              between the two feel natural.
+            </p>
             <ul className="list-disc space-y-2 pl-5">
               <li>
                 <span className="font-medium text-slate-900">Dashboard:</span> Click the &quot;Associated Content&quot; badge

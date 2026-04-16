@@ -51,7 +51,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
 
   // Detect context from current page
   const getContext = useCallback(() => {
-    let entityType: 'blog' | 'social_post' | 'idea' | 'dashboard' | 'tasks' = 'dashboard';
+    let entityType: 'blog' | 'social_post' | 'idea' = 'blog';
     let entityId: string | null = null;
 
     if (pathname?.includes('/blogs/')) {
@@ -103,7 +103,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         const { entityType, entityId } = getContext();
 
         // Only send request if on a detail page with an entity
-        if (!entityId || entityType === 'dashboard' || entityType === 'tasks') {
+        if (!entityId) {
           setError('AI assistant is only available on content detail pages');
           setIsLoading(false);
           return;

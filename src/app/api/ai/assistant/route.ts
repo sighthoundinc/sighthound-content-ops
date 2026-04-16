@@ -34,6 +34,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { 
   AskAIRequest, 
   AskAIResponse, 
@@ -49,7 +50,6 @@ import { generateResponse } from "@/app/api/ai/utils/response-generator";
 import { getRequiredFieldsForStatus, getNextStagesForStatus } from "@/lib/workflow-rules";
 import { getGeminiGuidance } from "@/app/api/ai/utils/gemini-client";
 import { routePrompt } from "@/app/api/ai/utils/prompt-router";
-import { createAdminClient } from "@/lib/supabase/server";
 
 /**
  * Entity state interface for DB mapping
@@ -73,12 +73,10 @@ function mergeUniqueSteps(primary: string[], fallback: string[]): string[] {
 }
 
 /**
- * Get entity state from Supabase with RLS enforcement
- * Uses service role key on server-side (client has already authenticated)
+ * Get entity state from Supabase using authenticated context
+ * Uses auth token from client to respect RLS policies
  */
-async function getEntityState(entityType: string, entityId: string, userId: string): Promise<EntityState> {
-  // Use admin client with service role key to bypass RLS
-  const supabase = createAdminClient();
+async function getEntityState(supabase: any, entityType: string, entityId: string, userId: string): Promise<EntityState> {
 
   if (entityType === "blog") {
     // Query blogs table with RLS
@@ -92,7 +90,8 @@ async function getEntityState(entityType: string, entityId: string, userId: stri
       .single();
 
     if (error || !data) {
-      throw new Error(`Blog not found or access denied: ${error?.message}`);
+      console.error("[AI Assistant Blog Query Error]", { error, data });
+      throw new Error(`Blog query failed: ${error?.message || 'no data'}`);
     }
 
     // Map DB fields to DetectorInput format
@@ -124,7 +123,8 @@ async function getEntityState(entityType: string, entityId: string, userId: stri
       .single();
 
     if (error || !data) {
-      throw new Error(`Social post not found or access denied: ${error?.message}`);
+      console.error("[AI Assistant Social Post Query Error]", { error, data });
+      throw new Error(`Social post query failed: ${error?.message || 'no data'}`);
     }
 
     // Map DB fields to DetectorInput format
@@ -169,12 +169,29 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
 
     const request = body as AskAIRequest;
 
+    // Extract auth token from request headers
+    const authHeader = req.headers.get("Authorization") || "";
+    const accessToken = authHeader.replace(/^Bearer\s+/i, "");
+
+    // Create authenticated Supabase client with the user's token
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    const supabase = createClient(supabaseUrl, anonKey, {
+      auth: {
+        persistSession: false,
+      },
+      global: {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      },
+    });
+
     // Get entity state from Supabase
     let entityState: EntityState;
     try {
-      entityState = await getEntityState(request.entityType, request.entityId, request.userId);
+      entityState = await getEntityState(supabase, request.entityType, request.entityId, request.userId);
     } catch (dbError) {
       const dbErrorMsg = (dbError as Error).message;
+      console.error("[AI Assistant DB Error]", dbErrorMsg);
       // Check if it's an RLS denial or not found
       if (dbErrorMsg.includes("access denied")) {
         return NextResponse.json(

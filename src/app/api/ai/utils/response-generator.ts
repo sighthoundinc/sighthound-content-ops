@@ -14,6 +14,7 @@
 import { ExtractedContext } from "./context-extractor";
 import { Blocker } from "@/lib/blocker-detector";
 import { QualityIssue } from "@/lib/quality-checker";
+import { AskAIIntent } from "../types";
 
 export interface ResponseGeneratorInput {
   context: ExtractedContext;
@@ -33,6 +34,11 @@ export interface DeterministicResult {
   qualityIssues: QualityIssue[];
   canProceed: boolean;
   confidence: number; // 0-100, indicates deterministic confidence
+  prompt?: string;
+  questionIntent?: AskAIIntent;
+  answer?: string;
+  responseSource?: "deterministic" | "gemini";
+  aiModel?: string;
   generatedAt: string;
 }
 

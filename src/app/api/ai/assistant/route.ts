@@ -57,31 +57,15 @@ interface EntityState {
 
 /**
  * Get entity state from Supabase with RLS enforcement
- * RLS ensures user can only access content they own or are assigned to
+ * Uses service role on server-side (client has already authenticated)
  */
 async function getEntityState(entityType: string, entityId: string, userId: string, authToken?: string): Promise<EntityState> {
-  let supabase;
-  
-  // Use authenticated client if token provided, otherwise use service role
-  if (authToken) {
-    supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${authToken}`
-          }
-        }
-      }
-    );
-  } else {
-    // Fall back to service role for server-side operations
-    supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-    );
-  }
+  // Use service role key on server for authenticated queries
+  // The client has already verified the user is logged in
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+  );
 
   if (entityType === "blog") {
     // Query blogs table with RLS

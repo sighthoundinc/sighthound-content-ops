@@ -121,8 +121,16 @@ async function callGeminiForModel(
     ],
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 500,
+      // 1024 tokens is plenty for our schema (intent + answer + up to 5 next steps + up to 4 links)
+      // while leaving headroom above the previous 500-token cap that was truncating responses.
+      maxOutputTokens: 1024,
       responseMimeType: "application/json",
+      // Gemini 2.5 models consume output budget on internal "thinking" tokens by
+      // default. Our assistant is pure structured output with no chain-of-reasoning
+      // needed, so we disable thinking to avoid truncation and reduce latency.
+      thinkingConfig: {
+        thinkingBudget: 0,
+      },
     },
   };
 

@@ -45,6 +45,21 @@ function extractLabelFromOpenLineValue(rawValue) {
   return slackMatch[1].trim();
 }
 
+// Locate the Slack link line in the message. Accepts the new, clean form
+// where the line IS the `<URL|label>` (no redundant "Open link: " prefix)
+// and the legacy form with the prefix, so the rules stay forward- and
+// backward-compatible.
+function findOpenLinkLine(message) {
+  const lines = splitLines(message);
+  // Prefer the bare `<URL|label>` form (new) anywhere in the message.
+  const bare = lines.find((l) => /^<https?:\/\/[^|>\s]+(?:\|[^>]*)?>$/.test(l.trim()));
+  if (bare) return { line: bare, rawValue: bare.trim() };
+  // Fallback: legacy "Open link: <URL|label>" or "Open link: https://..."
+  const legacy = lines.find((l) => l.startsWith("Open link: "));
+  if (legacy) return { line: legacy, rawValue: legacy.replace(/^Open link:\s*/, "") };
+  return null;
+}
+
 const FORBIDDEN_ROLE_TOKENS = [
   // Whole-word role labels that must never appear as the *value* after
   // "Assigned to:", "Assigned by:", or "By:".
@@ -188,13 +203,11 @@ function ruleOpenLinkFormat(message, fixture) {
   if (!fixture.payload.blogId && !fixture.payload.socialPostId) {
     return { pass: true };
   }
-  const lines = splitLines(message);
-  const openLine = lines.find((l) => l.startsWith("Open link: "));
-  if (!openLine) {
-    return { pass: false, reason: "Missing 'Open link:' line" };
+  const located = findOpenLinkLine(message);
+  if (!located) {
+    return { pass: false, reason: "Missing clickable link line" };
   }
-  const rawValue = openLine.replace(/^Open link:\s*/, "");
-  const url = extractUrlFromOpenLineValue(rawValue);
+  const url = extractUrlFromOpenLineValue(located.rawValue);
   const ok = /^https?:\/\//.test(url);
   return {
     pass: ok,
@@ -204,8 +217,8 @@ function ruleOpenLinkFormat(message, fixture) {
 
 function ruleOpenLinkMatchesExpectations(message, fixture) {
   const expect = fixture.expect ?? {};
-  const openLine = splitLines(message).find((l) => l.startsWith("Open link: ")) ?? "";
-  const rawValue = openLine.replace(/^Open link:\s*/, "");
+  const located = findOpenLinkLine(message);
+  const rawValue = located?.rawValue ?? "";
   const url = extractUrlFromOpenLineValue(rawValue);
   const issues = [];
   if (expect.openLinkPrefix && !url.startsWith(expect.openLinkPrefix)) {
@@ -229,24 +242,24 @@ function ruleOpenLinkMatchesExpectations(message, fixture) {
   return issues.length > 0 ? issues : { pass: true };
 }
 
-// Round 2 aspirational rule: the Open link line must use Slack's explicit
-// angle-bracket syntax so it renders as a clickable hyperlink regardless of
-// mrkdwn / unfurl settings. Accepts both `<URL>` and `<URL|label>` forms.
+// Round 2 aspirational rule: the clickable link line must use Slack's
+// explicit angle-bracket syntax so it renders as a clickable hyperlink
+// regardless of mrkdwn / unfurl settings. Accepts `<URL>` and `<URL|label>`
+// forms, with or without the legacy "Open link: " prefix.
 function ruleOpenLinkClickableSyntax(message, fixture) {
   if (!fixture.payload.blogId && !fixture.payload.socialPostId) {
     return { pass: true };
   }
-  const openLine = splitLines(message).find((l) => l.startsWith("Open link: "));
-  if (!openLine) {
-    return { pass: false, reason: "Missing 'Open link:' line" };
+  const located = findOpenLinkLine(message);
+  if (!located) {
+    return { pass: false, reason: "Missing clickable link line" };
   }
-  const rawValue = openLine.replace(/^Open link:\s*/, "");
-  const ok = /^<https?:\/\/[^|>\s]+(?:\|[^>]*)?>$/.test(rawValue.trim());
+  const ok = /^<https?:\/\/[^|>\s]+(?:\|[^>]*)?>$/.test(located.rawValue.trim());
   return {
     pass: ok,
     reason: ok
       ? undefined
-      : `Open link value must be Slack link syntax (\`<URL|label>\` or \`<URL>\`), got "${rawValue}"`,
+      : `Clickable link must be Slack link syntax (\`<URL|label>\` or \`<URL>\`), got "${located.rawValue}"`,
   };
 }
 
@@ -259,11 +272,11 @@ function ruleOpenLinkCtaLabel(message, fixture) {
   if (!fixture.payload.blogId && !fixture.payload.socialPostId) {
     return { pass: true };
   }
-  const openLine = splitLines(message).find((l) => l.startsWith("Open link: "));
-  if (!openLine) {
-    return { pass: false, reason: "Missing 'Open link:' line" };
+  const located = findOpenLinkLine(message);
+  if (!located) {
+    return { pass: false, reason: "Missing clickable link line" };
   }
-  const rawValue = openLine.replace(/^Open link:\s*/, "");
+  const rawValue = located.rawValue;
   const label = extractLabelFromOpenLineValue(rawValue);
   if (label === null) {
     return {

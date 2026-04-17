@@ -172,7 +172,11 @@ export function ctaLabelFor(eventType) {
 export function buildOpenLinkLine(eventType, deepLink) {
   if (!deepLink) return null;
   const label = ctaLabelFor(eventType);
-  return `Open link: <${deepLink}|${label}>`;
+  // Emit the bare Slack link (`<URL|label>`) as its own line. The `|label>`
+  // tail IS the visible clickable text in Slack, so a prefix like
+  // "Open link: Open blog" would render redundantly as "Open link: Open blog"
+  // where both halves describe the same action.
+  return `<${deepLink}|${label}>`;
 }
 
 export function normalizeTitle(title) {

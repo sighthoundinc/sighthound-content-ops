@@ -7,6 +7,7 @@ import { AIQualityCard } from './ai-quality-card';
 import { AINextStepsCard } from './ai-next-steps-card';
 import { AILinksRow } from './ai-links-row';
 import { AIFeedback } from './ai-feedback';
+import { BasedOnPanel } from './based-on-panel';
 
 interface AIMessageProps {
   response: AIResponse;
@@ -73,6 +74,19 @@ export function AIMessage({ response }: AIMessageProps) {
       {!isFactual && response.nextSteps && response.nextSteps.length > 0 && (
         <AINextStepsCard steps={response.nextSteps} />
       )}
+
+      {response.links.length > 0 ? (
+        <BasedOnPanel
+          facts={[]}
+          links={response.links.map((link) => ({
+            key: link.key,
+            label: link.label,
+            href: link.href,
+          }))}
+          responseSource={response.responseSource ?? 'deterministic'}
+          aiModel={response.aiModel ?? null}
+        />
+      ) : null}
 
       {showConfidence && (
         <div className="pt-3 border-t border-slate-100">

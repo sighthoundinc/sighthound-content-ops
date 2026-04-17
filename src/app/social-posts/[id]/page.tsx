@@ -12,8 +12,14 @@ import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
+import { PresenceBubbles } from "@/components/presence-bubbles";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
+import { UnstickThisButton } from "@/components/ai/unstick-this-button";
+import {
+  buildPresenceChannelKey,
+  useRealtimePresence,
+} from "@/hooks/useRealtimePresence";
 import { AppIcon } from "@/lib/icons";
 import {
   getApiErrorMessage,
@@ -386,6 +392,16 @@ export default function SocialPostEditorPage() {
   const { pushNotification } = useNotifications();
   const { showSaving, showSuccess, showError, updateAlert: updateStatus } = useAlerts();
   const postId = params?.id ?? "";
+  const presenceOthers = useRealtimePresence({
+    channelKey: postId ? buildPresenceChannelKey("social", postId) : null,
+    self: user
+      ? {
+          id: user.id,
+          name: profile?.display_name || profile?.full_name || user.email || "Teammate",
+          email: user.email ?? null,
+        }
+      : null,
+  });
   const requestedFocusTarget = useMemo(() => {
     const focusParam = searchParams.get("focus");
     return isEditorFocusTarget(focusParam) ? focusParam : null;
@@ -1807,7 +1823,8 @@ export default function SocialPostEditorPage() {
             title={form.title || "Social Post"}
             description="Build and refine your social post from concept to publication."
             primaryAction={
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <PresenceBubbles users={presenceOthers} />
                 <Button
                   variant="secondary"
                   size="sm"
@@ -1853,17 +1870,20 @@ export default function SocialPostEditorPage() {
                     : `All changes saved • ${formatSavedTimestamp(post.updated_at, profile?.timezone)}`}
                 </p>
               </div>
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={isPrimaryActionDisabled}
-                aria-keyshortcuts="Alt+Shift+Enter"
-                onClick={() => {
-                  void handleFinalAction();
-                }}
-              >
-                {isSaving ? "Saving…" : finalAction.label}
-              </Button>
+              <div className="flex items-center gap-2">
+                <UnstickThisButton />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={isPrimaryActionDisabled}
+                  aria-keyshortcuts="Alt+Shift+Enter"
+                  onClick={() => {
+                    void handleFinalAction();
+                  }}
+                >
+                  {isSaving ? "Saving…" : finalAction.label}
+                </Button>
+              </div>
             </div>
             <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">

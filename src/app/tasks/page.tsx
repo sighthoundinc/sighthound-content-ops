@@ -89,6 +89,9 @@ import type {
 import { formatDateOnly } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
+import { markEnd, markStart } from "@/lib/perf-marks";
+import { blogNextAction, socialNextAction } from "@/lib/next-action";
+import { NextActionCell } from "@/components/next-action";
 
 type TaskKind = "writer" | "publisher";
 
@@ -500,9 +503,15 @@ function MyTasksPageContent() {
   }, [isAdmin, session?.access_token, user?.id]);
 
   useEffect(() => {
-
+    markStart("tasks:tti");
     void loadTasks();
   }, [loadTasks]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      markEnd("tasks:tti");
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     const intent = getDashboardFilterIntent();
@@ -1579,35 +1588,27 @@ function MyTasksPageContent() {
       render: (task) => {
         if (task.contentType === "blog" && task.blogTask) {
           const blogTask = task.blogTask;
-          if (blogTask.kind === "publisher") {
-            return (
-              <select
-                value={blogTask.publisherStatus}
-                disabled={savingTaskId === blogTask.id}
-                onChange={(event) => {
-                  void updateTaskStatus(
-                    blogTask,
-                    event.target.value as PublisherStageStatus
-                  );
-                }}
-                className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-              >
-                {PUBLISHER_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {PUBLISHER_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-            );
-          }
-          return (
-            <span className="text-xs text-slate-600">
-              {blogTask.reason ?? "Due Soon"}
-            </span>
-          );
+          const descriptor = blogNextAction({
+            writerStatus: blogTask.writerStatus,
+            publisherStatus: blogTask.publisherStatus,
+            writerId: blogTask.kind === "writer" ? user?.id ?? null : null,
+            publisherId: blogTask.kind === "publisher" ? user?.id ?? null : null,
+            writerName: blogTask.kind === "writer" ? requiredByLabel : null,
+            publisherName: blogTask.kind === "publisher" ? requiredByLabel : null,
+            userId: user?.id ?? null,
+            isAdmin,
+          });
+          return <NextActionCell descriptor={descriptor} />;
         }
         if (task.socialTask) {
-          return <span className="text-xs text-slate-600">{task.socialTask.nextAction}</span>;
+          const socialDescriptor = socialNextAction({
+            status: task.socialTask.status,
+            ownerId: task.actionState === "action_required" ? user?.id ?? null : null,
+            ownerName: task.actionState === "action_required" ? requiredByLabel : null,
+            userId: user?.id ?? null,
+            isAdmin,
+          });
+          return <NextActionCell descriptor={socialDescriptor} />;
         }
         return "—";
       },

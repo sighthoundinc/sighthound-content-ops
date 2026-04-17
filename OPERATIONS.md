@@ -179,7 +179,30 @@ Dashboard filtering operating model:
   - `blogs(is_archived, overall_status, writer_id, publisher_id, scheduled_publish_date)`
   - `task_assignments(assigned_to_user_id, status, blog_id, task_type)`
 
-## 10) Documentation maintenance rule
+## 10) Inbox, global search, and UX primitives (operational notes)
+### Inbox (`/inbox`)
+- Surface is read-only; aggregates `GET /api/dashboard/tasks-snapshot` and `GET /api/activity-feed`.
+- Do not point the Inbox at non-standard feeds; counts must stay aligned with My Tasks and dashboard snapshot.
+- Archive/snooze/per-item unread are NOT implemented yet. Any support request implying those features should be rerouted — they are follow-up work gated on a future `notification_states` migration.
+- Timezone display uses the user’s `profiles.timezone` (fallback `America/New_York`).
+
+### Global search (`GET /api/search`)
+- Authenticated via `authenticateRequest()` and permission-gated per entity (`view_dashboard`, `view_social_posts`, `view_ideas`).
+- Admin client is used for the data read; visibility is enforced by the per-entity permission check, not RLS, so permission role defaults must remain accurate.
+- Title-only `ilike` matching with wildcards stripped. Per-group limit 10. `Cache-Control: no-store`.
+- Budget: keep p50 <250 ms; no UI consumes this endpoint yet, but the contract is live.
+
+### UX primitives rollout
+- Primitives shipped under `src/lib`, `src/components`, and `src/hooks` are canonical. Adoption is tracked in `docs/UX_UPGRADE_PLAN.md`.
+- Do not describe a primitive as “shipped to users” on a given surface until that surface imports it. Current user-visible effects limited to: `/inbox` page, `/api/search` endpoint, sidebar auto-collapse under 1400px.
+- Performance budget targets live in `docs/PERFORMANCE_BUDGET.md` and are enforced at development time via `console.warn` when marks exceed budget.
+
+### Sidebar auto-collapse
+- `useSidebarState` (in `src/hooks/useSidebarState.ts`) auto-collapses the sidebar on first paint when the viewport is below 1400px AND the user has not previously saved a preference.
+- Once the user toggles manually, the localStorage preference wins regardless of viewport.
+- `prefers-reduced-motion` continues to suppress all sidebar transitions.
+
+## 11) Documentation maintenance rule
 When workflow behavior changes, update:
 - `README.md`
 - `HOW_TO_USE_APP.md`

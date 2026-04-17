@@ -7,6 +7,7 @@ import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getUserRoles } from "@/lib/roles";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 export interface UseCommandPaletteReturn {
   isOpen: boolean;
@@ -89,7 +90,75 @@ export function useCommandPalette(): UseCommandPaletteReturn {
     () => allCommands.filter((command) => isCommandAllowed(command)),
     [isCommandAllowed]
   );
-  const results = searchCommands(availableCommands, searchTerm, 10);
+  const baseResults = searchCommands(availableCommands, searchTerm, 10);
+
+  // Live cross-entity search via /api/search. Results appear as a
+  // "results" category below the canonical navigation/create groups.
+  const [liveResults, setLiveResults] = useState<Command[]>([]);
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 180);
+  useEffect(() => {
+    const trimmed = debouncedSearchTerm.trim();
+    if (!isOpen || trimmed.length < 2) {
+      setLiveResults([]);
+      return;
+    }
+    const controller = new AbortController();
+    const run = async () => {
+      try {
+        const response = await fetch(
+          `/api/search?q=${encodeURIComponent(trimmed)}`,
+          { signal: controller.signal, cache: "no-store" }
+        );
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as {
+          results?: Array<{
+            id: string;
+            title: string;
+            kind: "blog" | "social" | "idea";
+            href: string;
+            statusLabel?: string | null;
+          }>;
+        };
+        const rows = Array.isArray(payload.results) ? payload.results : [];
+        setLiveResults(
+          rows.slice(0, 10).map((row) => ({
+            id: `search-${row.kind}-${row.id}`,
+            label: row.title || "Untitled",
+            category: "results",
+            icon:
+              row.kind === "blog"
+                ? "blog"
+                : row.kind === "social"
+                  ? "social"
+                  : "idea",
+            description:
+              row.kind === "blog"
+                ? "Blog"
+                : row.kind === "social"
+                  ? "Social Post"
+                  : "Idea",
+            actionType: "navigate",
+            targetUrl: row.href,
+          } satisfies Command))
+        );
+      } catch (error) {
+        if ((error as { name?: string }).name !== "AbortError") {
+          console.warn("command palette search failed", error);
+        }
+      }
+    };
+    void run();
+    return () => {
+      controller.abort();
+    };
+  }, [debouncedSearchTerm, isOpen]);
+
+  const results = useMemo(
+    () => [...liveResults, ...baseResults],
+    [baseResults, liveResults]
+  );
   resultsRef.current = results;
 
   const groupedResults = groupCommandsByCategory(results);
@@ -183,6 +252,20 @@ export function useCommandPalette(): UseCommandPaletteReturn {
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, [isOpen]);
+
+  // Clickable ⌘K affordance fires a custom event rather than binding
+  // directly to the hook so it works from anywhere in the tree.
+  useEffect(() => {
+    const handleOpenEvent = () => {
+      setIsOpen(true);
+      setSearchTerm("");
+      setSelectedIndex(0);
+    };
+    window.addEventListener("command-palette:open", handleOpenEvent);
+    return () => {
+      window.removeEventListener("command-palette:open", handleOpenEvent);
+    };
+  }, []);
 
   return {
     isOpen,

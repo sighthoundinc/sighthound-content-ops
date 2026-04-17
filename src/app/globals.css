@@ -3,6 +3,51 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+
+  /* Spacing rhythm — 4px base. Use alongside Tailwind utilities when
+     custom values are needed (e.g. CSS-in-JS, inline style). */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Radius scale */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Elevation scale — subtle, consistent shadow ramp */
+  --elevation-1: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --elevation-2: 0 2px 6px rgba(15, 23, 42, 0.06);
+  --elevation-3: 0 8px 24px rgba(15, 23, 42, 0.08);
+
+  /* Motion tokens (mirror src/lib/motion.ts) */
+  --motion-duration-instant: 80ms;
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 150ms;
+  --motion-duration-slow: 200ms;
+  --motion-duration-pulse: 250ms;
+  --motion-easing-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-easing-in: cubic-bezier(0.64, 0, 0.78, 0);
+  --motion-easing-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-instant: 0ms;
+    --motion-duration-fast: 0ms;
+    --motion-duration-base: 0ms;
+    --motion-duration-slow: 0ms;
+    --motion-duration-pulse: 0ms;
+  }
+
+  .skeleton::after {
+    animation: none !important;
+  }
 }
 
 @theme inline {

@@ -413,6 +413,33 @@ All user-visible strings are governed by the canonical vocabulary in `src/lib/ui
 7. **Contracts must stay visible**:
    - Keep contract rules synchronized across `AGENTS.md`, `SPECIFICATION.md`, and source-level types/interfaces.
 
+## UX Primitives Authority (MUST)
+
+The following primitives are canonical. New code MUST import from these modules instead of duplicating logic inline.
+
+1. **Motion tokens** live in `src/lib/motion.ts` and `:root` custom properties in `src/app/globals.css`. Do not inline `duration-[NNNms]` values; use the tokens. All durations collapse to `0ms` under `prefers-reduced-motion`.
+2. **Optimistic mutations** use `runOptimistic()` + `recoverableMessage()` from `src/lib/optimistic.ts`. No silent mutation failure; rollback + toast is mandatory.
+3. **Preflight computation** uses `computeSocialPostPreflight()` / `computeBlogPreflight()` from `src/lib/preflight.ts`. Preflight rings and sidebar pills read from the same report shape; required-field arrays are not duplicated in components.
+4. **Next-action labels** use `socialNextAction()` / `blogNextAction()` from `src/lib/next-action.ts`. Blog next-action labels are exported as `BLOG_NEXT_ACTION_LABELS` — do not introduce page-specific verb mappings.
+5. **Clipboard** uses `copyText()` from `src/lib/clipboard.ts`; toasts must carry a semantic subject (`Copied Google Doc URL`) rather than a generic `Copied!`.
+6. **Skeletons** replace centered spinners on tables, drawers, and detail pages via `src/components/skeleton.tsx`.
+7. **Empty states** render `<EmptyState />` from `src/components/empty-state.tsx` with copy sourced from `UI_VOCAB.emptyStates`.
+8. **Next-action primitives** render via `<NextActionCell />`, `<NextActionPill />`, `<NextActionRing />` under `src/components/next-action/`.
+9. **Bulk selection** uses `useBulkSelection()` + `<SelectionCart />` under `src/hooks` and `src/components/bulk/`. Bulk controls stay permission-gated and visible-with-disabled-state rather than hidden.
+10. **Saved views** go through `src/lib/saved-views.ts`. Storage is localStorage today; swap to `/api/saved-views` without changing exported signatures when the DB migration lands.
+11. **Record deep-link** on list pages uses `parseRecordDeepLink()` / `withRecordDeepLink()` in `src/lib/record-deep-link.ts`; the canonical URL param is `?record=<blog|social>:<id>`.
+12. **Shortcut hints** emit once per user via `emitTipOnce()` in `src/lib/shortcut-hints.ts`; the shortcuts modal remains the single discoverability surface (see Shortcut Display Invariants).
+13. **Density preference** uses `useDensityPreference()` from `src/hooks/useDensityPreference.ts`. Default is `compact`; migration to `profiles.ui_density` preserves the exported API.
+14. **Performance marks** for dashboard TTI, filter response, drawer open, and palette first-result use `src/lib/perf-marks.ts`. Budgets are authoritative in `docs/PERFORMANCE_BUDGET.md`.
+15. **Global search** is served by `GET /api/search?q=…` with per-entity visibility filtering using `hasPermission`. Palette + top-chrome search consume the same endpoint.
+16. **Ask AI explainability** renders `<BasedOnPanel />` from `src/components/ai/based-on-panel.tsx`. Facts + links must come from the API response; never hallucinated.
+17. **Onboarding tour** uses `src/components/onboarding-tour.tsx` keyed on `onboarding:completed-v1` localStorage flag; migration to `profiles.onboarded_at` preserves the exported API.
+18. **Responsive sidebar** collapse: `src/hooks/useSidebarState.ts` auto-collapses below 1400px only when the user has NOT set an explicit preference.
+19. **UX vocabulary** for feedback, errors, waiting states, and empty states lives in `src/lib/ui-vocab.ts` under `feedback`, `errors`, `nextActions`, `emptyStates`. Toasts and inline error copy MUST reference these keys instead of hard-coded strings.
+20. **Design tokens** for spacing, radius, elevation, and motion are defined as CSS custom properties in `src/app/globals.css` and documented in `docs/DESIGN_TOKENS.md`. No ad-hoc `p-[13px]` or bespoke shadow values in new code.
+
+Adoption is tracked in `docs/UX_UPGRADE_PLAN.md`. Not every list/detail surface has migrated yet; when touching a surface, migrate it to these primitives rather than introducing page-specific variants.
+
 ## Documentation Update Rule (MUST)
 
 After any feature or behavior change (when applicable):

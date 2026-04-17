@@ -2,6 +2,7 @@
 
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { parseRecordDeepLink } from "@/lib/record-deep-link";
 import {
   DndContext,
   PointerSensor,
@@ -620,6 +621,17 @@ function SocialPostsPageContent() {
   const isAdmin = userRoles.includes("admin");
   const { showError, showSuccess } = useAlerts();
   const requestedView = searchParams.get("view");
+  // Shared ?record=<blog|social>:<id> deep-link: when present on the list,
+  // route directly to the matching detail page so shareable URLs work the
+  // same everywhere. Keeps the list surface predictable.
+  useEffect(() => {
+    const deepLink = parseRecordDeepLink(searchParams);
+    if (deepLink?.type === "social") {
+      router.push(`/social-posts/${deepLink.id}`);
+    } else if (deepLink?.type === "blog") {
+      router.push(`/blogs/${deepLink.id}`);
+    }
+  }, [router, searchParams]);
   const shouldOpenCreateModal = searchParams.get("create") === "1";
   const requestedTitle = searchParams.get("title");
   const requestedScheduledDate = searchParams.get("scheduled_date");

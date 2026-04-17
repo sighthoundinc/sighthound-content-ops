@@ -14,6 +14,7 @@ import { Button } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ColumnEditor } from "@/components/column-editor";
 import { DashboardTable } from "@/components/dashboard-table";
+import { NeedsYouHero } from "@/components/dashboard/needs-you-hero";
 import { DetailDrawerField } from "@/components/detail-drawer";
 import { Tooltip } from "@/components/tooltip";
 import {
@@ -116,6 +117,7 @@ import {
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { markEnd, markStart } from "@/lib/perf-marks";
 import { logDashboardVisitEvent } from "@/app/actions/log-dashboard-visit";
 
 type BlogCommentRecord = {
@@ -1314,11 +1316,18 @@ export default function DashboardPage() {
   }, [session?.access_token, showWarning]);
 
   useEffect(() => {
+    markStart("dashboard:tti");
     void loadData();
   }, [loadData]);
   useEffect(() => {
     void loadOverviewMetrics();
   }, [loadOverviewMetrics]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      markEnd("dashboard:tti");
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -4017,6 +4026,7 @@ export default function DashboardPage() {
               </div>
             }
           />
+          <NeedsYouHero />
           {isOverviewLoading ? (
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
               <h2 className="text-sm font-semibold text-slate-900">Overview</h2>

@@ -4,7 +4,7 @@ export interface Command {
   id: string;
   label: string;
   description?: string;
-  category: "navigation" | "create" | "actions";
+  category: "navigation" | "create" | "actions" | "results";
   actionType: "navigate" | "create" | "action";
   targetUrl?: string;
   actionId?: "import_blogs" | "export_current_view" | "clear_all_filters";

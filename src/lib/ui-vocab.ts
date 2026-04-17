@@ -69,6 +69,57 @@ export const UI_VOCAB = {
     addButton: "Add Comment",
     addingButton: "Adding…",
   },
+  feedback: {
+    // Transient alert / toast copy. Prefer specific subject over generic.
+    saved: "Saved",
+    savedJustNow: "Saved just now",
+    saving: "Saving…",
+    copied: "Copied",
+    removed: "Removed",
+    updated: "Updated",
+  },
+  errors: {
+    // Actionable, fallback-safe error copy. See AGENTS.md Error Handling.
+    generic: "Something went wrong. Please try again.",
+    network: "Network error. Check your connection and try again.",
+    saveFailed: "Couldn’t save changes. Please try again.",
+    commentFailed: "Couldn’t add comment. Please try again.",
+    linksFailed: "Couldn’t save links. Please try again.",
+    updateFailed: "Couldn’t update post. Please try again.",
+    permission: "You don’t have permission to do that.",
+    lockedField: "This field is locked at the current stage.",
+    ownershipBlocked: "Only the assigned user can take this action.",
+  },
+  nextActions: {
+    // Waiting states surfaced on list rows / detail pages when the current
+    // user is not the assigned actor. Keep short and neutral.
+    waitingOnWriter: "Waiting on writer",
+    waitingOnPublisher: "Waiting on publisher",
+    waitingOnReviewer: "Waiting on reviewer",
+    readyForPublishing: "Ready for publishing",
+    done: "Done",
+  },
+  emptyStates: {
+    blogsTitle: "No blogs yet",
+    blogsDescription:
+      "Start by creating an idea, converting it to a blog, or importing from a spreadsheet.",
+    socialPostsTitle: "No social posts yet",
+    socialPostsDescription:
+      "Create a social post to get a Canva link reviewed and scheduled.",
+    ideasTitle: "No ideas yet",
+    ideasDescription:
+      "Capture an idea now and convert it to a blog or social post when it’s ready.",
+    tasksTitle: "Nothing on your plate",
+    tasksDescription: "You’re caught up. Items you’re assigned to will appear here.",
+    calendarTitle: "Nothing scheduled here",
+    calendarDescription: "Schedule a blog or social post to see it on the calendar.",
+    searchTitle: "No matches",
+    searchDescription:
+      "Try a different keyword or remove filters to widen the search.",
+    inboxTitle: "You’re all caught up",
+    inboxDescription:
+      "New assignments, mentions, and approvals will land here.",
+  },
 } as const;
 
 /**

@@ -9,6 +9,7 @@ import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ConnectedServicesForm } from "@/components/connected-services-form";
 import { NotificationPreferencesForm } from "@/components/notification-preferences-form";
+import { useDensityPreference } from "@/hooks/useDensityPreference";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   TablePaginationControls,
@@ -117,6 +118,7 @@ function SettingsPageContent() {
   const searchParams = useSearchParams();
   const { hasPermission, session, profile, refreshProfile, user } = useAuth();
   const { showError, showSuccess } = useAlerts();
+  const { density, setDensity } = useDensityPreference();
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
@@ -1251,6 +1253,40 @@ function SettingsPageContent() {
                           <span className="text-sm text-slate-600 whitespace-nowrap">days</span>
                         </div>
                       </label>
+                    </div>
+                    <div className="mt-3">
+                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                        Display density
+                      </span>
+                      <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setDensity("compact")}
+                          className={`rounded px-3 py-1 font-medium transition ${
+                            density === "compact"
+                              ? "bg-slate-900 text-white"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                          aria-pressed={density === "compact"}
+                        >
+                          Compact
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDensity("comfortable")}
+                          className={`rounded px-3 py-1 font-medium transition ${
+                            density === "comfortable"
+                              ? "bg-slate-900 text-white"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                          aria-pressed={density === "comfortable"}
+                        >
+                          Comfortable
+                        </button>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Controls row height on tables. Stored locally in your browser.
+                      </p>
                     </div>
                     <div className="mt-4">
                       <button

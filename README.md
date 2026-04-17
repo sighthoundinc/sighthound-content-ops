@@ -45,7 +45,7 @@ Social posts must include at least one valid public live link before they can mo
   - `Lens shortcuts` let users save and reapply frequently used lens selections with one click.
 - `My Tasks`: assignment-first execution queue served by unified API (`/api/tasks/queue`)
   - advanced filters under `More filters` with scope-aware blog/social controls
-- `My Tasks`: assignment-first execution queue
+- `Inbox` (`/inbox`): read-only aggregate of `Required`, `Waiting`, and recent `Activity` across blogs and social posts. Reads from the same snapshot + activity-feed endpoints the dashboard uses, so counts stay aligned. Archive/snooze are not yet available.
 - `Blogs`: blog workflow list and details
 - `Social Posts`: list/board/calendar and full social editor
   - list bulk delete runs selected requests concurrently and returns one aggregated deleted/skipped/failed summary
@@ -115,6 +115,9 @@ Detail page ordering rule:
 - Technical behavior/spec: `SPECIFICATION.md`
 - Maintainer runbook: `OPERATIONS.md`
 - Workflow summary brief: `docs/CONTENT_RELAY_DOCUMENTATION_BRIEF.md`
+- UX upgrade rollout + primitive adoption: `docs/UX_UPGRADE_PLAN.md`
+- Design tokens reference: `docs/DESIGN_TOKENS.md`
+- Performance budgets: `docs/PERFORMANCE_BUDGET.md`
 
 ## Local setup
 Prerequisite:

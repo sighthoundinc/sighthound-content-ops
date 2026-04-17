@@ -79,6 +79,12 @@ export default function ResourcesPage() {
               <li>
                 <InternalPageLink href="#associated-content">9) Associated Content navigation</InternalPageLink>
               </li>
+              <li>
+                <InternalPageLink href="#inbox">10) Inbox</InternalPageLink>
+              </li>
+              <li>
+                <InternalPageLink href="#workspace-upgrades">11) Workspace upgrades</InternalPageLink>
+              </li>
             </ul>
           </Section>
 
@@ -328,6 +334,11 @@ export default function ResourcesPage() {
                 “what should I do right now?”
               </li>
               <li>
+                <InternalPageLink href="/inbox">Inbox</InternalPageLink> — a single place to scan
+                what’s required of you, what’s waiting on others, and recent activity across blogs
+                and social posts.
+              </li>
+              <li>
                 <InternalPageLink href="/dashboard">Dashboard</InternalPageLink> — the cross-content
                 health view for triage and prioritization.
               </li>
@@ -413,6 +424,85 @@ export default function ResourcesPage() {
                 `?associated_blog=&#123;blogId&#125;` for filtered social posts, `?filter=&#123;blogId&#125;` for filtered blogs.
               </li>
             </ul>
+          </Section>
+
+          <Section id="inbox" title="10) Inbox">
+            <p>
+              <InternalPageLink href="/inbox">Inbox</InternalPageLink> is a focused view for quick
+              triage across both tracks. It reads the same server queue as My Tasks and the
+              dashboard snapshot, so counts stay aligned — nothing new is invented here.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                <span className="font-medium text-slate-900">Required</span> — work where you’re the
+                current owner and an action is expected from you.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Waiting</span> — items where someone
+                else owns the next action; use this tab when you’re chasing a handoff.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Activity</span> — the most recent
+                status and assignment changes across blogs and social posts.
+              </li>
+            </ul>
+            <p>
+              Each row deep-links straight to the underlying blog or social post detail page.
+              Archive and snooze aren’t available yet — items clear from a tab when their state
+              changes.
+            </p>
+          </Section>
+
+          <Section id="workspace-upgrades" title="11) Workspace upgrades">
+            <p className="font-medium text-slate-900">First-run walkthrough</p>
+            <p>
+              New users see a small getting-started panel in the lower-right corner the first time
+              they open the app. It covers capturing an idea, writing and submitting, and
+              scheduling to publish. Skip or complete it — it won’t come back in this browser.
+            </p>
+
+            <p className="font-medium text-slate-900">Display density</p>
+            <p>
+              Pick Compact (default) or Comfortable in{" "}
+              <InternalPageLink href="/settings">Settings</InternalPageLink> → My Profile. All
+              tables across the app honour your choice and remember it in this browser.
+            </p>
+
+            <p className="font-medium text-slate-900">Smart copy feedback</p>
+            <p>
+              The Copy button next to Google Doc, Live URL, and similar links now shows a specific
+              confirmation toast like <em>Copied Google Doc URL</em>, so you always know what
+              landed on the clipboard.
+            </p>
+
+            <p className="font-medium text-slate-900">Ask AI &ldquo;Based on&rdquo; panel</p>
+            <p>
+              When Ask AI returns an answer with supporting links, expand the <em>Based on</em>
+              section to see the curated links it referenced and the response source
+              (deterministic vs Gemini). The panel is read-only and helps you verify the answer
+              came from your record rather than a guess.
+            </p>
+
+            <p className="font-medium text-slate-900">Next Action column on My Tasks</p>
+            <p>
+              <InternalPageLink href="/tasks">My Tasks</InternalPageLink> shows a verb-first Next
+              Action column. When it’s your turn you see a direct action like <em>Submit Draft</em>{" "}
+              or <em>Publish Blog</em>; when someone else owns the step you see 
+              <em>Waiting on &lt;name&gt;</em>.
+            </p>
+
+            <p className="font-medium text-slate-900">Shareable record links</p>
+            <p>
+              Adding <code>?record=blog:&lt;id&gt;</code> or <code>?record=social:&lt;id&gt;</code>
+              to a list URL opens the matching detail page. Useful for sharing a specific record
+              without pre-filtering the list.
+            </p>
+
+            <p className="font-medium text-slate-900">Responsive sidebar</p>
+            <p>
+              Below roughly 1400px the sidebar starts collapsed so list views breathe. Your manual
+              toggle is remembered afterwards and wins over the auto behaviour.
+            </p>
           </Section>
         </div>
       </AppShell>

@@ -28,7 +28,11 @@ import {
   getRequiredFieldsForStatus,
   getNextStagesForStatus,
 } from "@/lib/workflow-rules";
-import { getGeminiGuidance } from "@/app/api/ai/utils/gemini-client";
+import {
+  getGeminiGuidance,
+  getLastGeminiFailure,
+  describeGeminiFailure,
+} from "@/app/api/ai/utils/gemini-client";
 import {
   normalizePrompt,
   routePrompt,
@@ -537,10 +541,11 @@ export async function POST(
     } else {
       validatorFailed = !!geminiGuidance?.validatorFailed;
       if (process.env.ASK_AI_REQUIRE_GEMINI === "true") {
-        const geminiConfigured = !!process.env.GEMINI_API_KEY?.trim();
-        const userMessage = geminiConfigured
-          ? "Ask AI is temporarily unavailable. Please try again shortly."
-          : "Ask AI isn't configured yet. Please contact an administrator.";
+        const reason = getLastGeminiFailure();
+        const reasonText = reason
+          ? describeGeminiFailure(reason)
+          : "Google Gemini is temporarily unavailable";
+        const userMessage = `Chat is not available currently due to ${reasonText}. Please try again shortly.`;
         return NextResponse.json(
           createErrorResponse("INTERNAL_ERROR", userMessage),
           { status: 503 }

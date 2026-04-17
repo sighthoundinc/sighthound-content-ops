@@ -45,6 +45,65 @@ export interface GeminiGuidanceOutput {
   validatorFailed?: boolean;
 }
 
+export type GeminiFailureReason =
+  | "unconfigured"
+  | "rate_limited"
+  | "model_unavailable"
+  | "network_error"
+  | "timeout"
+  | "empty_response"
+  | "parse_error"
+  | "schema_invalid"
+  | "validator_rejected"
+  | "unknown";
+
+/**
+ * Human-readable reason derived from a structured failure code.
+ * Used in user-facing error messages when deterministic fallback is disabled.
+ */
+export function describeGeminiFailure(reason: GeminiFailureReason): string {
+  switch (reason) {
+    case "unconfigured":
+      return "the AI service is not configured";
+    case "rate_limited":
+      return "we've temporarily hit the AI rate limit";
+    case "model_unavailable":
+      return "Google Gemini is experiencing high demand";
+    case "network_error":
+      return "a network issue reaching Google Gemini";
+    case "timeout":
+      return "the AI response timed out";
+    case "empty_response":
+      return "the AI returned an empty response";
+    case "parse_error":
+      return "the AI returned an unexpected format";
+    case "schema_invalid":
+      return "the AI response didn't match the expected shape";
+    case "validator_rejected":
+      return "the AI response failed safety checks";
+    default:
+      return "an unknown AI error occurred";
+  }
+}
+
+/** Stored on module state so the route can surface the last outage reason. */
+let lastFailure: { reason: GeminiFailureReason; at: number } | null = null;
+
+export function getLastGeminiFailure(): GeminiFailureReason | null {
+  if (!lastFailure) return null;
+  // Stale reasons (>2min old) aren't useful for the current request.
+  if (Date.now() - lastFailure.at > 2 * 60 * 1000) {
+    lastFailure = null;
+    return null;
+  }
+  return lastFailure.reason;
+}
+
+function recordFailure(reason: GeminiFailureReason): null {
+  lastFailure = { reason, at: Date.now() };
+  return null;
+}
+
 interface GeminiResponsePayload {
   candidates?: Array<{
     content?: {
@@ -90,7 +149,7 @@ export async function getGeminiGuidance(
 ): Promise<GeminiGuidanceOutput | null> {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
-    return null;
+    return recordFailure("unconfigured");
   }
 
   const models = selectModels(!!input.preferComplexModel);
@@ -165,13 +224,14 @@ async function callGeminiForModel(
           body: errorBody.slice(0, 500),
         });
         if (transient && !isFinalAttempt) {
-          // Exponential backoff with jitter: 500ms, 1000ms, 2000ms + up to 250ms jitter.
           const backoff =
             BASE_BACKOFF_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
           await delay(backoff);
           continue;
         }
-        return null;
+        if (response.status === 429) return recordFailure("rate_limited");
+        if (response.status >= 500) return recordFailure("model_unavailable");
+        return recordFailure("unknown");
       }
 
       const json = (await response.json()) as GeminiResponsePayload;
@@ -182,7 +242,7 @@ async function callGeminiForModel(
 
       if (!rawText) {
         console.warn("[AI Assistant Gemini] empty response text", { model, attempt });
-        return null;
+        return recordFailure("empty_response");
       }
 
       const parsedJson = parseJsonFromGemini(rawText);
@@ -192,7 +252,7 @@ async function callGeminiForModel(
           attempt,
           rawPreview: rawText.slice(0, 200),
         });
-        return null;
+        return recordFailure("parse_error");
       }
 
       const parsed = GeminiAssistantSchema.safeParse(parsedJson);
@@ -203,7 +263,7 @@ async function callGeminiForModel(
           issues: parsed.error.issues.slice(0, 3),
           rawPreview: rawText.slice(0, 200),
         });
-        return null;
+        return recordFailure("schema_invalid");
       }
 
       const validation = validateGeminiOutput({
@@ -216,6 +276,7 @@ async function callGeminiForModel(
           attempt,
           issues: validation.issues.slice(0, 3),
         });
+        recordFailure("validator_rejected");
         return {
           intent: "general",
           answer: "",
@@ -267,10 +328,13 @@ async function callGeminiForModel(
         await delay(backoff);
         continue;
       }
-      return null;
+      if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
+        return recordFailure("timeout");
+      }
+      return recordFailure("network_error");
     }
   }
-  return null;
+  return recordFailure("unknown");
 }
 
 function delay(ms: number): Promise<void> {

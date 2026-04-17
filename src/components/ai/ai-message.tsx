@@ -76,7 +76,7 @@ export function AIMessage({ response }: AIMessageProps) {
         </div>
       )}
 
-      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+      <div className="pt-3 border-t border-slate-100 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <AIFeedback context={response.feedbackContext} />
         <ProvenanceChip
           source={response.responseSource}
@@ -115,10 +115,12 @@ function ProvenanceChip({
   return (
     <span
       title={title}
-      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 max-w-[220px] truncate"
+      className="inline-flex items-start gap-1.5 text-[11px] font-medium text-slate-500 leading-4 break-words"
     >
-      <span className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass} shrink-0`} />
-      <span className="truncate">{label}</span>
+      <span
+        className={`mt-1 inline-block h-1.5 w-1.5 rounded-full ${dotClass} shrink-0`}
+      />
+      <span className="whitespace-normal">{label}</span>
     </span>
   );
 }

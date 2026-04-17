@@ -1,9 +1,18 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import { usePathname, useParams } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
 import { getUserRoles } from '@/lib/roles';
+import type { AskAISafeLinkView } from '@/components/ai/ai-links-row';
+import type { AIFeedbackContext } from '@/components/ai/ai-feedback';
 
 export type AIResponseIntent =
   | 'blockers'
@@ -16,7 +25,14 @@ export type AIResponseIntent =
   | 'identity'
   | 'people'
   | 'timeline'
-  | 'general';
+  | 'lookup'
+  | 'general'
+  | 'overview'
+  | 'priorities'
+  | 'overdue'
+  | 'ownership_map';
+
+export type AIEntityType = 'blog' | 'social_post' | 'idea' | 'workspace';
 
 export interface AIResponse {
   currentState: string;
@@ -39,6 +55,9 @@ export interface AIResponse {
   intent?: AIResponseIntent;
   isFactual?: boolean;
   responseSource?: 'deterministic' | 'gemini';
+  links: AskAISafeLinkView[];
+  assignee: { name?: string; role?: string } | null;
+  feedbackContext: AIFeedbackContext;
 }
 
 interface AssistantApiData {
@@ -66,12 +85,15 @@ interface AssistantApiData {
   answer?: string;
   questionIntent?: AIResponseIntent;
   responseSource?: 'deterministic' | 'gemini';
+  links?: AskAISafeLinkView[];
+  assignee?: { name?: string; role?: string } | null;
 }
 
 const FACTUAL_INTENTS: ReadonlySet<AIResponseIntent> = new Set([
   'identity',
   'people',
   'timeline',
+  'lookup',
 ]);
 
 function toTitleCase(value: string): string {
@@ -80,10 +102,6 @@ function toTitleCase(value: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-/**
- * Defensive extractor for the error envelope returned by /api/ai/assistant.
- * Handles legacy shapes and guarantees a string (no `[object Object]`).
- */
 function extractErrorMessage(data: unknown): string {
   if (data && typeof data === 'object') {
     const maybeError = (data as { error?: unknown }).error;
@@ -99,18 +117,15 @@ function extractErrorMessage(data: unknown): string {
 }
 
 function mapSeverity(value: string): 'critical' | 'warning' | 'info' {
-  if (value === 'critical' || value === 'warning' || value === 'info') {
-    return value;
-  }
-
-  if (value === 'error') {
-    return 'critical';
-  }
-
+  if (value === 'critical' || value === 'warning' || value === 'info') return value;
+  if (value === 'error') return 'critical';
   return 'info';
 }
 
-function mapApiDataToAIResponse(data: AssistantApiData): AIResponse {
+function mapApiDataToAIResponse(
+  data: AssistantApiData,
+  feedbackContext: AIFeedbackContext
+): AIResponse {
   const blockers = data.blockers.map((blocker) => ({
     severity: mapSeverity(blocker.severity),
     title: blocker.field ? `${toTitleCase(blocker.field)} issue` : toTitleCase(blocker.type),
@@ -128,7 +143,7 @@ function mapApiDataToAIResponse(data: AssistantApiData): AIResponse {
     action: step,
   }));
 
-  const fallbackCurrentState = `Current stage: ${toTitleCase(data.currentState.status)} • ${
+  const fallbackCurrentState = `Current stage: ${toTitleCase(data.currentState.status)} \u2022 ${
     data.currentState.isOwner ? 'You are assigned' : 'Another user is assigned'
   }`;
 
@@ -145,6 +160,13 @@ function mapApiDataToAIResponse(data: AssistantApiData): AIResponse {
     intent,
     isFactual,
     responseSource: data.responseSource,
+    links: Array.isArray(data.links) ? data.links : [],
+    assignee: data.assignee ?? null,
+    feedbackContext: {
+      ...feedbackContext,
+      intent: intent ?? null,
+      responseSource: data.responseSource ?? null,
+    },
   };
 }
 
@@ -160,9 +182,32 @@ interface AIAssistantContextType {
   clearResponse: () => void;
   closePanel: () => void;
   reset: () => void;
+  entityType: AIEntityType | null;
 }
 
 const AIAssistantContext = createContext<AIAssistantContextType | undefined>(undefined);
+
+const WORKSPACE_PATHS = ['/dashboard', '/tasks', '/calendar'];
+
+function pageAllowsAssistant(pathname: string | null): {
+  entityType: AIEntityType | null;
+  entityId: string | null;
+} {
+  if (!pathname) return { entityType: null, entityId: null };
+  if (pathname.includes('/blogs/') && !pathname.endsWith('/blogs')) {
+    return { entityType: 'blog', entityId: null /* resolved via useParams */ };
+  }
+  if (pathname.includes('/social-posts/') && !pathname.endsWith('/social-posts')) {
+    return { entityType: 'social_post', entityId: null };
+  }
+  if (pathname.includes('/ideas/') && !pathname.endsWith('/ideas')) {
+    return { entityType: 'idea', entityId: null };
+  }
+  if (WORKSPACE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return { entityType: 'workspace', entityId: null };
+  }
+  return { entityType: null, entityId: null };
+}
 
 export function AIAssistantProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -176,33 +221,24 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   const userRoles = profile ? getUserRoles(profile) : [];
   const userRole = userRoles.includes('admin') ? 'admin' : userRoles[0] || 'writer';
   const userTimezone = profile?.timezone || undefined;
-  // Request de-duplication: aborts any in-flight Ask AI request when a new
-  // one is issued, so rapid clicks don't race back to UI in the wrong order.
   const inflightRef = useRef<AbortController | null>(null);
 
-  // Detect context from current page
-  const getContext = useCallback(() => {
-    let entityType: 'blog' | 'social_post' | 'idea' = 'blog';
-    let entityId: string | null = null;
-
-    if (pathname?.includes('/blogs/')) {
-      entityType = 'blog';
-      entityId = (params?.id as string) || null;
-    } else if (pathname?.includes('/social-posts/')) {
-      entityType = 'social_post';
-      entityId = (params?.id as string) || null;
-    } else if (pathname?.includes('/ideas/')) {
-      entityType = 'idea';
-      entityId = (params?.id as string) || null;
-    }
-
-    return { entityType, entityId };
+  const getContext = useCallback((): {
+    entityType: AIEntityType | null;
+    entityId: string | null;
+  } => {
+    const base = pageAllowsAssistant(pathname);
+    if (!base.entityType) return base;
+    if (base.entityType === 'workspace') return { ...base, entityId: null };
+    const id = (params?.id as string) || null;
+    return { entityType: base.entityType, entityId: id };
   }, [pathname, params]);
+
+  const { entityType } = getContext();
 
   const togglePanel = useCallback(() => {
     setIsOpen((prev) => !prev);
     if (isOpen) {
-      // Clear response when closing
       setResponse(null);
       setError(null);
     }
@@ -227,43 +263,44 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         setError('You must be logged in to use the AI assistant');
         return;
       }
+      const { entityType, entityId } = getContext();
+      if (!entityType) {
+        setError('AI assistant is not available on this page');
+        return;
+      }
+      if (entityType !== 'workspace' && !entityId) {
+        setError('AI assistant is only available on content detail pages');
+        return;
+      }
 
-      const effectivePrompt = prompt || 'What should I do next?';
+      const effectivePrompt =
+        prompt || (entityType === 'workspace' ? 'What should I focus on today?' : 'What should I do next?');
       setLastPrompt(effectivePrompt);
       setIsLoading(true);
       setError(null);
 
-      // Cancel any in-flight request so double-clicks don't race.
       inflightRef.current?.abort();
       const controller = new AbortController();
       inflightRef.current = controller;
 
       try {
-        const { entityType, entityId } = getContext();
-
-        // Only send request if on a detail page with an entity
-        if (!entityId) {
-          setError('AI assistant is only available on content detail pages');
-          setIsLoading(false);
-          return;
-        }
-
-        // Get the user's session to send auth token
-        const { data: { session } } = await (await import('@/lib/supabase/browser')).getSupabaseBrowserClient().auth.getSession();
-        const headers: Record<string, string> = { 
+        const { data: { session } } = await (await import('@/lib/supabase/browser'))
+          .getSupabaseBrowserClient()
+          .auth.getSession();
+        const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
         if (session?.access_token) {
           headers.Authorization = `Bearer ${session.access_token}`;
         }
 
-        const response = await fetch('/api/ai/assistant', {
+        const res = await fetch('/api/ai/assistant', {
           method: 'POST',
           headers,
           signal: controller.signal,
           body: JSON.stringify({
             entityType,
-            entityId,
+            entityId: entityId ?? undefined,
             userId: user.id,
             userRole,
             prompt: effectivePrompt,
@@ -271,45 +308,37 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
           }),
         });
 
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          const errorMsg = extractErrorMessage(data);
-          throw new Error(errorMsg);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(extractErrorMessage(errData));
         }
 
-        const apiResponse = await response.json();
-        // Extract the data from the API response wrapper
+        const apiResponse = await res.json();
         const data = apiResponse?.data as AssistantApiData | undefined;
-        if (!data) {
-          throw new Error('Invalid response format from AI assistant');
-        }
+        if (!data) throw new Error('Invalid response format from AI assistant');
 
-        // Ignore results from superseded requests.
-        if (controller.signal.aborted) {
-          return;
-        }
+        if (controller.signal.aborted) return;
 
-        setResponse(mapApiDataToAIResponse(data));
+        setResponse(
+          mapApiDataToAIResponse(data, {
+            entityType,
+            entityId: entityId ?? null,
+          })
+        );
         setIsOpen(true);
       } catch (err) {
-        // Silently swallow aborts caused by the de-dupe logic.
         if (err instanceof Error && (err.name === 'AbortError' || controller.signal.aborted)) {
           return;
         }
-        const errorMsg = err instanceof Error ? err.message : 'An error occurred';
-        setError(errorMsg);
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
-        if (inflightRef.current === controller) {
-          inflightRef.current = null;
-        }
+        if (inflightRef.current === controller) inflightRef.current = null;
         setIsLoading(false);
       }
     },
     [user, getContext, userRole, userTimezone]
   );
 
-  // Clear response when user navigates to a different entity/page so the
-  // panel never shows stale guidance from the previously-viewed record.
   useEffect(() => {
     inflightRef.current?.abort();
     setResponse(null);
@@ -318,13 +347,11 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
     setLastPrompt(null);
   }, [pathname, params?.id]);
 
-  // Also clear response on full-page unload.
   useEffect(() => {
     const handleBeforeUnload = () => {
       setResponse(null);
       setError(null);
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
@@ -333,9 +360,6 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
     await askAI(lastPrompt ?? undefined);
   }, [askAI, lastPrompt]);
 
-  // Clear the current answer/error so the panel returns to the quick-prompt
-  // state, without closing the panel. Powers the "Ask another question" button.
-  // `lastPrompt` is intentionally preserved so a follow-up Retry can replay it.
   const clearResponse = useCallback(() => {
     inflightRef.current?.abort();
     setResponse(null);
@@ -357,6 +381,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         clearResponse,
         closePanel,
         reset,
+        entityType,
       }}
     >
       {children}

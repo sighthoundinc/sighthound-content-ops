@@ -46,7 +46,6 @@ describe("End-to-End Scenarios", () => {
       context,
       blockers: blockers.blockers,
       qualityIssues: [],
-      qualityScore: 100
     });
 
     expect(response.canProceed).toBe(false);
@@ -360,7 +359,6 @@ describe("End-to-End Scenarios", () => {
       context,
       blockers: blockers.blockers,
       qualityIssues: [],
-      qualityScore: 50
     });
 
     expect(response.nextSteps.length).toBeGreaterThan(0);

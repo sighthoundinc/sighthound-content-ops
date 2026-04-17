@@ -126,27 +126,34 @@ describe("API Assistant Integration", () => {
     });
   });
 
+  const makeContext = () => ({
+    entityType: "blog" as const,
+    entityId: "blog-123",
+    userId: "user-456",
+    userRole: "writer" as const,
+    currentStatus: "draft",
+    userIsOwner: true,
+    userIsReviewer: false,
+    fields: { title: true, writer_id: true },
+    nextAllowedStages: ["writer_review"],
+    workflowDefinition: {
+      entityType: "blog" as const,
+      stages: ["draft", "writer_review"],
+      transitions: { draft: ["writer_review"], writer_review: [] },
+      requiredFieldsByStage: { draft: [], writer_review: [] },
+      description: "Test blog workflow",
+    },
+    extractedAt: new Date().toISOString(),
+  });
+
   describe("Response Conversion", () => {
     it("should convert deterministic result to API response", () => {
-      const context = {
-        entityType: "blog" as const,
-        entityId: "blog-123",
-        userId: "user-456",
-        userRole: "writer" as const,
-        currentStatus: "draft",
-        userIsOwner: true,
-        userIsReviewer: false,
-        fields: { title: true, writer_id: true },
-        nextAllowedStages: ["writer_review"],
-        workflowDefinition: { transitions: {} },
-        extractedAt: new Date().toISOString()
-      };
+      const context = makeContext();
 
       const result = generateResponse({
         context,
         blockers: [],
         qualityIssues: [],
-        qualityScore: 100
       });
 
       const apiResponse = resultToAPIResponse(result);
@@ -157,25 +164,12 @@ describe("API Assistant Integration", () => {
     });
 
     it("should include all required fields in response", () => {
-      const context = {
-        entityType: "blog" as const,
-        entityId: "blog-123",
-        userId: "user-456",
-        userRole: "writer" as const,
-        currentStatus: "draft",
-        userIsOwner: true,
-        userIsReviewer: false,
-        fields: { title: true, writer_id: true },
-        nextAllowedStages: ["writer_review"],
-        workflowDefinition: { transitions: {} },
-        extractedAt: new Date().toISOString()
-      };
+      const context = makeContext();
 
       const result = generateResponse({
         context,
         blockers: [],
         qualityIssues: [],
-        qualityScore: 100
       });
 
       const apiResponse = resultToAPIResponse(result);
@@ -215,25 +209,12 @@ describe("API Assistant Integration", () => {
 
   describe("Type Guards", () => {
     it("should identify success response", () => {
-      const context = {
-        entityType: "blog" as const,
-        entityId: "blog-123",
-        userId: "user-456",
-        userRole: "writer" as const,
-        currentStatus: "draft",
-        userIsOwner: true,
-        userIsReviewer: false,
-        fields: { title: true, writer_id: true },
-        nextAllowedStages: ["writer_review"],
-        workflowDefinition: { transitions: {} },
-        extractedAt: new Date().toISOString()
-      };
+      const context = makeContext();
 
       const result = generateResponse({
         context,
         blockers: [],
         qualityIssues: [],
-        qualityScore: 100
       });
 
       const apiResponse = resultToAPIResponse(result);

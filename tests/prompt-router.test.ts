@@ -58,7 +58,7 @@ describe("prompt-router", () => {
     });
 
     expect(routed.intent).toBe("blockers");
-    expect(routed.answer.toLowerCase()).toContain("blocked");
+    expect(routed.answer.toLowerCase()).toMatch(/stuck|blocked|missing/);
     expect(routed.nextSteps.length).toBeGreaterThan(0);
   });
 

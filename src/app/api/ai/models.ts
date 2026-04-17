@@ -7,13 +7,15 @@
 
 import { DeterministicResult } from "./utils/response-generator";
 import { DEFAULT_ASK_AI_PROMPT, type AskAIIntent } from "./types";
+import type { AskAISafeLink } from "./utils/safe-links";
 
 /**
  * API Request Model
  */
 export interface AskAIRequest {
-  entityType: "blog" | "social_post" | "idea";
-  entityId: string;
+  entityType: "blog" | "social_post" | "idea" | "workspace";
+  /** Required for entity-scoped queries; omitted/ignored when entityType === 'workspace'. */
+  entityId?: string;
   userId: string;
   userRole: "writer" | "publisher" | "editor" | "admin";
   prompt?: string;
@@ -56,6 +58,14 @@ export interface AskAIResponse {
     answer: string;
     responseSource: "deterministic" | "gemini";
     aiModel?: string;
+    links?: AskAISafeLink[];
+    assignee?: {
+      name?: string;
+      role?: string;
+    } | null;
+    rateLimit?: {
+      remaining: number;
+    };
   };
   error?: {
     code: string;
@@ -82,8 +92,14 @@ export interface FormattedAIResponse {
 export interface APIErrorResponse {
   success: false;
   error: {
-    code: "INVALID_INPUT" | "NOT_FOUND" | "UNAUTHORIZED" | "INTERNAL_ERROR";
+    code:
+      | "INVALID_INPUT"
+      | "NOT_FOUND"
+      | "UNAUTHORIZED"
+      | "INTERNAL_ERROR"
+      | "RATE_LIMITED";
     message: string;
+    retryAfterSeconds?: number;
   };
   generatedAt: string;
 }
@@ -110,10 +126,19 @@ export function isErrorResponse(response: AskAIResponse | APIErrorResponse): res
   return response.success === false;
 }
 
+export interface AskAIResultExtras {
+  links?: AskAISafeLink[];
+  assignee?: { name?: string; role?: string } | null;
+  rateLimitRemaining?: number;
+}
+
 /**
  * Convert DeterministicResult to API response
  */
-export function resultToAPIResponse(result: DeterministicResult): AskAIResponse {
+export function resultToAPIResponse(
+  result: DeterministicResult,
+  extras: AskAIResultExtras = {}
+): AskAIResponse {
   return {
     success: true,
     data: {
@@ -127,7 +152,13 @@ export function resultToAPIResponse(result: DeterministicResult): AskAIResponse 
       questionIntent: result.questionIntent || "general",
       answer: result.answer || result.nextSteps[0] || "No additional guidance available.",
       responseSource: result.responseSource || "deterministic",
-      aiModel: result.aiModel
+      aiModel: result.aiModel,
+      links: extras.links ?? [],
+      assignee: extras.assignee ?? null,
+      rateLimit:
+        typeof extras.rateLimitRemaining === "number"
+          ? { remaining: extras.rateLimitRemaining }
+          : undefined,
     },
     generatedAt: result.generatedAt
   };
@@ -137,16 +168,23 @@ export function resultToAPIResponse(result: DeterministicResult): AskAIResponse 
  * Create error response
  */
 export function createErrorResponse(
-  code: "INVALID_INPUT" | "NOT_FOUND" | "UNAUTHORIZED" | "INTERNAL_ERROR",
-  message: string
+  code:
+    | "INVALID_INPUT"
+    | "NOT_FOUND"
+    | "UNAUTHORIZED"
+    | "INTERNAL_ERROR"
+    | "RATE_LIMITED",
+  message: string,
+  extras: { retryAfterSeconds?: number } = {}
 ): APIErrorResponse {
   return {
     success: false,
     error: {
       code,
-      message
+      message,
+      retryAfterSeconds: extras.retryAfterSeconds,
     },
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
   };
 }
 
@@ -164,12 +202,18 @@ export function validateAIRequest(data: unknown): { valid: boolean; errors?: Val
   const errors: ValidationError[] = [];
   const req = data as Record<string, unknown>;
 
-  if (!req.entityType || !["blog", "social_post", "idea"].includes(req.entityType as string)) {
-    errors.push({ field: "entityType", message: "entityType is required and must be blog, social_post, or idea" });
+  const entityType = req.entityType as string | undefined;
+  if (!entityType || !["blog", "social_post", "idea", "workspace"].includes(entityType)) {
+    errors.push({
+      field: "entityType",
+      message: "entityType is required and must be blog, social_post, idea, or workspace",
+    });
   }
 
-  if (!req.entityId || typeof req.entityId !== "string") {
-    errors.push({ field: "entityId", message: "entityId is required and must be a string" });
+  if (entityType !== "workspace") {
+    if (!req.entityId || typeof req.entityId !== "string") {
+      errors.push({ field: "entityId", message: "entityId is required and must be a string" });
+    }
   }
 
   if (!req.userId || typeof req.userId !== "string") {

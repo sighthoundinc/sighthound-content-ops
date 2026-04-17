@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { useAIAssistant } from '@/providers/ai-assistant-provider';
 import { AppIcon } from '@/lib/icons';
 
@@ -30,21 +29,17 @@ const IDEA_FACTUAL_PROMPTS = [
   'When was this submitted?',
 ];
 
-function entityTypeFromPath(pathname: string | null): 'blog' | 'social_post' | 'idea' | null {
-  if (!pathname) return null;
-  if (pathname.includes('/blogs/')) return 'blog';
-  if (pathname.includes('/social-posts/')) return 'social_post';
-  if (pathname.includes('/ideas/')) return 'idea';
-  return null;
-}
+const WORKSPACE_PROMPTS = [
+  'What should I focus on today?',
+  'What\u2019s waiting on me right now?',
+  'Which items are overdue?',
+];
 
 export function AIQuickPrompts() {
-  const { askAI, isLoading } = useAIAssistant();
+  const { askAI, isLoading, entityType } = useAIAssistant();
   const [customPrompt, setCustomPrompt] = useState('');
-  const pathname = usePathname();
 
   const { workflowPrompts, factualPrompts, factualLabel } = useMemo(() => {
-    const entityType = entityTypeFromPath(pathname);
     if (entityType === 'blog') {
       return {
         workflowPrompts: WORKFLOW_PROMPTS,
@@ -66,12 +61,19 @@ export function AIQuickPrompts() {
         factualLabel: 'About this idea',
       };
     }
+    if (entityType === 'workspace') {
+      return {
+        workflowPrompts: WORKSPACE_PROMPTS,
+        factualPrompts: [] as string[],
+        factualLabel: 'About your workspace',
+      };
+    }
     return {
       workflowPrompts: WORKFLOW_PROMPTS,
       factualPrompts: [] as string[],
       factualLabel: 'About this record',
     };
-  }, [pathname]);
+  }, [entityType]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

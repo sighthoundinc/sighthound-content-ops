@@ -1,36 +1,9 @@
 /**
- * AI Assistant API Endpoint
+ * Ask AI — workflow guidance endpoint.
  *
- * POST /api/ai/assistant
- * 
- * Gemini-first workflow guidance for blogs, social posts, and ideas with deterministic fallback.
- * No content generation. Only guidance, blocker detection, and next steps.
- * 
- * Request:
- * {
- *   "entityType": "blog" | "social_post" | "idea",
- *   "entityId": "string",
- *   "userId": "string",
- *   "userRole": "writer" | "publisher" | "editor" | "admin",
- *   "prompt": "Why can't I publish this?" // optional
- * }
- * 
- * Response:
- * {
- *   "success": true,
- *   "data": {
- *     "currentState": {...},
- *     "blockers": [...],
- *     "nextSteps": [...],
- *     "qualityIssues": [...],
- *     "canProceed": boolean,
- *     "confidence": number,
- *     "questionIntent": "string",
- *     "answer": "string",
- *     "responseSource": "deterministic" | "gemini"
- *   },
- *   "generatedAt": "ISO8601"
- * }
+ * Read-only, advisory-only. Gemini-primary with deterministic fallback,
+ * RLS-gated fact retrieval, safe-link curation, per-user rate limiting,
+ * response caching, and fire-and-forget telemetry.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -39,30 +12,45 @@ import {
   type PostgrestError,
   type SupabaseClient,
 } from "@supabase/supabase-js";
-import { 
-  AskAIRequest, 
-  AskAIResponse, 
+import {
+  AskAIRequest,
+  AskAIResponse,
   APIErrorResponse,
-  validateAIRequest, 
-  resultToAPIResponse, 
-  createErrorResponse 
+  validateAIRequest,
+  resultToAPIResponse,
+  createErrorResponse,
 } from "@/app/api/ai/models";
 import { extractContextSync } from "@/app/api/ai/utils/context-extractor";
 import { detectBlockers } from "@/lib/blocker-detector";
 import { checkQuality, type QualityCheckResult } from "@/lib/quality-checker";
 import { generateResponse } from "@/app/api/ai/utils/response-generator";
-import { getRequiredFieldsForStatus, getNextStagesForStatus } from "@/lib/workflow-rules";
+import {
+  getRequiredFieldsForStatus,
+  getNextStagesForStatus,
+} from "@/lib/workflow-rules";
 import { getGeminiGuidance } from "@/app/api/ai/utils/gemini-client";
-import { normalizePrompt, routePrompt } from "@/app/api/ai/utils/prompt-router";
+import {
+  normalizePrompt,
+  routePrompt,
+} from "@/app/api/ai/utils/prompt-router";
 import type { AskAIIntent } from "@/app/api/ai/types";
 import { isMissingSocialOwnershipColumnsError } from "@/lib/social-post-schema";
 import { getWorkflowStage } from "@/lib/status";
 import type { PublisherStageStatus, WriterStageStatus } from "@/lib/types";
 import { fetchFacts, type FactContext } from "@/app/api/ai/utils/fact-provider";
+import { buildSafeLinks } from "@/app/api/ai/utils/safe-links";
+import {
+  buildCacheKey,
+  getCachedResponse,
+  setCachedResponse,
+} from "@/app/api/ai/utils/response-cache";
+import {
+  checkRateLimit,
+  seedRateLimitBucket,
+} from "@/app/api/ai/utils/rate-limiter";
+import { recordAskAIEvent } from "@/app/api/ai/utils/telemetry";
+import { buildWorkspaceSnapshot } from "@/app/api/ai/utils/multi-entity-context";
 
-/**
- * Entity state interface for DB mapping
- */
 interface EntityState {
   status: string;
   fields: Record<string, boolean>;
@@ -71,7 +59,9 @@ interface EntityState {
   title?: string;
   caption?: string;
   platforms?: string[];
+  updatedAt?: string;
 }
+
 type SocialEntityStateRow = {
   id: string | null;
   status: string | null;
@@ -90,10 +80,11 @@ type SocialEntityStateRow = {
   associated_blog_id: string | null;
   updated_at: string | null;
 };
+
 type EntityStateErrorCode = "not_found" | "unauthorized" | "query_error";
+
 class EntityStateError extends Error {
   code: EntityStateErrorCode;
-
   constructor(code: EntityStateErrorCode, message: string) {
     super(message);
     this.code = code;
@@ -104,9 +95,7 @@ class EntityStateError extends Error {
 function isUnauthorizedEntityQueryError(
   error: Pick<PostgrestError, "code" | "message" | "details" | "hint"> | null | undefined
 ) {
-  if (!error) {
-    return false;
-  }
+  if (!error) return false;
   const code = (error.code ?? "").toUpperCase();
   const text = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
   return (
@@ -116,14 +105,13 @@ function isUnauthorizedEntityQueryError(
   );
 }
 
-/**
- * Get entity state from Supabase using authenticated context
- * Uses auth token from client to respect RLS policies
- */
-async function getEntityState(supabase: SupabaseClient, entityType: string, entityId: string, userId: string): Promise<EntityState> {
-
+async function getEntityState(
+  supabase: SupabaseClient,
+  entityType: string,
+  entityId: string,
+  userId: string
+): Promise<EntityState> {
   if (entityType === "blog") {
-    // Query blogs table with RLS
     const { data, error } = await supabase
       .from("blogs")
       .select(
@@ -144,8 +132,6 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
       throw new EntityStateError("not_found", "Blog not found");
     }
 
-    // Derive unified lifecycle stage from writer_status + publisher_status
-    // to keep Ask AI aligned with the app's actual blog workflow model.
     const writerStatus = (data.writer_status || "not_started") as WriterStageStatus;
     const publisherStatus = (data.publisher_status || "not_started") as PublisherStageStatus;
     const stage = getWorkflowStage({ writerStatus, publisherStatus });
@@ -158,13 +144,16 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
         draft_doc_link: !!data.google_doc_url,
         google_doc_url: !!data.google_doc_url,
         publisher_id: !!data.publisher_id,
-        scheduled_publish_date: !!data.scheduled_publish_date
+        scheduled_publish_date: !!data.scheduled_publish_date,
       },
       ownerId: data.writer_id || data.created_by || userId,
       reviewerId: data.publisher_id,
-      title: data.title || undefined
+      title: data.title || undefined,
+      updatedAt: (data.updated_at as string | null) || undefined,
     };
-  } else if (entityType === "social_post") {
+  }
+
+  if (entityType === "social_post") {
     const socialSelectWithOwnership = `
       id, status, product, type, canva_url, canva_page, caption,
       platforms, scheduled_date, created_by, worker_user_id, reviewer_user_id,
@@ -176,7 +165,6 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
       title, associated_blog_id, updated_at
     `;
 
-    // Query social_posts table with RLS (fallback for legacy ownership schema)
     let data: SocialEntityStateRow | null = null;
     let error: PostgrestError | null = null;
     {
@@ -189,13 +177,13 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
       error = result.error;
     }
     if (isMissingSocialOwnershipColumnsError(error)) {
-      const fallbackResult = await supabase
+      const fallback = await supabase
         .from("social_posts")
         .select(socialSelectLegacy)
         .eq("id", entityId)
         .maybeSingle();
-      data = fallbackResult.data as SocialEntityStateRow | null;
-      error = fallbackResult.error;
+      data = fallback.data as SocialEntityStateRow | null;
+      error = fallback.error;
     }
 
     if (error) {
@@ -209,7 +197,6 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
       throw new EntityStateError("not_found", "Social post not found");
     }
 
-    // Map DB fields to DetectorInput format
     const reviewerUserId =
       typeof data.reviewer_user_id === "string" ? data.reviewer_user_id : null;
     const workerUserId =
@@ -223,6 +210,7 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
         : workerUserId) ??
       (typeof data.created_by === "string" ? data.created_by : null) ??
       userId;
+
     return {
       status: data.status || "draft",
       fields: {
@@ -234,19 +222,22 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
         platforms: Array.isArray(data.platforms) ? data.platforms.length > 0 : !!data.platforms,
         scheduled_publish_date: !!data.scheduled_date,
         title: !!data.title,
-        associated_blog_id: !!data.associated_blog_id
+        associated_blog_id: !!data.associated_blog_id,
       },
       ownerId: derivedOwnerId,
       reviewerId: reviewerUserId ?? undefined,
       title: data.title || undefined,
       caption: data.caption || undefined,
-      platforms: Array.isArray(data.platforms) ? data.platforms : []
+      platforms: Array.isArray(data.platforms) ? (data.platforms as string[]) : [],
+      updatedAt: data.updated_at || undefined,
     };
-  } else if (entityType === "idea") {
+  }
+
+  if (entityType === "idea") {
     const { data, error } = await supabase
       .from("blog_ideas")
       .select(
-        "id,title,site,description,created_by,is_converted,converted_blog_id,created_at"
+        "id,title,site,description,created_by,is_converted,converted_blog_id,created_at,updated_at"
       )
       .eq("id", entityId)
       .maybeSingle();
@@ -273,55 +264,109 @@ async function getEntityState(supabase: SupabaseClient, entityType: string, enti
       ownerId:
         (typeof data.created_by === "string" ? data.created_by : null) || userId,
       title: typeof data.title === "string" ? data.title : undefined,
+      updatedAt: (data.updated_at as string | null) || (data.created_at as string | null) || undefined,
     };
   }
 
   throw new EntityStateError("query_error", `Unknown entity type: ${entityType}`);
 }
 
-/**
- * POST /api/ai/assistant
- * Gemini-first workflow guidance with deterministic fallback
- */
-export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse | APIErrorResponse>> {
+function deriveAssignee(
+  facts: FactContext
+): { name?: string; role?: string } | null {
+  if (!facts) return null;
+  if (facts.kind === "blog") {
+    if (facts.publisherName) return { name: facts.publisherName, role: "Publisher" };
+    if (facts.writerName) return { name: facts.writerName, role: "Writer" };
+    return null;
+  }
+  if (facts.kind === "social_post") {
+    if (facts.assignedToName) return { name: facts.assignedToName, role: "Assigned to" };
+    if (facts.reviewerName) return { name: facts.reviewerName, role: "Reviewer" };
+    if (facts.creatorName) return { name: facts.creatorName, role: "Creator" };
+    return null;
+  }
+  if (facts.kind === "idea") {
+    if (facts.creatorName) return { name: facts.creatorName, role: "Submitted by" };
+  }
+  return null;
+}
+
+export async function POST(
+  req: NextRequest
+): Promise<NextResponse<AskAIResponse | APIErrorResponse>> {
+  const startedAt = Date.now();
   try {
     const body = await req.json();
 
-    // Validate request
     const validation = validateAIRequest(body);
     if (!validation.valid) {
-      const errorMsg = validation.errors?.map((e) => `${e.field}: ${e.message}`).join("; ") || "Invalid request";
-      return NextResponse.json(createErrorResponse("INVALID_INPUT", errorMsg), { status: 400 });
+      const errorMsg =
+        validation.errors?.map((e) => `${e.field}: ${e.message}`).join("; ") ||
+        "Invalid request";
+      return NextResponse.json(
+        createErrorResponse("INVALID_INPUT", errorMsg),
+        { status: 400 }
+      );
     }
 
     const request = body as AskAIRequest;
 
-    // Extract auth token from request headers
     const authHeader = req.headers.get("Authorization") || "";
     const accessToken = authHeader.replace(/^Bearer\s+/i, "");
     if (!accessToken) {
       return NextResponse.json(
-        createErrorResponse("UNAUTHORIZED", "Please sign in to use the AI assistant"),
+        createErrorResponse(
+          "UNAUTHORIZED",
+          "Please sign in to use the AI assistant"
+        ),
         { status: 401 }
       );
     }
 
-    // Create authenticated Supabase client with the user's token
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
     const supabase = createClient(supabaseUrl, anonKey, {
-      auth: {
-        persistSession: false,
-      },
+      auth: { persistSession: false },
       global: {
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       },
     });
 
-    // Get entity state from Supabase
+    // Rate limit
+    const isAdmin = request.userRole === "admin";
+    const rate = checkRateLimit(request.userId, isAdmin);
+    if (!rate.allowed) {
+      // Seed the bucket asynchronously so subsequent workers stay in sync.
+      seedRateLimitBucket(supabase, request.userId).catch(() => undefined);
+      return NextResponse.json(
+        createErrorResponse(
+          "RATE_LIMITED",
+          "You're asking a lot of questions — please wait a moment and try again.",
+          { retryAfterSeconds: rate.retryAfterSeconds }
+        ),
+        {
+          status: 429,
+          headers: { "Retry-After": String(rate.retryAfterSeconds) },
+        }
+      );
+    }
+
+    // Workspace branch
+    if (request.entityType === "workspace") {
+      return await handleWorkspaceRequest(supabase, request, startedAt, rate.remaining);
+    }
+
+    // Entity branch — existing semantics.
+    const entityId = request.entityId as string;
     let entityState: EntityState;
     try {
-      entityState = await getEntityState(supabase, request.entityType, request.entityId, request.userId);
+      entityState = await getEntityState(
+        supabase,
+        request.entityType,
+        entityId,
+        request.userId
+      );
     } catch (dbError) {
       if (dbError instanceof EntityStateError) {
         console.error("[AI Assistant DB Error]", {
@@ -359,11 +404,35 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       );
     }
 
-    // Fetch grounded RAG facts for every entity type. Failures must never
-    // break the main guidance flow; fetchFacts() already swallows errors.
+    const normalizedPrompt = normalizePrompt(request.prompt);
+
+    // Cache lookup — keyed by prompt + updated_at so we invalidate on record change.
+    const cacheKey = buildCacheKey({
+      userId: request.userId,
+      entityType: request.entityType,
+      entityId,
+      updatedAt: entityState.updatedAt,
+      prompt: normalizedPrompt,
+    });
+    const cached = getCachedResponse(cacheKey);
+    if (cached) {
+      recordAskAIEvent({
+        userId: request.userId,
+        entityType: request.entityType,
+        entityId,
+        intent: "cache_hit",
+        responseSource: "cache",
+        model: null,
+        latencyMs: Date.now() - startedAt,
+        hadError: false,
+        cached: true,
+      });
+      return NextResponse.json(cached.data as AskAIResponse, { status: 200 });
+    }
+
     let facts: FactContext = null;
     try {
-      facts = await fetchFacts(supabase, request.entityType, request.entityId);
+      facts = await fetchFacts(supabase, request.entityType, entityId);
     } catch (factError) {
       console.warn(
         "[AI Assistant] fact provider failed",
@@ -371,30 +440,32 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       );
     }
 
-    // Normalize user timezone; default to America/New_York per app date contract.
     const userTimezone =
       typeof request.userTimezone === "string" && request.userTimezone.trim().length > 0
         ? request.userTimezone.trim()
         : "America/New_York";
 
-    // Extract context (grounded facts ride along for factual intents)
     const context = extractContextSync(
       {
         entityType: request.entityType,
-        entityId: request.entityId,
+        entityId,
         userId: request.userId,
-        userRole: request.userRole
+        userRole: request.userRole,
       },
       entityState,
       facts,
       userTimezone
     );
 
-    // Get required fields and next stages
-    const requiredFieldsForStatus = getRequiredFieldsForStatus(request.entityType, context.currentStatus);
-    const nextAllowedStages = getNextStagesForStatus(request.entityType, context.currentStatus);
+    const requiredFieldsForStatus = getRequiredFieldsForStatus(
+      request.entityType,
+      context.currentStatus
+    );
+    const nextAllowedStages = getNextStagesForStatus(
+      request.entityType,
+      context.currentStatus
+    );
 
-    // Detect blockers
     const blockerResult = detectBlockers({
       entityType: request.entityType,
       status: context.currentStatus,
@@ -403,92 +474,91 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       userIsReviewer: context.userIsReviewer,
       fields: context.fields,
       requiredFieldsForStatus,
-      nextAllowedStages
+      nextAllowedStages,
     });
 
-    // Check quality using entity snapshot data
     let qualityResult: QualityCheckResult = { issues: [], qualityScore: 100 };
     if (request.entityType === "blog") {
       qualityResult = checkQuality({
         entityType: "blog",
-        title: entityState.title
+        title: entityState.title,
       });
     } else if (request.entityType === "social_post") {
       qualityResult = checkQuality({
         entityType: "social_post",
         caption: entityState.caption,
-        platforms: entityState.platforms || []
+        platforms: entityState.platforms || [],
       });
     }
 
-    // Generate deterministic baseline response
     const deterministicResult = generateResponse({
       context,
       blockers: blockerResult.blockers,
-      qualityIssues: qualityResult.issues
+      qualityIssues: qualityResult.issues,
     });
 
-    const normalizedPrompt = normalizePrompt(request.prompt);
-    let answer = deterministicResult.nextSteps[0] || "No additional guidance available.";
+    const safeLinks = buildSafeLinks(request.entityType, entityId, facts);
+
+    let answer =
+      deterministicResult.nextSteps[0] || "No additional guidance available.";
     let questionIntent: AskAIIntent = "general";
     let nextSteps = deterministicResult.nextSteps;
     let responseSource: "deterministic" | "gemini" = "deterministic";
     let aiModel: string | undefined;
     let confidence = deterministicResult.confidence;
-    // Gemini-first prompt interpretation (deterministic fallback if unavailable/fails)
+    let resolvedLinks = safeLinks;
+    let validatorFailed = false;
+
     const geminiGuidance = await getGeminiGuidance({
       prompt: normalizedPrompt,
       context,
       blockers: blockerResult.blockers,
       qualityIssues: qualityResult.issues,
       nextSteps: deterministicResult.nextSteps,
-      canProceed: deterministicResult.canProceed
+      canProceed: deterministicResult.canProceed,
+      safeLinks,
     });
 
-    if (geminiGuidance) {
+    if (geminiGuidance && !geminiGuidance.validatorFailed) {
       answer = geminiGuidance.answer;
       questionIntent = geminiGuidance.intent;
-      // Prefer Gemini prose; only back-fill deterministic steps if Gemini returned none
       nextSteps =
         geminiGuidance.nextSteps.length > 0
           ? geminiGuidance.nextSteps
           : deterministicResult.nextSteps;
       responseSource = "gemini";
       aiModel = geminiGuidance.model;
-
       if (typeof geminiGuidance.confidence === "number") {
         confidence = geminiGuidance.confidence;
-      }     } else if (process.env.ASK_AI_REQUIRE_GEMINI === "true") {
-      // Gemini-only mode: do not fall back to deterministic routing.
-      const geminiConfigured = !!process.env.GEMINI_API_KEY?.trim();
-      const userMessage = geminiConfigured
-        ? "Ask AI is temporarily unavailable. Please try again shortly."
-        : "Ask AI isn’t configured yet. Please contact an administrator.";
-      console.warn(
-        "[AI Assistant] Gemini guidance unavailable with ASK_AI_REQUIRE_GEMINI=true",
-        { geminiConfigured }
-      );
-      return NextResponse.json(
-        createErrorResponse("INTERNAL_ERROR", userMessage),
-        { status: 503 }
-      );
+      }
+      if (geminiGuidance.links.length > 0) {
+        resolvedLinks = geminiGuidance.links;
+      }
     } else {
+      validatorFailed = !!geminiGuidance?.validatorFailed;
+      if (process.env.ASK_AI_REQUIRE_GEMINI === "true") {
+        const geminiConfigured = !!process.env.GEMINI_API_KEY?.trim();
+        const userMessage = geminiConfigured
+          ? "Ask AI is temporarily unavailable. Please try again shortly."
+          : "Ask AI isn't configured yet. Please contact an administrator.";
+        return NextResponse.json(
+          createErrorResponse("INTERNAL_ERROR", userMessage),
+          { status: 503 }
+        );
+      }
       const routedPrompt = routePrompt({
         prompt: normalizedPrompt,
         context,
         blockers: blockerResult.blockers,
         qualityIssues: qualityResult.issues,
         deterministicNextSteps: deterministicResult.nextSteps,
-        canProceed: deterministicResult.canProceed
+        canProceed: deterministicResult.canProceed,
       });
-
       answer = routedPrompt.answer;
       questionIntent = routedPrompt.intent;
       nextSteps = routedPrompt.nextSteps;
     }
 
-    // Factual questions (identity/people/timeline) should not be cluttered with
-    // workflow blockers, quality issues, next steps, or workflow confidence.
     const isFactualIntent =
       questionIntent === "identity" ||
       questionIntent === "people" ||
@@ -504,11 +574,32 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
       questionIntent,
       answer,
       responseSource,
-      aiModel
+      aiModel,
     };
 
-    // Convert to API response
-    const apiResponse = resultToAPIResponse(result);
+    const apiResponse = resultToAPIResponse(result, {
+      links: resolvedLinks,
+      assignee: deriveAssignee(facts),
+      rateLimitRemaining: rate.remaining,
+    });
+
+    setCachedResponse(cacheKey, {
+      data: apiResponse,
+      generatedAt: apiResponse.generatedAt,
+    });
+
+    recordAskAIEvent({
+      userId: request.userId,
+      entityType: request.entityType,
+      entityId,
+      intent: questionIntent,
+      responseSource,
+      model: aiModel ?? null,
+      latencyMs: Date.now() - startedAt,
+      hadError: false,
+      cached: false,
+      validatorFailed,
+    });
 
     return NextResponse.json(apiResponse, { status: 200 });
   } catch (error) {
@@ -521,36 +612,156 @@ export async function POST(req: NextRequest): Promise<NextResponse<AskAIResponse
 }
 
 /**
- * GET /api/ai/assistant
- * Health check and documentation
+ * Workspace-wide guidance: aggregates owned/assigned blogs + social posts
+ * and asks Gemini to summarise priorities. No cache on workspace (data
+ * shifts frequently across items).
  */
+async function handleWorkspaceRequest(
+  supabase: SupabaseClient,
+  request: AskAIRequest,
+  startedAt: number,
+  rateLimitRemaining: number
+): Promise<NextResponse<AskAIResponse | APIErrorResponse>> {
+  const snapshot = await buildWorkspaceSnapshot(supabase, request.userId);
+  const normalizedPrompt = normalizePrompt(
+    request.prompt || "What should I focus on today?"
+  );
+
+  const workspaceFacts = {
+    kind: "workspace" as const,
+    userId: snapshot.userId,
+    blogsCount: snapshot.blogsCount,
+    socialCount: snapshot.socialCount,
+    overdueCount: snapshot.overdueCount,
+    items: snapshot.items,
+  };
+
+  // Fake context for workspace — reuses types but with workspace semantics.
+  const context = extractContextSync(
+    {
+      entityType: "blog", // coerced; only used for workflow-rule hooks that we bypass below
+      entityId: request.userId,
+      userId: request.userId,
+      userRole: request.userRole,
+    },
+    {
+      status: "workspace",
+      fields: {},
+      ownerId: request.userId,
+    },
+    // Pass workspace facts through the facts slot so Gemini treats it as grounded data.
+    // We cast because FactContext is a discriminated union on entity kind.
+    workspaceFacts as unknown as FactContext,
+    typeof request.userTimezone === "string" ? request.userTimezone : "America/New_York"
+  );
+
+  const safeLinks = buildSafeLinks("workspace", null, null);
+
+  const gemini = await getGeminiGuidance({
+    prompt: normalizedPrompt,
+    context,
+    blockers: [],
+    qualityIssues: [],
+    nextSteps: [],
+    canProceed: true,
+    safeLinks,
+    preferComplexModel: snapshot.items.length > 10,
+  });
+
+  const deterministicFallbackAnswer = buildDeterministicWorkspaceAnswer(snapshot);
+
+  const answer =
+    gemini && !gemini.validatorFailed ? gemini.answer : deterministicFallbackAnswer;
+  const intent: AskAIIntent =
+    gemini && !gemini.validatorFailed ? gemini.intent : "overview";
+  const responseSource: "deterministic" | "gemini" =
+    gemini && !gemini.validatorFailed ? "gemini" : "deterministic";
+
+  const apiResponse: AskAIResponse = {
+    success: true,
+    data: {
+      currentState: {
+        entityType: "workspace",
+        status: "workspace",
+        userRole: request.userRole,
+        isOwner: true,
+      },
+      blockers: [],
+      nextSteps: gemini?.nextSteps ?? [],
+      qualityIssues: [],
+      canProceed: true,
+      confidence: gemini?.confidence ?? 0,
+      prompt: normalizedPrompt,
+      questionIntent: intent,
+      answer,
+      responseSource,
+      aiModel: gemini?.model,
+      links: gemini?.links?.length ? gemini.links : safeLinks,
+      assignee: null,
+      rateLimit: { remaining: rateLimitRemaining },
+    },
+    generatedAt: new Date().toISOString(),
+  };
+
+  recordAskAIEvent({
+    userId: request.userId,
+    entityType: "workspace",
+    entityId: null,
+    intent,
+    responseSource,
+    model: gemini?.model ?? null,
+    latencyMs: Date.now() - startedAt,
+    hadError: false,
+    cached: false,
+    validatorFailed: !!gemini?.validatorFailed,
+  });
+
+  return NextResponse.json(apiResponse, { status: 200 });
+}
+
+function buildDeterministicWorkspaceAnswer(snapshot: {
+  blogsCount: number;
+  socialCount: number;
+  overdueCount: number;
+  items: Array<{ awaitingMe: boolean; title: string }>;
+}): string {
+  const awaiting = snapshot.items.filter((i) => i.awaitingMe).length;
+  const parts = [
+    `You have ${snapshot.blogsCount} blog${snapshot.blogsCount === 1 ? "" : "s"} and ${snapshot.socialCount} social post${snapshot.socialCount === 1 ? "" : "s"} in flight.`,
+  ];
+  if (awaiting > 0) {
+    parts.push(
+      `${awaiting} item${awaiting === 1 ? " is" : "s are"} waiting on you.`
+    );
+  }
+  if (snapshot.overdueCount > 0) {
+    parts.push(
+      `${snapshot.overdueCount} ${snapshot.overdueCount === 1 ? "is" : "are"} past scheduled publish.`
+    );
+  }
+  return parts.join(" ");
+}
+
 export async function GET(): Promise<NextResponse<Record<string, unknown>>> {
   return NextResponse.json({
     endpoint: "/api/ai/assistant",
     method: "POST",
-    description: "Prompt-aware workflow intelligence for content ops",
-    version: "0.1.0",
+    description: "Read-only advisory assistant for content ops",
+    version: "1.0.0",
     status: "operational",
     documentation: {
       request: {
-        entityType: "blog | social_post | idea",
-        entityId: "string",
+        entityType: "blog | social_post | idea | workspace",
+        entityId: "string (required unless entityType === 'workspace')",
         userId: "string",
         userRole: "writer | publisher | editor | admin",
-        prompt: "string (optional natural language question)"
+        prompt: "string (optional natural language question)",
       },
-      response: {
-        currentState: "object",
-        blockers: "array",
-        nextSteps: "array",
-        qualityIssues: "array",
-        canProceed: "boolean",
-        confidence: "number",
-        prompt: "string",
-        questionIntent: "string",
-        answer: "string",
-        responseSource: "deterministic | gemini"
-      }
-    }
+      responseExtras: {
+        links: "Array<{key,label,href,kind}>",
+        assignee: "{name,role} | null",
+        rateLimit: "{remaining}",
+      },
+    },
   });
 }

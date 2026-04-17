@@ -155,6 +155,26 @@ function daysBetween(
 }
 
 /**
+ * Derive a public live URL for a published blog when the explicit
+ * `live_url` column is empty. Only returns a value when the blog has
+ * clearly been published (publisher stage completed or actual publish
+ * timestamp present) and both a site + slug are on record.
+ */
+function deriveBlogLiveUrl(
+  site: string | null | undefined,
+  slug: string | null | undefined,
+  published: { publisherStatus?: string | null; actualPublishedAt?: string | null }
+): string | undefined {
+  if (!slug) return undefined;
+  const isPublished =
+    published.publisherStatus === "completed" || !!published.actualPublishedAt;
+  if (!isPublished) return undefined;
+  if (site === "sighthound.com") return `https://www.sighthound.com/blog/${slug}`;
+  if (site === "redactor.com") return `https://www.redactor.com/blog/${slug}`;
+  return undefined;
+}
+
+/**
  * Fetch a grounded BlogFacts snapshot for Ask AI under the caller's RLS.
  * Returns `null` when the blog can't be read or the query fails.
  */
@@ -204,6 +224,17 @@ export async function fetchBlogFacts(
   const actualPublishedAt =
     normalized.actual_published_at ?? normalized.published_at ?? undefined;
 
+  // Prefer the stored live_url, but derive one from site + slug when the
+  // record is clearly published and the column is empty. This keeps Ask AI
+  // useful for older imports that never had live_url backfilled.
+  const liveUrl =
+    row.live_url ??
+    deriveBlogLiveUrl(row.site, row.slug, {
+      publisherStatus: row.publisher_status,
+      actualPublishedAt,
+    }) ??
+    undefined;
+
   return {
     kind: "blog",
     id: row.id,
@@ -217,7 +248,7 @@ export async function fetchBlogFacts(
     publisherEmail: row.publisher?.email ?? undefined,
     publisherUnavailable: isProfileClippedByRls(row.publisher_id, row.publisher),
     googleDocUrl: row.google_doc_url ?? undefined,
-    liveUrl: row.live_url ?? undefined,
+    liveUrl,
     createdAt: normalized.created_at ?? undefined,
     updatedAt: normalized.updated_at ?? undefined,
     scheduledPublishDate: normalized.scheduled_publish_date ?? undefined,

@@ -5,6 +5,8 @@ import { AIResponse } from '@/providers/ai-assistant-provider';
 import { AIBlockerCard } from './ai-blocker-card';
 import { AIQualityCard } from './ai-quality-card';
 import { AINextStepsCard } from './ai-next-steps-card';
+import { AILinksRow } from './ai-links-row';
+import { AIFeedback } from './ai-feedback';
 
 interface AIMessageProps {
   response: AIResponse;
@@ -13,18 +15,22 @@ interface AIMessageProps {
 export function AIMessage({ response }: AIMessageProps) {
   const isFactual = !!response.isFactual;
   const answerHeading = isFactual ? 'Answer' : 'Current State';
-  // Confidence is a deterministic-workflow signal. Hide it for factual
-  // answers and for Gemini-authored prose (where the 99% default is misleading).
   const showConfidence =
     !isFactual && response.responseSource !== 'gemini' && response.confidence > 0;
 
   return (
     <div className="space-y-6">
-      {/* Answer / Current State */}
+      {response.assignee?.name && (
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+          <span className="text-slate-500">{response.assignee.role ?? 'Assigned to'}:</span>
+          <span>{response.assignee.name}</span>
+        </div>
+      )}
       {response.currentState && (
         <div>
           <h3 className="text-sm font-semibold text-slate-900 mb-2">{answerHeading}</h3>
           <p className="text-sm text-slate-700">{response.currentState}</p>
+          {response.links.length > 0 && <AILinksRow links={response.links} />}
         </div>
       )}
 
@@ -55,7 +61,6 @@ export function AIMessage({ response }: AIMessageProps) {
         <AINextStepsCard steps={response.nextSteps} />
       )}
 
-      {/* Workflow confidence is not meaningful for factual or Gemini answers */}
       {showConfidence && (
         <div className="pt-4 border-t border-slate-200">
           <p className="text-xs text-slate-500">
@@ -63,6 +68,10 @@ export function AIMessage({ response }: AIMessageProps) {
           </p>
         </div>
       )}
+
+      <div className="pt-3 border-t border-slate-100">
+        <AIFeedback context={response.feedbackContext} />
+      </div>
     </div>
   );
 }

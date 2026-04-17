@@ -1,27 +1,20 @@
 'use client';
 
 import React from 'react';
-import { usePathname } from 'next/navigation';
+import { useAIAssistant } from '@/providers/ai-assistant-provider';
 import { AIFloatingButton } from './ai-floating-button';
 import { AIChatPanel } from './ai-chat-panel';
 
 /**
- * Global AI Assistant component
- * Only visible on detail pages (blogs, social posts, ideas)
- * Hidden on dashboard, tasks, and other non-detail pages
+ * Global AI Assistant.
+ *
+ * Visible on content detail pages (blogs, social posts, ideas) and on
+ * workspace surfaces (dashboard, tasks, calendar). Hidden everywhere
+ * else so the AI icon never appears where the assistant can't help.
  */
 export function AIFloatingAssistant() {
-  const pathname = usePathname();
-  
-  // Only show on detail pages that have a specific ID
-  const isDetailPage = 
-    pathname?.includes('/blogs/') || 
-    pathname?.includes('/social-posts/') || 
-    pathname?.includes('/ideas/');
-  
-  if (!isDetailPage) {
-    return null;
-  }
+  const { entityType } = useAIAssistant();
+  if (!entityType) return null;
 
   return (
     <>

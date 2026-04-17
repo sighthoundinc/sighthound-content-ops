@@ -46,8 +46,15 @@ export function AIChatPanel() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div className="flex items-center gap-2">
-            <AppIcon name="idea" size={20} className="text-blue-600" />
-            <h2 className="text-lg font-semibold text-slate-900">AI Assistant</h2>
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-indigo-200">
+              <AppIcon name="sparkle" size={14} boxClassName="h-4 w-4" />
+            </span>
+            <div className="flex flex-col leading-tight">
+              <h2 className="text-sm font-semibold text-slate-900">Ask AI</h2>
+              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                Read-only · Advisory
+              </span>
+            </div>
           </div>
           <button
             onClick={closePanel}

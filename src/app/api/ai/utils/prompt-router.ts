@@ -85,6 +85,50 @@ const INTENT_KEYWORDS: Array<{ intent: AskAIIntent; keywords: string[] }> = [
       "time to publish",
     ],
   },
+  // Lookup/retrieval must precede `transition` so phrases like
+  // "give me the link of the google doc for this published blog" aren't
+  // hijacked by the "publish" keyword in the transition intent.
+  {
+    intent: "lookup",
+    keywords: [
+      "google doc",
+      "google docs",
+      "doc link",
+      "docs link",
+      "live link",
+      "live url",
+      "published link",
+      "published url",
+      "canva link",
+      "canva url",
+      "the link",
+      "the url",
+      "its link",
+      "its url",
+      "give me the link",
+      "give me the url",
+      "give me its link",
+      "give me the google doc",
+      "give me the doc",
+      "give me the live",
+      "show me the link",
+      "show me the url",
+      "show me the google doc",
+      "share the link",
+      "share the url",
+      "share the google doc",
+      "can you share the",
+      "where is the link",
+      "where is the url",
+      "where is the google doc",
+      "what is the link",
+      "what's the link",
+      "whats the link",
+      "what is the url",
+      "what's the url",
+      "whats the url",
+    ],
+  },
   {
     intent: "blockers",
     keywords: ["why can't", "why cant", "cannot", "can't", "blocked", "blocking", "stuck", "why not", "issue"]
@@ -119,6 +163,7 @@ const FACTUAL_INTENTS: ReadonlySet<AskAIIntent> = new Set([
   "identity",
   "people",
   "timeline",
+  "lookup",
 ]);
 
 export function normalizePrompt(prompt?: string): string {
@@ -257,6 +302,35 @@ function buildFactualAnswer(
         const sentence = bits.join(", ");
         return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
       }
+      case "lookup": {
+        const lower = (input.prompt ?? "").toLowerCase();
+        const wantsDoc = /google doc|docs? link|draft doc|draft link/.test(lower);
+        const wantsLive = /live|published/.test(lower);
+        const hasDoc = !!facts.googleDocUrl;
+        const hasLive = !!facts.liveUrl;
+
+        if (wantsDoc && wantsLive) {
+          if (hasDoc && hasLive) return `Sure — Google Doc: ${facts.googleDocUrl}. Live link: ${facts.liveUrl}.`;
+          if (hasDoc) return `Here’s the Google Doc: ${facts.googleDocUrl}. No live link saved on this one yet.`;
+          if (hasLive) return `I don’t see a Google Doc on file, but the live link is ${facts.liveUrl}.`;
+          return `I don’t have a Google Doc or live link saved for this blog yet.`;
+        }
+        if (wantsDoc) {
+          return hasDoc
+            ? `Here’s the Google Doc: ${facts.googleDocUrl}.`
+            : `No Google Doc link saved on this blog yet.`;
+        }
+        if (wantsLive) {
+          return hasLive
+            ? `Live link: ${facts.liveUrl}.`
+            : `No live link on this one — it either hasn’t been published or the URL isn’t on file.`;
+        }
+        const parts: string[] = [];
+        if (hasDoc) parts.push(`Google Doc: ${facts.googleDocUrl}`);
+        if (hasLive) parts.push(`live link: ${facts.liveUrl}`);
+        if (parts.length === 0) return `I don’t have any links saved for this blog yet.`;
+        return `Here’s what I have — ${parts.join(" · ")}.`;
+      }
       default:
         return null;
     }
@@ -313,6 +387,28 @@ function buildFactualAnswer(
         const sentence = bits.join(", ");
         return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
       }
+      case "lookup": {
+        const lower = (input.prompt ?? "").toLowerCase();
+        const wantsCanva = /canva/.test(lower);
+        const wantsLive = /live|published/.test(lower);
+        const hasCanva = !!facts.canvaUrl;
+        const liveLinks = facts.liveLinks ?? [];
+        const hasLive = liveLinks.length > 0;
+
+        if (wantsCanva && !wantsLive) {
+          return hasCanva ? `Canva: ${facts.canvaUrl}.` : `No Canva link saved on this post yet.`;
+        }
+        if (wantsLive && !wantsCanva) {
+          return hasLive
+            ? `Live link${liveLinks.length > 1 ? "s" : ""}: ${liveLinks.join(", ")}.`
+            : `No live links on this post yet — it’s still pre-publish.`;
+        }
+        const parts: string[] = [];
+        if (hasCanva) parts.push(`Canva: ${facts.canvaUrl}`);
+        if (hasLive) parts.push(`live: ${liveLinks.join(", ")}`);
+        if (parts.length === 0) return `I don’t have any links saved for this post yet.`;
+        return `Here’s what I’ve got — ${parts.join(" · ")}.`;
+      }
       default:
         return null;
     }
@@ -351,6 +447,12 @@ function buildFactualAnswer(
         }
         const sentence = bits.join(" ");
         return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
+      }
+      case "lookup": {
+        if (facts.convertedBlogId) {
+          return `This idea was converted into a blog — open that blog to grab its Google Doc or live link.`;
+        }
+        return `No links on this one yet — it’s still an idea, so nothing’s been drafted or published.`;
       }
       default:
         return null;
@@ -412,6 +514,9 @@ function buildAnswer(intent: AskAIIntent, input: PromptRoutingInput): string {
         .slice(0, 2)
         .map((issue) => issue.message)
         .join(" and ")}.`;
+    case "lookup":
+      // Reached only when grounded facts aren’t loaded; keep it conversational.
+      return `I don’t have the record details loaded yet, so I can’t pull up that link right now. Try refreshing the page so the latest data is available.`;
     case "status":
       return `You’re in ${statusLabel}. ${
         input.canProceed ? "Ready to move to the next step." : "A few things still need to be finished first."

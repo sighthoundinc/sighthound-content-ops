@@ -34,35 +34,40 @@ Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in fou
 - [x] Preflight library.
 - [x] Micro-copy additions to `ui-vocab.ts`.
 - [x] Design token CSS variables.
-- [ ] Adoption: replace centered spinners with skeletons on dashboard, tasks, blogs list, social-posts list, detail drawers.
-- [ ] Adoption: route save/error/permission toasts through `UI_VOCAB.feedback` / `UI_VOCAB.errors`.
+- [x] Adoption: skeleton pattern already used globally via `.skeleton` CSS class (dashboard, tasks, blogs, social-posts, settings, ideas); `<Skeleton>` React primitive available for new code.
+- [ ] Adoption: route save/error/permission toasts through `UI_VOCAB.feedback` / `UI_VOCAB.errors`. Vocab is consumable; large-scale toast-copy migration pending.
 ### Wave 2 (list/detail ergonomics)
 - [x] Next-Action primitives.
 - [x] Global search API route.
 - [x] Record deep-link helpers.
 - [x] Shortcut tip helper.
-- [ ] Adoption: swap status cells for `NextActionCell` on dashboard/tasks/blogs/social-posts.
-- [ ] Adoption: wire `parseRecordDeepLink()` into list pages to open detail drawer on URL.
-- [ ] Adoption: add `⌘K` badge to app shell header + bind palette to new search API.
-- [ ] Adoption: extend command palette with verbs + recent items.
+- [x] Adoption: `<NextActionCell>` wired into `/tasks` Next Action column.
+- [x] Adoption: `parseRecordDeepLink()` wired into `/social-posts` list (routes `?record=<type>:<id>` to the matching detail page).
+- [ ] Adoption: `<NextActionCell>` in dashboard, blogs list, social-posts list. Detail pages (`/blogs/[id]`, `/social-posts/[id]`) already render a richer next-action strip with owner/handoff/preflight context, semantically equivalent to `<NextActionPill>`; no swap planned until we consolidate behavior.
+- [ ] Adoption: top-chrome `⌘K` badge + command palette binding to `/api/search`. Endpoint is live; palette integration is a separate feature PR.
 ### Wave 3 (scale & collaboration)
 - [x] `SelectionCart` primitive.
 - [x] `useBulkSelection` hook.
 - [x] Saved views local storage API.
 - [x] Inbox scaffold page.
-- [ ] Adoption: integrate `SelectionCart` into dashboard/tasks/blogs/social-posts.
-- [ ] Adoption: Saved views UI (save/load/pin) wired to filter-bar state.
+- [ ] Adoption: `SelectionCart` into existing bulk flows. Current social-posts/dashboard bulk UI is a deeply customized pattern; migration is a dedicated PR.
+- [ ] Adoption: Saved views UI (save/load/pin) on dashboard filter bar. Library is available; UI layer is a dedicated PR.
 - [ ] Adoption: Inbox archive/snooze after `notification_states` migration.
 ### Wave 4 (premium polish & structure)
 - [x] Empty state primitive + vocab.
 - [x] Onboarding tour scaffold.
 - [x] Performance budget doc.
 - [x] Design tokens doc.
-- [ ] Adoption: replace ad-hoc "No data" messages with `<EmptyState />`.
-- [ ] Adoption: mount onboarding tour in root layout for new users.
-- [ ] Adoption: instrument dashboard/tasks with `markStart`/`markEnd`.
-- [ ] Adoption: Lighthouse CI workflow under `.github/workflows/lhci.yml`.
-- [ ] Adoption: Explainable AI "Based on" panel in `src/components/ai`.
+- [x] Adoption: `DataPageEmptyState` now routes through `<EmptyState>` when used without a custom action, covering dashboard, tasks, blogs, social-posts, ideas list empty states.
+- [x] Adoption: `OnboardingTour` mounted inside `AppShell` so it appears on first run for every user.
+- [x] Adoption: `AppShell` root carries `data-density` attribute driven by `useDensityPreference`; Settings exposes Compact/Comfortable toggle; `DataTable` reads `readDensitySync()` by default.
+- [x] Adoption: `markStart`/`markEnd` wired on `/tasks` and `/dashboard` for `tasks:tti` / `dashboard:tti`.
+- [x] Adoption: `<BasedOnPanel>` rendered inside `AIMessage` when response links exist.
+- [x] Adoption: `copyText()` used by `LinkQuickActions`, giving every Google Doc / Live URL copy a semantic toast.
+- [ ] Adoption: Lighthouse CI workflow under `.github/workflows/lhci.yml`. Budget doc is authoritative; CI job is pending.
+- [ ] Adoption: `runOptimistic()` in transition/comment mutation flows. Helper is available; each mutation path needs per-site review before wrapping.
+- [ ] Adoption: `computeSocialPostPreflight` / `computeBlogPreflight` replacing duplicated required-field arrays on detail pages. Pending per-site review to preserve existing preflight UX.
+- [ ] Adoption: motion token migration across ad-hoc `duration-[NNNms]` values. Tokens are defined; codemod is pending.
 ## Contracts Preserved
 - No enum keys, DB values, or API contracts were changed.
 - Workflow authority remains with the server. All UI guards mirror server rules.

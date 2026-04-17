@@ -16,6 +16,7 @@ import {
 } from "@/lib/permissions";
 import { getUserRoles } from "@/lib/roles";
 import { logLoginEvent } from "@/app/actions/log-login";
+import { isAllowedEmail } from "@/lib/allowed-email";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { AppPermissionKey, ProfileRecord } from "@/lib/types";
@@ -106,7 +107,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [slackConnected, setSlackConnected] = useState(false);
 
+  const clearLocalAuthState = useCallback(() => {
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setPermissions([]);
+    setGoogleConnected(false);
+    setSlackConnected(false);
+  }, []);
+
   const applySession = async (nextSession: Session | null) => {
+    // Defense in depth: reject sessions whose authenticated user is not on
+    // an allowlisted email domain. This catches cases where a non-Sighthound
+    // account completes OAuth before the provider-side `hd` hint can be
+    // enforced, or where a stale session pre-dates the rule.
+    if (nextSession?.user && !isAllowedEmail(nextSession.user.email)) {
+      const supabase = getSupabaseBrowserClient();
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.error("Failed to sign out disallowed session:", signOutError);
+      }
+      clearLocalAuthState();
+      if (typeof window !== "undefined") {
+        const target = new URL("/login", window.location.origin);
+        target.searchParams.set("reason", "domain");
+        window.location.replace(target.toString());
+      }
+      return;
+    }
+
     setSession(nextSession);
     setUser(nextSession?.user ?? null);
 
@@ -127,14 +157,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setPermissions(await resolvePermissionsForProfile(nextProfile));
       setGoogleConnected(nextIntegrations.googleConnected);
       setSlackConnected(nextIntegrations.slackConnected);
-      
-      // Log login event when session is first established
-      // Use fire-and-forget to avoid blocking auth flow
-      void logLoginEvent(nextSession.user.id);
-      // Note: We do NOT auto-update OAuth connection status here.
-      // Users control which providers are "connected" via Settings → Connected Services.
-      // This respects manual disconnects — logging in with Google doesn't force
-      // Google to show as "connected" if the user previously disconnected it.
+
+      // Log login event when session is first established.
+      // Fire-and-forget; the server action resolves the user id from the
+      // session cookie and never trusts client-supplied values.
+      void logLoginEvent();
     } catch (error) {
       console.error(error);
       setProfile(null);
@@ -175,31 +202,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isDisposed = false;
     const supabase = getSupabaseBrowserClient();
 
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error(error);
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setPermissions([]);
+    // Hydrate auth using `getUser()` as the server-authoritative source. The
+    // previous implementation trusted `getSession()` which returns the locally
+    // cached (potentially tampered) session. We still read the session for the
+    // access token but only after the user is validated.
+    (async () => {
+      try {
+        const { data: userData, error: userError } =
+          await supabase.auth.getUser();
+        if (userError || !userData.user) {
+          if (!isDisposed) clearLocalAuthState();
           return;
         }
-        return applySession(data.session);
-      })
-      .catch((error) => {
+        const { data: sessionData } = await supabase.auth.getSession();
+        await applySession(sessionData.session);
+      } catch (error) {
         console.error(error);
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setPermissions([]);
-      })
-      .finally(() => {
-        if (!isDisposed) {
-          setLoading(false);
-        }
-      });
+        if (!isDisposed) clearLocalAuthState();
+      } finally {
+        if (!isDisposed) setLoading(false);
+      }
+    })();
 
     const {
       data: { subscription },

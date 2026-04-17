@@ -4,8 +4,37 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/server-permissions";
 import { withApiContract } from "@/lib/api-contract";
 
+// Minimum complexity requirements for admin-set passwords. Raised from 8
+// characters (pre-production) to meet a baseline credential strength policy.
+const MIN_PASSWORD_LENGTH = 12;
+const MAX_PASSWORD_LENGTH = 128;
+
 const resetPasswordSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z
+    .string()
+    .min(
+      MIN_PASSWORD_LENGTH,
+      `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+    )
+    .max(
+      MAX_PASSWORD_LENGTH,
+      `Password must be at most ${MAX_PASSWORD_LENGTH} characters`
+    )
+    .refine((value) => /[A-Z]/.test(value), {
+      message: "Password must include at least one uppercase letter",
+    })
+    .refine((value) => /[a-z]/.test(value), {
+      message: "Password must include at least one lowercase letter",
+    })
+    .refine((value) => /\d/.test(value), {
+      message: "Password must include at least one number",
+    })
+    .refine((value) => /[^A-Za-z0-9]/.test(value), {
+      message: "Password must include at least one symbol",
+    })
+    .refine((value) => !/\s/.test(value), {
+      message: "Password must not contain spaces",
+    }),
 });
 
 export const PATCH = withApiContract(async function PATCH(

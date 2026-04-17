@@ -793,7 +793,9 @@ export default function DashboardPage() {
     if (!user?.id) {
       return;
     }
-    void logDashboardVisitEvent(user.id);
+    // userId is resolved server-side inside the action from the session cookie;
+    // we only depend on user?.id here to trigger exactly once per authenticated visit.
+    void logDashboardVisitEvent();
   }, [user?.id]);
   const permissionContract = useMemo(
     () => createUiPermissionContract(hasPermission),

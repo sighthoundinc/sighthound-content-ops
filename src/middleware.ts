@@ -5,6 +5,7 @@ import {
   hasSupabaseAuthCookieNames,
   shouldBypassAuth,
 } from "@/lib/middleware-auth";
+import { isAllowedEmail } from "@/lib/allowed-email";
 
 function hasSupabaseAuthCookie(request: NextRequest) {
   return hasSupabaseAuthCookieNames(
@@ -21,6 +22,29 @@ function getSupabaseEnv() {
   return { url, anonKey };
 }
 
+function redirectToLogin(
+  request: NextRequest,
+  reason?: "session" | "domain" | "env"
+) {
+  const loginUrl = new URL("/login", request.url);
+  if (reason) {
+    loginUrl.searchParams.set("reason", reason);
+  }
+  const response = NextResponse.redirect(loginUrl);
+  // Clear any stale Supabase auth cookies so the login page is not misled.
+  for (const cookie of request.cookies.getAll()) {
+    if (cookie.name.startsWith("sb-")) {
+      response.cookies.set({
+        name: cookie.name,
+        value: "",
+        maxAge: 0,
+        path: "/",
+      });
+    }
+  }
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (shouldBypassAuth(pathname)) {
@@ -33,7 +57,9 @@ export async function middleware(request: NextRequest) {
 
   const supabaseEnv = getSupabaseEnv();
   if (!supabaseEnv) {
-    return NextResponse.next();
+    // Fail closed: without Supabase env we cannot verify the session,
+    // so we refuse to serve protected pages. Previously returned next().
+    return redirectToLogin(request, "env");
   }
 
   let response = NextResponse.next({
@@ -74,7 +100,17 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return redirectToLogin(request, "session");
+  }
+
+  // Domain allowlist enforcement. Defense in depth in case a non-@sighthound
+  // account makes it through Supabase (for example through provider misconfig
+  // or a stale session issued before this rule was enforced).
+  if (!isAllowedEmail(user.email)) {
+    await supabase.auth.signOut().catch(() => {
+      /* best effort — fall through to cookie clear */
+    });
+    return redirectToLogin(request, "domain");
   }
 
   return response;

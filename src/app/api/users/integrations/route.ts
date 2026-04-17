@@ -60,11 +60,13 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/users/integrations
- * Update integration connection status (called from Settings → Connected Services)
- * 
- * This is the ONLY place where connection status should be modified.
- * Users explicitly control which providers appear "connected" via the UI.
- * OAuth login does NOT auto-update these flags — that would override manual disconnects.
+ *
+ * Users can ONLY disconnect (set a provider flag to `false`) through this
+ * endpoint. Setting a provider to `true` is rejected so the `Connected` badge
+ * cannot be spoofed without actually completing OAuth.
+ *
+ * Connecting a provider is recorded exclusively by the `/auth/callback` route
+ * handler after Supabase verifies the provider identity.
  */
 export const PATCH = withApiContract(async function PATCH(request: NextRequest) {
   try {
@@ -78,22 +80,43 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
 
     const body = (await request.json()) as Partial<UserIntegrations>;
 
-    // Build update object with only provided fields
+    // Reject any attempt to mark a provider as connected.
+    if (body.google_connected === true || body.slack_connected === true) {
+      return NextResponse.json(
+        {
+          error:
+            "Use the provider sign-in flow to connect a service. This endpoint only disconnects.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Build update object with only provided fields (disconnects only).
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
 
-    if (body.google_connected !== undefined) {
-      updates.google_connected = body.google_connected;
-      updates.google_connected_at = body.google_connected ? new Date().toISOString() : null;
+    if (body.google_connected === false) {
+      updates.google_connected = false;
+      updates.google_connected_at = null;
     }
-    if (body.slack_connected !== undefined) {
-      updates.slack_connected = body.slack_connected;
-      updates.slack_connected_at = body.slack_connected ? new Date().toISOString() : null;
+    if (body.slack_connected === false) {
+      updates.slack_connected = false;
+      updates.slack_connected_at = null;
     }
 
-    // Use atomic upsert keyed on user_id so reconnect callbacks remain idempotent
-    // even when multiple requests race (e.g., duplicate redirects/effect retries).
+    // No-op guard: nothing to update apart from timestamp.
+    if (Object.keys(updates).length === 1) {
+      return NextResponse.json(
+        {
+          error: "No disconnect action specified.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Use atomic upsert keyed on user_id so disconnect calls remain idempotent
+    // even when multiple requests race.
     const { data: upserted, error: upsertError } = await auth.context.adminClient
       .from("user_integrations")
       .upsert(

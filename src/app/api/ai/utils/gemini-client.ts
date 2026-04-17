@@ -195,6 +195,16 @@ async function callGeminiForModel(
     },
   };
 
+  // Configurable per-attempt timeout. Gemini 2.5 Flash usually answers in
+  // 1.5–3s, but thinking tokens + 503 spikes push the p95 past 5s. Default
+  // of 12s gives comfortable headroom; override via env if you need to tune.
+  const PER_ATTEMPT_TIMEOUT_MS = (() => {
+    const raw = process.env.ASK_AI_GEMINI_TIMEOUT_MS;
+    const parsed = raw ? Number(raw) : NaN;
+    if (Number.isFinite(parsed) && parsed >= 3000 && parsed <= 30000) return parsed;
+    return 12000;
+  })();
+
   const MAX_ATTEMPTS = 3;
   const BASE_BACKOFF_MS = 500;
 
@@ -205,7 +215,7 @@ async function callGeminiForModel(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(9000),
+        signal: AbortSignal.timeout(PER_ATTEMPT_TIMEOUT_MS),
       });
 
       if (!response.ok) {
@@ -242,6 +252,12 @@ async function callGeminiForModel(
 
       if (!rawText) {
         console.warn("[AI Assistant Gemini] empty response text", { model, attempt });
+        if (!isFinalAttempt) {
+          const backoff =
+            BASE_BACKOFF_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+          await delay(backoff);
+          continue;
+        }
         return recordFailure("empty_response");
       }
 
@@ -252,6 +268,14 @@ async function callGeminiForModel(
           attempt,
           rawPreview: rawText.slice(0, 200),
         });
+        // JSON parse failures often self-correct on retry because of token
+        // truncation or whitespace glitches. Give it another shot.
+        if (!isFinalAttempt) {
+          const backoff =
+            BASE_BACKOFF_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+          await delay(backoff);
+          continue;
+        }
         return recordFailure("parse_error");
       }
 
@@ -263,6 +287,12 @@ async function callGeminiForModel(
           issues: parsed.error.issues.slice(0, 3),
           rawPreview: rawText.slice(0, 200),
         });
+        if (!isFinalAttempt) {
+          const backoff =
+            BASE_BACKOFF_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+          await delay(backoff);
+          continue;
+        }
         return recordFailure("schema_invalid");
       }
 

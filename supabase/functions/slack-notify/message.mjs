@@ -108,7 +108,16 @@ export function resolveAssignedTo(payload) {
         .filter((name) => Boolean(name))
     : [];
   if (names.length > 0) {
-    return names.join(", ");
+    // Case-insensitive dedupe that preserves the first-seen casing.
+    const seen = new Set();
+    const deduped = [];
+    for (const name of names) {
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(name);
+    }
+    return deduped.join(", ");
   }
   return normalizeName(payload.targetUserName) ?? "Team";
 }

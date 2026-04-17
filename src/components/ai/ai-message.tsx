@@ -76,9 +76,39 @@ export function AIMessage({ response }: AIMessageProps) {
         </div>
       )}
 
-      <div className="pt-3 border-t border-slate-100">
+      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
         <AIFeedback context={response.feedbackContext} />
+        <ProvenanceChip source={response.responseSource} model={response.aiModel} />
       </div>
     </div>
+  );
+}
+
+function ProvenanceChip({
+  source,
+  model,
+}: {
+  source?: 'deterministic' | 'gemini';
+  model?: string;
+}) {
+  if (!source) return null;
+
+  const isGemini = source === 'gemini';
+  const label = isGemini
+    ? `via ${model ?? 'Google Gemini'}`
+    : 'via deterministic fallback';
+  const title = isGemini
+    ? 'This response came from Google Gemini using live data from this page.'
+    : 'Gemini was unavailable; this response came from the built-in rule engine.';
+  const dotClass = isGemini ? 'bg-emerald-500' : 'bg-amber-500';
+
+  return (
+    <span
+      title={title}
+      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500"
+    >
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} />
+      {label}
+    </span>
   );
 }

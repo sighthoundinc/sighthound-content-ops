@@ -56,6 +56,7 @@ export interface AIResponse {
   intent?: AIResponseIntent;
   isFactual?: boolean;
   responseSource?: 'deterministic' | 'gemini';
+  aiModel?: string;
   links: AskAISafeLinkView[];
   assignee: { name?: string; role?: string } | null;
   feedbackContext: AIFeedbackContext;
@@ -86,6 +87,7 @@ interface AssistantApiData {
   answer?: string;
   questionIntent?: AIResponseIntent;
   responseSource?: 'deterministic' | 'gemini';
+  aiModel?: string;
   links?: AskAISafeLinkView[];
   assignee?: { name?: string; role?: string } | null;
 }
@@ -164,6 +166,7 @@ function mapApiDataToAIResponse(
     intent,
     isFactual,
     responseSource: data.responseSource,
+    aiModel: data.aiModel,
     links: Array.isArray(data.links) ? data.links : [],
     assignee: data.assignee ?? null,
     feedbackContext: {

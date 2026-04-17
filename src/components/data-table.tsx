@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { getWorkflowRowClassName } from "@/lib/table-row-tones";
 import { AppIcon, type AppIconName } from "@/lib/icons";
+import { readDensitySync } from "@/hooks/useDensityPreference";
 import {
   getTableBodyCellClass,
   TABLE_BASE_CLASS,
@@ -90,12 +91,13 @@ export function DataTable<TData>({
   onSelectionChange,
   onRowClick,
   activeIndex,
-  density = "comfortable",
+  density,
   emptyMessage = "No data available",
   className,
   rowClassName,
 }: DataTableProps<TData>) {
-  const bodyCellClass = getTableBodyCellClass(density);
+  const effectiveDensity = density ?? readDensitySync();
+  const bodyCellClass = getTableBodyCellClass(effectiveDensity);
   const visibleColumns = columns.filter((col) => col.visible !== false);
   const allVisibleSelected =
     visibleColumns.length > 0 &&

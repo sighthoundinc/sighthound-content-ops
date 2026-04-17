@@ -116,6 +116,7 @@ import {
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { markEnd, markStart } from "@/lib/perf-marks";
 import { logDashboardVisitEvent } from "@/app/actions/log-dashboard-visit";
 
 type BlogCommentRecord = {
@@ -1314,11 +1315,18 @@ export default function DashboardPage() {
   }, [session?.access_token, showWarning]);
 
   useEffect(() => {
+    markStart("dashboard:tti");
     void loadData();
   }, [loadData]);
   useEffect(() => {
     void loadOverviewMetrics();
   }, [loadOverviewMetrics]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      markEnd("dashboard:tti");
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     const loadUsers = async () => {

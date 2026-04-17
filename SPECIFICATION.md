@@ -278,7 +278,43 @@ Blogs and social posts support bidirectional navigation and context visibility t
 - List view → Associated blog filter selection → Filtered results with pill indicator
 - Detail views → Associated content card click → Full detail page or list view
 
-## 11) Definition of done for workflow changes
+## 11) Inbox surface contract
+- Route: `src/app/inbox/page.tsx`. Read-only aggregator — no mutations.
+- Tabs: `Required`, `Waiting`, `Activity`.
+  - `Required` / `Waiting` consume `GET /api/dashboard/tasks-snapshot` (same classifier as My Tasks and the dashboard snapshot).
+  - `Activity` consumes `GET /api/activity-feed?limit=25`.
+- Each row deep-links to the underlying detail page:
+  - blogs → `/blogs/[id]`
+  - social posts → `/social-posts/[id]`
+- Archive, snooze, and per-item unread state are out of scope until a `notification_states` (or equivalent) migration lands; the scaffold must not claim they exist.
+- Timezone rendering uses `profiles.timezone` (fallback `America/New_York`) via `formatDateInTimezone()`.
+
+## 12) Global search API contract
+- Endpoint: `GET /api/search?q=<query>`.
+- Authentication: requires signed-in session via `authenticateRequest()`.
+- Visibility filtering is permission-driven (`hasPermission`):
+  - `view_dashboard` → include blogs.
+  - `view_social_posts` → include social posts.
+  - `view_ideas` → include ideas.
+- Query shape:
+  - Empty query returns most-recently-updated rows per group.
+  - Non-empty query performs case-insensitive partial match (`ilike`) on `title`; wildcard metacharacters (`%`, `_`) are stripped.
+- Per-group limit: 10 rows. Response shape: `{ query, results: SearchResult[] }`.
+- `SearchResult` fields: `id`, `title`, `kind` (`blog` | `social` | `idea`), `site`, `href`, `statusLabel?`.
+- Response headers: `Cache-Control: no-store`.
+- Performance budget: <250 ms p50 (tracked via `palette:first-result` mark).
+
+## 13) UX primitives contract (library level)
+Primitives authored under `src/lib`, `src/components`, and `src/hooks` are canonical. Consumers must use them instead of duplicating logic. Current set (see also `AGENTS.md` “UX Primitives Authority” and `docs/UX_UPGRADE_PLAN.md`):
+- Libraries: `motion.ts`, `optimistic.ts`, `preflight.ts`, `clipboard.ts`, `next-action.ts`, `saved-views.ts`, `record-deep-link.ts`, `shortcut-hints.ts`, `perf-marks.ts`.
+- Components: `skeleton.tsx`, `empty-state.tsx`, `onboarding-tour.tsx`, `next-action/`, `bulk/selection-cart.tsx`, `ai/based-on-panel.tsx`.
+- Hooks: `useBulkSelection.ts`, `useDensityPreference.ts`; `useSidebarState.ts` extended with responsive auto-collapse below 1400px when no explicit preference is set.
+- Design tokens: spacing, radius, elevation, and motion values defined in `src/app/globals.css` (`:root`) and mirrored in `src/lib/motion.ts`; durations collapse to `0ms` under `prefers-reduced-motion`. Documented in `docs/DESIGN_TOKENS.md`.
+- Performance targets: `docs/PERFORMANCE_BUDGET.md`.
+
+Adoption across existing dashboard, tasks, blogs, social-posts, and calendar surfaces is tracked in `docs/UX_UPGRADE_PLAN.md`. These primitives must not be claimed as deployed on a given surface until that surface actually imports them.
+
+## 14) Definition of done for workflow changes
 A workflow change is complete only when:
 1. Status/transition logic is updated and validated.
 2. Required-field gates are enforced.

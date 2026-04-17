@@ -79,6 +79,9 @@ export default function ResourcesPage() {
               <li>
                 <InternalPageLink href="#associated-content">9) Associated Content navigation</InternalPageLink>
               </li>
+              <li>
+                <InternalPageLink href="#inbox">10) Inbox</InternalPageLink>
+              </li>
             </ul>
           </Section>
 
@@ -328,6 +331,11 @@ export default function ResourcesPage() {
                 “what should I do right now?”
               </li>
               <li>
+                <InternalPageLink href="/inbox">Inbox</InternalPageLink> — a single place to scan
+                what’s required of you, what’s waiting on others, and recent activity across blogs
+                and social posts.
+              </li>
+              <li>
                 <InternalPageLink href="/dashboard">Dashboard</InternalPageLink> — the cross-content
                 health view for triage and prioritization.
               </li>
@@ -413,6 +421,33 @@ export default function ResourcesPage() {
                 `?associated_blog=&#123;blogId&#125;` for filtered social posts, `?filter=&#123;blogId&#125;` for filtered blogs.
               </li>
             </ul>
+          </Section>
+
+          <Section id="inbox" title="10) Inbox">
+            <p>
+              <InternalPageLink href="/inbox">Inbox</InternalPageLink> is a focused view for quick
+              triage across both tracks. It reads the same server queue as My Tasks and the
+              dashboard snapshot, so counts stay aligned — nothing new is invented here.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                <span className="font-medium text-slate-900">Required</span> — work where you’re the
+                current owner and an action is expected from you.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Waiting</span> — items where someone
+                else owns the next action; use this tab when you’re chasing a handoff.
+              </li>
+              <li>
+                <span className="font-medium text-slate-900">Activity</span> — the most recent
+                status and assignment changes across blogs and social posts.
+              </li>
+            </ul>
+            <p>
+              Each row deep-links straight to the underlying blog or social post detail page.
+              Archive and snooze aren’t available yet — items clear from a tab when their state
+              changes.
+            </p>
           </Section>
         </div>
       </AppShell>

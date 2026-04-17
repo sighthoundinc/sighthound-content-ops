@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Button } from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
 import { AppIcon } from "@/lib/icons";
 import {
   TABLE_BASE_CLASS,
@@ -202,13 +203,19 @@ export function DataPageEmptyState({
   description: string;
   action?: ReactNode;
 }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
-      <div>
-        <p className="text-sm font-medium text-slate-900">{title}</p>
-        <p className="text-sm text-slate-600">{description}</p>
+  // Keeps the DataPage call signature (action may be any ReactNode such as a
+  // custom button), while delegating visual shape to the shared EmptyState
+  // primitive when `action` is omitted.
+  if (action) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+        <div>
+          <p className="text-sm font-medium text-slate-900">{title}</p>
+          <p className="text-sm text-slate-600">{description}</p>
+        </div>
+        <div>{action}</div>
       </div>
-      {action ? <div>{action}</div> : null}
-    </div>
-  );
+    );
+  }
+  return <EmptyState title={title} description={description} />;
 }

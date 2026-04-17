@@ -3,6 +3,7 @@
 ## Quick links
 - [Dashboard](/dashboard)
 - [My Tasks](/tasks)
+- [Inbox](/inbox)
 - [Blogs](/blogs)
 - [Social Posts](/social-posts)
 - [Ideas](/ideas)
@@ -93,8 +94,15 @@ What “explicit updates” means:
 |---|---|---|
 | [My Tasks](/tasks) | Assigned work + blocked handoffs (from unified server queue) | Daily execution |
 | [Dashboard](/dashboard) | Cross-content queue health + server-backed overview cards | Triage and prioritization |
+| [Inbox](/inbox) | Unified view of what's required of you, what's waiting on others, and recent activity | Quick triage across blogs and social posts |
 | [Calendar](/calendar) | Scheduled workload by date | Planning and sequencing |
 | Notifications | Assignment and stage updates | Respond to change quickly |
+
+Inbox page basics:
+- Three tabs: `Required` (action needed by you), `Waiting` (action owned by others), `Activity` (most recent state changes across blogs and social posts).
+- Reads from the same server queue used by My Tasks and the dashboard snapshot, so counts stay aligned.
+- Each row deep-links to the underlying blog or social post detail page.
+- Archive/snooze are not available yet; dismiss an item by acting on it or waiting for its state to change.
 
 Calendar overview and top navigation:
 - `Overview` includes scheduled items from previous month, current month, and next month.
@@ -203,6 +211,11 @@ Ask AI lives on blog, social post, and idea detail pages. It never edits records
 - Never publish social content without a saved valid live link.
 - Never rollback execution-stage social work without a reason.
 - Never finalize blog publishing before writing handoff and reviewer checkpoint.
+
+## 7a) Sidebar behavior
+- The sidebar remembers your preferred collapsed/expanded state in the browser.
+- On narrower screens (below ~1400px) the sidebar auto-collapses the first time you load the app, to keep list views readable. Once you toggle it manually, your choice is remembered across pages and viewport changes.
+- Under OS `prefers-reduced-motion`, sidebar animations are disabled and layout updates are applied immediately.
 
 ## 8) Setup and intake basics
 - Create work from direct create or conversion from [Ideas](/ideas).

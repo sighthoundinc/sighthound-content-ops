@@ -5,6 +5,7 @@ import { useState } from "react";
 import { buttonClass } from "@/components/button";
 import { ExternalLink } from "@/components/external-link";
 import { AppIcon } from "@/lib/icons";
+import { copyText, type CopySubject } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { useAlerts } from "@/providers/alerts-provider";
 
@@ -67,15 +68,16 @@ export function LinkQuickActions({
             if (!hasHref) {
               return;
             }
-            try {
-              await navigator.clipboard.writeText(trimmedHref);
+            const succeeded = await copyText(trimmedHref, {
+              subject: label as CopySubject,
+              onSuccess: (message) => showSuccess(message),
+              onError: (message) => showError(message),
+            });
+            if (succeeded) {
               setIsCopied(true);
               window.setTimeout(() => {
                 setIsCopied(false);
               }, 1200);
-              showSuccess(`${label} copied.`);
-            } catch {
-              showError("Copy failed. Try again");
             }
           }}
         >

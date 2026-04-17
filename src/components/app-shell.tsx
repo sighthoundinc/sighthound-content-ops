@@ -29,6 +29,8 @@ import { useNotifications } from "@/providers/notifications-provider";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { SidebarToggle } from "@/components/sidebar-toggle";
 import { SidebarVersionFooter } from "@/components/sidebar-version-footer";
+import { OnboardingTour } from "@/components/onboarding-tour";
+import { useDensityPreference } from "@/hooks/useDensityPreference";
 
 type NavItem = { href: string; label: string; icon: AppIconName };
 
@@ -97,6 +99,7 @@ export function AppShell({
     markAsRead,
   } = useNotifications();
   const { collapsed, setCollapsed } = useSidebarState();
+  const { density } = useDensityPreference();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
@@ -590,7 +593,7 @@ export function AppShell({
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50" data-density={density}>
       <header className="border-b border-slate-200 bg-[#fcfcfe]">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3">
           <Link
@@ -1187,6 +1190,7 @@ export function AppShell({
           </section>
         </div>
       ) : null}
+      <OnboardingTour />
     </div>
   );
 }

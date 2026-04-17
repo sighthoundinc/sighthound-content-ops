@@ -199,7 +199,10 @@ export function buildMessage(payload, options = {}) {
   const site = canonicalizeSite(payload.site);
   const headerLine = `[${contentType}] ${title} (${site})`;
   const actionLine = `Action: ${action}`;
-  const openLine = deepLink ? `Open link: ${deepLink}` : null;
+  // Slack link syntax `<URL|label>` guarantees a clickable hyperlink across
+  // desktop/mobile clients even with unfurl_links: false. A bare URL is not
+  // reliably auto-linkified when unfurl is suppressed.
+  const openLine = deepLink ? `Open link: <${deepLink}|Open>` : null;
 
   if (isCommentEvent) {
     const commentBody = normalizeCommentBody(payload.commentBody);

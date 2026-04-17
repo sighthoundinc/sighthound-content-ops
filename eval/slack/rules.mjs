@@ -344,9 +344,13 @@ function ruleCommentLengthCap(message, fixture) {
   if (!expect.commentMaxLength) return { pass: true };
   const idx = message.indexOf("\nComment:\n");
   const body = idx >= 0 ? message.slice(idx + "\nComment:\n".length) : "";
-  // Strip optional Open link trailing portion for length check
-  const openIdx = body.lastIndexOf("\nOpen link: ");
-  const pureBody = openIdx >= 0 ? body.slice(0, openIdx) : body;
+  // Strip optional trailing link line for length check. Supports both
+  // the new bare form (line starts with "<http") and the legacy
+  // "Open link: " prefix form.
+  const bareIdx = body.search(/\n<https?:\/\//);
+  const legacyIdx = body.lastIndexOf("\nOpen link: ");
+  const trimIdx = [bareIdx, legacyIdx].filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? -1;
+  const pureBody = trimIdx >= 0 ? body.slice(0, trimIdx) : body;
   const issues = [];
   if (pureBody.length > expect.commentMaxLength) {
     issues.push({

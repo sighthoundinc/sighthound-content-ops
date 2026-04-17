@@ -141,6 +141,11 @@ export function buildDeepLink(payload, appUrl) {
   return null;
 }
 
+export function normalizeTitle(title) {
+  if (typeof title !== "string") return "";
+  return title.trim();
+}
+
 export function buildMessage(payload, options = {}) {
   const appUrl = resolveAppUrl({
     appUrl: payload?.appUrl,
@@ -153,7 +158,8 @@ export function buildMessage(payload, options = {}) {
   const assignedBy = normalizeName(payload.actorName) ?? "Team";
   const isCommentEvent = COMMENT_EVENT_TYPES.has(payload.eventType);
 
-  const headerLine = `[${contentType}] ${payload.title} (${payload.site})`;
+  const title = normalizeTitle(payload.title);
+  const headerLine = `[${contentType}] ${title} (${payload.site})`;
   const actionLine = `Action: ${action}`;
   const openLine = deepLink ? `Open link: ${deepLink}` : null;
 

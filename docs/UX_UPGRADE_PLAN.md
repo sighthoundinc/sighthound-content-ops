@@ -1,5 +1,47 @@
 # UX Upgrade Plan — Rollout Notes
 Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in four waves. This document is the map from "shipped primitive" to "fully adopted behavior" across the app. Keep it current as consumers migrate.
+## Definitions
+- **Shipped primitive**: exists under `src/lib`, `src/components`, or `src/hooks`. Typechecks, has tests where applicable, and can be imported.
+- **Adopted**: a real user-facing surface imports the primitive, so an end user experiences the change. Anything not explicitly listed as adopted should be treated as library-only.
+## Adoption Matrix (source of truth)
+### Adopted end-to-end
+| Primitive | Adoption site | User-visible effect |
+| --- | --- | --- |
+| `OnboardingTour` | `AppShell` (root mount) | First-run walkthrough appears automatically; dismisses once per user via `localStorage['onboarding:completed-v1']`. |
+| `BasedOnPanel` | `AIMessage` | Every Ask AI answer with curated links shows a collapsible "Based on" panel exposing link list + response source / model. |
+| `useDensityPreference` + `data-density` | `AppShell` root attribute, `DataTable` default via `readDensitySync()`, Settings toggle | User selects Compact / Comfortable; tables render at matching row height globally. |
+| `copyText()` | `LinkQuickActions` | Every Google Doc / Live URL / Canva link copy surfaces a semantic toast like "Copied Google Doc URL". |
+| `EmptyState` (via `DataPageEmptyState`) | Dashboard, My Tasks, Blogs, Social Posts, Ideas list empty states | One consistent empty-state look; backed by `UI_VOCAB.emptyStates` where applicable. |
+| Sidebar auto-collapse | `useSidebarState` | Below 1400px auto-collapses the first time; explicit user toggle wins afterwards. |
+| `NextActionCell` | `/tasks` Next Action column | Verb-first cell ("Submit Draft", "Publish Blog", "Waiting on Jane") replaces raw status pill. |
+| `parseRecordDeepLink()` | `/social-posts` list | `?record=blog:<id>` or `?record=social:<id>` routes to the matching detail page. |
+| `perf-marks` (`markStart` / `markEnd`) | `/dashboard` and `/tasks` | `dashboard:tti` / `tasks:tti` measured; dev console warns on budget breach. |
+| Design tokens (spacing, radius, elevation, motion) | `globals.css` `:root` custom properties + `src/lib/motion.ts` | Available globally. Reduced-motion media query collapses duration tokens to `0ms`. |
+| `UI_VOCAB` additions (`feedback`, `errors`, `nextActions`, `emptyStates`) | `Inbox`, `EmptyState`-backed list pages | Shared source of truth for empty-state / error / feedback strings. |
+| `/inbox` route | New surface | Users can reach `/inbox` directly for Required / Waiting / Activity triage. |
+| `/api/search` endpoint | New surface | Permission-gated title search across blogs, social posts, ideas. |
+| Skeleton pattern | Global `.skeleton` CSS class already used in dashboard, tasks, blogs, social-posts, settings, ideas | Existing adoption validated; `<Skeleton>` React wrapper available for new code. |
+| `AGENTS.md` UX Primitives Authority rules | Repo-wide contract | New code is contractually required to reuse these primitives. |
+### Library-ready — adoption intentionally deferred
+These are substantive follow-up PRs. The primitive is callable today; the UI swap is listed here so nothing is claimed that isn't actually deployed.
+| Primitive | Why deferred | Follow-up scope |
+| --- | --- | --- |
+| `NextActionPill` on detail pages | `/blogs/[id]` and `/social-posts/[id]` already render a richer next-action strip (owner, handoff, preflight). Swapping loses UX unless we consolidate. | Design consolidation PR. |
+| `runOptimistic()` in transitions / comments | Each mutation site needs per-site review to preserve server-authoritative semantics. | Per-site PRs, one mutation path at a time. |
+| `computeSocialPostPreflight` / `computeBlogPreflight` on detail pages | Detail pages have elaborate inline preflight UX; replacement needs careful field-level migration. | Detail-page refactor PR. |
+| `SelectionCart` + `useBulkSelection` in bulk flows | `/social-posts` bulk UI is deeply customized. | Dedicated bulk-UX PR. |
+| Saved views save/load/pin UI | Library is live; filter-bar UI layer is a distinct feature. | Dedicated saved-views PR. |
+| Motion tokens codemod | Replacing ad-hoc `duration-[NNNms]` across the repo is a broad cosmetic change. | Follow-up codemod. |
+| Lighthouse CI workflow | Budgets documented; CI job is infrastructure work. | `.github/workflows/lhci.yml` PR. |
+| Toast copy routing through `UI_VOCAB.errors` / `UI_VOCAB.feedback` | Every toast call-site is a per-site copy migration. | Incremental PRs. |
+| `BasedOnPanel.facts` population | API doesn't expose `facts` yet — panel renders links + source today. | API change + UI fill-in. |
+| Inbox archive / snooze / unread | Requires `notification_states` table. | Migration PR. |
+## Concepts to preserve during follow-ups
+- Server remains authoritative for every mutation; primitives are UI mirrors.
+- No enum keys, DB values, API contracts change without an `AGENTS.md` update.
+- Labels go through `src/lib/ui-vocab.ts` and `src/lib/status.ts`.
+- Shortcut discoverability stays in the shortcuts modal; tips use `emitTipOnce`.
+- `prefers-reduced-motion` collapses every token-driven transition to `0ms`.
 ## Shipped Primitives (Wave 1 foundations)
 ### Libraries
 - `src/lib/motion.ts` — motion tokens + reduced-motion helpers.
@@ -27,47 +69,6 @@ Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in fou
 - `src/lib/ui-vocab.ts` extended with `feedback`, `errors`, `nextActions`, and `emptyStates` sections.
 ### Global
 - `src/app/globals.css` extended with spacing, radius, elevation, and motion tokens.
-## Adoption Checklist by Wave
-### Wave 1 (foundations)
-- [x] Motion tokens library and CSS variables.
-- [x] Optimistic helper + skeleton primitives.
-- [x] Preflight library.
-- [x] Micro-copy additions to `ui-vocab.ts`.
-- [x] Design token CSS variables.
-- [x] Adoption: skeleton pattern already used globally via `.skeleton` CSS class (dashboard, tasks, blogs, social-posts, settings, ideas); `<Skeleton>` React primitive available for new code.
-- [ ] Adoption: route save/error/permission toasts through `UI_VOCAB.feedback` / `UI_VOCAB.errors`. Vocab is consumable; large-scale toast-copy migration pending.
-### Wave 2 (list/detail ergonomics)
-- [x] Next-Action primitives.
-- [x] Global search API route.
-- [x] Record deep-link helpers.
-- [x] Shortcut tip helper.
-- [x] Adoption: `<NextActionCell>` wired into `/tasks` Next Action column.
-- [x] Adoption: `parseRecordDeepLink()` wired into `/social-posts` list (routes `?record=<type>:<id>` to the matching detail page).
-- [ ] Adoption: `<NextActionCell>` in dashboard, blogs list, social-posts list. Detail pages (`/blogs/[id]`, `/social-posts/[id]`) already render a richer next-action strip with owner/handoff/preflight context, semantically equivalent to `<NextActionPill>`; no swap planned until we consolidate behavior.
-- [ ] Adoption: top-chrome `⌘K` badge + command palette binding to `/api/search`. Endpoint is live; palette integration is a separate feature PR.
-### Wave 3 (scale & collaboration)
-- [x] `SelectionCart` primitive.
-- [x] `useBulkSelection` hook.
-- [x] Saved views local storage API.
-- [x] Inbox scaffold page.
-- [ ] Adoption: `SelectionCart` into existing bulk flows. Current social-posts/dashboard bulk UI is a deeply customized pattern; migration is a dedicated PR.
-- [ ] Adoption: Saved views UI (save/load/pin) on dashboard filter bar. Library is available; UI layer is a dedicated PR.
-- [ ] Adoption: Inbox archive/snooze after `notification_states` migration.
-### Wave 4 (premium polish & structure)
-- [x] Empty state primitive + vocab.
-- [x] Onboarding tour scaffold.
-- [x] Performance budget doc.
-- [x] Design tokens doc.
-- [x] Adoption: `DataPageEmptyState` now routes through `<EmptyState>` when used without a custom action, covering dashboard, tasks, blogs, social-posts, ideas list empty states.
-- [x] Adoption: `OnboardingTour` mounted inside `AppShell` so it appears on first run for every user.
-- [x] Adoption: `AppShell` root carries `data-density` attribute driven by `useDensityPreference`; Settings exposes Compact/Comfortable toggle; `DataTable` reads `readDensitySync()` by default.
-- [x] Adoption: `markStart`/`markEnd` wired on `/tasks` and `/dashboard` for `tasks:tti` / `dashboard:tti`.
-- [x] Adoption: `<BasedOnPanel>` rendered inside `AIMessage` when response links exist.
-- [x] Adoption: `copyText()` used by `LinkQuickActions`, giving every Google Doc / Live URL copy a semantic toast.
-- [ ] Adoption: Lighthouse CI workflow under `.github/workflows/lhci.yml`. Budget doc is authoritative; CI job is pending.
-- [ ] Adoption: `runOptimistic()` in transition/comment mutation flows. Helper is available; each mutation path needs per-site review before wrapping.
-- [ ] Adoption: `computeSocialPostPreflight` / `computeBlogPreflight` replacing duplicated required-field arrays on detail pages. Pending per-site review to preserve existing preflight UX.
-- [ ] Adoption: motion token migration across ad-hoc `duration-[NNNms]` values. Tokens are defined; codemod is pending.
 ## Contracts Preserved
 - No enum keys, DB values, or API contracts were changed.
 - Workflow authority remains with the server. All UI guards mirror server rules.

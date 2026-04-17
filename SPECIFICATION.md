@@ -312,7 +312,7 @@ Primitives authored under `src/lib`, `src/components`, and `src/hooks` are canon
 - Design tokens: spacing, radius, elevation, and motion values defined in `src/app/globals.css` (`:root`) and mirrored in `src/lib/motion.ts`; durations collapse to `0ms` under `prefers-reduced-motion`. Documented in `docs/DESIGN_TOKENS.md`.
 - Performance targets: `docs/PERFORMANCE_BUDGET.md`.
 
-Adoption across existing dashboard, tasks, blogs, social-posts, and calendar surfaces is tracked in `docs/UX_UPGRADE_PLAN.md`. These primitives must not be claimed as deployed on a given surface until that surface actually imports them.
+Adoption across existing dashboard, tasks, blogs, social-posts, and calendar surfaces is tracked in `docs/UX_UPGRADE_PLAN.md` — see the `Adoption Matrix` there for the authoritative “shipped vs adopted” state. These primitives must not be claimed as deployed on a given surface until that surface actually imports them.
 
 ## 14) Definition of done for workflow changes
 A workflow change is complete only when:

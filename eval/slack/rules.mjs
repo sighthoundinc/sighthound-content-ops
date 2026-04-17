@@ -289,6 +289,11 @@ function ruleNoBlankLinesBetweenStructuralLines(message, fixture) {
 }
 
 function ruleMultiAssigneeJoin(message, fixture) {
+  // When a fixture pins the exact Assigned-to value via `expect.assignedToEquals`,
+  // the canonical check takes precedence (see ruleAssignedToEquals). This heuristic
+  // rule is for fixtures that only care that the comma+space join is used without
+  // asserting the exact normalized list.
+  if (fixture.expect?.assignedToEquals) return { pass: true };
   const names = fixture.payload.targetUserNames;
   if (!Array.isArray(names) || names.length === 0) return { pass: true };
   const cleanNames = names

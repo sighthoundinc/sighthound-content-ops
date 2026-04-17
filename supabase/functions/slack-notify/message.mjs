@@ -155,6 +155,26 @@ export function normalizeTitle(title) {
   return title.trim();
 }
 
+export function canonicalizeSite(site) {
+  if (typeof site !== "string") return site;
+  const normalized = site.trim().toLowerCase();
+  if (
+    normalized === "sh" ||
+    normalized === "sighthound" ||
+    normalized === "sighthound.com"
+  ) {
+    return "SH";
+  }
+  if (
+    normalized === "red" ||
+    normalized === "redactor" ||
+    normalized === "redactor.com"
+  ) {
+    return "RED";
+  }
+  return site;
+}
+
 export function buildMessage(payload, options = {}) {
   const appUrl = resolveAppUrl({
     appUrl: payload?.appUrl,
@@ -168,7 +188,8 @@ export function buildMessage(payload, options = {}) {
   const isCommentEvent = COMMENT_EVENT_TYPES.has(payload.eventType);
 
   const title = normalizeTitle(payload.title);
-  const headerLine = `[${contentType}] ${title} (${payload.site})`;
+  const site = canonicalizeSite(payload.site);
+  const headerLine = `[${contentType}] ${title} (${site})`;
   const actionLine = `Action: ${action}`;
   const openLine = deepLink ? `Open link: ${deepLink}` : null;
 

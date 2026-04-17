@@ -626,10 +626,16 @@ export async function POST(
       fallbackReason,
     });
 
-    setCachedResponse(cacheKey, {
-      data: apiResponse,
-      generatedAt: apiResponse.generatedAt,
-    });
+    // Only cache genuine Gemini responses. Caching deterministic fallbacks
+    // would freeze stale fallback reasons (e.g. a transient 429 from 3 minutes
+    // ago would keep reappearing even after Gemini recovered) and prevent the
+    // next request from re-attempting Gemini for up to 5 minutes.
+    if (responseSource === "gemini") {
+      setCachedResponse(cacheKey, {
+        data: apiResponse,
+        generatedAt: apiResponse.generatedAt,
+      });
+    }
 
     recordAskAIEvent({
       userId: request.userId,

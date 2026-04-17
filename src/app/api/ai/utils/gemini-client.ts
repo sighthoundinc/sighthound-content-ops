@@ -104,6 +104,15 @@ function recordFailure(reason: GeminiFailureReason): null {
   return null;
 }
 
+/**
+ * Clear any stored failure reason. Called whenever a model actually succeeds
+ * so a previous transient failure can't bleed into a subsequent deterministic
+ * fallback's `fallbackReason`.
+ */
+function clearLastFailure(): void {
+  lastFailure = null;
+}
+
 interface GeminiResponsePayload {
   candidates?: Array<{
     content?: {
@@ -330,6 +339,10 @@ async function callGeminiForModel(
           } satisfies AskAISafeLink;
         })
         .filter((link): link is AskAISafeLink => !!link);
+
+      // Successful Gemini response — wipe any stale failure so the next
+      // deterministic-fallback (if one ever happens) reports its real cause.
+      clearLastFailure();
 
       return {
         intent: parsed.data.intent,

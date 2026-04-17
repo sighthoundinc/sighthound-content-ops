@@ -26,6 +26,29 @@ import { isMissingSocialOwnershipColumnsError } from "@/lib/social-post-schema";
 import { getWorkflowStage } from "@/lib/status";
 import type { PublisherStageStatus, WriterStageStatus } from "@/lib/types";
 
+export interface AskAICommentSummary {
+  author?: string;
+  comment: string;
+  createdAt?: string;
+}
+
+export interface AskAIActivityEntry {
+  eventType: string;
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+  actor?: string;
+  changedAt?: string;
+}
+
+export interface AskAILinkedSocial {
+  id: string;
+  title?: string;
+  type?: string;
+  status?: string;
+  scheduledDate?: string;
+}
+
 export interface BlogFacts {
   kind: "blog";
   id: string;
@@ -52,6 +75,12 @@ export interface BlogFacts {
   workflowStage?: string;
   writerStatus?: string;
   publisherStatus?: string;
+  /** Most recent comments (capped) — truncated bodies for prompt budget. */
+  recentComments?: AskAICommentSummary[];
+  commentsCount?: number;
+  recentActivity?: AskAIActivityEntry[];
+  linkedSocialPosts?: AskAILinkedSocial[];
+  linkedSocialPostsCount?: number;
 }
 
 export interface SocialPostFacts {
@@ -78,6 +107,9 @@ export interface SocialPostFacts {
   associatedBlogTitle?: string;
   associatedBlogSite?: string;
   liveLinks?: string[];
+  recentComments?: AskAICommentSummary[];
+  commentsCount?: number;
+  recentActivity?: AskAIActivityEntry[];
 }
 
 export interface IdeaFacts {
@@ -152,6 +184,219 @@ function daysBetween(
     return undefined;
   }
   return Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
+}
+
+const COMMENT_LIMIT = 10;
+const COMMENT_MAX_CHARS = 400;
+
+type CommentRow = {
+  comment: string | null;
+  created_at: string | null;
+  author: ProfileJoin;
+};
+
+function mapCommentRows(
+  rows: CommentRow[] | null | undefined
+): AskAICommentSummary[] {
+  if (!rows) return [];
+  const out: AskAICommentSummary[] = [];
+  for (const row of rows) {
+    const body = (row.comment ?? "").trim();
+    if (!body) continue;
+    const truncated =
+      body.length > COMMENT_MAX_CHARS ? body.slice(0, COMMENT_MAX_CHARS) + "…" : body;
+    out.push({
+      author: profileDisplayName(row.author),
+      comment: truncated,
+      createdAt: row.created_at ?? undefined,
+    });
+  }
+  return out;
+}
+
+async function fetchBlogComments(
+  supabase: SupabaseClient,
+  blogId: string
+): Promise<{ rows: AskAICommentSummary[]; count: number }> {
+  try {
+    // Most recent first, capped. RLS filters to readers of this blog.
+    const { data, error, count } = await supabase
+      .from("blog_comments")
+      .select("comment, created_at, author:created_by(id,full_name,email)", {
+        count: "exact",
+      })
+      .eq("blog_id", blogId)
+      .order("created_at", { ascending: false })
+      .limit(COMMENT_LIMIT);
+    if (error) {
+      console.warn("[AI Assistant Facts] blog comments fetch failed", {
+        code: error.code,
+        message: error.message,
+      });
+      return { rows: [], count: 0 };
+    }
+    return {
+      rows: mapCommentRows(data as unknown as CommentRow[]),
+      count: count ?? 0,
+    };
+  } catch {
+    return { rows: [], count: 0 };
+  }
+}
+
+async function fetchSocialPostComments(
+  supabase: SupabaseClient,
+  postId: string
+): Promise<{ rows: AskAICommentSummary[]; count: number }> {
+  try {
+    const { data, error, count } = await supabase
+      .from("social_post_comments")
+      .select("comment, created_at, author:user_id(id,full_name,email)", {
+        count: "exact",
+      })
+      .eq("social_post_id", postId)
+      .order("created_at", { ascending: false })
+      .limit(COMMENT_LIMIT);
+    if (error) {
+      console.warn("[AI Assistant Facts] social post comments fetch failed", {
+        code: error.code,
+        message: error.message,
+      });
+      return { rows: [], count: 0 };
+    }
+    return {
+      rows: mapCommentRows(data as unknown as CommentRow[]),
+      count: count ?? 0,
+    };
+  } catch {
+    return { rows: [], count: 0 };
+  }
+}
+
+const ACTIVITY_LIMIT = 8;
+
+type ActivityRow = {
+  event_type: string | null;
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  changed_at: string | null;
+  actor: ProfileJoin;
+};
+
+function mapActivityRows(
+  rows: ActivityRow[] | null | undefined
+): AskAIActivityEntry[] {
+  if (!rows) return [];
+  const out: AskAIActivityEntry[] = [];
+  for (const row of rows) {
+    if (!row.event_type) continue;
+    out.push({
+      eventType: row.event_type,
+      field: row.field_name ?? undefined,
+      oldValue: row.old_value ?? undefined,
+      newValue: row.new_value ?? undefined,
+      actor: profileDisplayName(row.actor),
+      changedAt: row.changed_at ?? undefined,
+    });
+  }
+  return out;
+}
+
+async function fetchBlogActivity(
+  supabase: SupabaseClient,
+  blogId: string
+): Promise<AskAIActivityEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from("blog_assignment_history")
+      .select(
+        "event_type, field_name, old_value, new_value, changed_at, actor:changed_by(id,full_name,email)"
+      )
+      .eq("blog_id", blogId)
+      .order("changed_at", { ascending: false })
+      .limit(ACTIVITY_LIMIT);
+    if (error) {
+      console.warn("[AI Assistant Facts] blog activity fetch failed", {
+        code: error.code,
+        message: error.message,
+      });
+      return [];
+    }
+    return mapActivityRows(data as unknown as ActivityRow[]);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchSocialPostActivity(
+  supabase: SupabaseClient,
+  postId: string
+): Promise<AskAIActivityEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from("social_post_activity_history")
+      .select(
+        "event_type, field_name, old_value, new_value, changed_at, actor:changed_by(id,full_name,email)"
+      )
+      .eq("social_post_id", postId)
+      .order("changed_at", { ascending: false })
+      .limit(ACTIVITY_LIMIT);
+    if (error) {
+      console.warn("[AI Assistant Facts] social activity fetch failed", {
+        code: error.code,
+        message: error.message,
+      });
+      return [];
+    }
+    return mapActivityRows(data as unknown as ActivityRow[]);
+  } catch {
+    return [];
+  }
+}
+
+type LinkedSocialRow = {
+  id: string;
+  title: string | null;
+  type: string | null;
+  status: string | null;
+  scheduled_date: string | null;
+};
+
+const LINKED_SOCIAL_LIMIT = 10;
+
+async function fetchBlogLinkedSocialPosts(
+  supabase: SupabaseClient,
+  blogId: string
+): Promise<{ rows: AskAILinkedSocial[]; count: number }> {
+  try {
+    const { data, error, count } = await supabase
+      .from("social_posts")
+      .select("id, title, type, status, scheduled_date", { count: "exact" })
+      .eq("associated_blog_id", blogId)
+      .order("scheduled_date", { ascending: true, nullsFirst: false })
+      .limit(LINKED_SOCIAL_LIMIT);
+    if (error) {
+      console.warn("[AI Assistant Facts] linked social posts fetch failed", {
+        code: error.code,
+        message: error.message,
+      });
+      return { rows: [], count: 0 };
+    }
+    const rows = (data as LinkedSocialRow[] | null) ?? [];
+    return {
+      rows: rows.map((r) => ({
+        id: r.id,
+        title: r.title ?? undefined,
+        type: r.type ?? undefined,
+        status: r.status ?? undefined,
+        scheduledDate: r.scheduled_date ?? undefined,
+      })),
+      count: count ?? rows.length,
+    };
+  } catch {
+    return { rows: [], count: 0 };
+  }
 }
 
 /**
@@ -235,6 +480,14 @@ export async function fetchBlogFacts(
     }) ??
     undefined;
 
+  // Fetch comments, activity, and linked social posts in parallel so Ask AI
+  // has the full page context without tripling request latency.
+  const [comments, activity, linkedSocial] = await Promise.all([
+    fetchBlogComments(supabase, blogId),
+    fetchBlogActivity(supabase, blogId),
+    fetchBlogLinkedSocialPosts(supabase, blogId),
+  ]);
+
   return {
     kind: "blog",
     id: row.id,
@@ -258,6 +511,11 @@ export async function fetchBlogFacts(
     workflowStage,
     writerStatus: row.writer_status ?? undefined,
     publisherStatus: row.publisher_status ?? undefined,
+    recentComments: comments.rows.length > 0 ? comments.rows : undefined,
+    commentsCount: comments.count,
+    recentActivity: activity.length > 0 ? activity : undefined,
+    linkedSocialPosts: linkedSocial.rows.length > 0 ? linkedSocial.rows : undefined,
+    linkedSocialPostsCount: linkedSocial.count,
   };
 }
 
@@ -347,20 +605,26 @@ export async function fetchSocialPostFacts(
   }
   if (!row) return null;
 
-  // Fetch live links (best-effort; ignore errors)
-  let liveLinks: string[] = [];
-  try {
-    const { data: linkRows } = await supabase
-      .from("social_post_links")
-      .select("url")
-      .eq("social_post_id", postId)
-      .limit(5);
-    liveLinks = (linkRows as SocialLinkRow[] | null)
-      ?.map((linkRow) => linkRow.url?.trim())
-      .filter((url): url is string => !!url) ?? [];
-  } catch {
-    // non-fatal
-  }
+  // Fetch live links, comments, and activity in parallel (best-effort).
+  const [liveLinksResult, comments, activity] = await Promise.all([
+    (async () => {
+      try {
+        const { data: linkRows } = await supabase
+          .from("social_post_links")
+          .select("url")
+          .eq("social_post_id", postId)
+          .limit(5);
+        return (linkRows as SocialLinkRow[] | null)
+          ?.map((linkRow) => linkRow.url?.trim())
+          .filter((url): url is string => !!url) ?? [];
+      } catch {
+        return [] as string[];
+      }
+    })(),
+    fetchSocialPostComments(supabase, postId),
+    fetchSocialPostActivity(supabase, postId),
+  ]);
+  const liveLinks = liveLinksResult;
 
   const platforms = Array.isArray(row.platforms)
     ? (row.platforms.filter((p) => typeof p === "string") as string[])
@@ -393,6 +657,9 @@ export async function fetchSocialPostFacts(
     associatedBlogTitle: row.associated_blog?.title ?? undefined,
     associatedBlogSite: row.associated_blog?.site ?? undefined,
     liveLinks: liveLinks.length > 0 ? liveLinks : undefined,
+    recentComments: comments.rows.length > 0 ? comments.rows : undefined,
+    commentsCount: comments.count,
+    recentActivity: activity.length > 0 ? activity : undefined,
   };
 }
 

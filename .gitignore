@@ -45,3 +45,7 @@ supabase/.temp/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sh-autoresearch runtime state (see program.md)
+/research.env
+/results/

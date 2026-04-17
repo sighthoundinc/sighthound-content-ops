@@ -7,9 +7,9 @@ import { AIQuickPrompts } from './ai-quick-prompts';
 import { AppIcon } from '@/lib/icons';
 
 const LOADING_HINTS = [
-  'Reading this page\u2019s context\u2026',
-  'Cross-checking the latest updates\u2026',
-  'Drafting your guidance\u2026',
+  'Reading this page’s context…',
+  'Cross-checking the latest updates…',
+  'Drafting your guidance…',
 ];
 
 export function AIChatPanel() {
@@ -50,7 +50,7 @@ export function AIChatPanel() {
 
   return (
     <>
-      {/* Backdrop \u2014 subtle blur + slate tint instead of flat black */}
+      {/* Backdrop — subtle blur + slate tint instead of flat black */}
       <div
         className="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-[2px] animate-in fade-in duration-200 motion-reduce:animate-none"
         onClick={closePanel}
@@ -77,7 +77,7 @@ export function AIChatPanel() {
                 Ask AI
               </h2>
               <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                Read-only \u00b7 Advisory
+                Read-only · Advisory
               </span>
             </div>
           </div>
@@ -221,7 +221,7 @@ function EmptyState() {
         What can I help with?
       </h3>
       <p className="mt-1.5 max-w-[260px] text-xs leading-5 text-slate-500">
-        I explain stages, blockers, ownership, and next steps using live data from this page. I don\u2019t write content or change anything.
+        I explain stages, blockers, ownership, and next steps using live data from this page. I don’t write content or change anything.
       </p>
     </div>
   );

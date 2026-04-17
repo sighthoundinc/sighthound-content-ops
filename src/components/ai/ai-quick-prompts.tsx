@@ -31,7 +31,7 @@ const IDEA_FACTUAL_PROMPTS = [
 
 const WORKSPACE_PROMPTS = [
   'What should I focus on today?',
-  'What\u2019s waiting on me right now?',
+  'What’s waiting on me right now?',
   'Which items are overdue?',
 ];
 
@@ -109,7 +109,7 @@ export function AIQuickPrompts() {
           type="text"
           value={customPrompt}
           onChange={(e) => setCustomPrompt(e.target.value)}
-          placeholder="Ask anything about this\u2026"
+          placeholder="Ask anything about this…"
           disabled={isLoading}
           className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors hover:border-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400/40 disabled:opacity-50"
         />

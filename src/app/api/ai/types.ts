@@ -13,6 +13,8 @@ export const ASK_AI_INTENTS = [
   "general",
   // Meta-question about the assistant itself (identity, capabilities).
   "meta",
+  // Concept / definition question (e.g. "what does 'in review' mean?").
+  "definition",
   // Workspace-scope intents (used when entityType === 'workspace').
   "overview",
   "priorities",

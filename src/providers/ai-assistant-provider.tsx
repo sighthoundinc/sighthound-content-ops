@@ -27,6 +27,7 @@ export type AIResponseIntent =
   | 'timeline'
   | 'lookup'
   | 'meta'
+  | 'definition'
   | 'general'
   | 'overview'
   | 'priorities'
@@ -100,6 +101,7 @@ const NON_WORKFLOW_INTENTS: ReadonlySet<AIResponseIntent> = new Set([
   'timeline',
   'lookup',
   'meta',
+  'definition',
 ]);
 
 function toTitleCase(value: string): string {

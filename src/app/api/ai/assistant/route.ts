@@ -590,6 +590,7 @@ export async function POST(
       "timeline",
       "lookup",
       "meta",
+      "definition",
     ]);
     const suppressWorkflowChrome =
       nonWorkflowIntents.has(questionIntent) ||

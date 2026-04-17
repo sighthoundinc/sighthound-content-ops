@@ -3,7 +3,10 @@ import { ASK_AI_INTENTS, type AskAIIntent } from "../types";
 import type { Blocker } from "@/lib/blocker-detector";
 import type { QualityIssue } from "@/lib/quality-checker";
 import type { ExtractedContext } from "./context-extractor";
-import { buildCanonicalStatusAllowListText } from "./canonical-labels";
+import {
+  buildCanonicalStatusAllowListText,
+  buildCanonicalStatusDescriptionsText,
+} from "./canonical-labels";
 import { validateGeminiOutput } from "./output-validator";
 import type { AskAISafeLink } from "./safe-links";
 
@@ -135,6 +138,8 @@ const GEMINI_SYSTEM_INSTRUCTIONS = [
   "If a specific fact isn't present in the snapshot, say you don't have that on record — don't invent names, dates, URLs, titles, or quotes.",
   'Write in a warm, natural, second-person tone ("you"). 1 to 4 short sentences. No markdown.',
   "If the user asks what powers you, what model you use, or a similar meta-question about the assistant itself, answer truthfully: you are a read-only advisory assistant in Sighthound Content Relay, powered by Google Gemini. Never deny the underlying model. Set intent to 'meta' for these questions and keep nextSteps empty.",
+  "If the user asks a definitional / concept question about a stage or status (e.g. 'what does in review mean?', 'explain needs revision', 'what's the difference between ready and published?'), set intent to 'definition' and answer ONLY from the status description table below. Do NOT describe the current record's state. Keep nextSteps empty.",
+  `Status description table (authoritative source for definition questions): ${buildCanonicalStatusDescriptionsText()}.`,
   "Never expose raw enum keys or internal column names (e.g. 'ready_to_publish', 'canva_url', 'publisher_id'). Use friendly names.",
   `Use only these canonical status labels when naming a stage: ${buildCanonicalStatusAllowListText()}.`,
   "Keep the answer under 600 characters. Keep each next step under 220 characters.",
@@ -441,8 +446,9 @@ function buildGeminiPrompt(input: GeminiGuidanceInput): string {
     "Interpret the user's question and respond conversationally from the snapshot below.",
     "If they ask for a link or URL, include the matching entry in 'links' (by its 'key') AND mention the resource in the answer by name. Never paste invented URLs.",
     "If they ask a factual question (title, author, publisher, dates, durations), answer from 'facts' only. If missing, say you don't have it on record.",
-    "For workflow questions (blockers, next steps, transitions, ownership, quality, status), use the deterministic fields plus 'facts' for friendly names.",
-    "Choose the best intent from: blockers | next_steps | requirements | ownership | transition | quality | status | identity | people | timeline | lookup | meta | general.",
+    "If they ask what a stage/status MEANS or for an EXPLANATION of workflow concepts (e.g. 'what does in review mean?', 'explain needs revision', 'what's the difference between ready and published?'), set intent='definition' and answer ONLY from the status description table in the system instructions. Ignore the current record's status, blockers, ownership, and next steps — those are NOT what the user is asking about. Keep nextSteps empty.",
+    "For workflow questions about THIS record (blockers, next steps, transitions, ownership, quality, current status), use the deterministic fields plus 'facts' for friendly names.",
+    "Choose the best intent from: blockers | next_steps | requirements | ownership | transition | quality | status | identity | people | timeline | lookup | meta | definition | general.",
     "Return JSON with exactly this shape:",
     '{"intent":"<intent>","answer":"string","nextSteps":["string"],"links":[{"key":"string","label":"string","kind":"internal|external"}],"confidence":0-100}',
     `Snapshot: ${JSON.stringify(workflowSnapshot)}`,

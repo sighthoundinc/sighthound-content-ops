@@ -29,6 +29,52 @@ export const CANONICAL_STATUS_LABELS: Readonly<Record<string, string>> =
     completed: "Completed",
     not_started: "Not Started",
     idea: "Idea",
+    // Writer/publisher pipeline sub-statuses (referenced in definitional Q&A).
+    in_progress: "In Progress",
+    pending_review: "Awaiting Editorial Review",
+    needs_revision: "Needs Revision",
+    publisher_approved: "Approved for Publishing",
+  });
+
+/**
+ * One-sentence descriptions for each canonical status, injected into the
+ * Gemini system prompt so the assistant can answer "what does X mean?"
+ * definitional questions from a grounded source.
+ */
+export const CANONICAL_STATUS_DESCRIPTIONS: Readonly<Record<string, string>> =
+  Object.freeze({
+    // Blog lifecycle
+    writing: "The writer is drafting the blog in the Google Doc.",
+    ready: "Writing is approved; the blog is ready for the publisher to take over.",
+    publishing:
+      "The publisher is formatting, scheduling, and preparing to go live.",
+    published: "The blog is live on the site; the workflow is complete.",
+    // Writer pipeline sub-statuses
+    in_progress: "The current owner is actively working on this item.",
+    pending_review:
+      "The writer has submitted their draft and is waiting on editorial review.",
+    needs_revision:
+      "The editor reviewed the draft and requested revisions; the writer needs to address feedback and resubmit.",
+    // Publisher pipeline sub-statuses
+    publisher_approved:
+      "The publisher\u2019s work has been approved and the blog is queued to go live.",
+    // Social post statuses
+    draft:
+      "The creator is setting up the post; product, type, and Canva link are required to submit for review.",
+    in_review:
+      "The creator submitted the post and is waiting on the editor to approve or request changes.",
+    changes_requested:
+      "The editor asked for revisions; the creator needs to apply them and resubmit.",
+    creative_approved:
+      "The creative is approved; the editor now adds caption, platforms, and schedule.",
+    ready_to_publish:
+      "All fields are set; the creator publishes and will add the live link(s) afterwards.",
+    awaiting_live_link:
+      "The post has been published externally; the creator needs to paste the live URL(s) to close the loop.",
+    // Shared
+    completed: "The item has finished its workflow successfully.",
+    not_started: "No one has begun work yet.",
+    idea: "A topic that hasn\u2019t been converted into a blog or social post yet.",
   });
 
 /**
@@ -93,4 +139,18 @@ export function buildCanonicalStatusAllowListText(): string {
   return Object.entries(CANONICAL_STATUS_LABELS)
     .map(([key, label]) => `${key} = "${label}"`)
     .join("; ");
+}
+
+/**
+ * Format the status descriptions as a dense reference the system prompt
+ * can inject so Gemini can answer definitional questions from a grounded
+ * source instead of the current record\u2019s snapshot.
+ */
+export function buildCanonicalStatusDescriptionsText(): string {
+  return Object.entries(CANONICAL_STATUS_DESCRIPTIONS)
+    .map(([key, description]) => {
+      const label = CANONICAL_STATUS_LABELS[key] ?? key;
+      return `"${label}": ${description}`;
+    })
+    .join(" | ");
 }

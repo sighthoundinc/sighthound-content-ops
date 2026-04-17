@@ -376,4 +376,86 @@ export const fixtures = [
     },
     aspirational: true,
   },
+
+  // ── Round 3 aspirational fixtures ───────────────────────────────────
+  // Social post linked to a RED blog: the site header should reflect the
+  // associated blog's site, not the social post's `product` slug.
+  {
+    id: "social_site_resolves_from_linked_blog",
+    payload: {
+      eventType: "social_submitted_for_review",
+      socialPostId: "sp-r3-1",
+      title: "IG Post linked to RED blog",
+      site: "general_company", // what the current callers leak
+      associatedBlogSite: "RED", // what the emitter should prefer
+      actorName: "Ali Creator",
+      targetUserName: "Dana Admin",
+      appUrl: APP_URL,
+    },
+    expect: {
+      headerContains: ["(RED)"],
+      headerForbids: ["(general_company)", "(SH)"],
+    },
+    aspirational: true,
+  },
+  // Social post without a linked blog: site must fall back to SH, never
+  // surface a product slug.
+  {
+    id: "social_site_defaults_to_SH_when_no_blog",
+    payload: {
+      eventType: "social_submitted_for_review",
+      socialPostId: "sp-r3-2",
+      title: "IG Post with no linked blog",
+      site: "edge_vision", // product slug leak
+      // no associatedBlogSite
+      actorName: "Ali Creator",
+      targetUserName: "Dana Admin",
+      appUrl: APP_URL,
+    },
+    expect: {
+      headerContains: ["(SH)"],
+      headerForbids: ["(edge_vision)", "(platform)", "(general_company)"],
+    },
+    aspirational: true,
+  },
+  // Another linked-blog case covering a different event type (publish
+  // overdue). Ensures the site derivation covers all social event code
+  // paths, not just submit-for-review.
+  {
+    id: "social_publish_overdue_site_from_linked_blog",
+    payload: {
+      eventType: "social_publish_overdue",
+      socialPostId: "sp-r3-3",
+      title: "LinkedIn overdue post linked to SH blog",
+      site: "platform", // product slug leak
+      associatedBlogSite: "SH", // preferred source
+      actorName: "Dana Admin",
+      targetUserName: "Ali Creator",
+      appUrl: APP_URL,
+    },
+    expect: {
+      headerContains: ["(SH)"],
+      headerForbids: ["(platform)"],
+    },
+    aspirational: true,
+  },
+  // Comment on a social post linked to a RED blog.
+  {
+    id: "social_comment_site_from_linked_blog",
+    payload: {
+      eventType: "social_comment_created",
+      socialPostId: "sp-r3-4",
+      title: "Comment on RED-linked social post",
+      site: "general_company",
+      associatedBlogSite: "RED",
+      actorName: "Dana Admin",
+      commentBody: "Looks great, ship it.",
+      appUrl: APP_URL,
+    },
+    expect: {
+      headerContains: ["(RED)"],
+      headerForbids: ["(general_company)", "(SH)"],
+    },
+    aspirational: true,
+  },
 ];

@@ -209,10 +209,54 @@ Each iteration (managed by `scripts/autoresearch.sh`):
    - exit 1: no improvement, files restored.
    - exit 2: crash (linter threw or metric extraction failed), files restored.
    - exit 3: deadline passed — **stop immediately**.
+6. **If the change touched `supabase/functions/**`, the edge function MUST
+   be deployed before the iteration is considered complete** — see
+   §Deployment Verification Protocol below.
 
 **HARD STOP RULE**: When `check-time.sh` exits 1 or `autoresearch.sh` exits 3,
 stop the loop immediately. Do not ask for permission. Summarise results from
 `results/autoresearch.tsv` and wait.
+
+## Deployment Verification Protocol (MUST)
+
+The local scorer (`scripts/slack-contract-lint.mjs`) imports `message.mjs`
+directly via Node and measures the code on disk. It does NOT validate the
+deployed Supabase edge function. A green `slack_contract_pass=1.0000` means
+nothing for production until the edge function is redeployed.
+
+This gap caused a false-victory event during Round 2: Round 1 and Round 2
+fixes were committed + pushed to `origin/main` but never deployed, so the
+live Slack notifications still ran the pre-Round-1 code. The user received
+a production notification with no Open link and a `(general_company)` site
+header, exactly the bugs the loop had "fixed."
+
+Rules:
+
+1. After ANY iteration whose diff includes `supabase/functions/**`, the
+   operator (or agent, when authorized) MUST run:
+   ```
+   supabase functions deploy slack-notify
+   ```
+   before moving to the next experiment.
+2. The iteration is NOT considered complete until the deploy command exits
+   successfully.
+3. Optional smoke test: invoke the deployed function with a synthetic
+   payload and confirm the Slack channel renders the expected format:
+   ```
+   supabase functions invoke slack-notify --body @eval/slack/live-test.json
+   ```
+   (Create the file if it doesn't exist, keyed on a sacrificial blog/social
+   post ID that your workspace tolerates as test noise.)
+4. If the deploy fails, revert the iteration's commit, fix the deployment
+   blocker, and retry. Do NOT continue the loop with undeployed code.
+5. Caller-side changes (files outside `supabase/functions/**`) do NOT
+   require `supabase functions deploy` — they land via the normal Next.js
+   deploy pipeline (Vercel / wherever). Those still require a platform
+   deploy, tracked separately.
+6. Bundle deploys: if a session lands multiple `supabase/functions/**`
+   iterations back-to-back, a single end-of-session deploy is acceptable
+   — but the loop must NOT be declared complete until that deploy has
+   succeeded.
 
 ## Crash Handling
 

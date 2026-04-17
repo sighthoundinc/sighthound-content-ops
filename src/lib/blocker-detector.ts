@@ -134,16 +134,29 @@ function detectOwnershipIssues(input: DetectorInput, blockers: Blocker[]): void 
 
 /**
  * Detects invalid transition attempts.
- * If no next allowed stages, cannot proceed.
+ *
+ * Happy terminal states (published / completed) are NOT blockers — they're
+ * the successful end of the workflow. We only flag `invalid_transition`
+ * when the record is stuck in a non-terminal state with no outgoing edges,
+ * which is a real problem worth surfacing.
  */
 function detectInvalidTransitions(input: DetectorInput, blockers: Blocker[]): void {
-  if (input.nextAllowedStages.length === 0) {
-    blockers.push({
-      type: "invalid_transition",
-      message: "This record is already at the final stage.",
-      severity: "critical"
-    });
+  if (input.nextAllowedStages.length > 0) return;
+
+  const happyTerminalStates = new Set([
+    "published",
+    "completed",
+    "done",
+  ]);
+  if (happyTerminalStates.has(input.status)) {
+    return; // Not a blocker — the record is finished successfully.
   }
+
+  blockers.push({
+    type: "invalid_transition",
+    message: "This record has no allowed next stage.",
+    severity: "warning",
+  });
 }
 
 /**

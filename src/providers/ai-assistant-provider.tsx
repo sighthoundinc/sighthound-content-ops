@@ -26,6 +26,7 @@ export type AIResponseIntent =
   | 'people'
   | 'timeline'
   | 'lookup'
+  | 'meta'
   | 'general'
   | 'overview'
   | 'priorities'
@@ -89,11 +90,12 @@ interface AssistantApiData {
   assignee?: { name?: string; role?: string } | null;
 }
 
-const FACTUAL_INTENTS: ReadonlySet<AIResponseIntent> = new Set([
+const NON_WORKFLOW_INTENTS: ReadonlySet<AIResponseIntent> = new Set([
   'identity',
   'people',
   'timeline',
   'lookup',
+  'meta',
 ]);
 
 function toTitleCase(value: string): string {
@@ -148,7 +150,9 @@ function mapApiDataToAIResponse(
   }`;
 
   const intent = data.questionIntent;
-  const isFactual = intent ? FACTUAL_INTENTS.has(intent) : false;
+  // Treat anything outside the explicit workflow intents as "conversational"
+  // so the UI skips the robotic "Current State / Blockers" scaffolding.
+  const isFactual = intent ? NON_WORKFLOW_INTENTS.has(intent) : false;
 
   return {
     currentState: data.answer || fallbackCurrentState,

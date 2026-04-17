@@ -11,6 +11,8 @@ export const ASK_AI_INTENTS = [
   "timeline",
   "lookup",
   "general",
+  // Meta-question about the assistant itself (identity, capabilities).
+  "meta",
   // Workspace-scope intents (used when entityType === 'workspace').
   "overview",
   "priorities",

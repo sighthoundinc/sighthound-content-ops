@@ -185,7 +185,7 @@ describe("Ask AI — blog in Writing phase (regression)", () => {
     expect(terminal).toBeUndefined();
   });
 
-  it("only marks 'published' (publisher_status=completed) as terminal", () => {
+  it("treats 'published' as a happy terminal state (no invalid_transition blocker)", () => {
     const { stage, blockerResult } = runPipelineForBlog({
       writer_status: "completed",
       publisher_status: "completed",
@@ -198,9 +198,12 @@ describe("Ask AI — blog in Writing phase (regression)", () => {
 
     expect(stage).toBe("published");
 
+    // A published blog is the successful end of the workflow, NOT a blocker.
+    // Ask AI must not surface robotic "this record is at the final stage" noise
+    // when the user is simply viewing a completed blog.
     const terminal = blockerResult.blockers.find(
       (b) => b.type === "invalid_transition"
     );
-    expect(terminal).toBeDefined();
+    expect(terminal).toBeUndefined();
   });
 });

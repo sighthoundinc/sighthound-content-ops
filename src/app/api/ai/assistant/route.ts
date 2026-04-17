@@ -559,17 +559,28 @@ export async function POST(
       nextSteps = routedPrompt.nextSteps;
     }
 
-    const isFactualIntent =
-      questionIntent === "identity" ||
-      questionIntent === "people" ||
-      questionIntent === "timeline";
+    // Factual and meta/lookup intents don't need workflow scaffolding —
+    // surfacing blockers/next-steps on them is noisy and robotic.
+    // We also suppress scaffolding when Gemini returned a general answer,
+    // since that's typically a conversational follow-up that doesn't need
+    // the full workflow chrome.
+    const nonWorkflowIntents = new Set<AskAIIntent>([
+      "identity",
+      "people",
+      "timeline",
+      "lookup",
+      "meta",
+    ]);
+    const suppressWorkflowChrome =
+      nonWorkflowIntents.has(questionIntent) ||
+      (responseSource === "gemini" && questionIntent === "general");
 
     const result = {
       ...deterministicResult,
-      blockers: isFactualIntent ? [] : deterministicResult.blockers,
-      qualityIssues: isFactualIntent ? [] : deterministicResult.qualityIssues,
-      nextSteps: isFactualIntent ? [] : nextSteps,
-      confidence: isFactualIntent ? 0 : confidence,
+      blockers: suppressWorkflowChrome ? [] : deterministicResult.blockers,
+      qualityIssues: suppressWorkflowChrome ? [] : deterministicResult.qualityIssues,
+      nextSteps: suppressWorkflowChrome ? [] : nextSteps,
+      confidence: suppressWorkflowChrome ? 0 : confidence,
       prompt: normalizedPrompt,
       questionIntent,
       answer,

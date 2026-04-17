@@ -4,13 +4,21 @@
 
 **Maximise `slack_contract_pass` on the Slack notification fixture set.**
 
-Current baseline: **`slack_contract_pass = 0.7714`** (Round 2).
+Current baseline: **`slack_contract_pass = 1.0000`** (Round 2 closed; Round 3
+will add new aspirational rules and re-baseline).
 
-Round 1 (closed) ratcheted from 0.9657 → 1.0000 across 4 experiments (title
-trim, case-insensitive assignee dedupe, site canonicalization, HTML-escape
-angle brackets). Round 2 re-baselines the harness with two new aspirational
-rules that target Slack link clickability and per-event CTA labels — the
-"Open link doesn't actually open" regression we found during deep dive.
+Round history:
+- **Round 1 (closed)**: 0.9657 → 1.0000. Four experiments: title trim,
+  case-insensitive assignee dedupe, site canonicalization (SH/RED), HTML-escape
+  angle brackets in the header title.
+- **Round 2 (closed)**: 0.7714 → 1.0000. Two experiments: Slack angle-bracket
+  link syntax (`<URL|label>`) and per-event CTA labels (`Open blog` / `Open post`
+  / `Open thread` / `Submit link`). Closed the "Open link doesn't actually
+  open" regression surfaced by the deep dive.
+- **Round 3 (proposed)**: see §Experiment Priorities below. Targets title
+  length capping, overdue event emphasis, deep-link URL encoding, and
+  emitter-side robustness. Widens `EDITABLE_FILES` to include overdue/reminder
+  routes so the loop can close caller-side bugs H3/H4.
 
 Metric definition: weighted pass rate of the rules in `eval/slack/rules.mjs`
 against 27 frozen fixtures in `eval/slack/fixtures.mjs`. Each fixture is a
@@ -62,48 +70,96 @@ the edge function.
 - Do NOT change the Slack Display Contract in AGENTS.md (this is the spec we
   are ratcheting TOWARD, not AWAY from).
 
-## Experiment Priorities (Round 2)
+## Experiment Priorities (Round 3 — proposed)
 
-Ordered by expected impact — each is a single, targeted change. Fixture/rule
-references point at the specific failure driving the experiment.
+Round 3 has not started yet. Before kicking it off, extend
+`eval/slack/fixtures.mjs` and `eval/slack/rules.mjs` with the aspirational
+checks listed below, then commit the harness additions as the Round 3
+baseline. The loop then ratchets `message.mjs`, `index.ts`,
+`server-slack-emitter.ts`, and (new in Round 3) the overdue/reminder API
+routes to close each failure.
 
-1. **Wrap the Open link URL in Slack angle-bracket syntax with a generic label.**
-   Rule: `open_link_clickable_syntax`. In `buildMessage()`, change
-   ``const openLine = deepLink ? `Open link: ${deepLink}` : null;`` to wrap
-   the deep link as ``<${deepLink}|Open>``. This unblocks 27 fixtures at once
-   (weight 5 each) — the largest single expected lift.
+Experiments are ordered by expected impact. Fixture/rule names are the
+suggested identifiers — rename as needed when implementing the harness
+additions.
 
-2. **Replace the generic `Open` label with a per-event CTA via
-   `ctaLabelFor(eventType)`.**
-   Rule: `open_link_cta_label`. Add a helper in `message.mjs` that mirrors
-   the mapping in `eval/slack/rules.mjs::expectedCtaLabelFor`:
-   comment events → `Open thread`; `social_awaiting_live_link` /
-   `social_live_link_reminder` → `Submit link`; blog events → `Open blog`;
-   other social events → `Open post`. Use this label in the `<URL|label>`
-   tail. This closes the remaining gap after experiment 1.
+1. **Fix `site` overloading for social events (H3 — caller bug).**
+   New fixtures: `social_site_resolves_from_linked_blog`,
+   `social_site_defaults_to_SH_when_no_blog`. New rule:
+   `social_site_never_contains_product_slug` (weight 5). The rule checks
+   the header site never matches known product slugs (`platform`,
+   `edge_vision`, `general_company`, etc.). Requires widening
+   `EDITABLE_FILES` to include `src/app/api/social-posts/reminders/route.ts`
+   and `src/app/api/social-posts/overdue-checks/route.ts`. The fix: derive
+   `site` from the social post's linked blog when available, fall back to
+   `"SH"` otherwise — never a product slug.
 
-3. **Extract a `buildOpenLinkLine(eventType, deepLink)` helper** so the link
-   syntax + label mapping live in one place. Expected lift: 0 (pure refactor
-   — only land if it simplifies the code). Useful scaffolding for experiment 4.
+2. **Populate `reviewer_user_id` in the social overdue-checks SELECT (H4).**
+   New fixture: `social_review_overdue_surfaces_reviewer_name`. New rule:
+   `social_review_overdue_has_named_assignee` (weight 3) — for
+   `social_review_overdue` events the `Assigned to:` value must not be
+   `"Team"` when the fixture provides a `reviewerName`. Requires adding
+   `reviewer_user_id` to the SELECT in
+   `src/app/api/social-posts/overdue-checks/route.ts:52–58` and plumbing
+   it through the emitter call.
 
-4. **Widen the CTA mapping to differentiate overdue events.** Optional
-   enhancement: add a subtle prefix for overdue events (e.g. `Open blog
-   (overdue)`). Only worth keeping if it passes MIN_DELTA without fighting
-   rule 2; if not, discard.
+3. **Title length cap with ellipsis (defensive hardening).**
+   New fixture: `title_exceeding_200_chars_is_truncated`. New rule:
+   `title_length_cap` (weight 2) — header line ≤ 240 chars and, when
+   truncated, ends with `…` inside the header. Fix: extend
+   `normalizeTitle()` to cap at 180 chars with ellipsis; keep the rest
+   of the contract (trim, escape) intact.
 
-5. **Belt-and-suspenders on the emitter side.** In
-   `src/lib/server-slack-emitter.ts`, assert the payload always carries a
-   valid `eventType` and log a warning before forwarding. Low metric impact
-   but improves observability for caller bugs.
+4. **Distinct CTA marker for overdue events.**
+   New fixture: `overdue_events_carry_overdue_marker`. New rule:
+   `overdue_cta_label_is_marked` (weight 2) — for the 3 overdue event
+   types, the CTA label must end with ` (overdue)`. Fix: thread an
+   `isOverdue(eventType)` check through `ctaLabelFor()` so overdue events
+   render as `Open blog (overdue)` / `Open post (overdue)` without
+   breaking the Round 2 base labels.
 
-6. **Combine #1 + #2** into a single release-ready commit after each has
-   landed individually. Verify no per-rule regression.
+5. **URL encoding for deep-link IDs.**
+   New fixture: `deep_link_id_containing_special_chars_is_encoded`. New
+   rule: `deep_link_is_url_safe` (weight 2) — the URL inside `<URL|label>`
+   passes a strict `URL` constructor parse on the fixture `socialPostId`
+   / `blogId` value after decoding. Fix: run IDs through
+   `encodeURIComponent` in `buildDeepLink()` as a defensive pass.
 
-Round 1 completed experiments (kept in history for context):
-- R1-1 — trim title whitespace (+0.0069)
-- R1-2 — case-insensitive assignee dedupe (+0.0055)
-- R1-3 — canonicalize site to SH/RED (+0.0137)
-- R1-4 — HTML-escape angle brackets in header title (+0.0068)
+6. **Emitter-side pre-validation + dedupe of `targetUserIds` (M2).**
+   No new rule — maintenance work to reduce DB lookups and surface caller
+   bugs earlier. Emitter should warn on empty `title`/`site`, dedupe
+   `targetUserIds` before the profile fetch, and log the payload shape
+   on a 400 response from the edge function.
+
+7. **Migrate edge function to `Deno.serve()` (L1).**
+   Drop the deprecated `std@0.224.0/http/server` import; adopt
+   `Deno.serve()` signature. No metric impact; eliminates cold-start
+   deprecation warnings.
+
+### Pre-Round-3 harness checklist (do BEFORE starting the loop)
+
+1. Add the 5 new fixtures listed above to `eval/slack/fixtures.mjs`.
+2. Add the 4 new rules listed above to `eval/slack/rules.mjs` (experiments
+   6 and 7 don't need rules).
+3. Widen `EDITABLE_FILES` in `research.env` to include the 2 overdue/
+   reminder route files.
+4. Re-run `node scripts/slack-contract-lint.mjs --verbose` to measure the
+   new baseline (expected: somewhere in the 0.85–0.90 range).
+5. Pin the new baseline in `research.env` (`BASELINE_METRIC="<measured>"`).
+6. Commit as `chore(autoresearch): round 3 baseline`.
+7. Start a fresh session: `./scripts/start-session.sh 2 <baseline>`.
+
+### History of closed experiments
+
+Round 1 (0.9657 → 1.0000):
+- R1-1 — trim title whitespace (+0.0069) — `d11a947`
+- R1-2 — case-insensitive assignee dedupe (+0.0055) — `855f400`
+- R1-3 — canonicalize site to SH/RED (+0.0137) — `b0b0520`
+- R1-4 — HTML-escape angle brackets in header title (+0.0068) — `f064805`
+
+Round 2 (0.7714 → 1.0000):
+- R2-1 — wrap Open link URL in Slack angle-bracket syntax (+0.1429) — `ee501a1`
+- R2-2 — per-event CTA labels via `ctaLabelFor` helper (+0.0857) — `7e67f17`
 
 ## Simplicity Criterion
 
@@ -115,11 +171,13 @@ Round 1 completed experiments (kept in history for context):
 
 ## Agent Workflow (Copy-Paste Prompt)
 
-Use this prompt to start a session (Prompt 2 from the AutoResearch README):
+Use this prompt to start a session (Prompt 2 from the AutoResearch README).
+Replace `<baseline>` with the measured baseline after completing the Round 3
+harness checklist above.
 
 ```
 Run the autoresearch loop for [N] hours. Follow program.md §Agent Workflow exactly:
-1. Start the session: ./scripts/start-session.sh [N] 0.7714
+1. Start the session: ./scripts/start-session.sh [N] <baseline>
 2. Before every experiment: ./scripts/check-time.sh — stop immediately if it exits 1
 3. Read program.md and results/autoresearch.tsv, pick the next untried experiment,
    make ONE targeted change, then run:

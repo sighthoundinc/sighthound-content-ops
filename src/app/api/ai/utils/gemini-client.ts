@@ -71,11 +71,16 @@ const GEMINI_SYSTEM_INSTRUCTIONS = [
   "Respond with strict JSON only. No prose preamble, no markdown fences.",
 ].join(" ");
 
-function selectModel(preferComplexModel: boolean): string {
+function selectModels(preferComplexModel: boolean): string[] {
   const complexModel = process.env.ASK_AI_COMPLEX_MODEL?.trim();
   const defaultModel = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-  if (preferComplexModel && complexModel) return complexModel;
-  return defaultModel;
+  const fallbackModel = process.env.ASK_AI_FALLBACK_MODEL?.trim();
+
+  const chain: string[] = [];
+  if (preferComplexModel && complexModel) chain.push(complexModel);
+  chain.push(defaultModel);
+  if (fallbackModel && !chain.includes(fallbackModel)) chain.push(fallbackModel);
+  return chain;
 }
 
 export async function getGeminiGuidance(
@@ -86,7 +91,20 @@ export async function getGeminiGuidance(
     return null;
   }
 
-  const model = selectModel(!!input.preferComplexModel);
+  const models = selectModels(!!input.preferComplexModel);
+  for (const model of models) {
+    const result = await callGeminiForModel(apiKey, model, input);
+    if (result) return result;
+    // On hard Gemini failure (null) try the next model in the chain.
+  }
+  return null;
+}
+
+async function callGeminiForModel(
+  apiKey: string,
+  model: string,
+  input: GeminiGuidanceInput
+): Promise<GeminiGuidanceOutput | null> {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -108,8 +126,8 @@ export async function getGeminiGuidance(
     },
   };
 
-  const MAX_ATTEMPTS = 2;
-  const RETRY_DELAY_MS = 400;
+  const MAX_ATTEMPTS = 3;
+  const BASE_BACKOFF_MS = 500;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const isFinalAttempt = attempt === MAX_ATTEMPTS;
@@ -137,7 +155,10 @@ export async function getGeminiGuidance(
           body: errorBody.slice(0, 500),
         });
         if (transient && !isFinalAttempt) {
-          await delay(RETRY_DELAY_MS);
+          // Exponential backoff with jitter: 500ms, 1000ms, 2000ms + up to 250ms jitter.
+          const backoff =
+            BASE_BACKOFF_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+          await delay(backoff);
           continue;
         }
         return null;
@@ -231,7 +252,9 @@ export async function getGeminiGuidance(
         message,
       });
       if (transient && !isFinalAttempt) {
-        await delay(RETRY_DELAY_MS);
+        const backoff =
+          BASE_BACKOFF_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+        await delay(backoff);
         continue;
       }
       return null;

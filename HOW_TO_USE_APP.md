@@ -162,6 +162,7 @@ Shared detail-page usability helpers:
 - Responsive right rail behavior is consistent on both detail pages:
   - `lg` and above: right rail is visible and sticky.
   - Below `lg`: right-rail cards move into the main vertical flow (no side column).
+- Keyboard shortcuts for detail pages (jump to next required field, run primary action) are documented only in the shared shortcuts modal (profile menu → `Shortcuts`). Main pages no longer print key combos inline.
 
 ## Ask AI (guidance-only)
 - Use Ask AI on detail pages when you need workflow help in plain language.

@@ -1277,10 +1277,6 @@ export default function BlogDetailPage() {
                   )}
                 </>
               )}
-              <p className="text-[11px] text-slate-500">
-                Shortcut: {BLOG_DETAIL_SHORTCUTS.nextRequired.keys[0]} • Primary action:{" "}
-                {BLOG_DETAIL_SHORTCUTS.primaryAction.keys[0]}
-              </p>
             </div>
           </section>
           <nav
@@ -1989,10 +1985,6 @@ export default function BlogDetailPage() {
                         )}
                       </>
                     )}
-                    <p className="text-[11px] text-slate-500">
-                      Shortcut: {BLOG_DETAIL_SHORTCUTS.nextRequired.keys[0]} • Primary action:{" "}
-                      {BLOG_DETAIL_SHORTCUTS.primaryAction.keys[0]}
-                    </p>
                   </div>
                 </section>
                 <nav

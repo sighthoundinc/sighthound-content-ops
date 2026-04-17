@@ -59,6 +59,7 @@ npm run check:full
 - Blog detail uses preflight readiness + jump-to-field guidance and keyboard parity shortcuts:
   - `Alt+Shift+J` (next missing required field)
   - `Alt+Shift+Enter` (primary action)
+  - These shortcuts are surfaced exclusively in the shared shortcuts modal; detail pages must not render inline `Shortcut: …` / `Primary action: …` text.
 
 ### Blogs
 - Writing flow handoff to publishing remains enforced.

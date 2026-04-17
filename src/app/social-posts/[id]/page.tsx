@@ -1877,10 +1877,6 @@ export default function SocialPostEditorPage() {
                   ready.
                 </p>
               )}
-              <p className="text-[11px] text-slate-500">
-                Shortcut: {SOCIAL_POST_EDITOR_SHORTCUTS.nextRequired.keys[0]} • Primary action:{" "}
-                {SOCIAL_POST_EDITOR_SHORTCUTS.primaryAction.keys[0]}
-              </p>
             </div>
           </section>
           <nav
@@ -3022,21 +3018,6 @@ export default function SocialPostEditorPage() {
                   >
                     {isSaving ? "Saving…" : finalAction.label}
                   </Button>
-                  <p className="text-[11px] text-slate-500">
-                    <button
-                      type="button"
-                      className="font-medium text-slate-700 underline-offset-2 hover:underline"
-                      onClick={() => {
-                        window.dispatchEvent(new CustomEvent("open-shortcuts-modal"));
-                      }}
-                    >
-                      Shortcut
-                    </button>{" "}
-                    {SOCIAL_POST_EDITOR_SHORTCUTS.nextRequired.label}:{" "}
-                    {SOCIAL_POST_EDITOR_SHORTCUTS.nextRequired.keys[0]} •{" "}
-                    {SOCIAL_POST_EDITOR_SHORTCUTS.primaryAction.label}:{" "}
-                    {SOCIAL_POST_EDITOR_SHORTCUTS.primaryAction.keys[0]}
-                  </p>
                   {!canActOnCurrentStatus ? (
                     <p className="text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
                   ) : null}

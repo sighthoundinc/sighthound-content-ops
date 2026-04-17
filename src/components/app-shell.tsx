@@ -1064,20 +1064,18 @@ export function AppShell({
                 ))}
               </div>
             </div>
-            <p className="mt-4 text-xs text-slate-500">
-              Use ↑/↓ to move and Enter to select.{" "}
+            <div className="mt-4 flex justify-end">
               <button
                 type="button"
-                className="font-medium text-slate-700 underline-offset-2 hover:underline"
+                className="text-xs font-medium text-slate-700 underline-offset-2 hover:underline"
                 onClick={() => {
                   setIsQuickCreateOpen(false);
                   setIsShortcutModalOpen(true);
                 }}
               >
-                Shortcuts
-              </button>{" "}
-              details
-            </p>
+                Shortcut
+              </button>
+            </div>
           </section>
         </div>
       ) : null}

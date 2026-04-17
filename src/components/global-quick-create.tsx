@@ -156,9 +156,6 @@ export function GlobalQuickCreate() {
             >
               Create New
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Press {QUICK_CREATE_SHORTCUT_KEY} to open, ESC to close
-            </p>
           </div>
 
           {/* Actions */}

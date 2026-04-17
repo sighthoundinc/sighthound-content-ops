@@ -57,6 +57,7 @@ export interface AIResponse {
   isFactual?: boolean;
   responseSource?: 'deterministic' | 'gemini';
   aiModel?: string;
+  fallbackReason?: string;
   links: AskAISafeLinkView[];
   assignee: { name?: string; role?: string } | null;
   feedbackContext: AIFeedbackContext;
@@ -88,6 +89,7 @@ interface AssistantApiData {
   questionIntent?: AIResponseIntent;
   responseSource?: 'deterministic' | 'gemini';
   aiModel?: string;
+  fallbackReason?: string;
   links?: AskAISafeLinkView[];
   assignee?: { name?: string; role?: string } | null;
 }
@@ -167,6 +169,7 @@ function mapApiDataToAIResponse(
     isFactual,
     responseSource: data.responseSource,
     aiModel: data.aiModel,
+    fallbackReason: data.fallbackReason,
     links: Array.isArray(data.links) ? data.links : [],
     assignee: data.assignee ?? null,
     feedbackContext: {

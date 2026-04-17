@@ -608,10 +608,22 @@ export async function POST(
       aiModel,
     };
 
+    // On deterministic fallback, surface why Gemini didn't answer so the UI
+    // can display it alongside the provenance chip.
+    const fallbackReason =
+      responseSource === "deterministic"
+        ? (() => {
+            const code = getLastGeminiFailure();
+            if (!code) return undefined;
+            return describeGeminiFailure(code);
+          })()
+        : undefined;
+
     const apiResponse = resultToAPIResponse(result, {
       links: resolvedLinks,
       assignee: deriveAssignee(facts),
       rateLimitRemaining: rate.remaining,
+      fallbackReason,
     });
 
     setCachedResponse(cacheKey, {

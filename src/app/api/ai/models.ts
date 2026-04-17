@@ -58,6 +58,8 @@ export interface AskAIResponse {
     answer: string;
     responseSource: "deterministic" | "gemini";
     aiModel?: string;
+    /** Human-readable reason Gemini didn't answer. Only set on deterministic fallback. */
+    fallbackReason?: string;
     links?: AskAISafeLink[];
     assignee?: {
       name?: string;
@@ -130,6 +132,7 @@ export interface AskAIResultExtras {
   links?: AskAISafeLink[];
   assignee?: { name?: string; role?: string } | null;
   rateLimitRemaining?: number;
+  fallbackReason?: string;
 }
 
 /**
@@ -153,6 +156,7 @@ export function resultToAPIResponse(
       answer: result.answer || result.nextSteps[0] || "No additional guidance available.",
       responseSource: result.responseSource || "deterministic",
       aiModel: result.aiModel,
+      fallbackReason: extras.fallbackReason,
       links: extras.links ?? [],
       assignee: extras.assignee ?? null,
       rateLimit:

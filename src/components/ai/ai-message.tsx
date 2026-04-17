@@ -24,44 +24,50 @@ export function AIMessage({ response }: AIMessageProps) {
   const showHeading = !isFactual;
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       {showAssignee && response.assignee?.name && (
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+        <div className="inline-flex items-center gap-1.5 self-start rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 shadow-sm">
           <span className="text-slate-500">{response.assignee.role ?? 'Assigned to'}:</span>
-          <span>{response.assignee.name}</span>
+          <span className="text-slate-900">{response.assignee.name}</span>
         </div>
       )}
       {response.currentState && (
-        <div>
+        <section className="space-y-2">
           {showHeading && (
-            <h3 className="text-sm font-semibold text-slate-900 mb-2">Current State</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Current State
+            </h3>
           )}
-          <p className="text-sm text-slate-700">{response.currentState}</p>
+          <p className="text-sm leading-6 text-slate-800">{response.currentState}</p>
           {response.links.length > 0 && <AILinksRow links={response.links} />}
-        </div>
+        </section>
       )}
 
       {/* Workflow sections are hidden for factual Q&A */}
       {!isFactual && response.blockers && response.blockers.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900 mb-3">Blockers</h3>
+        <section className="space-y-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            Blockers
+          </h3>
           <div className="space-y-2">
             {response.blockers.map((blocker, i) => (
               <AIBlockerCard key={i} blocker={blocker} />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {!isFactual && response.qualityIssues && response.qualityIssues.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900 mb-3">Quality Issues</h3>
+        <section className="space-y-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            Quality Issues
+          </h3>
           <div className="space-y-2">
             {response.qualityIssues.map((issue, i) => (
               <AIQualityCard key={i} issue={issue} />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {!isFactual && response.nextSteps && response.nextSteps.length > 0 && (
@@ -69,8 +75,8 @@ export function AIMessage({ response }: AIMessageProps) {
       )}
 
       {showConfidence && (
-        <div className="pt-4 border-t border-slate-200">
-          <p className="text-xs text-slate-500">
+        <div className="pt-3 border-t border-slate-100">
+          <p className="text-[11px] text-slate-500">
             Confidence: {Math.round(response.confidence * 100)}%
           </p>
         </div>

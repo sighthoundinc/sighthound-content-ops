@@ -39,12 +39,23 @@ export function AIBlockerCard({ blocker }: BlockerCardProps) {
   const config = SEVERITY_CONFIG[blocker.severity] || SEVERITY_CONFIG.info;
 
   return (
-    <div className={`p-3 rounded-lg border ${config.bg} ${config.border}`}>
-      <div className="flex gap-2">
-        <AppIcon name={config.icon} size={16} className={`flex-shrink-0 mt-0.5 ${config.color}`} />
-        <div className="flex-1">
-          <h4 className={`text-sm font-medium ${config.text}`}>{blocker.title}</h4>
-          <p className={`text-xs ${config.text} opacity-90`}>{blocker.description}</p>
+    <div
+      className={`rounded-lg border p-3 transition-shadow hover:shadow-sm ${config.bg} ${config.border}`}
+    >
+      <div className="flex items-start gap-2.5">
+        <AppIcon
+          name={config.icon}
+          size={14}
+          boxClassName="h-4 w-4 mt-0.5"
+          className={`shrink-0 ${config.color}`}
+        />
+        <div className="flex-1 min-w-0">
+          <h4 className={`text-sm font-semibold leading-5 ${config.text}`}>
+            {blocker.title}
+          </h4>
+          <p className={`mt-0.5 text-xs leading-5 ${config.text} opacity-80`}>
+            {blocker.description}
+          </p>
         </div>
       </div>
     </div>

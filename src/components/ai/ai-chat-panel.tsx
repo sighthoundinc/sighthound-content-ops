@@ -1,10 +1,16 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAIAssistant } from '@/providers/ai-assistant-provider';
 import { AIMessage } from './ai-message';
 import { AIQuickPrompts } from './ai-quick-prompts';
 import { AppIcon } from '@/lib/icons';
+
+const LOADING_HINTS = [
+  'Reading this page\u2019s context\u2026',
+  'Cross-checking the latest updates\u2026',
+  'Drafting your guidance\u2026',
+];
 
 export function AIChatPanel() {
   const {
@@ -18,111 +24,205 @@ export function AIChatPanel() {
     clearResponse,
   } = useAIAssistant();
 
+  const [hintIndex, setHintIndex] = useState(0);
+
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        closePanel();
-      }
+      if (e.key === 'Escape' && isOpen) closePanel();
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen, closePanel]);
 
+  // Rotate loading hints every 1.8s while analysing.
+  useEffect(() => {
+    if (!isLoading) {
+      setHintIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setHintIndex((i) => (i + 1) % LOADING_HINTS.length);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop \u2014 subtle blur + slate tint instead of flat black */}
       <div
-        className="fixed inset-0 z-30 bg-black/20"
+        className="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-[2px] animate-in fade-in duration-200 motion-reduce:animate-none"
         onClick={closePanel}
       />
 
       {/* Panel */}
-      <div
-        className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-40 flex flex-col animate-in slide-in-from-right-full duration-300"
+      <aside
+        role="dialog"
+        aria-label="Ask AI"
+        className="fixed right-0 top-0 h-full w-[420px] max-w-[calc(100vw-2rem)] bg-white z-40 flex flex-col border-l border-slate-200 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.35)] animate-in slide-in-from-right duration-300 ease-out motion-reduce:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-indigo-200">
+        <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-gradient-to-b from-white to-slate-50/50">
+          <div className="flex items-center gap-2.5">
+            <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-indigo-200 shadow-inner">
               <AppIcon name="sparkle" size={14} boxClassName="h-4 w-4" />
+              {isLoading && (
+                <span className="absolute inset-0 rounded-full ring-2 ring-indigo-300/70 animate-ping motion-reduce:hidden" />
+              )}
             </span>
             <div className="flex flex-col leading-tight">
-              <h2 className="text-sm font-semibold text-slate-900">Ask AI</h2>
-              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                Read-only · Advisory
+              <h2 className="text-sm font-semibold text-slate-900 tracking-tight">
+                Ask AI
+              </h2>
+              <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                Read-only \u00b7 Advisory
               </span>
             </div>
           </div>
           <button
             onClick={closePanel}
-            className="p-1 hover:bg-slate-100 rounded transition-colors"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             aria-label="Close"
           >
-            <AppIcon name="close" size={20} />
+            <AppIcon name="close" size={16} />
           </button>
-        </div>
+        </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-5 py-5 ai-panel-scroll">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3">
-              <AppIcon
-                name="loading"
-                size={22}
-                boxClassName="h-7 w-7"
-                className="text-blue-600 animate-[spin_1.5s_linear_infinite] motion-reduce:animate-none"
-              />
-              <p className="text-sm text-slate-600">Analyzing...</p>
-            </div>
+            <LoadingState hint={LOADING_HINTS[hintIndex]} />
           ) : error ? (
-            <div className="flex flex-col gap-3">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {lastPrompt && (
-                  <button
-                    onClick={() => retryLast()}
-                    className="px-3 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 text-sm font-medium"
-                  >
-                    Retry
-                  </button>
-                )}
-                <button
-                  onClick={closePanel}
-                  className="px-3 py-2 border border-slate-300 text-slate-700 rounded hover:bg-slate-50 text-sm font-medium"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+            <ErrorState
+              message={error}
+              canRetry={!!lastPrompt}
+              onRetry={() => retryLast()}
+              onClose={closePanel}
+            />
           ) : response ? (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5 animate-in fade-in-50 slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
               <AIMessage response={response} />
-              <div className="pt-2">
-                <button
-                  onClick={clearResponse}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-                  aria-label="Ask another question"
-                >
-                  <span aria-hidden="true">←</span>
-                  Ask another question
-                </button>
-              </div>
+              <button
+                onClick={clearResponse}
+                className="inline-flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                aria-label="Ask another question"
+              >
+                <AppIcon name="chevronLeft" size={12} boxClassName="h-3.5 w-3.5" />
+                Ask another question
+              </button>
             </div>
           ) : (
-            <div className="text-center text-slate-500">
-              <p className="text-sm">Ask a question to get started</p>
-            </div>
+            <EmptyState />
           )}
         </div>
 
         {/* Quick Prompts */}
-        {!response && !isLoading && <AIQuickPrompts />}
-      </div>
+        {!response && !isLoading && !error && <AIQuickPrompts />}
+      </aside>
+
+      <style jsx global>{`
+        .ai-panel-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgb(203 213 225) transparent;
+        }
+        .ai-panel-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+        .ai-panel-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .ai-panel-scroll::-webkit-scrollbar-thumb {
+          background-color: rgb(203 213 225);
+          border-radius: 9999px;
+        }
+        .ai-panel-scroll::-webkit-scrollbar-thumb:hover {
+          background-color: rgb(148 163 184);
+        }
+      `}</style>
     </>
+  );
+}
+
+function LoadingState({ hint }: { hint: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+      <div className="relative flex h-12 w-12 items-center justify-center">
+        <span className="absolute inset-0 rounded-full bg-slate-900/5 animate-ping motion-reduce:hidden" />
+        <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-indigo-200 shadow-sm">
+          <AppIcon
+            name="sparkle"
+            size={18}
+            boxClassName="h-5 w-5"
+            className="animate-pulse motion-reduce:animate-none"
+          />
+        </span>
+      </div>
+      <p
+        key={hint}
+        className="text-sm text-slate-600 animate-in fade-in duration-500 motion-reduce:animate-none"
+      >
+        {hint}
+      </p>
+    </div>
+  );
+}
+
+function ErrorState({
+  message,
+  canRetry,
+  onRetry,
+  onClose,
+}: {
+  message: string;
+  canRetry: boolean;
+  onRetry: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 animate-in fade-in-50 duration-200">
+      <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3.5">
+        <AppIcon
+          name="warning"
+          size={16}
+          boxClassName="h-4 w-4 mt-0.5"
+          className="text-rose-600 shrink-0"
+        />
+        <p className="text-sm text-rose-800 leading-5">{message}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        {canRetry && (
+          <button
+            onClick={onRetry}
+            className="inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+          >
+            Try again
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center text-center px-2">
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-700 text-indigo-200 shadow-sm">
+        <AppIcon name="sparkle" size={20} boxClassName="h-5 w-5" />
+      </span>
+      <h3 className="mt-4 text-sm font-semibold text-slate-900 tracking-tight">
+        What can I help with?
+      </h3>
+      <p className="mt-1.5 max-w-[260px] text-xs leading-5 text-slate-500">
+        I explain stages, blockers, ownership, and next steps using live data from this page. I don\u2019t write content or change anything.
+      </p>
+    </div>
   );
 }

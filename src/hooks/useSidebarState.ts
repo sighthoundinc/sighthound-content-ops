@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 
 const SIDEBAR_STATE_KEY = 'sidebar:collapsed';
+const AUTO_COLLAPSE_BREAKPOINT_PX = 1400;
 
 /**
  * Custom hook for managing global, persistent sidebar collapsed state.
@@ -26,6 +27,37 @@ export function useSidebarState() {
    */
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  /**
+   * Responsive auto-collapse at viewports below 1400px when the user
+   * has NOT explicitly set a preference in localStorage. Once the user
+   * toggles manually, their preference sticks regardless of viewport.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return;
+    }
+    let userHasExplicitPreference = false;
+    try {
+      userHasExplicitPreference = localStorage.getItem(SIDEBAR_STATE_KEY) !== null;
+    } catch {
+      userHasExplicitPreference = true;
+    }
+    if (userHasExplicitPreference) {
+      return;
+    }
+    const mediaQuery = window.matchMedia(
+      `(max-width: ${AUTO_COLLAPSE_BREAKPOINT_PX - 1}px)`
+    );
+    const sync = () => {
+      setCollapsedState(mediaQuery.matches);
+    };
+    sync();
+    mediaQuery.addEventListener('change', sync);
+    return () => {
+      mediaQuery.removeEventListener('change', sync);
+    };
   }, []);
 
   /**

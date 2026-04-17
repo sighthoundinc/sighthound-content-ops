@@ -155,6 +155,14 @@ export function normalizeTitle(title) {
   return title.trim();
 }
 
+// Slack interprets raw `<` / `>` as link or mention delimiters. Escape them
+// in the header only — comment bodies keep their formatting via mention-safe
+// normalization in normalizeCommentBody().
+export function escapeHeaderTitle(title) {
+  if (typeof title !== "string") return "";
+  return title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 export function canonicalizeSite(site) {
   if (typeof site !== "string") return site;
   const normalized = site.trim().toLowerCase();
@@ -187,7 +195,7 @@ export function buildMessage(payload, options = {}) {
   const assignedBy = normalizeName(payload.actorName) ?? "Team";
   const isCommentEvent = COMMENT_EVENT_TYPES.has(payload.eventType);
 
-  const title = normalizeTitle(payload.title);
+  const title = escapeHeaderTitle(normalizeTitle(payload.title));
   const site = canonicalizeSite(payload.site);
   const headerLine = `[${contentType}] ${title} (${site})`;
   const actionLine = `Action: ${action}`;

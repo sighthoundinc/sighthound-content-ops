@@ -4,7 +4,13 @@
 
 **Maximise `slack_contract_pass` on the Slack notification fixture set.**
 
-Current baseline: **`slack_contract_pass = 0.9657`**
+Current baseline: **`slack_contract_pass = 0.7714`** (Round 2).
+
+Round 1 (closed) ratcheted from 0.9657 → 1.0000 across 4 experiments (title
+trim, case-insensitive assignee dedupe, site canonicalization, HTML-escape
+angle brackets). Round 2 re-baselines the harness with two new aspirational
+rules that target Slack link clickability and per-event CTA labels — the
+"Open link doesn't actually open" regression we found during deep dive.
 
 Metric definition: weighted pass rate of the rules in `eval/slack/rules.mjs`
 against 27 frozen fixtures in `eval/slack/fixtures.mjs`. Each fixture is a
@@ -56,59 +62,48 @@ the edge function.
 - Do NOT change the Slack Display Contract in AGENTS.md (this is the spec we
   are ratcheting TOWARD, not AWAY from).
 
-## Experiment Priorities
+## Experiment Priorities (Round 2)
 
 Ordered by expected impact — each is a single, targeted change. Fixture/rule
 references point at the specific failure driving the experiment.
 
-1. **Trim `title` whitespace in `buildMessage` header assembly.**
-   Fixture: `title_whitespace_must_be_trimmed`.
-   Rule: `header_expectations`. Cheapest fix; a single `.trim()` on the title
-   before formatting the header line.
+1. **Wrap the Open link URL in Slack angle-bracket syntax with a generic label.**
+   Rule: `open_link_clickable_syntax`. In `buildMessage()`, change
+   ``const openLine = deepLink ? `Open link: ${deepLink}` : null;`` to wrap
+   the deep link as ``<${deepLink}|Open>``. This unblocks 27 fixtures at once
+   (weight 5 each) — the largest single expected lift.
 
-2. **Case-insensitive dedupe of multi-assignee names in `resolveAssignedTo()`.**
-   Fixture: `assignee_dedupe_must_be_case_insensitive`.
-   Rule: `assigned_to_equals`. Keep the first-seen casing while deduping by
-   `.toLowerCase()` to collapse `["Ali Creator", "ali creator", "ALI CREATOR"]`
-   to a single entry.
+2. **Replace the generic `Open` label with a per-event CTA via
+   `ctaLabelFor(eventType)`.**
+   Rule: `open_link_cta_label`. Add a helper in `message.mjs` that mirrors
+   the mapping in `eval/slack/rules.mjs::expectedCtaLabelFor`:
+   comment events → `Open thread`; `social_awaiting_live_link` /
+   `social_live_link_reminder` → `Submit link`; blog events → `Open blog`;
+   other social events → `Open post`. Use this label in the `<URL|label>`
+   tail. This closes the remaining gap after experiment 1.
 
-3. **Canonicalize site to `SH` / `RED` when a domain form is provided.**
-   Fixtures: `site_domain_must_canonicalize_to_SH`,
-   `site_domain_must_canonicalize_to_RED`.
-   Rule: `header_expectations`. Add a small `canonicalizeSite()` helper: if
-   input matches `sighthound.com`, `sighthound`, `sh` (case-insensitive) →
-   `SH`; if matches `redactor.com`, `redactor`, `red` → `RED`; otherwise pass
-   through untouched. Use in `buildMessage()` for the header only.
+3. **Extract a `buildOpenLinkLine(eventType, deepLink)` helper** so the link
+   syntax + label mapping live in one place. Expected lift: 0 (pure refactor
+   — only land if it simplifies the code). Useful scaffolding for experiment 4.
 
-4. **HTML-escape `<` and `>` in the title when formatting the header.**
-   Fixture: `title_with_angle_brackets_must_be_escaped`.
-   Rule: `header_expectations`. Slack will otherwise interpret angle brackets
-   as link/mention syntax. Escape to `&lt;` / `&gt;` in the header assembly
-   (NOT in the comment body — that path is already sanitized).
+4. **Widen the CTA mapping to differentiate overdue events.** Optional
+   enhancement: add a subtle prefix for overdue events (e.g. `Open blog
+   (overdue)`). Only worth keeping if it passes MIN_DELTA without fighting
+   rule 2; if not, discard.
 
-5. **Factor the three header-safety transforms into a single
-   `renderHeader(payload)` helper.** Once #1, #3, #4 are landing, consolidate
-   so the transforms live in one place with clear test hooks.
+5. **Belt-and-suspenders on the emitter side.** In
+   `src/lib/server-slack-emitter.ts`, assert the payload always carries a
+   valid `eventType` and log a warning before forwarding. Low metric impact
+   but improves observability for caller bugs.
 
-6. **Share title trimming with emitter-side payload normalization.** In
-   `src/lib/server-slack-emitter.ts`, normalize the `title` field before it
-   is forwarded to `buildMessage`, so the trimming is belt-and-suspenders.
+6. **Combine #1 + #2** into a single release-ready commit after each has
+   landed individually. Verify no per-rule regression.
 
-7. **Pre-filter duplicate target user IDs case-insensitively in
-   `emitWorkflowSlackEvent()` before DB resolution.** Reduces profile lookups
-   for the assignee-dedupe case.
-
-8. **Stable ordering of `targetUserNames` across the pipeline.** Today the
-   order is preserved from input; add a tie-breaker (input order) and ensure
-   the dedupe preserves the first seen form. Prevents future flip-flop
-   between runs.
-
-9. **Combine #1 + #2 + #3 + #4** into a single release-ready commit after
-   each has landed individually. Verify no per-rule regression.
-
-10. **More radical: render the header through a template object**
-    (`{ contentType, title, site }`) and centralize escape/trim/canonicalize.
-    Only worth it if #5 proves too narrow.
+Round 1 completed experiments (kept in history for context):
+- R1-1 — trim title whitespace (+0.0069)
+- R1-2 — case-insensitive assignee dedupe (+0.0055)
+- R1-3 — canonicalize site to SH/RED (+0.0137)
+- R1-4 — HTML-escape angle brackets in header title (+0.0068)
 
 ## Simplicity Criterion
 
@@ -124,7 +119,7 @@ Use this prompt to start a session (Prompt 2 from the AutoResearch README):
 
 ```
 Run the autoresearch loop for [N] hours. Follow program.md §Agent Workflow exactly:
-1. Start the session: ./scripts/start-session.sh [N] 0.9657
+1. Start the session: ./scripts/start-session.sh [N] 0.7714
 2. Before every experiment: ./scripts/check-time.sh — stop immediately if it exits 1
 3. Read program.md and results/autoresearch.tsv, pick the next untried experiment,
    make ONE targeted change, then run:

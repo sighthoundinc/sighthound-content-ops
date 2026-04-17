@@ -8,6 +8,43 @@
 
 const COMMENT_EVENTS = new Set(["blog_comment_created", "social_comment_created"]);
 
+// Events that should render a "Submit link" CTA (the user's job is to paste
+// the published link). These override the default blog/social CTA labels.
+const SUBMIT_LINK_EVENTS = new Set([
+  "social_awaiting_live_link",
+  "social_live_link_reminder",
+]);
+
+// Per-event CTA label mapping. Canonical labels for the Slack `<URL|label>`
+// tail so the clickable link is self-describing.
+export function expectedCtaLabelFor(eventType) {
+  if (COMMENT_EVENTS.has(eventType)) return "Open thread";
+  if (SUBMIT_LINK_EVENTS.has(eventType)) return "Submit link";
+  if (typeof eventType === "string" && eventType.startsWith("social_")) {
+    return "Open post";
+  }
+  return "Open blog";
+}
+
+// Extract the URL portion from an "Open link: …" value, tolerating both
+// bare (legacy) and Slack <URL|label> formats.
+function extractUrlFromOpenLineValue(rawValue) {
+  if (typeof rawValue !== "string") return "";
+  const trimmed = rawValue.trim();
+  // Slack link syntax: <URL|label> or <URL>
+  const slackMatch = trimmed.match(/^<([^|>]+)(?:\|[^>]*)?>$/);
+  if (slackMatch) return slackMatch[1].trim();
+  return trimmed;
+}
+
+function extractLabelFromOpenLineValue(rawValue) {
+  if (typeof rawValue !== "string") return null;
+  const trimmed = rawValue.trim();
+  const slackMatch = trimmed.match(/^<[^|>]+\|([^>]*)>$/);
+  if (!slackMatch) return null;
+  return slackMatch[1].trim();
+}
+
 const FORBIDDEN_ROLE_TOKENS = [
   // Whole-word role labels that must never appear as the *value* after
   // "Assigned to:", "Assigned by:", or "By:".
@@ -156,7 +193,8 @@ function ruleOpenLinkFormat(message, fixture) {
   if (!openLine) {
     return { pass: false, reason: "Missing 'Open link:' line" };
   }
-  const url = openLine.replace(/^Open link:\s*/, "");
+  const rawValue = openLine.replace(/^Open link:\s*/, "");
+  const url = extractUrlFromOpenLineValue(rawValue);
   const ok = /^https?:\/\//.test(url);
   return {
     pass: ok,
@@ -167,7 +205,8 @@ function ruleOpenLinkFormat(message, fixture) {
 function ruleOpenLinkMatchesExpectations(message, fixture) {
   const expect = fixture.expect ?? {};
   const openLine = splitLines(message).find((l) => l.startsWith("Open link: ")) ?? "";
-  const url = openLine.replace(/^Open link:\s*/, "");
+  const rawValue = openLine.replace(/^Open link:\s*/, "");
+  const url = extractUrlFromOpenLineValue(rawValue);
   const issues = [];
   if (expect.openLinkPrefix && !url.startsWith(expect.openLinkPrefix)) {
     issues.push({
@@ -188,6 +227,58 @@ function ruleOpenLinkMatchesExpectations(message, fixture) {
     });
   }
   return issues.length > 0 ? issues : { pass: true };
+}
+
+// Round 2 aspirational rule: the Open link line must use Slack's explicit
+// angle-bracket syntax so it renders as a clickable hyperlink regardless of
+// mrkdwn / unfurl settings. Accepts both `<URL>` and `<URL|label>` forms.
+function ruleOpenLinkClickableSyntax(message, fixture) {
+  if (!fixture.payload.blogId && !fixture.payload.socialPostId) {
+    return { pass: true };
+  }
+  const openLine = splitLines(message).find((l) => l.startsWith("Open link: "));
+  if (!openLine) {
+    return { pass: false, reason: "Missing 'Open link:' line" };
+  }
+  const rawValue = openLine.replace(/^Open link:\s*/, "");
+  const ok = /^<https?:\/\/[^|>\s]+(?:\|[^>]*)?>$/.test(rawValue.trim());
+  return {
+    pass: ok,
+    reason: ok
+      ? undefined
+      : `Open link value must be Slack link syntax (\`<URL|label>\` or \`<URL>\`), got "${rawValue}"`,
+  };
+}
+
+// Round 2 aspirational rule: the link label (the portion after `|` in Slack
+// link syntax) must match the per-event CTA mapping so each notification
+// communicates its specific next action. Comment events -> "Open thread",
+// live-link events -> "Submit link", blog events -> "Open blog", social
+// events -> "Open post".
+function ruleOpenLinkCtaLabel(message, fixture) {
+  if (!fixture.payload.blogId && !fixture.payload.socialPostId) {
+    return { pass: true };
+  }
+  const openLine = splitLines(message).find((l) => l.startsWith("Open link: "));
+  if (!openLine) {
+    return { pass: false, reason: "Missing 'Open link:' line" };
+  }
+  const rawValue = openLine.replace(/^Open link:\s*/, "");
+  const label = extractLabelFromOpenLineValue(rawValue);
+  if (label === null) {
+    return {
+      pass: false,
+      reason: `Open link has no CTA label; expected Slack link syntax \`<URL|label>\``,
+    };
+  }
+  const expected = expectedCtaLabelFor(fixture.payload.eventType);
+  if (label !== expected) {
+    return {
+      pass: false,
+      reason: `CTA label mismatch for event "${fixture.payload.eventType}": expected "${expected}", got "${label}"`,
+    };
+  }
+  return { pass: true };
 }
 
 function ruleCommentPingsNeutralized(message, fixture) {
@@ -328,4 +419,7 @@ export const rules = [
   // Aspirational hardening rules — heavy weight so fixes move the metric meaningfully:
   { id: "header_expectations", fn: ruleHeaderExpectations, weight: 5 },
   { id: "assigned_to_equals", fn: ruleAssignedToEquals, weight: 5 },
+  // Round 2 aspirational rules (link clickability + per-event CTAs):
+  { id: "open_link_clickable_syntax", fn: ruleOpenLinkClickableSyntax, weight: 5 },
+  { id: "open_link_cta_label", fn: ruleOpenLinkCtaLabel, weight: 3 },
 ];

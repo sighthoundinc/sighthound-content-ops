@@ -4,7 +4,7 @@ Foundational guidelines for AI agent behavior in the Deft framework.
 
 Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 
-**⚠️ Rule Precedence**: USER.md has two sections: `Personal` (always wins — name, custom rules) and `Defaults` (fallback — strategy, coverage, languages; PROJECT.md overrides these). (Override path via `DEFT_USER_PATH` env var; legacy fallback: `core/user.md`)
+**⚠️ Rule Precedence**: USER.md has two sections: `Personal` (always wins — name, custom rules) and `Defaults` (fallback — strategy, coverage, languages; PROJECT.md overrides these). (Override path via `DEFT_USER_PATH` env var; )
 
 **📋 Lazy Loading**: See [REFERENCES.md](./REFERENCES.md) for guidance on when to load which files.
 
@@ -20,7 +20,7 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 - [main.md](../main.md) - General AI behavior (this document)
 - [coding/coding.md](./coding/coding.md) - Software development guidelines
 - `~/.config/deft/USER.md` - Personal preferences (highest precedence)
-- `./PROJECT.md` - Project-specific overrides (legacy: `core/project.md`)
+- `./PROJECT.md` - Project-specific overrides 
 
 **Coding-Specific:**
 - Languages: [languages/cpp.md](./languages/cpp.md), [languages/go.md](./languages/go.md), [languages/python.md](./languages/python.md), [languages/typescript.md](./languages/typescript.md)
@@ -49,7 +49,7 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 - ~ Suggest improvements even when not asked
 - ! Before implementing any planned change that touches 3+ files or has an accepted plan artifact, propose `/deft:change <name>` and present the change name for explicit confirmation (e.g. "Confirm? yes/no") — the user must reply with an affirmative (`yes`, `confirmed`, `approve`) to satisfy this gate; a broad 'proceed', 'do it', or 'go ahead' does NOT satisfy it
 - ? For solo projects (single contributor): the `/deft:change` proposal is RECOMMENDED but not mandatory for changes fully covered by the quality gate (`task check`); it remains mandatory for cross-cutting, architectural, or high-risk changes regardless of team size
-- ! No implementation is complete until tests are written and `task check` passes — this gate applies unconditionally and a general 'proceed' instruction does not waive it
+- ! No implementation is complete until tests are written and `task check` passes — this gate applies unconditionally and a general 'proceed' instruction does not waive it. This gate has two dimensions: (a) **regression coverage** -- existing tests continue to pass, and (b) **forward coverage** -- new source files (`scripts/`, `src/`, `cmd/`, `*.py`, `*.go`) have corresponding new test files that exercise the new code paths. Running existing tests alone satisfies (a) but not (b)
 - ⊗ Commit or push directly to the default branch (master/main) — always create a feature branch and open a PR, even for single-commit changes. The only exception is if the user **explicitly** instructs a direct commit for the current task, or if `PROJECT.md` contains `Allow direct commits to master: true` under `## Branching`.
 - ⊗ Fix a discovered issue in-place mid-task without filing a GitHub issue — always file the issue and continue the current task; do not derail the active workflow to apply an instant fix (#198). **Carve-out**: if the discovered issue is a hard blocker (the current task literally cannot be completed without fixing it), fixing it in-scope is permitted, but a GitHub issue MUST be filed before or alongside the fix; nice-to-fix, quality improvements, and adjacent issues remain prohibited (#241)
 - ⊗ Continue executing a skill past its explicit instruction boundary — when a skill's steps are complete, stop and return to the calling context; do not drift into adjacent work (#198)
@@ -131,7 +131,7 @@ See [commands.md](./commands.md) for full workflow details.
 ## Context Awareness
 
 **Project Context:**
-- ! Check [project.md](../core/project.md) for project-specific rules
+- ! Check [PROJECT.md](./PROJECT.md) for project-specific rules
 - ! Follow project-specific patterns and conventions
 - ~ Note which rules/patterns are being applied
 

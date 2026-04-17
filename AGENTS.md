@@ -8,17 +8,22 @@ Primary entrypoint:
 Apply Deft lazily based on task type (language/tool/interface) and follow the layered precedence defined by Deft.
 
 Project-specific Deft files:
-- `deft/PROJECT.md`
-- `deft/SPECIFICATION.md`
+- `deft/PROJECT.md` (thin pointer to root docs; Deft framework lives under `deft/`, project content lives at repo root)
+
+Authoritative project documentation lives at the repo root:
+- `SPECIFICATION.md` (technical spec)
+- `AGENTS.md` (this file — rules/invariants)
+- `README.md`, `HOW_TO_USE_APP.md`, `OPERATIONS.md`
 
 ## Rule Conflict Resolution (MUST)
 
 If instructions appear to conflict, resolve in this order:
 
 1. Direct task-specific user instruction for the current request.
-2. Project-specific Deft rules and specifications (`deft/main.md`, `deft/PROJECT.md`, `deft/SPECIFICATION.md`).
-3. This file (`AGENTS.md`) invariants.
-4. Default implementation preferences.
+2. This file (`AGENTS.md`) invariants.
+3. Root project specification (`SPECIFICATION.md`).
+4. Deft framework rules (`deft/main.md`, `deft/PROJECT.md`, and relevant `deft/languages/*`, `deft/interfaces/*`, `deft/strategies/*`).
+5. Default implementation preferences.
 
 When still ambiguous, choose the option that maximizes predictability, accessibility, and cross-page consistency.
 

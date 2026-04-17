@@ -139,6 +139,10 @@ See `deft/coding/coding.md` and `deft/coding/testing.md` for full rules.
 1. ! **Encoding errors** -- em-dashes corrupted to replacement characters, BOM artifacts, mojibake from round-trip read/write
 2. ! **Unintended duplication** -- accidental double entries in CHANGELOG.md, SPECIFICATION.md, or structured data files
 3. ! **Structural issues** -- malformed CHANGELOG entries, broken table rows, mismatched index entries, invalid JSON/YAML
+4. ! **Semantic accuracy** -- verify that counts, claims, and summaries in CHANGELOG entries and ROADMAP changelog lines match the actual data in the commit (e.g. "triaged 4 issues" must match the number actually triaged, issue numbers cited must match the issues actually added)
+5. ! **Semantic contradictions** -- when adding a `!` or `⊗` rule that prohibits a specific command, pattern, or behavior, search the same file for any `~`, `≉`, or prose that recommends or permits the same command/pattern -- resolve all contradictions in the same commit before pushing
+6. ! **Strength duplicates** -- when strengthening a rule (e.g. upgrading `~` to `!`), grep for the term in the full file and verify no weaker-strength duplicate remains
+7. ! **Forward test coverage** -- for each new source file in this PR (`scripts/`, `src/`, `cmd/`, `*.py`, `*.go`), verify a corresponding test file exists in the same PR; running existing tests is not sufficient for new code
 
 ⊗ Commit without re-reading all modified files first.
 
@@ -181,4 +185,5 @@ feat(phase-2): add REST API endpoints with integration tests
 - ⊗ Proceed to next task or phase without tests passing — testing is a hard gate, not a cleanup step
 - ⊗ Skip the Change Lifecycle Gate because the user said "proceed" — broad approval does not satisfy the confirmation gate
 - ⊗ Write `SPECIFICATION.md` directly — always create `specification.vbrief.json` first and render from it
-- ⊗ Commit or push directly to the default branch — always create a feature branch first. Exception: user explicitly instructs a direct commit, or `PROJECT.md` contains `Allow direct commits to master: true` under `## Branching`
+- ⊗ Commit or push directly to the default branch -- always create a feature branch first. Exception: user explicitly instructs a direct commit, or `PROJECT.md` contains `Allow direct commits to master: true` under `## Branching`
+- ⊗ Add a prohibition (`!` or `⊗`) without scanning the same file for conflicting softer-strength rules (`~`, `≉`) that reference the same term

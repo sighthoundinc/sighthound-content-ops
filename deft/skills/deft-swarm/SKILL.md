@@ -42,6 +42,7 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 
 - ! Identify blocked spec tasks (status `[blocked]`) and their blocking reasons
 - ! Identify roadmap items with no corresponding spec task (missing spec coverage)
+- ! For each candidate item missing spec coverage: create a skeleton spec task in SPECIFICATION.md before proceeding to Phase 1. Use the format defined in `skills/deft-roadmap-refresh/SKILL.md` Phase 2 Step 4. Swarm agents cannot implement work that has no spec task -- the skeleton ensures every assigned task has a traceable spec entry.
 - ! Identify dependency conflicts between candidate items (e.g. task A depends on task B, but B is assigned to a different agent or is incomplete)
 - ! Flag any candidate items whose prerequisites are unmet
 
@@ -194,6 +195,8 @@ Track each agent through these stages:
 
 ### Takeover Triggers
 
+! **Pre-spawn verification:** Before spawning a replacement agent, verify the original is truly unresponsive by waiting for an idle/blocked lifecycle event (e.g. the agent's Warp tab shows no tool calls in progress, no pending shell commands, and no recent output). Do NOT spawn a replacement based solely on message timing, absence of recent commits, or a perceived delay — original Warp tabs can resume after apparent failure, and spawning a new agent creates two concurrent agents on the same worktree (see Duplicate-Tab Failure Mode below).
+
 ! Take over an agent's workflow if ANY of these occur:
 
 - Agent process has exited and PR has not been created
@@ -202,6 +205,23 @@ Track each agent through these stages:
 - Agent is stuck in an error loop (same error 3+ times)
 
 When taking over: read the agent's current state (git log, diff, PR comments), complete remaining steps manually following the same deft process.
+
+### Duplicate-Tab Failure Mode
+
+⚠️ **Root cause of #261 and #263:** Original Warp agent tabs may resume after apparent failure (network hiccup, temporary Warp UI freeze, context window pressure). If the monitor spawns a new agent for the same worktree, two concurrent agents execute on the same branch simultaneously. This corrupts the `tool_use`/`tool_result` message chain — both agents issue tool calls, but responses are interleaved unpredictably, causing one or both agents to act on stale or incorrect state.
+
+**Recovery guidance:**
+- ! Keep original agent tabs open until their PR is merged — do not close tabs that appear stalled
+- ! If an agent appears stalled, go to its original Warp tab and tell it to resume (e.g. "continue from where you left off") rather than spawning a replacement
+- ! If the original tab is truly unrecoverable (Warp crash, tab closed), only then create a new agent — and first verify the worktree state (`git status`, `git log`, `gh pr list`) to avoid conflicting with any in-flight work
+
+### Context-Length Warning
+
+! Long monitoring sessions accumulate large conversation history (hundreds of tool_use/tool_result pairs) and are susceptible to conversation corruption — the tool_use/tool_result mismatch observed in #263 occurred at approximately message 158 in a single monitor conversation. To mitigate:
+
+- ! Offload rebase, review-watch, and merge sub-tasks to ephemeral sub-agents using the tiered approach from `skills/deft-review-cycle/SKILL.md` (spawn via `start_agent` when available, discrete tool calls with yield otherwise) — this keeps the monitor conversation shallow
+- ~ Target <100 tool-call round-trips in any single monitor conversation before considering a fresh session handoff
+- ! If the monitor detects degraded output (repeated errors, inconsistent state references, tool call failures), stop and hand off to a fresh session with a state summary rather than continuing in a corrupted context
 
 ## Phase 5 — Review
 
@@ -226,12 +246,20 @@ All PRs meet ALL of:
 
 ! Before proceeding to Phase 6 (Close), the monitor MUST present the proposed release scope and version bump to the user for confirmation.
 
+⊗ **Context-pressure bypass prohibition:** Even under long-context or time pressure (large conversation history, many tool calls, approaching context limits), this gate MUST NOT be bypassed. The Phase 5→6 gate is mandatory regardless of conversation length, elapsed time, or perceived urgency. If the monitor's context is degraded, hand off to a fresh session rather than skipping the gate.
+
 1. ! Present a summary containing:
    - **PRs ready to merge**: list of PRs with titles, issue numbers, and current review status
    - **Proposed version bump**: the tentative version from Phase 0 (patch/minor/major) with rationale — updated if scope changed during implementation
    - **Release scope**: brief description of what this batch of changes represents
-2. ! Wait for explicit user approval (`yes`, `confirmed`, `approve`) before proceeding to Phase 6 merge cascade
-3. ! If the user requests changes (e.g. different version bump, defer a PR), adjust and re-present
+2. ! **Merge-readiness checklist:** Before any `gh pr merge` call, the monitor MUST emit a structured checklist confirming each PR is merge-ready. For each PR, verify and explicitly confirm:
+   - Greptile confidence score > 3
+   - No P0 or P1 issues remaining
+   - `task check` passed on the branch
+   - CHANGELOG.md entry present under `[Unreleased]`
+   - Explicit user approval received for this merge cascade
+3. ! Wait for explicit user approval (`yes`, `confirmed`, `approve`) before proceeding to Phase 6 merge cascade
+4. ! If the user requests changes (e.g. different version bump, defer a PR), adjust and re-present
 
 ⊗ Begin merge cascade without presenting the version bump proposal and receiving explicit user approval.
 
@@ -239,9 +267,20 @@ All PRs meet ALL of:
 
 ### Step 1: Merge
 
+! **Per-PR sub-agent identity gate:** Before acting on any PR (merge, force-push, status check), query the specific sub-agent responsible for that PR for live status. Do not infer a PR's status from a different agent's tab, from message timing, or from the absence of recent commits. If the responsible agent is unreachable, verify PR state directly via `gh pr view <number>` and `gh pr checks <number>` before proceeding.
+
+! **Idempotent pre-check pattern:** Before each action in the merge cascade, verify the current PR/branch state to ensure the action is still needed and safe to execute. Check: is this PR already merged (`gh pr view <number> --json state --jq .state`)? Is this branch already rebased onto the latest master? Has this issue already been closed? This makes recovery re-runs safe — a crash mid-cascade can resume from any point without duplicate actions or errors.
+
 ! **Merge authority:** Monitor proposes merge order and executes merges; user approves before the first merge. Do not merge without explicit user approval.
 
 ! **Rebase cascade ownership:** Monitor owns rebase cascade sequencing. Swarm agents do not rebase -- by the time merges begin, swarm agents are idle or complete. The monitor fetches updated master, rebases each remaining branch, resolves conflicts, and force-pushes.
+
+! **Read-back verification after conflict resolution:** After resolving any rebase conflict and BEFORE running `git add`, re-read the resolved file and verify structural integrity:
+- ! No conflict markers remain (`<<<<<<<`, `=======`, `>>>>>>>`)
+- ! No collapsed or missing lines (compare line count to pre-rebase version if feasible)
+- ! No encoding artifacts (BOM injection, mojibake, replacement characters)
+- ! For `CHANGELOG.md` and `SPECIFICATION.md` conflicts: prefer `edit_files` over shell regex (`sed`, `Select-String -replace`) for resolution -- edit_files preserves encoding and provides exact match verification, while regex substitutions risk silent line collapse or encoding corruption
+- ⊗ Run `git add` on a conflict-resolved file without first re-reading it and verifying structural integrity
 
 ! **Non-interactive rebase:** Monitor MUST set `GIT_EDITOR=true` (Unix/WSL/Git Bash) or `$env:GIT_EDITOR="echo"` (Windows PowerShell) before running `git rebase --continue` during merge cascade to prevent the default editor from blocking the agent.
 
@@ -249,9 +288,15 @@ All PRs meet ALL of:
 
 ! **Greptile re-review on rebase force-push:** Force-pushing a rebased branch triggers a **full** Greptile re-review (not an incremental diff), even if the rebase introduced no logic changes. Expected latency is ~2-5 minutes per PR in the cascade. Factor this into merge sequencing.
 
+! **Autonomous re-review monitoring after force-push:** After each `--force-with-lease` push of a rebased branch in the cascade, the monitor MUST autonomously wait for the Greptile re-review to complete before proceeding to the next merge. Use the tiered monitoring approach defined in `skills/deft-review-cycle/SKILL.md` Step 4 Review Monitoring (Approach 1: spawn sub-agent via `start_agent` to poll and report back; Approach 2 fallback: discrete `run_shell_command` wait-mode calls with yield between polls, adaptive cadence -- see deft-review-cycle SKILL.md). Do NOT duplicate the full monitoring logic here -- follow the canonical skill.
+
+! **Gate:** Do NOT proceed to the next merge in the cascade until the Greptile review for the rebased branch is current (pushed SHA matches "Last reviewed commit" SHA) AND the exit condition is met (confidence > 3, no P0/P1 issues remaining). A stale or in-progress review is not sufficient.
+
 ? **Rebase-only annotation:** If the force-push contains no logic changes (pure rebase onto updated master), the monitor MAY post a brief PR comment noting "rebase-only, no logic changes" to give Greptile context and help reviewers triage the re-review.
 
 ~ To minimize cascades: rebase ALL remaining PRs onto latest master before starting any merges, then merge in rapid succession.
+
+~ **Parallel rebase + review monitoring (start_agent available):** When `start_agent` is available during the merge cascade, the monitor MAY launch parallel sub-agents to overlap rebase and review monitoring work. For example: while Greptile re-reviews PR #A after a rebase push, spawn a sub-agent to begin rebasing PR #B onto the latest master. Each sub-agent reports back via `send_message_to_agent` when its task (rebase complete, review passed) is done. This reduces total cascade wall-clock time from serial (rebase + review per PR) to overlapped. The gate remains: do NOT merge PR #B until its own Greptile review passes the exit condition.
 
 - ! Undraft PRs: `gh pr ready <number> --repo <owner/repo>`
 - ! Squash merge: `gh pr merge <number> --squash --delete-branch --admin` (if branch protection requires)
@@ -281,6 +326,69 @@ All PRs meet ALL of:
 
 ⊗ Update ROADMAP.md during swarm close — leave it for the release commit.
 
+### Step 6: Generate Slack Release Announcement
+
+! After creating the GitHub release (or after the final merge if no formal release is created), generate a standard Slack announcement block and present it to the user for copy-paste into the team channel.
+
+! The announcement block MUST include all of the following fields:
+
+```
+:rocket: *{Project Name} {version}* -- {release title}
+
+*Summary*: {one-sentence description of the release scope}
+
+*Key Changes*:
+- {bullet per significant change, 3-5 items max}
+
+*Stats*: {N} agents | ~{duration} elapsed | {N} PRs merged
+*PRs*: {#PR1, #PR2, ...}
+*Release*: {GitHub release URL}
+```
+
+- ! Populate version from the CHANGELOG promotion commit or git tag
+- ! Populate release title from the CHANGELOG section heading or GitHub release title
+- ! Key changes summarized from CHANGELOG `[Unreleased]` entries (not raw commit messages)
+- ! Agent count and approximate duration from the swarm session (Phase 3 launch to Phase 6 close)
+- ! PR numbers from the merged PRs in this swarm run
+- ! GitHub release URL from the `gh release create` output (or `gh release view --json url` if already created)
+- ~ Present the block as a code-fenced snippet the user can copy directly
+- ? If no formal GitHub release was created (e.g. user deferred), still generate the announcement with a placeholder URL and note that the release is pending
+
+## Crash Recovery
+
+When a monitor session crashes or a new session must take over an in-progress swarm, follow these steps to safely reconstruct and continue.
+
+### Checkpoint Guidance
+
+! At each major Phase 6 milestone, record progress so a new session can reconstruct state:
+
+- **PR merged** — note the PR number, merge commit SHA, and which issues it closes
+- **Rebase done** — note which branches have been rebased onto the latest master
+- **Review passed** — note which PRs have passed the Greptile exit condition post-rebase
+
+~ Use a brief structured note (in the conversation or a scratch file) after each milestone — this is the checkpoint a recovery session will read.
+
+### Recovery Steps
+
+! On a fresh session taking over a swarm, reconstruct the cascade state before taking any action:
+
+1. ! Run `gh pr list --repo <owner>/<repo> --state all` to see all PRs from the swarm (filter by branch prefix, e.g. `agent1/`, `agent2/`)
+2. ! For each PR, run `gh pr view <number> --json state,mergeCommit,headRefName,title` to determine:
+   - Is this PR already merged? (state = MERGED) → skip, move to issue verification
+   - Is this PR still open? → check if it needs rebase, re-review, or merge
+   - Is this PR closed without merge? → investigate (was it superseded?)
+3. ! For open PRs, check rebase status: `git --no-pager log --oneline <branch> ^origin/master -5` — if empty, the branch is already up-to-date with master
+4. ! For open PRs, check review status: `gh pr checks <number>` and `gh pr view <number> --comments` to verify Greptile review state
+5. ! Resume the cascade from the first incomplete step — the idempotent pre-check pattern (see Step 1 above) ensures re-running any step on an already-completed PR is safe
+
+### Idempotent Safety
+
+! Every Phase 6 action MUST be safe to re-run:
+- Merging an already-merged PR → `gh pr merge` will report "already merged" and exit cleanly
+- Rebasing a branch already on latest master → rebase is a no-op
+- Closing an already-closed issue → `gh issue close` will report "already closed"
+- Force-pushing a branch that hasn't changed → push reports "Everything up-to-date"
+
 ## Prompt Template
 
 ! Use this template for all agent prompts. The first line MUST be an imperative task statement.
@@ -308,12 +416,15 @@ STEP 4 — Commit: Add CHANGELOG.md entries under [Unreleased].
 Commit with message: [type]([scope]): [description] — with bullet-point body.
 
 STEP 5 — Push and PR: Push branch to origin. Create PR targeting master using gh CLI.
+Note: --body-file must use a temp file in the OS temp directory ($env:TEMP on PowerShell,
+$TMPDIR or /tmp on Unix) -- do NOT write temp files in the worktree. See scm/github.md.
 
 STEP 6 — Review cycle: Follow skills/deft-review-cycle/SKILL.md to run the
 Greptile review cycle on the PR. Do NOT merge — leave for human review.
 
 CONSTRAINTS:
 - Do not touch [list files other agents are working on]
+- New source files (scripts/, src/, cmd/, *.py, *.go) must have corresponding test files in the same PR
 - Use conventional commits: type(scope): description
 - Run task check before every commit
 - Never force-push
@@ -349,4 +460,9 @@ CONSTRAINTS:
 - ⊗ Proceed to Phase 1 (Select) without completing Phase 0 (Analyze) and receiving explicit user approval
 - ⊗ Update ROADMAP.md during swarm close — it is updated only at release time (CHANGELOG promotion commit), not by individual agents or during PR merges.
 - ⊗ Begin merge cascade without presenting the version bump proposal and receiving explicit user approval — the Phase 5→6 gate is mandatory
-- ⊗ Ignore Greptile re-review latency when planning merge cascade timing — each rebase force-push triggers a full re-review (~2-5 min), not an incremental diff
+- ⊗ Ignore Greptile re-review latency when planning merge cascade timing -- each rebase force-push triggers a full re-review (~2-5 min), not an incremental diff
+- ⊗ Proceed to the next merge in the rebase cascade before confirming the Greptile re-review is current (SHA match) and exit condition is met (confidence > 3, no P0/P1) on the rebased branch -- see `skills/deft-review-cycle/SKILL.md` Step 4 for the monitoring approach
+- ⊗ Spawn a replacement sub-agent without confirming the original is unresponsive via a lifecycle event (idle/blocked) — original Warp tabs can resume after apparent failure, and two concurrent agents on the same worktree will corrupt the tool_use/tool_result call chain (#261, #263)
+- ⊗ Skip Phase 5 or the Phase 5→6 confirmation gate under time pressure or due to long context — the gate is mandatory regardless of conversation length, elapsed time, or context-window pressure
+- ⊗ Run `git add` on a conflict-resolved file without re-reading and verifying structural integrity (no conflict markers, no collapsed lines, no encoding artifacts) -- see Phase 6 Step 1 read-back verification rule (#288)
+- ⊗ Use shell regex (`sed`, `Select-String -replace`) to resolve `CHANGELOG.md` or `SPECIFICATION.md` rebase conflicts -- prefer `edit_files` for encoding safety and exact match verification (#288)

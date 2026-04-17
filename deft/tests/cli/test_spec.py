@@ -484,3 +484,4 @@ def test_render_item_with_traces(render_mod, tmp_path) -> None:
     render_mod.render_spec(str(spec_file), str(out_file))
     content = out_file.read_text(encoding="utf-8")
     assert "**Traces**: FR-1, FR-2" in content
+

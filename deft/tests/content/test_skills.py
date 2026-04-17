@@ -754,3 +754,393 @@ def test_deft_roadmap_refresh_exit_chaining_instructions() -> None:
     assert "exiting skill" in text.lower() and "chaining instructions" in text.lower(), (
         f"{_ROADMAP_REFRESH_PATH}: EXIT block must provide chaining instructions (#243, t1.11.5)"
     )
+
+
+# ---------------------------------------------------------------------------
+# 26. deft-review-cycle batch-fix enforcement (#250, t1.12.2)
+# ---------------------------------------------------------------------------
+
+
+def test_deft_review_cycle_precommit_gate() -> None:
+    """Phase 2 Step 3 must require full review re-read before committing."""
+    text = _read_skill(_REVIEW_CYCLE_PATH)
+    assert "re-read the full current greptile review" in text.lower(), (
+        f"{_REVIEW_CYCLE_PATH}: Step 3 must have pre-commit gate requiring "
+        "full review re-read (#250, t1.12.2)"
+    )
+
+
+def test_deft_review_cycle_partial_fix_antipattern() -> None:
+    """Anti-patterns must prohibit fix commits addressing fewer findings than review surfaces."""
+    text = _read_skill(_REVIEW_CYCLE_PATH)
+    assert "fewer findings than the current greptile review surfaces" in text.lower(), (
+        f"{_REVIEW_CYCLE_PATH}: must have anti-pattern against partial fix commits (#250, t1.12.2)"
+    )
+
+
+def test_deft_review_cycle_unchecked_p1_antipattern() -> None:
+    """Anti-patterns must prohibit pushing after fixing P1 without checking for more findings."""
+    text = _read_skill(_REVIEW_CYCLE_PATH)
+    assert "push after fixing a p1 without first checking" in text.lower(), (
+        f"{_REVIEW_CYCLE_PATH}: must have anti-pattern against unchecked P1 fix (#250, t1.12.2)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 27. Semantic contradiction check in deft-build and deft-pre-pr (#251, t1.12.3)
+# ---------------------------------------------------------------------------
+
+_PRE_PR_PATH = "skills/deft-pre-pr/SKILL.md"
+
+
+def test_deft_build_semantic_contradiction_rule() -> None:
+    """deft-build pre-commit checklist must require contradiction scan for !/\u2297 rules."""
+    text = _read_skill("skills/deft-build/SKILL.md")
+    assert "semantic contradictions" in text.lower(), (
+        "skills/deft-build/SKILL.md: missing semantic contradiction check rule (#251, t1.12.3)"
+    )
+
+
+def test_deft_build_strength_duplicate_rule() -> None:
+    """deft-build pre-commit checklist must require strength-duplicate check."""
+    text = _read_skill("skills/deft-build/SKILL.md")
+    assert "strength duplicates" in text.lower() and "weaker-strength duplicate" in text.lower(), (
+        "skills/deft-build/SKILL.md: missing strength-duplicate check rule (#251, t1.12.3)"
+    )
+
+
+def test_deft_build_contradiction_antipattern() -> None:
+    """deft-build anti-patterns must prohibit adding prohibition without scanning for conflicts."""
+    text = _read_skill("skills/deft-build/SKILL.md")
+    assert "prohibition" in text.lower() and "softer-strength" in text.lower(), (
+        "skills/deft-build/SKILL.md: missing contradiction anti-pattern (#251, t1.12.3)"
+    )
+
+
+def test_deft_pre_pr_semantic_contradiction_rule() -> None:
+    """deft-pre-pr Read phase must require contradiction scan for !/\u2297 rules."""
+    text = _read_skill(_PRE_PR_PATH)
+    lower = text.lower()
+    assert "prohibits a specific command" in lower and "resolve all contradictions" in lower, (
+        f"{_PRE_PR_PATH}: missing semantic contradiction check rule (#251, t1.12.3)"
+    )
+
+
+def test_deft_pre_pr_strength_duplicate_rule() -> None:
+    """deft-pre-pr Read phase must require strength-duplicate check."""
+    text = _read_skill(_PRE_PR_PATH)
+    assert "strengthening a rule" in text.lower() and "weaker-strength duplicate" in text.lower(), (
+        f"{_PRE_PR_PATH}: missing strength-duplicate check rule (#251, t1.12.3)"
+    )
+
+
+def test_deft_pre_pr_contradiction_antipattern() -> None:
+    """deft-pre-pr anti-patterns must prohibit adding prohibition without scanning for conflicts."""
+    text = _read_skill(_PRE_PR_PATH)
+    assert "prohibition" in text.lower() and "softer-strength" in text.lower(), (
+        f"{_PRE_PR_PATH}: missing contradiction anti-pattern (#251, t1.12.3)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 28. deft-swarm Phase 5->6 gate hardening + crash recovery (#261, #263, t1.13.1)
+# ---------------------------------------------------------------------------
+
+
+def test_deft_swarm_phase5_6_context_pressure_callout() -> None:
+    """Phase 5->6 gate must contain explicit context-pressure bypass prohibition."""
+    text = _read_skill(_SWARM_PATH)
+    assert "context-pressure bypass prohibition" in text.lower(), (
+        f"{_SWARM_PATH}: Phase 5->6 gate missing context-pressure callout (#261, t1.13.1)"
+    )
+
+
+def test_deft_swarm_takeover_prespawn_verification() -> None:
+    """Takeover Triggers must require pre-spawn verification via lifecycle events."""
+    text = _read_skill(_SWARM_PATH)
+    assert "pre-spawn verification" in text.lower() and "lifecycle event" in text.lower(), (
+        f"{_SWARM_PATH}: Takeover Triggers missing pre-spawn verification rule (#261, t1.13.1)"
+    )
+
+
+def test_deft_swarm_duplicate_tab_failure_mode() -> None:
+    """deft-swarm must document the duplicate-tab failure mode."""
+    text = _read_skill(_SWARM_PATH)
+    assert "Duplicate-Tab Failure Mode" in text and "tool_use" in text and "tool_result" in text, (
+        f"{_SWARM_PATH}: missing Duplicate-Tab Failure Mode documentation (#261, t1.13.1)"
+    )
+
+
+def test_deft_swarm_context_length_warning() -> None:
+    """Phase 4 must contain context-length warning about long monitoring sessions."""
+    text = _read_skill(_SWARM_PATH)
+    assert "Context-Length Warning" in text and "conversation corruption" in text.lower(), (
+        f"{_SWARM_PATH}: Phase 4 missing context-length warning (#263, t1.13.1)"
+    )
+
+
+def test_deft_swarm_crash_recovery_section() -> None:
+    """deft-swarm must contain a Crash Recovery section with recovery steps."""
+    text = _read_skill(_SWARM_PATH)
+    assert "## Crash Recovery" in text and "gh pr list" in text and "gh pr view" in text, (
+        f"{_SWARM_PATH}: missing Crash Recovery section (#263, t1.13.1)"
+    )
+
+
+def test_deft_swarm_antipattern_no_spawn_without_lifecycle() -> None:
+    """Anti-patterns must prohibit spawning replacement without lifecycle confirmation."""
+    text = _read_skill(_SWARM_PATH)
+    assert "spawn a replacement sub-agent without confirming" in text.lower(), (
+        f"{_SWARM_PATH}: missing anti-pattern against spawning "
+        "without lifecycle check (#261, t1.13.1)"
+    )
+
+
+def test_deft_swarm_antipattern_no_skip_phase5_gate() -> None:
+    """Anti-patterns must prohibit skipping Phase 5 gate under pressure."""
+    text = _read_skill(_SWARM_PATH)
+    lower = text.lower()
+    assert "skip phase 5" in lower and "time pressure" in lower and "long context" in lower, (
+        f"{_SWARM_PATH}: missing anti-pattern against skipping "
+        "Phase 5 gate under pressure (#261, t1.13.1)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 29. deft-setup USER.md/PROJECT.md deft_version field (#270, t3.2.1)
+# ---------------------------------------------------------------------------
+
+_SETUP_PATH = "skills/deft-setup/SKILL.md"
+
+
+def test_deft_setup_user_md_template_has_deft_version() -> None:
+    """USER.md template in deft-setup must contain a deft_version field."""
+    text = _read_skill(_SETUP_PATH)
+    # The template is inside a ```markdown code block in Phase 1
+    assert "**deft_version**:" in text, (
+        f"{_SETUP_PATH}: USER.md template must include a deft_version field (#270, t3.2.1)"
+    )
+
+
+def test_deft_setup_project_md_template_has_deft_version() -> None:
+    """PROJECT.md template in deft-setup must contain a deft_version field."""
+    text = _read_skill(_SETUP_PATH)
+    # Both USER.md and PROJECT.md templates should have deft_version;
+    # verify at least two occurrences (one per template)
+    count = text.count("**deft_version**:")
+    assert count >= 2, (
+        f"{_SETUP_PATH}: both USER.md and PROJECT.md templates must include "
+        f"deft_version field -- found {count} occurrence(s), expected >= 2 (#270, t3.2.1)"
+    )
+
+
+def test_deft_setup_stale_user_md_detection() -> None:
+    """deft-setup must contain stale USER.md detection via deft_version field."""
+    text = _read_skill(_SETUP_PATH)
+    lower = text.lower()
+    assert "freshness detection" in lower, (
+        f"{_SETUP_PATH}: must contain USER.md Freshness Detection section (#270, t3.2.1)"
+    )
+    assert "predates versioning" in lower and "treat as stale" in lower, (
+        f"{_SETUP_PATH}: must detect missing deft_version as stale (#270, t3.2.1)"
+    )
+    assert "query missing fields individually" in lower, (
+        f"{_SETUP_PATH}: must query missing fields individually, "
+        "not re-run full interview (#270, t3.2.1)"
+    )
+
+
+def test_deft_setup_deft_version_must_rule() -> None:
+    """deft-setup must have a ! rule requiring deft_version on generate/update."""
+    text = _read_skill(_SETUP_PATH)
+    assert "deft_version` field MUST be set" in text, (
+        f"{_SETUP_PATH}: must have ! rule requiring deft_version field "
+        "when generating or updating USER.md/PROJECT.md (#270, t3.2.1)"
+    )
+    assert "\u2297" in text and "without including the `deft_version` field" in text, (
+        f"{_SETUP_PATH}: must have \u2297 anti-pattern against omitting deft_version (#270, t3.2.1)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 30. deft-interview skill -- existence, structure, and content (#296, t2.11.1)
+# ---------------------------------------------------------------------------
+
+_INTERVIEW_PATH = "skills/deft-interview/SKILL.md"
+_INTERVIEW_POINTER_PATH = ".agents/skills/deft-interview/SKILL.md"
+
+
+def test_deft_interview_exists() -> None:
+    """deft-interview SKILL.md must exist at its expected path."""
+    assert (_REPO_ROOT / _INTERVIEW_PATH).is_file(), (
+        f"Skill file missing: {_INTERVIEW_PATH}"
+    )
+
+
+def test_deft_interview_rfc2119_legend() -> None:
+    """deft-interview must contain the RFC2119 legend line."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert RFC2119_LEGEND in text, (
+        f"{_INTERVIEW_PATH}: missing RFC2119 legend '{RFC2119_LEGEND}'"
+    )
+
+
+def test_deft_interview_has_frontmatter() -> None:
+    """deft-interview must have YAML frontmatter with name and description."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert text.startswith("---"), (
+        f"{_INTERVIEW_PATH}: must start with YAML frontmatter '---'"
+    )
+    assert "name: deft-interview" in text, (
+        f"{_INTERVIEW_PATH}: frontmatter must contain 'name: deft-interview'"
+    )
+
+
+def test_deft_interview_one_question_per_turn() -> None:
+    """deft-interview must enforce one-question-per-turn rule."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert "ONE focused question per step" in text, (
+        f"{_INTERVIEW_PATH}: must contain one-question-per-turn rule (#296)"
+    )
+
+
+def test_deft_interview_numbered_options_with_default() -> None:
+    """deft-interview must require numbered options with stated default."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert "[default:" in text and "numbered answer options" in text.lower(), (
+        f"{_INTERVIEW_PATH}: must require numbered options with stated default (#296)"
+    )
+
+
+def test_deft_interview_other_escape() -> None:
+    """deft-interview must require an other/IDK escape option."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert "Other / I don't know" in text, (
+        f"{_INTERVIEW_PATH}: must require other/IDK escape option (#296)"
+    )
+
+
+def test_deft_interview_depth_gate() -> None:
+    """deft-interview must include a depth gate rule."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert "no material ambiguity remains" in text.lower(), (
+        f"{_INTERVIEW_PATH}: must include depth gate rule (#296)"
+    )
+
+
+def test_deft_interview_default_acceptance() -> None:
+    """deft-interview must define default acceptance responses."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert "bare enter" in text.lower() and "default" in text.lower(), (
+        f"{_INTERVIEW_PATH}: must define default acceptance responses (#296)"
+    )
+
+
+def test_deft_interview_confirmation_gate() -> None:
+    """deft-interview must require confirmation gate with all captured answers."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert "confirmation gate" in text.lower() and "yes / no" in text.lower(), (
+        f"{_INTERVIEW_PATH}: must require confirmation gate (#296)"
+    )
+
+
+def test_deft_interview_structured_handoff() -> None:
+    """deft-interview must define structured handoff contract with answers map."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert "answers map" in text.lower() and "calling skill" in text.lower(), (
+        f"{_INTERVIEW_PATH}: must define structured handoff contract (#296)"
+    )
+
+
+def test_deft_interview_anti_patterns() -> None:
+    """deft-interview must have anti-patterns section."""
+    text = _read_skill(_INTERVIEW_PATH)
+    assert "## Anti-Patterns" in text, (
+        f"{_INTERVIEW_PATH}: missing '## Anti-Patterns' section (#296)"
+    )
+    assert "multiple questions" in text.lower() and "confirmation gate" in text.lower(), (
+        f"{_INTERVIEW_PATH}: anti-patterns must cover multi-question and confirmation gate (#296)"
+    )
+
+
+def test_deft_interview_pointer_exists() -> None:
+    """.agents thin pointer for deft-interview must exist."""
+    assert (_REPO_ROOT / _INTERVIEW_POINTER_PATH).is_file(), (
+        f"Thin pointer missing: {_INTERVIEW_POINTER_PATH}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 31. deft-setup Phase 1/2 must reference deft-interview (#304, t1.29.1)
+# ---------------------------------------------------------------------------
+
+
+def test_deft_setup_phase1_references_deft_interview() -> None:
+    """deft-setup Phase 1 Interview Rules must reference deft-interview SKILL.md."""
+    text = _read_skill(_SETUP_PATH)
+    # Phase 1 Interview Rules section should reference deft-interview
+    phase1_start = text.find("## Phase 1")
+    phase2_start = text.find("## Phase 2")
+    assert phase1_start != -1 and phase2_start != -1, (
+        f"{_SETUP_PATH}: must contain Phase 1 and Phase 2 sections"
+    )
+    phase1_text = text[phase1_start:phase2_start]
+    assert "deft-interview" in phase1_text, (
+        f"{_SETUP_PATH}: Phase 1 must reference deft-interview for interview rules (#304)"
+    )
+
+
+def test_deft_setup_phase2_references_deft_interview() -> None:
+    """deft-setup Phase 2 Interview Rules must reference deft-interview SKILL.md."""
+    text = _read_skill(_SETUP_PATH)
+    phase2_start = text.find("## Phase 2")
+    phase3_start = text.find("## Phase 3")
+    assert phase2_start != -1 and phase3_start != -1, (
+        f"{_SETUP_PATH}: must contain Phase 2 and Phase 3 sections"
+    )
+    phase2_text = text[phase2_start:phase3_start]
+    assert "deft-interview" in phase2_text, (
+        f"{_SETUP_PATH}: Phase 2 must reference deft-interview for interview rules (#304)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 32. deft-swarm Phase 6 read-back verification (#288, t1.21.1)
+# ---------------------------------------------------------------------------
+
+
+def test_deft_swarm_phase6_readback_verification() -> None:
+    """Phase 6 must require re-reading conflict-resolved files before git add."""
+    text = _read_skill(_SWARM_PATH)
+    assert "Read-back verification" in text and "conflict markers" in text.lower(), (
+        f"{_SWARM_PATH}: Phase 6 must contain read-back verification rule (#288)"
+    )
+
+
+def test_deft_swarm_phase6_prefer_edit_files_for_conflicts() -> None:
+    """Phase 6 must prefer edit_files over shell regex for conflict resolution."""
+    text = _read_skill(_SWARM_PATH)
+    assert "edit_files" in text and "CHANGELOG.md" in text and "SPECIFICATION.md" in text, (
+        f"{_SWARM_PATH}: Phase 6 must prefer edit_files for conflict resolution (#288)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 33. deft-swarm Phase 6 Slack announcement (#292, t1.22.1)
+# ---------------------------------------------------------------------------
+
+
+def test_deft_swarm_phase6_slack_announcement_step() -> None:
+    """Phase 6 Step 6 must generate a Slack release announcement block."""
+    text = _read_skill(_SWARM_PATH)
+    assert "Slack" in text and "announcement" in text.lower(), (
+        f"{_SWARM_PATH}: Phase 6 must include Slack announcement step (#292)"
+    )
+
+
+def test_deft_swarm_phase6_slack_required_fields() -> None:
+    """Slack announcement must include version, key changes, PR numbers, and release URL."""
+    text = _read_skill(_SWARM_PATH)
+    assert "Key Changes" in text and "PRs*:" in text and "Release*:" in text, (
+        f"{_SWARM_PATH}: Slack announcement must include required fields (#292)"
+    )

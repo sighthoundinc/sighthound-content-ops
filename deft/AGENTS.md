@@ -55,6 +55,8 @@ When user input matches a trigger keyword, read the corresponding skill:
 - "build" / "implement" / "implement spec" → `skills/deft-build/SKILL.md`
 - "setup" / "bootstrap" / "onboard" → `skills/deft-setup/SKILL.md`
 - "sync" / "good morning" / "update deft" / "update vbrief" / "sync frameworks" → `skills/deft-sync/SKILL.md`
+- "pre-pr" / "quality loop" / "rwldl" / "self-review" → `skills/deft-pre-pr/SKILL.md`
+- "interview loop" / "q&a loop" / "run interview loop" → `skills/deft-interview/SKILL.md`
 
 ## Development Process (always follow)
 
@@ -63,8 +65,11 @@ When user input matches a trigger keyword, read the corresponding skill:
 - ! If no spec task exists for the work, add one before implementing
 - ⊗ Begin editing files before checking spec coverage and creating a feature branch — even if the user says "yes" or "proceed"
 
+! Before opening a PR, run `skills/deft-pre-pr/SKILL.md` for an iterative quality loop.
+
 **Before committing:**
 - Run `task check` (validate + lint + test) — this is the pre-commit gate
+- ! New source files (`scripts/`, `src/`, `cmd/`, `*.py`, `*.go`) MUST include corresponding test files in the same PR -- running existing tests alone is not sufficient for new code; forward coverage requires new tests that exercise the new code paths
 - Add CHANGELOG.md entry under `[Unreleased]`
 - Verify .github/PULL_REQUEST_TEMPLATE.md checklist items are satisfied
 
@@ -87,6 +92,10 @@ When user input matches a trigger keyword, read the corresponding skill:
 - /deft:run:map              — Map an existing codebase
 - run bootstrap              — CLI setup (terminal users)
 - run spec                   — CLI spec generation
+
+## PowerShell
+
+! When writing files using PowerShell, MUST use `New-Object System.Text.UTF8Encoding $false` -- never `[System.Text.Encoding]::UTF8` (writes BOM). See `scm/github.md` PS 5.1 section.
 
 Note: paths here are root-relative — this repo IS the deft directory.
 Install-generated AGENTS.md uses deft/-prefixed paths.

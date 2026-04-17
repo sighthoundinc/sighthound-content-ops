@@ -2,7 +2,7 @@
 
 Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 
-**⚠️ See also**: [main.md](../main.md) | [project.md](../core/project.md)
+**⚠️ See also**: [main.md](../main.md) | [PROJECT.md](../PROJECT.md)
 
 **Stack**: CommonMark/GFM; Diagrams: Mermaid; Linting: markdownlint; Render targets: GitHub, GitLab, Obsidian, static site generators
 
@@ -146,6 +146,16 @@ Key non-defaults: MD033/MD036 disabled (allow inline HTML, emphasis-as-heading);
 - ⊗ **Stale docs**: Delete or update — stale docs are worse than no docs
 - ≉ **Documents >700 lines**: Split into focused, linked files
 - ≉ **Deeply nested lists (>2 levels)**: Restructure into sections or subheadings
+
+## Commands
+
+See [commands.md](./commands.md).
+
+## Patterns
+
+- ~ Use templates for recurring document types (ADRs, runbooks, RFCs)
+- ~ Automate link checking in CI with markdownlint or dedicated link checkers
+- ~ Use reference-style links for frequently-cited URLs
 
 ## Compliance Checklist
 

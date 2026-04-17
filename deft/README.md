@@ -24,26 +24,44 @@ Deft is a SKILL.md that makes AI coding significantly more effective by providin
 
 Download the installer for your platform from [GitHub Releases](https://github.com/deftai/directive/releases), run it, and follow the prompts.
 
+> **⬇️ Quick Download** -- direct binaries from the [latest GitHub Release](https://github.com/deftai/directive/releases/latest):
+> - **Windows:** [`install-windows-amd64.exe`](https://github.com/deftai/directive/releases/latest/download/install-windows-amd64.exe) | [`install-windows-arm64.exe`](https://github.com/deftai/directive/releases/latest/download/install-windows-arm64.exe) (Surface / Copilot+ PCs)
+> - **macOS:** [`install-macos-universal`](https://github.com/deftai/directive/releases/latest/download/install-macos-universal) (Intel + Apple Silicon)
+> - **Linux:** [`install-linux-amd64`](https://github.com/deftai/directive/releases/latest/download/install-linux-amd64) | [`install-linux-arm64`](https://github.com/deftai/directive/releases/latest/download/install-linux-arm64) (Raspberry Pi / ARM)
+
 ### 1. Install Deft
 
 **Windows:**
 - Download `install-windows-amd64.exe` (or `install-windows-arm64.exe` for Surface / Copilot+ PCs)
-- Run the downloaded file — Windows SmartScreen may warn about an unrecognised publisher; click "More info" → "Run anyway" (code signing is planned for a future release)
+- Run the downloaded file -- Windows SmartScreen may warn about an unrecognised publisher; click "More info" then "Run anyway" (code signing is planned for a future release)
 
 **macOS:**
-- Download `install-macos-universal` — works on all Macs (Intel and Apple Silicon)
-- Make it executable and run: `chmod +x install-macos-universal && ./install-macos-universal`
-- If macOS Gatekeeper blocks the file: right-click → Open, or run `xattr -d com.apple.quarantine install-macos-universal` first (code signing is planned for a future release)
+- Download `install-macos-universal` -- works on all Macs (Intel and Apple Silicon)
+- Make it executable and run:
+  ```bash
+  chmod +x install-macos-universal && ./install-macos-universal
+  ```
+- If macOS Gatekeeper blocks the file: right-click then Open, or remove the quarantine attribute first (code signing is planned for a future release):
+  ```bash
+  xattr -d com.apple.quarantine install-macos-universal
+  ```
 
 **Linux:**
 - Download `install-linux-amd64` (or `install-linux-arm64` for Raspberry Pi / ARM cloud)
-- Make it executable and run: `chmod +x install-linux-amd64 && ./install-linux-amd64`
+- Make it executable and run:
+  ```bash
+  chmod +x install-linux-amd64 && ./install-linux-amd64
+  ```
 
 The installer guides you through choosing a project directory, installs git if needed, clones deft, wires it into `AGENTS.md`, and creates your user config directory.
 
 **Manual clone (no installer):** If you clone deft directly via `git clone`, create an `AGENTS.md` in your project root using the full bootstrap template (see `agentsMDEntry` in `cmd/deft-install/setup.go` for the exact content with `deft/`-prefixed paths and first-session phase detection), then tell your agent `read AGENTS.md and follow it` to start the setup.
 
-**Building from source (developers only):** requires Go 1.22+ — `go run ./cmd/deft-install/`
+**Building from source (developers only):** requires Go 1.22+
+
+```bash
+go run ./cmd/deft-install/
+```
 
 **Manual clone (CLI users):** if you already have git and prefer to skip the installer, clone deft directly into your project:
 
@@ -276,6 +294,7 @@ deft/
 │
 ├── skills/                # Agent skills (SKILL.md format)
 │   ├── deft-build/        # Build/implement skill
+│   ├── deft-pre-pr/       # Iterative pre-PR quality loop (RWLDL)
 │   ├── deft-review-cycle/ # Greptile bot review cycle
 │   ├── deft-roadmap-refresh/ # Issue triage and roadmap refresh
 │   ├── deft-setup/        # Interactive setup skill
@@ -332,7 +351,7 @@ deft/
 **SKILL.md** - Entry point for AI agent skill loading  
 **coding/coding.md** - Software development standards  
 **coding/testing.md** - Testing standards  
-**core/project.md** - Project-specific template  
+**PROJECT.md** - Project-specific configuration (project root)  
 **USER.md** - Your personal preferences (highest precedence) — `~/.config/deft/USER.md` (Unix/macOS) or `%APPDATA%\deft\USER.md` (Windows)
 
 ### 🐍 Languages
@@ -393,7 +412,7 @@ Plus: delphi, visual-basic, vhdl, 6502-DASM
 **vbrief/schemas/** - JSON validation schemas
 
 ### 📜 Contracts
-**contracts/hierarchy.md** - Dual-hierarchy framework (durability axis + generative axis)
+**contracts/hierarchy.md** - Dual-hierarchy framework (durability axis + generative axis)  
 **contracts/boundary-maps.md** - Explicit produces/consumes declarations between slices
 
 ### 🚀 Deployments
@@ -401,10 +420,11 @@ Plus: delphi, visual-basic, vhdl, 6502-DASM
 agentuity, aws, azure, cloudflare, cloud-gov, fly-io, google, netlify, vercel
 
 ### 🤖 Skills
-**skills/deft-build/** - Build/implement skill
-**skills/deft-review-cycle/** - Greptile bot reviewer response workflow (fetch findings, batch fix, exit on clean)
-**skills/deft-roadmap-refresh/** - Issue triage and phased roadmap maintenance
-**skills/deft-setup/** - Interactive setup wizard skill
+**skills/deft-build/** - Build/implement skill  
+**skills/deft-pre-pr/** - Iterative pre-PR quality loop (Read-Write-Lint-Diff-Loop) -- run before pushing a branch for PR creation  
+**skills/deft-review-cycle/** - Greptile bot reviewer response workflow (fetch findings, batch fix, exit on clean)  
+**skills/deft-roadmap-refresh/** - Issue triage and phased roadmap maintenance  
+**skills/deft-setup/** - Interactive setup wizard skill  
 **skills/deft-swarm/** - Parallel local agent orchestration (worktrees, prompts, monitoring, merge)
 
 ### 📝 Templates
@@ -807,6 +827,16 @@ Manual runs skip the release job automatically (guarded by `if: startsWith(githu
 5. Each release includes: `install-windows-amd64.exe`, `install-windows-arm64.exe`, `install-macos-universal`, `install-linux-amd64`, `install-linux-arm64`
 
 > **Note:** Binaries are not yet code-signed. macOS users may need to bypass Gatekeeper (see [Getting Started](#-getting-started)). Windows users may see a SmartScreen warning. Code signing is planned for a future release.
+
+## 📦 Your Artifacts
+
+When you use Deft in a consumer project, these are the key locations for user-generated artifacts:
+
+- **`./vbrief/`** -- vBRIEF plan and spec JSON files (`plan.vbrief.json`, `specification.vbrief.json`, etc.)
+- **`SPECIFICATION.md`** -- rendered specification (generated from `vbrief/specification.vbrief.json`)
+- **`PROJECT.md`** -- project-level configuration and overrides (project root)
+- **`USER.md`** -- personal preferences (`~/.config/deft/USER.md` on Unix/macOS, `%APPDATA%\deft\USER.md` on Windows)
+- **`./deft/`** -- installed framework files (cloned or installed by the installer)
 
 ## 🎓 Philosophy
 

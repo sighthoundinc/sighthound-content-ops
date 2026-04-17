@@ -14,6 +14,7 @@ import { Button } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 import { ColumnEditor } from "@/components/column-editor";
 import { DashboardTable } from "@/components/dashboard-table";
+import { NeedsYouHero } from "@/components/dashboard/needs-you-hero";
 import { DetailDrawerField } from "@/components/detail-drawer";
 import { Tooltip } from "@/components/tooltip";
 import {
@@ -4025,6 +4026,7 @@ export default function DashboardPage() {
               </div>
             }
           />
+          <NeedsYouHero />
           {isOverviewLoading ? (
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
               <h2 className="text-sm font-semibold text-slate-900">Overview</h2>

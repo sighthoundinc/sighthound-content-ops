@@ -42,7 +42,7 @@ export function CommandPalette() {
 
   if (!isOpen) return null;
 
-  const categoryOrder = ["navigation", "create", "actions"];
+  const categoryOrder = ["results", "navigation", "create", "actions"];
   const sortedCategories = Object.keys(groupedResults).sort((a, b) => {
     const aIndex = categoryOrder.indexOf(a);
     const bIndex = categoryOrder.indexOf(b);
@@ -110,6 +110,7 @@ export function CommandPalette() {
                   <div key={category}>
                     {/* Category Header */}
                     <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50">
+                      {category === "results" && "Results"}
                       {category === "navigation" && "Navigation"}
                       {category === "create" && "Create"}
                       {category === "actions" && "Actions"}

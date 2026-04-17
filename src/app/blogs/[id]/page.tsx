@@ -9,8 +9,14 @@ import { AppShell } from "@/components/app-shell";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
+import { PresenceBubbles } from "@/components/presence-bubbles";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
+import { UnstickThisButton } from "@/components/ai/unstick-this-button";
+import {
+  buildPresenceChannelKey,
+  useRealtimePresence,
+} from "@/hooks/useRealtimePresence";
 import { validateAuthor } from "@/lib/shape-validation";
 import {
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
@@ -175,6 +181,16 @@ export default function BlogDetailPage() {
   const { showError, showSuccess } = useAlerts();
   const { pushNotification } = useNotifications();
   const blogId = params.id;
+  const presenceOthers = useRealtimePresence({
+    channelKey: blogId ? buildPresenceChannelKey("blog", blogId) : null,
+    self: user
+      ? {
+          id: user.id,
+          name: profile?.display_name || profile?.full_name || user.email || "Teammate",
+          email: user.email ?? null,
+        }
+      : null,
+  });
 
   const [blog, setBlog] = useState<BlogRecord | null>(null);
   const [form, setForm] = useState<BlogFormState | null>(null);
@@ -1196,7 +1212,8 @@ export default function BlogDetailPage() {
                 {blog.site} • Created {formatDateInTimezone(blog.created_at, profile?.timezone)}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <PresenceBubbles users={presenceOthers} />
               <WorkflowStageBadge
                 stage={getWorkflowStage({
                   writerStatus: blog.writer_status,
@@ -1228,17 +1245,20 @@ export default function BlogDetailPage() {
                       )}`}
                 </p>
               </div>
-              {blogNextAction.ctaLabel ? (
-                <button
-                  type="button"
-                  disabled={blogNextAction.disabled}
-                  aria-keyshortcuts="Alt+Shift+Enter"
-                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={runBlogPrimaryAction}
-                >
-                  {blogNextAction.ctaLabel}
-                </button>
-              ) : null}
+              <div className="flex items-center gap-2">
+                <UnstickThisButton />
+                {blogNextAction.ctaLabel ? (
+                  <button
+                    type="button"
+                    disabled={blogNextAction.disabled}
+                    aria-keyshortcuts="Alt+Shift+Enter"
+                    className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={runBlogPrimaryAction}
+                  >
+                    {blogNextAction.ctaLabel}
+                  </button>
+                ) : null}
+              </div>
             </div>
             <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">

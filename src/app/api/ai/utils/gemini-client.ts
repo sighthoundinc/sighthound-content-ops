@@ -48,6 +48,7 @@ export interface GeminiGuidanceOutput {
 export type GeminiFailureReason =
   | "unconfigured"
   | "rate_limited"
+  | "credits_depleted"
   | "model_unavailable"
   | "network_error"
   | "timeout"
@@ -67,6 +68,8 @@ export function describeGeminiFailure(reason: GeminiFailureReason): string {
       return "the AI service is not configured";
     case "rate_limited":
       return "we've temporarily hit the AI rate limit";
+    case "credits_depleted":
+      return "the AI billing balance is depleted — please top up credits in AI Studio";
     case "model_unavailable":
       return "Google Gemini is experiencing high demand";
     case "network_error":
@@ -165,7 +168,12 @@ export async function getGeminiGuidance(
   for (const model of models) {
     const result = await callGeminiForModel(apiKey, model, input);
     if (result) return result;
-    // On hard Gemini failure (null) try the next model in the chain.
+    // If the failure is a billing / config issue, other models in the chain
+    // share the same billing account and will fail identically. Bail out.
+    const terminal: GeminiFailureReason[] = ["credits_depleted", "unconfigured"];
+    if (lastFailure && terminal.includes(lastFailure.reason)) {
+      return null;
+    }
   }
   return null;
 }
@@ -242,6 +250,21 @@ async function callGeminiForModel(
           transient,
           body: errorBody.slice(0, 500),
         });
+        // Google returns 429 for both true rate-limits and depleted billing
+        // balance. The body text is the only reliable signal. Credits-depleted
+        // is non-recoverable within a request, so we bail immediately to avoid
+        // burning the retry budget on a guaranteed failure.
+        if (response.status === 429) {
+          const bodyLower = errorBody.toLowerCase();
+          const looksLikeBillingIssue =
+            bodyLower.includes("prepayment credits") ||
+            bodyLower.includes("credits are depleted") ||
+            bodyLower.includes("billing account") ||
+            bodyLower.includes("billing");
+          if (looksLikeBillingIssue) {
+            return recordFailure("credits_depleted");
+          }
+        }
         if (transient && !isFinalAttempt) {
           const backoff =
             BASE_BACKOFF_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);

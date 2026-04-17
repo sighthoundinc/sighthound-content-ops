@@ -891,6 +891,19 @@ Reminder + notification invariants:
   - `POST /api/social-posts/overdue-checks`
   - `POST /api/blogs/overdue-checks`
 
+## Shortcut Display Invariants (MUST)
+
+Keyboard shortcut information must live in exactly one place: the shared shortcuts modal. Main pages and detail editors must not advertise keybindings inline.
+
+1. Do NOT render key-combo text on pages or sidebars (for example `Shortcut: ⌥⇧J`, `Primary action: ⌥⇧↵`, or `Press Q to open, ESC to close`).
+2. The only discoverability affordance allowed on a page is a clickable text labeled `Shortcut` (or `Shortcuts`) that opens the shared shortcuts modal.
+3. The shortcuts modal is the single source of truth for all global, create, and page-aware shortcut keys, grouped per page scope (`pageShortcuts` in `src/components/app-shell.tsx`).
+4. Dropdown/command menu items (for example Quick Create rows `New Blog`, `New Idea`, `New Social Post`) may display a per-item `KbdShortcut` badge next to the action. This is an item affordance, not on-page prose, and remains allowed.
+5. Keydown handlers (for example `Alt+Shift+J`, `Alt+Shift+Enter` on `/blogs/[id]` and `/social-posts/[id]`) stay functional; only the on-page text description is removed.
+6. `aria-keyshortcuts` attributes on primary action buttons are kept for accessibility (screen reader / assistive technology), since they do not render visible text.
+7. Do not reintroduce explanatory sentences like `Use Up/Down to move and Enter to select` in Quick Create or similar panels. Arrow-key behavior is expected and the single `Shortcut` link is sufficient for discoverability.
+8. Naming: the clickable discoverability affordance uses the singular word `Shortcut` (title-case). Inside the modal, keep the heading `Shortcuts`.
+
 ## UI Label Standards (MUST)
 
 **Avoid labeling user roles in section headers** unless explicitly necessary for admin-only features:

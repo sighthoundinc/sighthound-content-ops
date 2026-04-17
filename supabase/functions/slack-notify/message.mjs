@@ -226,7 +226,18 @@ export function buildMessage(payload, options = {}) {
   const isCommentEvent = COMMENT_EVENT_TYPES.has(payload.eventType);
 
   const title = escapeHeaderTitle(normalizeTitle(payload.title));
-  const site = canonicalizeSite(payload.site);
+  // Prefer the linked blog's site when callers provide it. Social post
+  // callers historically leaked `product` slugs (e.g. "general_company",
+  // "edge_vision") into the raw `site` field; when the emitter has
+  // resolved the associated blog's site, that value is authoritative.
+  // canonicalizeSite still runs so the SH/RED canonical form is enforced
+  // and any remaining unknown value falls back to "SH".
+  const rawSite =
+    typeof payload.associatedBlogSite === "string" &&
+    payload.associatedBlogSite.trim().length > 0
+      ? payload.associatedBlogSite
+      : payload.site;
+  const site = canonicalizeSite(rawSite);
   const headerLine = `[${contentType}] ${title} (${site})`;
   const actionLine = `Action: ${action}`;
   // Slack link syntax `<URL|label>` guarantees a clickable hyperlink across

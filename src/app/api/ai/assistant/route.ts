@@ -546,6 +546,21 @@ export async function POST(
           ? describeGeminiFailure(reason)
           : "Google Gemini is temporarily unavailable";
         const userMessage = `Chat is not available currently due to ${reasonText}. Please try again shortly.`;
+
+        // Record the outage so admins can see the 503s in telemetry.
+        recordAskAIEvent({
+          userId: request.userId,
+          entityType: request.entityType,
+          entityId,
+          intent: reason ?? "gemini_unavailable",
+          responseSource: "deterministic", // no successful source
+          model: null,
+          latencyMs: Date.now() - startedAt,
+          hadError: true,
+          cached: false,
+          validatorFailed,
+        });
+
         return NextResponse.json(
           createErrorResponse("INTERNAL_ERROR", userMessage),
           { status: 503 }

@@ -53,13 +53,30 @@ function LoginPageContent() {
 
   const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // Read authoritative values from the form DOM. This avoids the
+    // controlled-input / browser-autofill desync that caused "takes two
+    // clicks" when password managers populated the fields without
+    // triggering React's onChange.
+    const formData = new FormData(event.currentTarget);
+    const emailValue = ((formData.get("email") as string | null) ?? email).trim();
+    const passwordValue = (formData.get("password") as string | null) ?? password;
+
+    if (!emailValue || !passwordValue) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
+    // Keep React state in sync with what we actually submitted.
+    setEmail(emailValue);
+    setPassword(passwordValue);
+
     const supabase = getSupabaseBrowserClient();
     setIsSubmitting(true);
     setError(null);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: emailValue,
+      password: passwordValue,
     });
 
     if (signInError) {
@@ -69,8 +86,10 @@ function LoginPageContent() {
       return;
     }
 
+    // Redirect is handled by the session effect above once the auth state
+    // change lands. We still clear the submitting flag to keep the button
+    // responsive if navigation is slow.
     setIsSubmitting(false);
-    router.replace("/");
   };
 
   const handleGoogleSignIn = async () => {
@@ -228,6 +247,9 @@ function LoginPageContent() {
               <input
                 required
                 type="email"
+                name="email"
+                autoComplete="username"
+                inputMode="email"
                 value={email}
                 onChange={(event) => {
                   setEmail(event.target.value);
@@ -244,6 +266,8 @@ function LoginPageContent() {
               <input
                 required
                 type="password"
+                name="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(event) => {
                   setPassword(event.target.value);

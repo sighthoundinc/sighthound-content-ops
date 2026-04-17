@@ -150,6 +150,31 @@ export function buildDeepLink(payload, appUrl) {
   return null;
 }
 
+// Events that should surface a "Submit link" CTA — the worker's next action
+// is to paste the published link, not to open the record generically.
+const SUBMIT_LINK_EVENT_TYPES = new Set([
+  "social_awaiting_live_link",
+  "social_live_link_reminder",
+]);
+
+// Per-event CTA label mapping. Used as the `|label>` tail in Slack link syntax
+// so each notification communicates its specific next action instead of a
+// generic "Open".
+export function ctaLabelFor(eventType) {
+  if (COMMENT_EVENT_TYPES.has(eventType)) return "Open thread";
+  if (SUBMIT_LINK_EVENT_TYPES.has(eventType)) return "Submit link";
+  if (typeof eventType === "string" && eventType.startsWith("social_")) {
+    return "Open post";
+  }
+  return "Open blog";
+}
+
+export function buildOpenLinkLine(eventType, deepLink) {
+  if (!deepLink) return null;
+  const label = ctaLabelFor(eventType);
+  return `Open link: <${deepLink}|${label}>`;
+}
+
 export function normalizeTitle(title) {
   if (typeof title !== "string") return "";
   return title.trim();
@@ -201,8 +226,10 @@ export function buildMessage(payload, options = {}) {
   const actionLine = `Action: ${action}`;
   // Slack link syntax `<URL|label>` guarantees a clickable hyperlink across
   // desktop/mobile clients even with unfurl_links: false. A bare URL is not
-  // reliably auto-linkified when unfurl is suppressed.
-  const openLine = deepLink ? `Open link: <${deepLink}|Open>` : null;
+  // reliably auto-linkified when unfurl is suppressed. The `|label>` tail
+  // comes from ctaLabelFor() so each notification describes its own next
+  // action (e.g. "Submit link" for live-link reminders).
+  const openLine = buildOpenLinkLine(payload.eventType, deepLink);
 
   if (isCommentEvent) {
     const commentBody = normalizeCommentBody(payload.commentBody);

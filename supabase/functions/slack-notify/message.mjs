@@ -189,8 +189,9 @@ export function escapeHeaderTitle(title) {
 }
 
 export function canonicalizeSite(site) {
-  if (typeof site !== "string") return site;
+  if (typeof site !== "string") return "SH";
   const normalized = site.trim().toLowerCase();
+  if (!normalized) return "SH";
   if (
     normalized === "sh" ||
     normalized === "sighthound" ||
@@ -205,7 +206,11 @@ export function canonicalizeSite(site) {
   ) {
     return "RED";
   }
-  return site;
+  // Unknown values (e.g. social post `product` slugs like "general_company",
+  // "platform", "edge_vision") must not leak into the header. Default to SH
+  // so the notification is readable; callers that want RED must pass a known
+  // canonical form.
+  return "SH";
 }
 
 export function buildMessage(payload, options = {}) {

@@ -236,3 +236,22 @@ The repo vendors a single-metric git-ratchet tool at `autoresearch/` (adapted fr
 ### Reference
 - Vendored upstream docs: `autoresearch/README.md`.
 - Archived sessions with outcomes: `autoresearch/history/`.
+## 13) Authentication runbook
+Authentication is enforced in three layers (full contract in `SPECIFICATION.md` §16). Use this runbook to triage sign-in issues fast.
+### Layer map
+1. **Edge middleware** — `src/middleware.ts` (+ `src/lib/middleware-auth.ts`)
+2. **Server Components** — `src/app/page.tsx`, `src/app/login/page.tsx` using `src/lib/supabase/ssr.ts`
+3. **Client state** — `src/providers/auth-provider.tsx` using `src/lib/supabase/browser.ts`
+### Troubleshooting by symptom
+- **User stuck on `/login` after clicking Sign in** — check that `src/app/login/login-form.tsx` contains BOTH the `router.replace + router.refresh` inside `handlePasswordSignIn` (covers interactive sign-ins) AND the top-level session-watching `useEffect` (covers OAuth return). If either is missing, the user cannot escape `/login` after authenticating.
+- **User redirected back to `/login` after OAuth** — expected for the first brief moment: middleware bounces the OAuth callback to `/login` because cookies are not yet set; the browser Supabase client then exchanges the hash/code and fires `onAuthStateChange`, and the session-watching effect navigates to `/`. If they are stuck, check that `@supabase/ssr`'s browser client is actually configured (`getSupabaseBrowserClient()`) and that the URL has a preserved `#...` hash or `?code=...`.
+- **Everyone redirected to `/login` even when signed in** — the `sb-*` cookie is missing or malformed. Verify `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` are present on the server. Check `AUTH_BYPASS_PREFIXES` still includes `/login`.
+- **`/api/*` returns 401 for signed-in users** — callers must forward `Authorization: Bearer <access_token>`. Client code reads from `useAuth().session?.access_token`. Server Components read from their `supabase.auth.getSession()` result.
+- **Cross-user data leak / stale render on `/` or `/login`** — confirm `export const dynamic = "force-dynamic"` is still present on both pages. Without it Next may collapse renders across users.
+- **Redirect loop between `/login` and itself** — confirm `AUTH_BYPASS_PREFIXES` in `src/lib/middleware-auth.ts` still starts with `/login`.
+### When to reach for `supabase db push`
+- Any schema change (`supabase/migrations/*.sql`). This is unrelated to auth plumbing but shares the verification flow; a stuck login can occasionally be caused by stale `profiles` / `user_integrations` / `role_permissions` schemas if a migration is behind.
+- After resetting the local dev DB.
+### Observability hooks
+- `logLoginEvent(userId)` fires fire-and-forget inside `AuthProvider` whenever a session is established. Access logs are visible under `Settings → Activity History → Login only`.
+- Middleware redirect loops will show up as repeated `302` responses to `/login` in server logs. If the loop is not visible in a browser devtools Network tab (because Next resolves 302s internally for SSR), `curl -I http://localhost:3000/foo` will expose it.

@@ -53,20 +53,20 @@ export function BasedOnPanel({
   return (
     <div
       className={cn(
-        "rounded-md border border-slate-200 bg-slate-50/60 text-xs text-slate-700",
+        "rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/60 text-xs text-navy-500",
         className
       )}
     >
       <button
         type="button"
         onClick={() => setIsOpen((previous) => !previous)}
-        className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 font-medium text-slate-700 hover:bg-slate-100"
+        className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 font-medium text-navy-500 hover:bg-blurple-50"
         aria-expanded={isOpen}
       >
         <span className="inline-flex items-center gap-1.5">
           <InfoIcon boxClassName="h-3.5 w-3.5" size={12} />
           Based on
-          <span className="text-slate-500">
+          <span className="text-navy-500">
             · {facts.length} facts{links.length > 0 ? ` · ${links.length} links` : ""}
           </span>
         </span>
@@ -77,7 +77,7 @@ export function BasedOnPanel({
         />
       </button>
       {isOpen ? (
-        <div className="flex flex-col gap-2 border-t border-slate-200 px-3 py-2">
+        <div className="flex flex-col gap-2 border-t border-[color:var(--sh-gray-200)] px-3 py-2">
           {facts.length > 0 ? (
             <dl className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-1">
               {facts.map((fact) => (
@@ -85,10 +85,10 @@ export function BasedOnPanel({
                   key={`${fact.label}-${fact.value}`}
                   className="contents"
                 >
-                  <dt className="truncate text-[11px] font-medium text-slate-500">
+                  <dt className="truncate text-[11px] font-medium text-navy-500">
                     {fact.label}
                   </dt>
-                  <dd className="truncate font-mono text-[11px] text-slate-800">
+                  <dd className="truncate font-mono text-[11px] text-ink">
                     {fact.value}
                   </dd>
                 </div>
@@ -107,7 +107,7 @@ export function BasedOnPanel({
                         ? "noopener noreferrer"
                         : undefined
                     }
-                    className="inline-flex items-center gap-1 text-[11px] text-slate-700 hover:text-slate-900 hover:underline"
+                    className="inline-flex items-center gap-1 text-[11px] text-navy-500 hover:text-ink hover:underline"
                   >
                     <AppIcon
                       name={link.href.startsWith("http") ? "externalLink" : "link"}
@@ -120,7 +120,7 @@ export function BasedOnPanel({
               ))}
             </ul>
           ) : null}
-          <p className="text-[10px] text-slate-500">
+          <p className="text-[10px] text-navy-500">
             Source:{" "}
             {responseSource === "gemini"
               ? `Gemini${aiModel ? ` · ${aiModel}` : ""}`

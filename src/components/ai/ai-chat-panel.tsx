@@ -52,7 +52,7 @@ export function AIChatPanel() {
     <>
       {/* Backdrop — subtle blur + slate tint instead of flat black */}
       <div
-        className="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-[2px] animate-in fade-in duration-200 motion-reduce:animate-none"
+        className="fixed inset-0 z-30 bg-ink/30 backdrop-blur-[2px] animate-in fade-in duration-200 motion-reduce:animate-none"
         onClick={closePanel}
       />
 
@@ -60,30 +60,30 @@ export function AIChatPanel() {
       <aside
         role="dialog"
         aria-label="Ask AI"
-        className="fixed right-0 top-0 h-full w-[420px] max-w-[calc(100vw-2rem)] bg-white z-40 flex flex-col border-l border-slate-200 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.35)] animate-in slide-in-from-right duration-300 ease-out motion-reduce:animate-none"
+        className="fixed right-0 top-0 h-full w-[420px] max-w-[calc(100vw-2rem)] bg-white z-40 flex flex-col border-l border-[color:var(--sh-gray-200)] shadow-[0_25px_60px_-15px_rgba(15,23,42,0.35)] animate-in slide-in-from-right duration-300 ease-out motion-reduce:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-gradient-to-b from-white to-slate-50/50">
+        <header className="flex items-center justify-between border-b border-[color:var(--sh-gray-200)] px-5 py-4 bg-gradient-to-b from-white to-[color:var(--sh-gray)]/50">
           <div className="flex items-center gap-2.5">
-            <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-indigo-200 shadow-inner">
+            <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink text-blurple-100 shadow-inner">
               <SparkleIcon size={14} boxClassName="h-4 w-4" />
               {isLoading && (
-                <span className="absolute inset-0 rounded-full ring-2 ring-indigo-300/70 animate-ping motion-reduce:hidden" />
+                <span className="absolute inset-0 rounded-full ring-2 ring-blurple-300/70 animate-ping motion-reduce:hidden" />
               )}
             </span>
             <div className="flex flex-col leading-tight">
-              <h2 className="text-sm font-semibold text-slate-900 tracking-tight">
+              <h2 className="text-sm font-semibold text-ink tracking-tight">
                 Ask AI
               </h2>
-              <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
+              <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-navy-500">
                 Read-only · Advisory
               </span>
             </div>
           </div>
           <button
             onClick={closePanel}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-navy-500 transition-colors hover:bg-blurple-50 hover:text-navy-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             aria-label="Close"
           >
             <CloseIcon size={16} />
@@ -106,7 +106,7 @@ export function AIChatPanel() {
               <AIMessage response={response} />
               <button
                 onClick={clearResponse}
-                className="inline-flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-xs font-medium text-navy-500 transition-colors hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                 aria-label="Ask another question"
               >
                 <ChevronLeftIcon size={12} boxClassName="h-3.5 w-3.5" />
@@ -149,8 +149,8 @@ function LoadingState({ hint }: { hint: string }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
       <div className="relative flex h-12 w-12 items-center justify-center">
-        <span className="absolute inset-0 rounded-full bg-slate-900/5 animate-ping motion-reduce:hidden" />
-        <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-indigo-200 shadow-sm">
+        <span className="absolute inset-0 rounded-full bg-ink/5 animate-ping motion-reduce:hidden" />
+        <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-ink text-blurple-100 shadow-sm">
           <SparkleIcon size={18}
             boxClassName="h-5 w-5"
             className="animate-pulse motion-reduce:animate-none" />
@@ -158,7 +158,7 @@ function LoadingState({ hint }: { hint: string }) {
       </div>
       <p
         key={hint}
-        className="text-sm text-slate-600 animate-in fade-in duration-500 motion-reduce:animate-none"
+        className="text-sm text-navy-500 animate-in fade-in duration-500 motion-reduce:animate-none"
       >
         {hint}
       </p>
@@ -189,14 +189,14 @@ function ErrorState({
         {canRetry && (
           <button
             onClick={onRetry}
-            className="inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+            className="inline-flex items-center justify-center rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
             Try again
           </button>
         )}
         <button
           onClick={onClose}
-          className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+          className="inline-flex items-center justify-center rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
           Close
         </button>
@@ -208,13 +208,13 @@ function ErrorState({
 function EmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center px-2">
-      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-700 text-indigo-200 shadow-sm">
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-ink to-navy-700 text-blurple-100 shadow-sm">
         <SparkleIcon size={20} boxClassName="h-5 w-5" />
       </span>
-      <h3 className="mt-4 text-sm font-semibold text-slate-900 tracking-tight">
+      <h3 className="mt-4 text-sm font-semibold text-ink tracking-tight">
         What can I help with?
       </h3>
-      <p className="mt-1.5 max-w-[260px] text-xs leading-5 text-slate-500">
+      <p className="mt-1.5 max-w-[260px] text-xs leading-5 text-navy-500">
         I explain stages, blockers, ownership, and next steps using live data from this page. I don’t write content or change anything.
       </p>
     </div>

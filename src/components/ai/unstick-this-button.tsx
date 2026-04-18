@@ -41,7 +41,7 @@ export function UnstickThisButton({
         void askAI(UNSTICK_PROMPT);
       }}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center gap-1.5 rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-2.5 py-1 text-xs font-medium text-blurple-800 transition hover:bg-blurple-100 disabled:cursor-not-allowed disabled:opacity-60",
         className
       )}
       title="Ask AI for a checklist of what's blocking this record"

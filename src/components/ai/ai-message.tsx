@@ -27,19 +27,19 @@ export function AIMessage({ response }: AIMessageProps) {
   return (
     <div className="flex flex-col gap-5">
       {showAssignee && response.assignee?.name && (
-        <div className="inline-flex items-center gap-1.5 self-start rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 shadow-sm">
-          <span className="text-slate-500">{response.assignee.role ?? 'Assigned to'}:</span>
-          <span className="text-slate-900">{response.assignee.name}</span>
+        <div className="inline-flex items-center gap-1.5 self-start rounded-full border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2.5 py-1 text-[11px] font-medium text-navy-500 shadow-sm">
+          <span className="text-navy-500">{response.assignee.role ?? 'Assigned to'}:</span>
+          <span className="text-ink">{response.assignee.name}</span>
         </div>
       )}
       {response.currentState && (
         <section className="space-y-2">
           {showHeading && (
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-500">
               Current State
             </h3>
           )}
-          <p className="text-sm leading-6 text-slate-800">{response.currentState}</p>
+          <p className="text-sm leading-6 text-ink">{response.currentState}</p>
           {response.links.length > 0 && <AILinksRow links={response.links} />}
         </section>
       )}
@@ -47,7 +47,7 @@ export function AIMessage({ response }: AIMessageProps) {
       {/* Workflow sections are hidden for factual Q&A */}
       {!isFactual && response.blockers && response.blockers.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-500">
             Blockers
           </h3>
           <div className="space-y-2">
@@ -60,7 +60,7 @@ export function AIMessage({ response }: AIMessageProps) {
 
       {!isFactual && response.qualityIssues && response.qualityIssues.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-500">
             Quality Issues
           </h3>
           <div className="space-y-2">
@@ -89,14 +89,14 @@ export function AIMessage({ response }: AIMessageProps) {
       ) : null}
 
       {showConfidence && (
-        <div className="pt-3 border-t border-slate-100">
-          <p className="text-[11px] text-slate-500">
+        <div className="pt-3 border-t border-[color:var(--sh-gray)]">
+          <p className="text-[11px] text-navy-500">
             Confidence: {Math.round(response.confidence * 100)}%
           </p>
         </div>
       )}
 
-      <div className="pt-3 border-t border-slate-100 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+      <div className="pt-3 border-t border-[color:var(--sh-gray)] flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <AIFeedback context={response.feedbackContext} />
         <ProvenanceChip
           source={response.responseSource}
@@ -135,7 +135,7 @@ function ProvenanceChip({
   return (
     <span
       title={title}
-      className="inline-flex items-start gap-1.5 text-[11px] font-medium text-slate-500 leading-4 break-words"
+      className="inline-flex items-start gap-1.5 text-[11px] font-medium text-navy-500 leading-4 break-words"
     >
       <span
         className={`mt-1 inline-block h-1.5 w-1.5 rounded-full ${dotClass} shrink-0`}

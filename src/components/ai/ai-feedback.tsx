@@ -55,20 +55,20 @@ export function AIFeedback({ context }: { context: AIFeedbackContext }) {
 
   if (submitted) {
     return (
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-navy-500">
         Thanks for the feedback.
       </p>
     );
   }
 
   return (
-    <div className="flex items-center gap-2 text-xs text-slate-500">
+    <div className="flex items-center gap-2 text-xs text-navy-500">
       <span>Was this helpful?</span>
       <button
         type="button"
         onClick={() => send('up')}
         disabled={submitting}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:border-emerald-300 hover:text-emerald-600 disabled:opacity-50"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--sh-gray-200)] bg-white text-navy-500 transition-colors hover:border-emerald-300 hover:text-emerald-600 disabled:opacity-50"
         aria-label="Helpful"
         title="Helpful"
       >
@@ -78,7 +78,7 @@ export function AIFeedback({ context }: { context: AIFeedbackContext }) {
         type="button"
         onClick={() => send('down')}
         disabled={submitting}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:border-rose-300 hover:text-rose-600 disabled:opacity-50"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--sh-gray-200)] bg-white text-navy-500 transition-colors hover:border-rose-300 hover:text-rose-600 disabled:opacity-50"
         aria-label="Not helpful"
         title="Not helpful"
       >

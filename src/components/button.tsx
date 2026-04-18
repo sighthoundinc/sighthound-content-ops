@@ -1,4 +1,8 @@
-"use client";
+// Shared module (no "use client"). `Button` is a pure stateless component
+// and `buttonClass()` is a pure string helper — neither uses hooks, event
+// listeners, or browser APIs. Marking this file server-neutral lets server
+// components (e.g. src/app/page.tsx) call `buttonClass(...)` directly.
+// Client components still import from `@/components/button` unchanged.
 
 import type { ButtonHTMLAttributes } from "react";
 

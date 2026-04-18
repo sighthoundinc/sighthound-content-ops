@@ -47,6 +47,7 @@ supabase/.temp/
 next-env.d.ts
 
 # sh-autoresearch runtime state (see autoresearch/README.md)
+# research.env is gitignored (mutable baseline); program.md is the versioned
+# experiment-strategy document and MUST stay tracked so round history survives.
 /research.env
-/program.md
 /results/

@@ -113,6 +113,11 @@ echo "Baseline:          $BASELINE_METRIC"
 echo "Min delta:         $MIN_DELTA"
 
 # ── Compare metric ────────────────────────────────────────────────────────────
+# Capture the python comparator's exit code directly. The previous form
+# (`$(...) || IMPROVED=1; IMPROVED=$?`) was broken on every platform: the
+# second assignment clobbered IMPROVED with the exit code of the first
+# assignment (always 0), so the ratchet always took the "improved" branch.
+set +e
 RESULT=$(python3 - <<PYEOF
 import sys
 
@@ -130,8 +135,9 @@ improvement = metric - baseline if direction == "higher" else baseline - metric
 print(f"delta={improvement:+.4f}  improved={'yes' if improved else 'no'}")
 sys.exit(0 if improved else 1)
 PYEOF
-) || IMPROVED=1
+)
 IMPROVED=$?
+set -e
 echo "$RESULT"
 
 COMMIT=$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -141,9 +147,13 @@ if [ $IMPROVED -eq 0 ]; then
     echo ""
     echo "✓ IMPROVED — $BASELINE_METRIC → $METRIC  (Δ$(python3 -c "print(f'{float(\"$METRIC\")-float(\"$BASELINE_METRIC\"):+.4f}')") )"
     printf "%s\t%s\tkeep\t%s\n" "$COMMIT" "$METRIC" "$DESC" >> "$RESULTS_TSV"
-    # Update session best metric so check-time.sh can report it
+    # Update session best metric so check-time.sh can report it.
+    # Portable BSD/GNU sed: use -i.bak then remove the backup (works on
+    # both macOS and Linux; GNU `sed -i '<expr>'` and BSD `sed -i '' '<expr>'`
+    # are mutually incompatible).
     if [ -f "$SESSION_FILE" ]; then
-        sed -i "s/^SESSION_BEST_METRIC=.*/SESSION_BEST_METRIC=$METRIC/" "$SESSION_FILE"
+        sed -i.bak "s/^SESSION_BEST_METRIC=.*/SESSION_BEST_METRIC=$METRIC/" "$SESSION_FILE"
+        rm -f "$SESSION_FILE.bak"
     fi
     exit 0
 else

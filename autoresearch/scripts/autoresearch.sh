@@ -94,9 +94,29 @@ print(m.group(1) if m else '$BASELINE_METRIC')
         echo ""
         echo "✓ IMPROVED ($BASELINE_METRIC → $NEW_METRIC) — committing"
         git add $EDITABLE_FILES
-        git commit -m "autoresearch: $DESCRIPTION — $METRIC_DIRECTION $BASELINE_METRIC → $NEW_METRIC"
-        # Persist new best so the next iteration uses it
-        sed -i "s/^BASELINE_METRIC=.*/BASELINE_METRIC=$NEW_METRIC/" "$ENV_FILE"
+        # Build a commitlint-compliant subject. This repo's rules require:
+        #   - type from allowlist (perf suits a bundle-size win)
+        #   - scope from allowlist (ui for UI changes)
+        #   - lower-case subject
+        #   - header <= 72 chars
+        # The description from the agent may contain capitals or colons, so
+        # lower-case it and truncate the whole subject to fit the budget.
+        # Subject-only commit to avoid body line-length rule issues.
+        # The metric delta is captured in results/autoresearch.tsv anyway.
+        COMMIT_SUBJECT_PREFIX="perf(ui): "
+        # Sanitize: lower-case and strip newlines; truncate to 72 minus prefix.
+        COMMIT_SUBJECT_BODY=$(printf '%s' "$DESCRIPTION" | tr '[:upper:]' '[:lower:]' | tr -d '\n')
+        MAX_SUBJECT=72
+        PREFIX_LEN=${#COMMIT_SUBJECT_PREFIX}
+        BUDGET=$(( MAX_SUBJECT - PREFIX_LEN ))
+        if [ ${#COMMIT_SUBJECT_BODY} -gt $BUDGET ]; then
+            COMMIT_SUBJECT_BODY="${COMMIT_SUBJECT_BODY:0:$BUDGET}"
+        fi
+        git commit -m "${COMMIT_SUBJECT_PREFIX}${COMMIT_SUBJECT_BODY}"
+        # Persist new best so the next iteration uses it.
+        # Portable BSD/GNU sed: use -i.bak then remove the backup.
+        sed -i.bak "s/^BASELINE_METRIC=.*/BASELINE_METRIC=$NEW_METRIC/" "$ENV_FILE"
+        rm -f "$ENV_FILE.bak"
         echo "New best: $NEW_METRIC  (written to research.env)"
         ;;
     1)

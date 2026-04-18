@@ -38,8 +38,6 @@
   ],
   "exclude": [
     "node_modules",
-    "supabase/functions/**/*.ts",
-    "**/* 2.ts",
-    "**/* 2.tsx"
+    "supabase/functions/**/*.ts"
   ]
 }

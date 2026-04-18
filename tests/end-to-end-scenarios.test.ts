@@ -13,7 +13,7 @@ import { getRequiredFieldsForStatus, getNextStagesForStatus } from "@/lib/workfl
 
 describe("End-to-End Scenarios", () => {
   /**
-   * Scenario 1: Blog draft missing title (writer)
+   * Scenario 1: Blog in writing stage, missing title (writer)
    */
   it("should handle blog draft missing title", () => {
     const context = extractContextSync(
@@ -24,7 +24,7 @@ describe("End-to-End Scenarios", () => {
         userRole: "writer"
       },
       {
-        status: "draft",
+        status: "writing",
         fields: { title: false, writer_id: true },
         ownerId: "writer-1",
         reviewerId: undefined
@@ -133,7 +133,7 @@ describe("End-to-End Scenarios", () => {
         userRole: "admin"
       },
       {
-        status: "draft",
+        status: "writing",
         fields: { title: true, writer_id: true },
         ownerId: "writer-4",
         reviewerId: undefined
@@ -198,6 +198,7 @@ describe("End-to-End Scenarios", () => {
 
   /**
    * Scenario 8: Blog ready to transition (all fields present)
+   * Unified blog workflow: writing -> ready -> publishing -> published.
    */
   it("should allow transition when all required fields present", () => {
     const context = extractContextSync(
@@ -208,7 +209,7 @@ describe("End-to-End Scenarios", () => {
         userRole: "writer"
       },
       {
-        status: "draft",
+        status: "writing",
         fields: { title: true, writer_id: true },
         ownerId: "writer-8",
         reviewerId: undefined
@@ -232,7 +233,7 @@ describe("End-to-End Scenarios", () => {
   });
 
   /**
-   * Scenario 9: Terminal stage (blog completed)
+   * Scenario 9: Terminal stage (blog published)
    */
   it("should prevent transition from terminal stage", () => {
     const context = extractContextSync(
@@ -243,7 +244,7 @@ describe("End-to-End Scenarios", () => {
         userRole: "publisher"
       },
       {
-        status: "completed",
+        status: "published",
         fields: { title: true, writer_id: true, draft_doc_link: true, publisher_id: true },
         ownerId: "publisher-9",
         reviewerId: undefined
@@ -366,9 +367,10 @@ describe("End-to-End Scenarios", () => {
   });
 
   /**
-   * Scenario 12: Blog in publisher review stage
+   * Scenario 12: Blog in the publishing stage (equivalent of the old
+   * "publisher_review" stage in the unified workflow).
    */
-  it("should require publisher for publisher_review stage", () => {
+  it("should allow publisher to transition from publishing stage", () => {
     const context = extractContextSync(
       {
         entityType: "blog",
@@ -377,7 +379,7 @@ describe("End-to-End Scenarios", () => {
         userRole: "publisher"
       },
       {
-        status: "publisher_review",
+        status: "publishing",
         fields: { title: true, writer_id: true, draft_doc_link: true, publisher_id: true },
         ownerId: "publisher-12",
         reviewerId: "editor-12"
@@ -396,6 +398,6 @@ describe("End-to-End Scenarios", () => {
     });
 
     expect(blockers.canProceedToNextStage).toBe(true);
-    expect(context.nextAllowedStages).toContain("completed");
+    expect(context.nextAllowedStages).toContain("published");
   });
 });

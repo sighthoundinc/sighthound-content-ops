@@ -78,16 +78,18 @@ describe("Context Extractor", () => {
   });
 
   it("should get next allowed stages", () => {
+    // Unified blog workflow: writing -> ready -> publishing -> published.
+    // See `src/lib/workflow-rules.ts#BLOG_WORKFLOW`.
     const input = createInput({ entityType: "blog" });
-    const state = createEntityState({ status: "draft" });
+    const state = createEntityState({ status: "writing" });
     const result = extractContextSync(input, state);
 
-    expect(result.nextAllowedStages).toContain("writer_review");
+    expect(result.nextAllowedStages).toContain("ready");
   });
 
   it("should handle terminal stages", () => {
     const input = createInput({ entityType: "blog" });
-    const state = createEntityState({ status: "completed" });
+    const state = createEntityState({ status: "published" });
     const result = extractContextSync(input, state);
 
     expect(result.nextAllowedStages.length).toBe(0);

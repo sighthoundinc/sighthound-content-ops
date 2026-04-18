@@ -27,6 +27,29 @@ If instructions appear to conflict, resolve in this order:
 
 When still ambiguous, choose the option that maximizes predictability, accessibility, and cross-page consistency.
 
+## Design System Authority — Sighthound Content Relay (MUST)
+
+The `design-system/` directory is the canonical source of truth for brand identity, visual tokens, typography, assets, and reference UI. This is the **Sighthound Content Relay** flashpoint: from this commit forward all UI work aligns here first, and this section supersedes any pre-Content-Relay ad-hoc color/font/spacing conventions referenced elsewhere in this file (including legacy slate/blue references in the Typography System section).
+
+1. **Token authority**: Colors, type scale, spacing, radii, shadows, and motion tokens live in `design-system/colors_and_type.css`. Map these into `src/app/globals.css` (CSS custom properties) and the Tailwind theme. Do NOT hardcode brand hex values (`#4f60dc`, `#1a1d38`, `#f99f25`, `#f05d22`, `#f62470`) directly in components — consume them via tokens.
+2. **Brand palette contract**:
+   - Primary: Blurple `#4f60dc` (~60% of composition).
+   - Secondary: Dark Navy `#1a1d38` + Neutral Gray `#eff3f7` (~30%). All body text is Dark Navy on light surfaces — never pure black, never arbitrary slate.
+   - Accents: Light Orange `#f99f25`, Medium Orange `#f05d22`, Red Orange `#f62470` — capped at ~10% (pops only, never fills).
+   - Gradients (Blurple → Red-Orange, warm, cool) used sparingly (~10%).
+3. **Typography authority**: Primary font is **Lexend** (weights 300/500/600). Brand-approved fallback is **Verdana**. The logo wordmark uses **Robofan** (proprietary) — NEVER recreate the wordmark; always use the logo files in `design-system/assets/`. Digital type scale (H1 46/1.2 medium · H2 32/1.33 light · H3 16/1.5 · H4 16 semibold ALL CAPS · H5 18/1.5 · body 16/1.5 · button 16) is defined in `design-system/colors_and_type.css`.
+4. **Assets authority**: Brand logos, hero imagery, product icons, and hardware renders live in `design-system/assets/`. Copy into `public/` or import; never redraw, re-render, or substitute placeholders.
+5. **Reference UI kits**: `design-system/ui_kits/sighthound-marketing/` and `design-system/ui_kits/redactor-app/` are the canonical reference implementations for patterns, spacing, and component composition. Consult them before introducing any new UI variant or bespoke layout.
+6. **Non-negotiables**:
+   - Buttons: **20px radius**, 14/29 padding, Lexend Light 16.
+   - Cards: 12px radius, soft navy-tinted shadows — never black shadows.
+   - Inputs: 8px radius. Pills: 999px.
+   - No emoji icons in production UI; use the illustrated brand icon set from `design-system/assets/` or Lucide (`lucide-react`) at 1.75 stroke weight / `currentColor` for UI-level glyphs (per Iconography Standard).
+   - Signature motifs — the **wave** graphic and the Blurple → Red-Orange gradient — used sparingly and intentionally.
+   - Tagline is *"Turning sight into insight."*; voice is informal-yet-polished, we/you, no arrogance.
+7. **Skill + provenance**: `design-system/SKILL.md` is the designer-agent skill manifest. Brand provenance lives in `design-system/uploads/Sighthound-BrandGuidelines-Jul12.pdf` (official April 2022 brand guide) plus `design-system/README.md`.
+8. **Change control**: Any brand token change (color, type, spacing, motion, radius) MUST originate in `design-system/colors_and_type.css` and flow downstream into `src/app/globals.css` / Tailwind theme — never the other way around.
+
 ## Change Intelligence Protocol (MUST)
 
 For every non-trivial UI or workflow change:
@@ -73,9 +96,10 @@ For every non-trivial UI or workflow change:
 5. **Weight Hierarchy**: Normal (400) for body, Medium (500) for labels, Semibold (600) for headings, Bold (700) reserved for rare exceptions
 6. **Line Height Optimization**: Snug (1.2) for headings, 1.5 (leading-6) for body, 1 (leading-4) for meta and table headers
 7. **Letter Spacing**: Headings use `tracking-tight` (-0.015em), body uses natural Inter spacing (0). Global body applies -0.01em for subtle optical refinement.
-8. **Color Consistency**: Use slate-900 for headings, slate-800 for body, slate-600 for meta, slate-400 for disabled text
+8. **Color Consistency (pre-Content-Relay baseline)**: Historical baseline used slate-900 for headings, slate-800 for body, slate-600 for meta, slate-400 for disabled text. These slate values are **superseded** by the Sighthound Content Relay palette in `design-system/colors_and_type.css` (Dark Navy `#1a1d38` for body / headings on light, Blurple `#4f60dc` as primary). New and touched surfaces MUST adopt the Content Relay tokens; slate remains only as a temporary fallback until migration completes.
 9. **No Manual Overrides**: Do not apply arbitrary `text-*`, `font-*`, or `leading-*` classes to text content; use the predefined system instead.
-10. **Design Documentation**: Refer to `docs/TYPOGRAPHY_SYSTEM.md` for detailed specifications, examples, and component patterns.
+10. **Design Documentation**: `design-system/` (root of repo) is the upstream source of truth — see `design-system/README.md` and `design-system/colors_and_type.css`. `docs/TYPOGRAPHY_SYSTEM.md` may be referenced for implementation notes but must not contradict the design system tokens.
+11. **Fonts**: Primary font family is **Lexend** per the Design System Authority section. Any remaining references to Inter are legacy and should be migrated to Lexend on touch.
 
 ## Timezone and Date Display (MUST)
 

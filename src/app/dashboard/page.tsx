@@ -4079,7 +4079,6 @@ export default function DashboardPage() {
               </div>
             }
           />
-          <NeedsYouHero />
           {isOverviewLoading ? (
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
               <h2 className="text-sm font-semibold text-slate-900">Overview</h2>

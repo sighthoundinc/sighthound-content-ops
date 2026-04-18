@@ -24,25 +24,25 @@ export function AINextStepsCard({ steps }: NextStepsCardProps) {
 
   return (
     <section className="space-y-2">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-500">
         Next Steps
       </h3>
       <div className="space-y-2">
         {steps.map((item, i) => (
           <div
             key={i}
-            className="group rounded-lg border border-slate-200 bg-white p-3 transition-shadow hover:shadow-sm"
+            className="group rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 transition-shadow hover:shadow-sm"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
                   {item.step}
                 </p>
-                <p className="mt-1 text-sm leading-5 text-slate-800">{item.action}</p>
+                <p className="mt-1 text-sm leading-5 text-ink">{item.action}</p>
               </div>
               <button
                 onClick={() => handleCopy(item.action, i)}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-navy-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-blurple-50 hover:text-navy-500 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                 aria-label="Copy"
               >
                 <AppIcon

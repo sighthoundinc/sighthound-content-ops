@@ -849,3 +849,59 @@ Notable result of the two sweeps: AI avatar bubbles (header + empty-state hero),
 - `src/components/ai/ai-quality-card.tsx`
 - `src/components/ai/ai-next-steps-card.tsx`
 - `src/components/associated-blog-context-card.tsx` (bespoke card outside `ai/` namespace but part of the same “context card” story)
+
+### Phase 4.6 — Bespoke cards (4 files)
+
+In-place migration of four bespoke card components the user explicitly reserved for a separate pass. No shared `<Card>` primitive extracted (that's a post-migration refactor, not this PR).
+
+**Files touched (4)**
+- `src/components/ai/ai-blocker-card.tsx` (blocker severity pill — critical / warning / info)
+- `src/components/ai/ai-quality-card.tsx` (AI quality issue severity pill — same pattern)
+- `src/components/ai/ai-next-steps-card.tsx` (next-steps list with per-item copy CTA)
+- `src/components/associated-blog-context-card.tsx` (associated-blog mini card rendered on social-post detail pages)
+
+**Token migration**
+| Surface | Before | After |
+|---|---|---|
+| Chrome (card surface / borders / body text / timestamps / status pill chrome) | `bg-slate-50`, `border-slate-200`, `text-slate-600/700/800/900`, `hover:bg-slate-100/200` | `bg-[color:var(--sh-gray)]`, `border-[color:var(--sh-gray-200)]`, `text-navy-500` / `text-ink`, `hover:bg-blurple-50` / `hover:bg-[color:var(--sh-gray-200)]` |
+| Info severity branch (blocker + quality) | `bg-blue-50 border-blue-200 text-blue-800 text-blue-600` | `bg-blurple-50 border-[color:var(--sh-blurple-100)] text-blurple-800 text-brand` (Strategy B) |
+| Focus rings on copy buttons | `ring-slate-400` | `ring-brand` |
+| Hover text on copy button | `hover:text-slate-700` | `hover:text-navy-500` |
+
+**Deliberately preserved** (semantic signal palettes)
+- **Critical severity**: `bg-red-50 border-red-200 text-red-800 text-red-600` kept across blocker + quality cards — semantic danger. Intentionally NOT swept to `rose-*` (which is the contract-locked status-chip tone). The card severity palette is its own signal story per user scope.
+- **Warning severity**: `bg-amber-50 border-amber-200 text-amber-800 text-amber-600` kept for the same reason — semantic warning, parallel to the shortcut tip box in app-shell.
+- **Emerald copy-success tone** on the next-steps card (`text-emerald-600` when a step has just been copied) — semantic success, parallel to the copy-flash in `DetailDrawerQuickAction`.
+- **`bg-white`** surfaces inside the associated-blog card status chips and the next-steps card — kept as-is (same output as `bg-surface`).
+
+**Info-severity note**: the blocker/quality “info” branch previously used Tailwind blue-*. Per Strategy B, blue isn't a Content Relay tone — Blurple is. The info pills now render with Blurple-50 / Blurple-100 border / Blurple-800 text / brand icon, making the three severities read as a clear semantic ladder (Red critical → Amber warning → Blurple info).
+
+**Cross-app visual impact**: the Ask AI panel's blocker cards, quality-issue cards, and next-steps list all render in Content Relay chrome. The associated-blog context card on every social-post detail page now uses Sighthound navy ink + `sh-gray-200` borders + `sh-gray` surface + Blurple hover-into. Open-blog icon hover is `sh-gray-200`. Status chip rendering inside this card (Writing: ..., Publishing: ...) picks up the same border/navy treatment, though the **label text values** (status strings from `status.ts`) continue to use the contract-locked palette elsewhere.
+
+**Caller compatibility**: no API surface changed. No prop signatures touched. `npx tsc --noEmit` → exit 0.
+
+---
+
+## 17. Phase 4 — COMPLETE
+
+All page-level and component-level surfaces are now migrated to Content Relay tokens.
+
+| # | Scope | Commit(s) |
+|---|---|---|
+| 4.1 | Typography system (constants + utility classes) | `e78d8fe` |
+| 4.2 | Global chrome (app-shell, sidebars, header) | `ca92dda` |
+| 4.3 | Login / landing (brand-showcase) | `76de154` |
+| 4.4 | Dashboard + list pages (16 files, 2 batches) | `5f11a85`, `45fc58b`, `b5f9089` |
+| 4.5 | AI chrome (chat panel + floating button + 7 more) | `276340f`, `bd48277` |
+| 4.6 | Bespoke cards (4 files) | _this PR_ |
+
+Plus hotfix `abc73f4` (drop `"use client"` from `button.tsx` so server components can call `buttonClass()`).
+
+**Still-outstanding follow-ups (queued for Phase 5 cleanup)**
+- `.interactive-link:hover` in `globals.css` still references `#0f172a` (slate-900) directly — migrate to `var(--color-ink)`.
+- `.table-row-focus` in `globals.css` still uses `#f8fafc` (slate-50) for hover-bg and `#cbd5e1` (slate-300) for the inset stripe.
+- `--font-inter-sans` CSS alias to `--font-lexend-sans` in `globals.css` — Phase 5 cleanup removes the alias once every reference is on `--font-lexend-sans` or `--font-sans`.
+- `src/app/font-variants.tsx` zombie file (references `--font-geist-sans`; Geist isn’t used).
+- `docs/TYPOGRAPHY_SYSTEM.md` may still carry legacy slate guidance; Phase 5 checks alignment with `design-system/README.md`.
+- Git LFS decision for `design-system/uploads/*.pdf` (10 MB) — unrelated to visual migration.
+- Any remaining untouched shared components in `src/components/` that happened to slip past Phase 3 primitives + Phase 4 pages. Phase 5 is expected to be a final grep-sweep to confirm zero slate-*/indigo-*/blue-* references across `src/`.

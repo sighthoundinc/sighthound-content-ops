@@ -27,11 +27,11 @@ const SEVERITY_CONFIG: Record<string, { bg: string; border: string; text: string
     color: 'text-amber-600',
   },
   info: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    text: 'text-blue-800',
+    bg: 'bg-blurple-50',
+    border: 'border-[color:var(--sh-blurple-100)]',
+    text: 'text-blurple-800',
     icon: 'info',
-    color: 'text-blue-600',
+    color: 'text-brand',
   },
 };
 

@@ -599,7 +599,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-slate-50" data-density={density}>
-      <header className="border-b border-slate-200 bg-[#fcfcfe]">
+      <header className="border-b border-slate-200 bg-surface">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3">
           <Link
             href="/"

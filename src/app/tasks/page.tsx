@@ -1251,18 +1251,21 @@ function MyTasksPageContent() {
       })
       .join("");
     popup.document.open();
+    // Print popup runs in an isolated document; Sighthound design tokens are
+    // inlined as hex because --sh-* / --color-* CSS vars are not available
+    // in the new window. Values below mirror the brand palette.
     popup.document.write(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
   <title>My Tasks Export</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0f172a; padding: 24px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1a1d38; padding: 24px; }
     h1 { margin: 0 0 12px 0; font-size: 20px; }
-    p { margin: 0 0 18px 0; color: #475569; font-size: 13px; }
+    p { margin: 0 0 18px 0; color: #4b4f73; font-size: 13px; }
     table { border-collapse: collapse; width: 100%; font-size: 12px; }
-    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
-    th { background: #f8fafc; font-weight: 600; }
+    th, td { border: 1px solid #d9dfe6; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
+    th { background: #eff3f7; font-weight: 600; }
   </style>
 </head>
 <body>

@@ -3955,19 +3955,19 @@ export default function DashboardPage() {
     [savedViews]
   );
   const getOverviewMetricCardClass = (isActive: boolean) =>
-    `rounded-lg border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-1 ${
+    `rounded-lg border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
       isActive
-        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-        : "border-slate-300 bg-white text-slate-900 hover:border-slate-400 hover:bg-slate-100"
+        ? "border-ink bg-ink text-white shadow-sm"
+        : "border-[color:var(--sh-gray-200)] bg-white text-ink hover:border-[color:var(--sh-gray-400)] hover:bg-blurple-50"
     }`;
   const getOverviewMetricTitleClass = (isActive: boolean) =>
-    isActive ? "text-xs font-semibold text-white" : "text-xs font-semibold text-slate-800";
+    isActive ? "text-xs font-semibold text-white" : "text-xs font-semibold text-ink";
   const getOverviewMetricBreakdownClass = (isActive: boolean) =>
-    isActive ? "mt-1 text-[11px] text-slate-200" : "mt-1 text-[11px] text-slate-600";
+    isActive ? "mt-1 text-[11px] text-blurple-100" : "mt-1 text-[11px] text-navy-500";
   const getOverviewMetricValueClass = (isActive: boolean) =>
     isActive
       ? "mt-2 text-2xl font-semibold tabular-nums text-white"
-      : "mt-2 text-2xl font-semibold tabular-nums text-slate-900";
+      : "mt-2 text-2xl font-semibold tabular-nums text-ink";
   const renderOverviewMetricCard = (metricKey: MetricFilterKey) => {
     const isActive = activeMetricFilter === metricKey;
     const metricLabel = METRIC_FILTER_LABELS[metricKey];
@@ -4006,11 +4006,11 @@ export default function DashboardPage() {
             <span
               role="img"
               aria-label={`${metricLabel} logic`}
-              className={isActive ? "text-slate-200" : "text-slate-500"}
+              className={isActive ? "text-blurple-100" : "text-navy-500"}
             >
               <InfoIcon size={14}
                 boxClassName="h-4 w-4"
-                className={isActive ? "text-slate-200" : "text-slate-500"} />
+                className={isActive ? "text-blurple-100" : "text-navy-500"} />
             </span>
           </Tooltip>
         </div>
@@ -4033,15 +4033,15 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {canCreateBlog || canManageSocialPosts ? (
                   <details className="relative">
-                    <summary className="cursor-pointer list-none rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-1">
+                    <summary className="cursor-pointer list-none rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1">
                       Add Content
                     </summary>
-                    <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                    <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
                       {canCreateBlog ? (
                         <>
                           <button
                             type="button"
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50"
                             onClick={() => {
                               closeOpenDashboardMenus();
                               router.push("/ideas");
@@ -4051,7 +4051,7 @@ export default function DashboardPage() {
                           </button>
                           <button
                             type="button"
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50"
                             onClick={() => {
                               closeOpenDashboardMenus();
                               router.push("/blogs/new");
@@ -4064,7 +4064,7 @@ export default function DashboardPage() {
                       {canManageSocialPosts ? (
                         <button
                           type="button"
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50"
                           onClick={() => {
                             closeOpenDashboardMenus();
                             router.push("/social-posts?create=1");
@@ -4080,8 +4080,8 @@ export default function DashboardPage() {
             }
           />
           {isOverviewLoading ? (
-            <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
-              <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
+            <section className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
+              <h2 className="text-sm font-semibold text-ink">Overview</h2>
               <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div
@@ -4092,11 +4092,11 @@ export default function DashboardPage() {
               </div>
             </section>
           ) : (
-            <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
-              <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
+            <section className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
+              <h2 className="text-sm font-semibold text-ink">Overview</h2>
               <div className="mt-3 space-y-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                     Informational
                   </p>
                   <div className="mt-1 grid gap-2 text-sm md:grid-cols-3">
@@ -4106,7 +4106,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                     Actionable Now
                   </p>
                   <div className="mt-1 grid gap-2 text-sm md:grid-cols-3">
@@ -4119,7 +4119,7 @@ export default function DashboardPage() {
             </section>
           )}
           {isLoading ? (
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 sm:p-5">
               <div className="skeleton h-8 w-32" />
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={`filter-skeleton-${i}`} className="skeleton h-10 w-full" />
@@ -4145,7 +4145,7 @@ export default function DashboardPage() {
                   <div className="md:col-span-2 xl:col-span-4 grid gap-3">
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                       <label className="block">
-                        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-navy-500">
                           Lens
                         </span>
                         <select
@@ -4153,7 +4153,7 @@ export default function DashboardPage() {
                           onChange={(event) => {
                             setLens(event.target.value as DashboardLens);
                           }}
-                          className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                         >
                           {lensOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -4218,9 +4218,9 @@ export default function DashboardPage() {
                       ) : null}
                     </div>
                     {isAdvancedFiltersOpen ? (
-                      <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-                        <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white p-2">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <div className="space-y-3 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
+                        <div className="flex flex-wrap items-center gap-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                             Lens shortcuts
                           </span>
                           <Button
@@ -4237,14 +4237,14 @@ export default function DashboardPage() {
                           {sortedSavedLensShortcuts.map((shortcut) => (
                             <div
                               key={shortcut.id}
-                              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white p-1"
+                              className="inline-flex items-center gap-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1"
                             >
                               <button
                                 type="button"
                                 className={`rounded px-2 py-1 text-xs font-medium ${
                                   shortcut.lens === lens
-                                    ? "bg-slate-900 text-white"
-                                    : "text-slate-700 hover:bg-slate-100"
+                                    ? "bg-ink text-white"
+                                    : "text-navy-500 hover:bg-blurple-50"
                                 }`}
                                 onClick={() => {
                                   applyLensShortcut(shortcut);
@@ -4254,7 +4254,7 @@ export default function DashboardPage() {
                               </button>
                               <button
                                 type="button"
-                                className="rounded px-2 py-1 text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                                className="rounded px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50 hover:text-navy-500"
                                 onClick={() => {
                                   removeLensShortcut(shortcut);
                                 }}
@@ -4346,11 +4346,11 @@ export default function DashboardPage() {
           )}
 
           {selectedRowCount > 0 ? (
-            <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900">Bulk Actions</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-sm font-semibold text-ink">Bulk Actions</p>
+                  <p className="text-xs text-navy-500">
                     {selectedRowCount} selected · Blogs: {selectedBlogIds.length} · Social:{" "}
                     {selectedSocialPostIds.length}
                   </p>
@@ -4358,7 +4358,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   disabled={isBulkSaving}
-                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     clearBulkUiState();
                   }}
@@ -4367,12 +4367,12 @@ export default function DashboardPage() {
                 </button>
               </div>
               {hasOnlySocialSelection ? (
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-navy-500">
                   Social posts are selected. Bulk updates for social posts are not available yet.
                 </p>
               ) : null}
               {hasSocialSelection && hasBlogSelection ? (
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-navy-500">
                   Blog bulk updates are available only when social posts are not selected.
                   Deselect social posts to continue.
                 </p>
@@ -4387,7 +4387,7 @@ export default function DashboardPage() {
                   disabled={
                     !canChangeWriterAssignment || isBulkSaving || !hasOnlyBlogSelection
                   }
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 >
                   <option value="">No writing assignment change</option>
                   {assignmentOptions.map((user) => (
@@ -4405,7 +4405,7 @@ export default function DashboardPage() {
                   disabled={
                     !canChangePublisherAssignment || isBulkSaving || !hasOnlyBlogSelection
                   }
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 >
                   <option value="">No publishing assignment change</option>
                   {assignmentOptions.map((user) => (
@@ -4421,7 +4421,7 @@ export default function DashboardPage() {
                     setBulkWriterStatus(event.target.value as WriterStageStatus | "");
                   }}
                   disabled={!canEditWritingStage || isBulkSaving || !hasOnlyBlogSelection}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 >
                   <option value="">No writing status change</option>
                   {WRITER_STATUSES.map((status) => (
@@ -4437,7 +4437,7 @@ export default function DashboardPage() {
                     setBulkPublisherStatus(event.target.value as PublisherStageStatus | "");
                   }}
                   disabled={!canEditPublishingStage || isBulkSaving || !hasOnlyBlogSelection}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 >
                   <option value="">No publishing status change</option>
                   {PUBLISHER_STATUSES.map((status) => (
@@ -4448,7 +4448,7 @@ export default function DashboardPage() {
                 </select>
               </div>
               {!canRunBulkActions ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-navy-500">
                   Bulk updates are unavailable with your current permissions.
                 </p>
               ) : null}
@@ -4463,7 +4463,7 @@ export default function DashboardPage() {
                     !hasPendingBulkChanges ||
                     Boolean(bulkValidationError)
                   }
-                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     void handleBulkApplyChanges();
                   }}
@@ -4490,7 +4490,7 @@ export default function DashboardPage() {
           ) : null}
 
           {isLoading ? (
-            <div className="space-y-3 rounded-lg border border-slate-200 p-4 sm:p-5">
+            <div className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] p-4 sm:p-5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
               ))}
@@ -4510,15 +4510,15 @@ export default function DashboardPage() {
                   <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
                     <details className="relative">
                       <summary
-                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
                       >
                         Copy
                       </summary>
-                      <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                      <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
                         <button
                           type="button"
                           disabled={sortedRows.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={() => {
                             closeOpenDashboardMenus();
                             void handleCopyValues("title");
@@ -4529,7 +4529,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           disabled={sortedRows.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={() => {
                             closeOpenDashboardMenus();
                             void handleCopyValues("url");
@@ -4541,7 +4541,7 @@ export default function DashboardPage() {
                     </details>
                     <button
                       type="button"
-                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
                       onClick={() => {
                         setIsEditColumnsOpen((previous) => {
                           const nextIsOpen = !previous;
@@ -4575,15 +4575,15 @@ export default function DashboardPage() {
                     {canExportCsv || canExportSelectedCsv ? (
                       <details className="relative">
                         <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-900 bg-slate-900 text-white hover:bg-slate-700`}
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-ink bg-ink text-white hover:bg-navy-700`}
                         >
                           Export
                         </summary>
-                        <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                        <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
                           <button
                             type="button"
                             disabled={sortedRows.length === 0}
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               handleExportCsv(getSmartExportScope());
                               closeOpenDashboardMenus();
@@ -4594,7 +4594,7 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             disabled={sortedRows.length === 0}
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               handleExportPdf(getSmartExportScope());
                               closeOpenDashboardMenus();
@@ -4608,29 +4608,29 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 {isEditColumnsOpen ? (
-                  <div className="absolute right-0 z-30 mt-2 w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                  <div className="absolute right-0 z-30 mt-2 w-full max-w-2xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-lg">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                         Column View
                       </p>
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                          className="rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50"
                           onClick={saveCurrentFiltersAsView}
                         >
                           Save View
                         </button>
                         <details className="relative">
-                          <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                          <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50">
                             <span>Load View</span>
                             <ChevronDownIcon boxClassName="h-3 w-3"
                               size={12}
-                              className="text-slate-500" />
+                              className="text-navy-500" />
                           </summary>
-                          <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                          <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
                             {sortedSavedViews.length === 0 ? (
-                              <p className="px-3 py-2 text-xs text-slate-500">No saved views yet.</p>
+                              <p className="px-3 py-2 text-xs text-navy-500">No saved views yet.</p>
                             ) : (
                               sortedSavedViews.map((view) => (
                                 <button
@@ -4638,8 +4638,8 @@ export default function DashboardPage() {
                                   type="button"
                                   className={`block w-full rounded px-3 py-2 text-left text-sm transition ${
                                     activeSavedViewId === view.id
-                                      ? "bg-slate-900 text-white"
-                                      : "text-slate-700 hover:bg-slate-100"
+                                      ? "bg-ink text-white"
+                                      : "text-navy-500 hover:bg-blurple-50"
                                   }`}
                                   onClick={() => {
                                     closeOpenDashboardMenus();
@@ -4657,7 +4657,7 @@ export default function DashboardPage() {
                         </details>
                         <button
                           type="button"
-                          className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                          className="rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50"
                           onClick={resetColumnView}
                         >
                           Reset Defaults
@@ -4665,8 +4665,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="mt-2 space-y-3">
-                      <div className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
-                        <span className="text-xs font-medium text-slate-600">Density</span>
+                      <div className="flex items-center justify-between rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1.5">
+                        <span className="text-xs font-medium text-navy-500">Density</span>
                         <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
                           <button
                             type="button"
@@ -4694,7 +4694,7 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </div>
-                      <p className="text-[11px] text-slate-500">Drag columns to reorder, or use checkboxes to show/hide</p>
+                      <p className="text-[11px] text-navy-500">Drag columns to reorder, or use checkboxes to show/hide</p>
                       <ColumnEditor
                         columns={columnOrder.map((column) => ({
                           id: column,
@@ -4780,7 +4780,7 @@ export default function DashboardPage() {
 
               <div
                 ref={tableContainerRef}
-                className="overflow-hidden rounded-lg border border-slate-200"
+                className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)]"
               >
                 <DashboardTable
                   rows={pagedRows}
@@ -4892,9 +4892,9 @@ export default function DashboardPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {isPanelEditMode && canChangeWriterAssignment ? (
                     <label className="block space-y-1">
-                      <span className="text-xs text-slate-500">Writer</span>
+                      <span className="text-xs text-navy-500">Writer</span>
                       <select
-                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.writer_id ?? ""}
                         onChange={(event) => {
                           const nextWriterId = event.target.value || null;
@@ -4922,9 +4922,9 @@ export default function DashboardPage() {
 
                   {isPanelEditMode && canChangePublisherAssignment ? (
                     <label className="block space-y-1">
-                      <span className="text-xs text-slate-500">Publisher</span>
+                      <span className="text-xs text-navy-500">Publisher</span>
                       <select
-                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.publisher_id ?? ""}
                         onChange={(event) => {
                           const nextPublisherId = event.target.value || null;
@@ -4952,9 +4952,9 @@ export default function DashboardPage() {
 
                   {isPanelEditMode && canEditWritingStage ? (
                     <label className="block space-y-1">
-                      <span className="text-xs text-slate-500">Writer status</span>
+                      <span className="text-xs text-navy-500">Writer status</span>
                       <select
-                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.writer_status}
                         onChange={(event) => {
                           void updateBlogInline(
@@ -4995,9 +4995,9 @@ export default function DashboardPage() {
 
                   {isPanelEditMode && canEditPublishingStage ? (
                     <label className="block space-y-1">
-                      <span className="text-xs text-slate-500">Publisher status</span>
+                      <span className="text-xs text-navy-500">Publisher status</span>
                       <select
-                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.publisher_status}
                         onChange={(event) => {
                           void updateBlogInline(
@@ -5041,10 +5041,10 @@ export default function DashboardPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {isPanelEditMode && canEditScheduledDate ? (
                     <label className="block space-y-1">
-                      <span className="text-xs text-slate-500">Scheduled date</span>
+                      <span className="text-xs text-navy-500">Scheduled date</span>
                       <input
                         type="date"
-                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={formatDateInput(getBlogScheduledDate(activeBlog))}
                         onChange={(event) => {
                           const nextDate = event.target.value || null;
@@ -5068,10 +5068,10 @@ export default function DashboardPage() {
 
                   {isPanelEditMode && canEditDisplayDate ? (
                     <label className="block space-y-1">
-                      <span className="text-xs text-slate-500">Display date</span>
+                      <span className="text-xs text-navy-500">Display date</span>
                       <input
                         type="date"
-                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={formatDateInput(activeBlog.display_published_date)}
                         onChange={(event) => {
                           const nextDisplayDate = event.target.value || null;
@@ -5099,9 +5099,9 @@ export default function DashboardPage() {
             }
             linksContent={
               activeBlog ? (
-                <div className="space-y-3 text-sm text-slate-700">
+                <div className="space-y-3 text-sm text-navy-500">
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-500">Google Doc</p>
+                    <p className="text-xs text-navy-500">Google Doc</p>
                     <LinkQuickActions
                       href={activeBlog.google_doc_url}
                       label="Google Doc URL"
@@ -5109,7 +5109,7 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-500">Live URL</p>
+                    <p className="text-xs text-navy-500">Live URL</p>
                     <LinkQuickActions
                       href={activeBlog.live_url}
                       label="Live URL"
@@ -5117,7 +5117,7 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-500">Blog Page</p>
+                    <p className="text-xs text-navy-500">Blog Page</p>
                     <LinkQuickActions
                       href={`/blogs/${activeBlog.id}`}
                       label="Blog page URL"
@@ -5142,7 +5142,7 @@ export default function DashboardPage() {
                         onChange={(event) => {
                           setPanelCommentDraft(event.target.value);
                         }}
-                        className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        className="min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         placeholder="Add a comment..."
                         maxLength={2000}
                       />
@@ -5150,7 +5150,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           disabled={isPanelCommentSaving}
-                          className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => {
                             void handlePanelAddComment();
                           }}
@@ -5160,28 +5160,28 @@ export default function DashboardPage() {
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-navy-500">
                       You do not have permission to add comments.
                     </p>
                   )}
                   {panelComments.length === 0 ? (
-                    <p className="text-sm text-slate-500">No comments yet.</p>
+                    <p className="text-sm text-navy-500">No comments yet.</p>
                   ) : (
                     <ul className="space-y-3">
                       {panelComments.map((comment) => (
-                        <li key={comment.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex items-start gap-3">
-                            <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
+                            <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-semibold text-white">
                               {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold text-slate-600">
-                                {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
-                                <time className="font-normal text-slate-400">
+                              <p className="text-xs font-semibold text-navy-500">
+                                {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}
+                                <time className="font-normal text-navy-500/60">
                                   {formatRelativeTimeAgo(new Date(comment.created_at))}
                                 </time>
                               </p>
-                              <div className="mt-2 text-sm text-slate-700">
+                              <div className="mt-2 text-sm text-navy-500">
                                 <MarkdownComment content={comment.comment} />
                               </div>
                             </div>
@@ -5196,17 +5196,17 @@ export default function DashboardPage() {
             timelineContent={
               activeBlog ? (
                 isPanelLoading ? (
-                  <p className="text-sm text-slate-500">Loading timeline…</p>
+                  <p className="text-sm text-navy-500">Loading timeline…</p>
                 ) : panelHistory.length === 0 ? (
-                  <p className="text-sm text-slate-500">No activity history yet.</p>
+                  <p className="text-sm text-navy-500">No activity history yet.</p>
                 ) : (
                   <ol className="space-y-2">
                     {panelHistory.map((entry) => (
                       <li
                         key={entry.id}
-                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2"
                       >
-                        <p className="text-sm font-medium text-slate-800">
+                        <p className="text-sm font-medium text-ink">
                           {formatActivityEventTitle(entry)}
                         </p>
                         {(() => {
@@ -5214,10 +5214,10 @@ export default function DashboardPage() {
                             userNameById: panelHistoryUserNameById,
                           });
                           return detail ? (
-                            <p className="text-xs text-slate-600">{detail}</p>
+                            <p className="text-xs text-navy-500">{detail}</p>
                           ) : null;
                         })()}
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-navy-500/60">
                           {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                         </p>
                       </li>

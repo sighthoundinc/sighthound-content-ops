@@ -1807,17 +1807,17 @@ export default function SocialPostEditorPage() {
         <div className="space-y-5">
           <nav
             aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
           >
-            <Link href="/dashboard" className="hover:text-slate-700">
+            <Link href="/dashboard" className="hover:text-navy-500">
               Dashboard
             </Link>
             <span>/</span>
-            <Link href="/social-posts" className="hover:text-slate-700">
+            <Link href="/social-posts" className="hover:text-navy-500">
               Social Posts
             </Link>
             <span>/</span>
-            <span className="text-slate-700">Details</span>
+            <span className="text-navy-500">Details</span>
           </nav>
           <DataPageHeader
             title={form.title || "Social Post"}
@@ -1847,17 +1847,17 @@ export default function SocialPostEditorPage() {
               </div>
             }
           />
-          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Next Action
                 </h3>
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-medium text-ink">
                   {finalAction.label} → {SOCIAL_POST_STATUS_LABELS[finalAction.nextStatus]}
                 </p>
-                <p className="text-sm text-slate-600">{finalAction.helper}</p>
-                <p className="text-xs text-slate-600">
+                <p className="text-sm text-navy-500">{finalAction.helper}</p>
+                <p className="text-xs text-navy-500">
                   Current owner: {currentOwnerName} • Next owner: {nextOwnerName}
                 </p>
                 <p
@@ -1885,14 +1885,14 @@ export default function SocialPostEditorPage() {
                 </Button>
               </div>
             </div>
-            <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                 Transition Preflight
               </p>
               {transitionRequiredFields.length === 0 ? (
                 <p className="text-xs text-emerald-700">No required blockers for current action.</p>
               ) : (
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-navy-500">
                   {readyTransitionFieldCount} / {transitionRequiredFields.length} required items
                   ready.
                 </p>
@@ -1901,16 +1901,16 @@ export default function SocialPostEditorPage() {
           </section>
           <nav
             aria-label="Detail sections"
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2"
           >
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
               Jump to
             </span>
             {socialSectionLinks.map((sectionLink) => (
               <a
                 key={sectionLink.href}
                 href={sectionLink.href}
-                className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                className="rounded border border-[color:var(--sh-gray-200)] px-2 py-1 text-xs text-navy-500 hover:bg-blurple-50"
               >
                 {sectionLink.label}
               </a>
@@ -1952,7 +1952,7 @@ export default function SocialPostEditorPage() {
             }}
           >
             {pendingPrimaryTransitionConfirmation ? (
-              <div className="space-y-2 text-sm text-slate-700">
+              <div className="space-y-2 text-sm text-navy-500">
                 <p>
                   <span className="font-medium">Status change:</span>{" "}
                   {SOCIAL_POST_STATUS_LABELS[pendingPrimaryTransitionConfirmation.fromStatus]} →{" "}
@@ -2011,7 +2011,7 @@ export default function SocialPostEditorPage() {
             }}
           >
             <div className="space-y-3">
-              <label className="space-y-1 text-sm text-slate-700">
+              <label className="space-y-1 text-sm text-navy-500">
                 <span className="font-medium">Category</span>
                 <select
                   value={pendingChangeRequestTransition?.template.category ?? ""}
@@ -2028,7 +2028,7 @@ export default function SocialPostEditorPage() {
                         : previous
                     );
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   <option value="">Select category</option>
                   {CHANGE_REQUEST_CATEGORY_OPTIONS.map((option) => (
@@ -2039,7 +2039,7 @@ export default function SocialPostEditorPage() {
                 </select>
               </label>
               <fieldset className="space-y-2">
-                <legend className="text-sm font-medium text-slate-700">
+                <legend className="text-sm font-medium text-navy-500">
                   Action checklist
                 </legend>
                 {CHANGE_REQUEST_CHECKLIST_OPTIONS.map((option) => {
@@ -2051,7 +2051,7 @@ export default function SocialPostEditorPage() {
                   return (
                     <label
                       key={option.id}
-                      className="flex items-start gap-2 text-sm text-slate-700"
+                      className="flex items-start gap-2 text-sm text-navy-500"
                     >
                       <input
                         type="checkbox"
@@ -2082,7 +2082,7 @@ export default function SocialPostEditorPage() {
                   );
                 })}
               </fieldset>
-              <label className="space-y-1 text-sm text-slate-700">
+              <label className="space-y-1 text-sm text-navy-500">
                 <span className="font-medium">Context (optional)</span>
                 <textarea
                   value={pendingChangeRequestTransition?.template.note ?? ""}
@@ -2100,7 +2100,7 @@ export default function SocialPostEditorPage() {
                     );
                   }}
                   rows={3}
-                  className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                   placeholder="Add implementation context for the next pass..."
                 />
               </label>
@@ -2125,7 +2125,7 @@ export default function SocialPostEditorPage() {
               void submitReopenBrief(reason.length > 0 ? reason : null);
             }}
           >
-            <label className="space-y-1 text-sm text-slate-700">
+            <label className="space-y-1 text-sm text-navy-500">
               <span className="font-medium">Reason (optional)</span>
               <textarea
                 value={reopenBriefReason}
@@ -2133,7 +2133,7 @@ export default function SocialPostEditorPage() {
                   setReopenBriefReason(event.target.value);
                 }}
                 rows={3}
-                className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 placeholder="Add context for why this brief is being reopened..."
               />
             </label>
@@ -2162,11 +2162,11 @@ export default function SocialPostEditorPage() {
             <div className="space-y-4">
               <section
                 id="social-editor-step-setup"
-                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+                className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4"
               >
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Setup</h3>
-                  <p className="text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">Setup</h3>
+                  <p className="text-sm text-navy-500">
                     Define the post essentials before writing or review.
                   </p>
                 </div>
@@ -2174,10 +2174,10 @@ export default function SocialPostEditorPage() {
                   disabled={!canEditBrief}
                   className="disabled:opacity-70"
                 >
-                  <div className="space-y-3 border-b border-slate-200 pb-3">
-                    <h4 className="text-sm font-semibold text-slate-900">Required Now</h4>
+                  <div className="space-y-3 border-b border-[color:var(--sh-gray-200)] pb-3">
+                    <h4 className="text-sm font-semibold text-ink">Required Now</h4>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <label className="space-y-1 text-sm text-slate-700">
+                      <label className="space-y-1 text-sm text-navy-500">
                         <span className="font-medium">Product</span>
                         <select
                           id="social-post-product"
@@ -2189,7 +2189,7 @@ export default function SocialPostEditorPage() {
                                 : previous
                             );
                           }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {SOCIAL_POST_PRODUCTS.map((product) => (
                             <option key={product} value={product}>
@@ -2198,7 +2198,7 @@ export default function SocialPostEditorPage() {
                           ))}
                         </select>
                       </label>
-                      <label className="space-y-1 text-sm text-slate-700">
+                      <label className="space-y-1 text-sm text-navy-500">
                         <span className="font-medium">Type</span>
                         <select
                           id="social-post-type"
@@ -2208,7 +2208,7 @@ export default function SocialPostEditorPage() {
                               previous ? { ...previous, type: event.target.value as SocialPostType } : previous
                             );
                           }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {SOCIAL_POST_TYPES.map((type) => (
                             <option key={type} value={type}>
@@ -2217,7 +2217,7 @@ export default function SocialPostEditorPage() {
                           ))}
                         </select>
                       </label>
-                      <label className="space-y-1 text-sm text-slate-700 md:col-span-2">
+                      <label className="space-y-1 text-sm text-navy-500 md:col-span-2">
                         <span className="font-medium">Canva Link</span>
                         <input
                           id="social-post-canva-url"
@@ -2228,7 +2228,7 @@ export default function SocialPostEditorPage() {
                               previous ? { ...previous, canva_url: event.target.value } : previous
                             );
                           }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           placeholder="https://www.canva.com/..."
                         />
                         {form.canva_url.trim() && !hasValidCanvaUrl && (
@@ -2240,15 +2240,15 @@ export default function SocialPostEditorPage() {
                   <div
                     className={`space-y-3 pt-3 ${
                       requiresReviewDetails
-                        ? "rounded-md border border-blue-200 bg-blue-50/70 p-3"
+                        ? "rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50/70 p-3"
                         : ""
                     }`}
                   >
-                    <h4 className="text-sm font-semibold text-slate-900">
+                    <h4 className="text-sm font-semibold text-ink">
                       Required Before Approval
                     </h4>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <label className="space-y-1 text-sm text-slate-700">
+                      <label className="space-y-1 text-sm text-navy-500">
                         <span className="font-medium">Scheduled Publish Date</span>
                         <input
                           id="social-post-scheduled-date"
@@ -2259,10 +2259,10 @@ export default function SocialPostEditorPage() {
                               previous ? { ...previous, scheduled_date: event.target.value } : previous
                             );
                           }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
-                      <div id="social-post-platforms" className="space-y-1 text-sm text-slate-700 md:col-span-2">
+                      <div id="social-post-platforms" className="space-y-1 text-sm text-navy-500 md:col-span-2">
                         <span className="font-medium">Platform(s)</span>
                         <div className="flex flex-wrap gap-2">
                           {SOCIAL_PLATFORMS.map((platform) => {
@@ -2300,13 +2300,13 @@ export default function SocialPostEditorPage() {
                     onToggle={(event) => {
                       setIsOptionalSetupOpen(event.currentTarget.open);
                     }}
-                    className="rounded-md border border-slate-200 bg-slate-50/70 px-3 py-2"
+                    className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/70 px-3 py-2"
                   >
-                    <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                    <summary className="cursor-pointer text-sm font-semibold text-ink">
                       Optional Details
                     </summary>
                     <div className="grid gap-3 pt-3 md:grid-cols-2">
-                      <label className="space-y-1 text-sm text-slate-700">
+                      <label className="space-y-1 text-sm text-navy-500">
                         <span className="font-medium">Canva Page</span>
                         <input
                           value={form.canva_page}
@@ -2315,11 +2315,11 @@ export default function SocialPostEditorPage() {
                               previous ? { ...previous, canva_page: event.target.value } : previous
                             );
                           }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           placeholder="e.g. 23"
                         />
                       </label>
-                      <label className="space-y-1 text-sm text-slate-700">
+                      <label className="space-y-1 text-sm text-navy-500">
                         <span className="font-medium">Post Title</span>
                         <input
                           value={form.title}
@@ -2328,7 +2328,7 @@ export default function SocialPostEditorPage() {
                               previous ? { ...previous, title: event.target.value } : previous
                             );
                           }}
-                          className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                     </div>
@@ -2338,12 +2338,12 @@ export default function SocialPostEditorPage() {
 
               <section
                 id="social-editor-step-assignment"
-                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+                className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-base font-semibold text-slate-900">Assignment</h3>
-                    <p className="text-sm text-slate-600">Manage who is working on and reviewing this post.</p>
+                    <h3 className="text-base font-semibold text-ink">Assignment</h3>
+                    <p className="text-sm text-navy-500">Manage who is working on and reviewing this post.</p>
                   </div>
                   {isAdmin && !editingAssignment ? (
                     <Button
@@ -2360,16 +2360,16 @@ export default function SocialPostEditorPage() {
                   ) : null}
                 </div>
                 {editingAssignment && isAdmin ? (
-                  <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50 p-3">
+                  <div className="space-y-3 rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 p-3">
                     <div className="grid gap-3 md:grid-cols-2">
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">Assigned to</span>
+                        <span className="mb-1 block text-sm font-medium text-navy-500">Assigned to</span>
                         <select
                           value={editAssignedToUserId ?? ""}
                           onChange={(event) => {
                             setEditAssignedToUserId(event.target.value || null);
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           <option value="">— Select person —</option>
                           {availableUsers.map((u) => (
@@ -2380,13 +2380,13 @@ export default function SocialPostEditorPage() {
                         </select>
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">Reviewer</span>
+                        <span className="mb-1 block text-sm font-medium text-navy-500">Reviewer</span>
                         <select
                           value={editReviewerUserId ?? ""}
                           onChange={(event) => {
                             setEditReviewerUserId(event.target.value || null);
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           <option value="">— Select reviewer —</option>
                           {availableUsers.map((u) => (
@@ -2417,16 +2417,16 @@ export default function SocialPostEditorPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
                     <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Assigned to</p>
-                      <p className="mt-1 text-sm text-slate-900">
+                      <p className="text-xs font-medium uppercase tracking-wide text-navy-500">Assigned to</p>
+                      <p className="mt-1 text-sm text-ink">
                         {availableUsers.find((u) => u.id === post?.worker_user_id)?.full_name || "Not assigned"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Reviewer</p>
-                      <p className="mt-1 text-sm text-slate-900">
+                      <p className="text-xs font-medium uppercase tracking-wide text-navy-500">Reviewer</p>
+                      <p className="mt-1 text-sm text-ink">
                         {availableUsers.find((u) => u.id === post?.reviewer_user_id)?.full_name || "Not assigned"}
                       </p>
                     </div>
@@ -2436,18 +2436,18 @@ export default function SocialPostEditorPage() {
 
               <section
                 id="social-editor-step-associated-blog"
-                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+                className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4"
               >
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">
-                    Associated Blog <span className="text-slate-500">(optional)</span>
+                  <h3 className="text-base font-semibold text-ink">
+                    Associated Blog <span className="text-navy-500">(optional)</span>
                   </h3>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-navy-500">
                     Link a related blog so caption and publishing context stay connected.
                   </p>
                 </div>
                 <fieldset disabled={!canEditBrief} className="space-y-4 disabled:opacity-70">
-                <label className="space-y-1 text-sm text-slate-700">
+                <label className="space-y-1 text-sm text-navy-500">
                   <span className="font-medium">Associated Blog Search</span>
                   <input
                     value={blogSearchQuery}
@@ -2456,22 +2456,22 @@ export default function SocialPostEditorPage() {
                       setBlogSearchQuery(event.target.value);
                       setIsBlogSearchOpen(true);
                     }}
-                    className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Search blog title..."
                   />
                 </label>
                 {isBlogSearchOpen ? (
-                  <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white">
+                  <div className="max-h-44 overflow-y-auto rounded-md border border-[color:var(--sh-gray-200)] bg-white">
                     {isBlogSearchLoading ? (
-                      <p className="px-3 py-2 text-sm text-slate-500">Searching…</p>
+                      <p className="px-3 py-2 text-sm text-navy-500">Searching…</p>
                     ) : blogSearchResults.length === 0 ? (
-                      <p className="px-3 py-2 text-sm text-slate-500">No matching blogs.</p>
+                      <p className="px-3 py-2 text-sm text-navy-500">No matching blogs.</p>
                     ) : (
                       blogSearchResults.map((blog) => (
                         <button
                           key={blog.id}
                           type="button"
-                          className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                          className="block w-full border-b border-[color:var(--sh-gray)] px-3 py-2 text-left last:border-b-0 hover:bg-blurple-50"
                           onClick={() => {
                             setForm((previous) =>
                               previous ? { ...previous, associated_blog_id: blog.id } : previous
@@ -2484,8 +2484,8 @@ export default function SocialPostEditorPage() {
                             setIsBlogSearchOpen(false);
                           }}
                         >
-                          <p className="text-sm font-medium text-slate-900">{blog.title}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-sm font-medium text-ink">{blog.title}</p>
+                          <p className="text-xs text-navy-500">
                             {blog.slug || "no-slug"} • {blog.site}
                           </p>
                         </button>
@@ -2494,11 +2494,11 @@ export default function SocialPostEditorPage() {
                   </div>
                 ) : null}
                 {form.associated_blog_id ? (
-                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-medium text-slate-900">
+                  <div className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
+                    <p className="text-sm font-medium text-ink">
                       {post.associated_blog?.title ?? "Blog linked"}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-navy-500">
                       {post.associated_blog?.site ?? "Linked blog"}
                     </p>
                     <div className="mt-2 space-y-2">
@@ -2531,25 +2531,25 @@ export default function SocialPostEditorPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">No linked blog yet.</p>
+                  <p className="text-sm text-navy-500">No linked blog yet.</p>
                 )}
                 </fieldset>
               </section>
 
               <section
                 id="social-editor-step-write-caption"
-                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+                className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4"
               >
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Write Caption</h3>
-                  <p className="text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">Write Caption</h3>
+                  <p className="text-sm text-navy-500">
                     Use the editor like a focused notepad, then copy from one menu.
                   </p>
                 </div>
                 <fieldset disabled={!canEditBrief} className="space-y-2 disabled:opacity-70">
-                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+                <div className="space-y-2 rounded-lg border border-[color:var(--sh-gray-200)] p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-slate-700">Caption Editor (UTF-8)</p>
+                    <p className="text-sm font-medium text-navy-500">Caption Editor (UTF-8)</p>
                     <div className="flex items-center gap-1">
                       <span className="tooltip-container">
                         <Button
@@ -2585,29 +2585,29 @@ export default function SocialPostEditorPage() {
                       );
                     }}
                     onKeyDown={handleCaptionKeyDown}
-                    className="focus-field min-h-[24rem] w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm leading-relaxed"
+                    className="focus-field min-h-[24rem] w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 font-mono text-sm leading-relaxed"
                     placeholder="Write your social caption..."
                   />
                   </div>
                 </fieldset>
-                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+                <div className="space-y-2 rounded-lg border border-[color:var(--sh-gray-200)] p-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p
                         className={`text-xs font-medium ${
-                          isOverLimit ? "text-rose-700" : "text-slate-500"
+                          isOverLimit ? "text-rose-700" : "text-navy-500"
                         }`}
                       >
                         {captionLength} / {LINKEDIN_CAPTION_LIMIT}
                       </p>
                       {form.platforms.length === 0 ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-navy-500">
                           Select at least one platform for platform-specific guidance.
                         </p>
                       ) : (
                         <ul className="space-y-1">
                           {form.platforms.map((platform) => (
-                            <li key={platform} className="text-xs text-slate-500">
+                            <li key={platform} className="text-xs text-navy-500">
                               {PLATFORM_CAPTION_GUIDANCE[platform]}
                             </li>
                           ))}
@@ -2615,13 +2615,13 @@ export default function SocialPostEditorPage() {
                       )}
                     </div>
                     <details className="relative">
-                      <summary className="list-none cursor-pointer rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                      <summary className="list-none cursor-pointer rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50">
                         Copy
                       </summary>
-                      <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                      <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
                         <button
                           type="button"
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50"
                           onClick={() => {
                             void copyText(form.caption);
                           }}
@@ -2630,7 +2630,7 @@ export default function SocialPostEditorPage() {
                         </button>
                         <button
                           type="button"
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50"
                           onClick={() => {
                             const url = post.associated_blog?.live_url ?? "";
                             void copyText(`${form.caption}\n\n${url}`.trim());
@@ -2640,7 +2640,7 @@ export default function SocialPostEditorPage() {
                         </button>
                         <button
                           type="button"
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50"
                           onClick={() => {
                             void copyText(post.associated_blog?.live_url ?? "");
                           }}
@@ -2655,23 +2655,23 @@ export default function SocialPostEditorPage() {
 
               <section
                 id="social-editor-step-review-publish"
-                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+                className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4"
               >
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Review & Publish</h3>
-                  <p className="text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">Review & Publish</h3>
+                  <p className="text-sm text-navy-500">
                     Manage transitions and handle publishing actions.
                   </p>
                 </div>
-                <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Primary Transition Action
                   </p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-navy-500">
                     Use the primary action in the right panel for standard progression.
                   </p>
-                  <details className="rounded-md border border-slate-200 bg-white p-2">
-                    <summary className="cursor-pointer text-xs font-medium text-slate-700">
+                  <details className="rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2">
+                    <summary className="cursor-pointer text-xs font-medium text-navy-500">
                       Advanced transition controls
                     </summary>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -2690,7 +2690,7 @@ export default function SocialPostEditorPage() {
                           }
                           void transitionPostStatus(nextStatus);
                         }}
-                        className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs"
+                        className="focus-field rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-xs"
                       >
                         {Object.entries(SOCIAL_POST_STATUS_LABELS).map(([value, label]) => (
                           <option
@@ -2716,17 +2716,17 @@ export default function SocialPostEditorPage() {
                 </div>
               </section>
               {post.associated_blog_id ? (
-                <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                <section className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
                   <AssociatedBlogContextCard blogId={post.associated_blog_id} />
                 </section>
               ) : null}
               <section
                 id="social-editor-step-comments"
-                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+                className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4"
               >
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Comments</h3>
-                  <p className="text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">Comments</h3>
+                  <p className="text-sm text-navy-500">
                     Collaboration notes are visible to everyone on this record.
                   </p>
                 </div>
@@ -2736,7 +2736,7 @@ export default function SocialPostEditorPage() {
                     onChange={(event) => {
                       setCommentDraft(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Add context or feedback…"
                   />
                   <div className="flex justify-end">
@@ -2754,7 +2754,7 @@ export default function SocialPostEditorPage() {
                   </div>
                 </div>
                 {comments.length === 0 ? (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-navy-500">
                     No comments yet. Add context to keep handoffs clear.
                   </p>
                 ) : (
@@ -2762,17 +2762,17 @@ export default function SocialPostEditorPage() {
                     {comments.slice(0, 20).map((comment) => (
                       <li
                         key={comment.id}
-                        className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+                        className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
                       >
-                        <p className="text-xs font-semibold text-slate-600">
-                          {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
-                          <time className="font-normal text-slate-400">
+                        <p className="text-xs font-semibold text-navy-500">
+                          {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}
+                          <time className="font-normal text-navy-500/60">
                             {formatDistanceToNow(new Date(comment.created_at), {
                               addSuffix: true,
                             })}
                           </time>
                         </p>
-                        <div className="mt-2 text-sm text-slate-700">
+                        <div className="mt-2 text-sm text-navy-500">
                           <MarkdownComment content={comment.comment} />
                         </div>
                       </li>
@@ -2782,15 +2782,15 @@ export default function SocialPostEditorPage() {
               </section>
               <section
                 id="social-editor-step-links"
-                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+                className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4"
               >
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Links</h3>
-                  <p className="text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">Links</h3>
+                  <p className="text-sm text-navy-500">
                     Paste once and auto-assign to LinkedIn, Facebook, or Instagram.
                   </p>
                 </div>
-                <div id="social-post-live-links" className="space-y-2 rounded-md border border-slate-200 bg-white p-2">
+                <div id="social-post-live-links" className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="url"
@@ -2798,7 +2798,7 @@ export default function SocialPostEditorPage() {
                       onChange={(event) => {
                         setQuickLiveLinkInput(event.target.value);
                       }}
-                      className="focus-field min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                      className="focus-field min-w-0 flex-1 rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-xs"
                       placeholder="Paste live URL…"
                     />
                     <Button
@@ -2810,14 +2810,14 @@ export default function SocialPostEditorPage() {
                       Add Link
                     </Button>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-navy-500">
                     Draft links ready: {liveLinkDraftCount} / {SOCIAL_PLATFORMS.length}
                   </p>
                 </div>
                 <div className="grid gap-2 md:grid-cols-3">
                   {SOCIAL_PLATFORMS.map((platform) => (
-                    <label key={platform} className="space-y-1 text-xs text-slate-600">
-                      <span className="font-medium text-slate-700">
+                    <label key={platform} className="space-y-1 text-xs text-navy-500">
+                      <span className="font-medium text-navy-500">
                         {SOCIAL_PLATFORM_LABELS[platform]}
                       </span>
                       <input
@@ -2829,19 +2829,19 @@ export default function SocialPostEditorPage() {
                             [platform]: event.target.value,
                           }));
                         }}
-                        className="focus-field w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-xs"
                         placeholder={`https://${platform}.com/...`}
                       />
                     </label>
                   ))}
                 </div>
                 {liveLinks.length === 0 ? (
-                  <p className="text-xs text-slate-500">No live links saved yet.</p>
+                  <p className="text-xs text-navy-500">No live links saved yet.</p>
                 ) : (
                   <ul className="space-y-1">
                     {liveLinks.map((link) => (
-                      <li key={link.id} className="space-y-1 text-xs text-slate-600">
-                        <p className="font-medium text-slate-700">
+                      <li key={link.id} className="space-y-1 text-xs text-navy-500">
+                        <p className="font-medium text-navy-500">
                           {SOCIAL_PLATFORM_LABELS[link.platform]}
                         </p>
                         <LinkQuickActions
@@ -2869,30 +2869,30 @@ export default function SocialPostEditorPage() {
               </section>
               <section
                 id="social-editor-step-assignment-changes"
-                className="space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+                className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4"
               >
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Assignment & Changes</h3>
-                  <p className="text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">Assignment & Changes</h3>
+                  <p className="text-sm text-navy-500">
                     Status and assignment changes are visible in latest-first order.
                   </p>
                 </div>
                 {groupedLatestActivity.length === 0 ? (
-                  <p className="text-sm text-slate-500">No assignment or status changes yet.</p>
+                  <p className="text-sm text-navy-500">No assignment or status changes yet.</p>
                 ) : (
                   <div className="space-y-3">
                     {groupedLatestActivity.map((group) => (
                       <section key={group.dayLabel} className="space-y-2">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                           {group.dayLabel}
                         </h4>
                         <ul className="space-y-2">
                           {group.entries.map((entry) => (
                             <li
                               key={entry.id}
-                              className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                              className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2"
                             >
-                              <p className="text-sm font-medium text-slate-800">
+                              <p className="text-sm font-medium text-ink">
                                 {formatActivityEventTitle(entry)}
                               </p>
                               {(() => {
@@ -2900,10 +2900,10 @@ export default function SocialPostEditorPage() {
                                   userNameById: activityUserNameById,
                                 });
                                 return detail ? (
-                                  <p className="text-xs text-slate-600">{detail}</p>
+                                  <p className="text-xs text-navy-500">{detail}</p>
                                 ) : null;
                               })()}
-                              <p className="text-xs text-slate-400">
+                              <p className="text-xs text-navy-500/60">
                                 {entry.actor?.full_name ?? "System"} •{" "}
                                 {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                               </p>
@@ -2921,25 +2921,25 @@ export default function SocialPostEditorPage() {
               <div className="space-y-3 lg:sticky lg:top-20">
                 <section
                   id="social-editor-step-current-snapshot"
-                  className="space-y-2 rounded-lg border border-slate-200 bg-white p-3"
+                  className="space-y-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3"
                 >
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                   Current Snapshot
                 </p>
-                <div className="space-y-2 border-b border-slate-200 pb-2">
+                <div className="space-y-2 border-b border-[color:var(--sh-gray-200)] pb-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500">Status</span>
+                    <span className="text-xs text-navy-500">Status</span>
                     <SocialPostStatusBadge status={form.status} />
                   </div>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-navy-500">
                     Product: {SOCIAL_POST_PRODUCT_LABELS[form.product]}
                   </p>
-                  <p className="text-xs text-slate-600">Type: {SOCIAL_POST_TYPE_LABELS[form.type]}</p>
-                  <p className="text-xs text-slate-600">Assigned to: {assignedToName}</p>
-                  <p className="text-xs text-slate-600">Reviewer: {reviewerName}</p>
-                  <p className="text-xs text-slate-600">Current owner: {currentOwnerName}</p>
-                  <p className="text-xs text-slate-600">Next owner: {nextOwnerName}</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-navy-500">Type: {SOCIAL_POST_TYPE_LABELS[form.type]}</p>
+                  <p className="text-xs text-navy-500">Assigned to: {assignedToName}</p>
+                  <p className="text-xs text-navy-500">Reviewer: {reviewerName}</p>
+                  <p className="text-xs text-navy-500">Current owner: {currentOwnerName}</p>
+                  <p className="text-xs text-navy-500">Next owner: {nextOwnerName}</p>
+                  <p className="text-xs text-navy-500">
                     Last saved: {formatSavedTimestamp(post.updated_at, profile?.timezone)}
                   </p>
                 </div>
@@ -2954,30 +2954,30 @@ export default function SocialPostEditorPage() {
                 </section>
                 <section
                   id="social-editor-step-checklist"
-                  className="space-y-3 rounded-lg border border-slate-200 bg-white p-3"
+                  className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3"
                 >
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Checklist
                   </p>
                 </div>
                 <ul className="space-y-1">
                   {checklistItems.map((item) => (
-                    <li key={item.label} className="flex items-start gap-2 text-sm text-slate-700">
+                    <li key={item.label} className="flex items-start gap-2 text-sm text-navy-500">
                       <span
                         className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs ${
-                          item.done ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+                          item.done ? "bg-emerald-100 text-emerald-700" : "bg-[color:var(--sh-gray-200)] text-navy-500"
                         }`}
                       >
                         {item.done ? (
                           <SuccessIcon boxClassName="h-3.5 w-3.5" size={11} />
                         ) : (
-                          <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-navy-500" />
                         )}
                       </span>
                       <div>
                         <p>{item.label}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-navy-500">
                           {item.required ? "(required)" : "(optional)"}
                         </p>
                       </div>
@@ -2985,11 +2985,11 @@ export default function SocialPostEditorPage() {
                   ))}
                 </ul>
                 {transitionRequiredFields.length > 0 ? (
-                  <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                       Transition Preflight
                     </p>
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-navy-500">
                       {readyTransitionFieldCount} / {transitionRequiredFields.length} required items ready for{" "}
                       {SOCIAL_POST_STATUS_LABELS[finalAction.nextStatus]}.
                     </p>
@@ -3000,12 +3000,12 @@ export default function SocialPostEditorPage() {
                         {missingTransitionFields.map((field) => (
                           <li
                             key={field}
-                            className="flex items-center justify-between gap-2 text-xs text-slate-700"
+                            className="flex items-center justify-between gap-2 text-xs text-navy-500"
                           >
                             <span>{PREFLIGHT_FIELD_META[field].label}</span>
                             <button
                               type="button"
-                              className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                              className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
                               onClick={() => {
                                 jumpToPreflightField(field);
                               }}
@@ -3018,9 +3018,9 @@ export default function SocialPostEditorPage() {
                     )}
                   </div>
                 ) : null}
-                <div className="space-y-2 border-t border-slate-200 pt-3">
-                  <p className="text-xs text-slate-600">{finalAction.helper}</p>
-                  <p className="text-xs font-medium text-slate-700">
+                <div className="space-y-2 border-t border-[color:var(--sh-gray-200)] pt-3">
+                  <p className="text-xs text-navy-500">{finalAction.helper}</p>
+                  <p className="text-xs font-medium text-navy-500">
                     Next stage: {SOCIAL_POST_STATUS_LABELS[finalAction.nextStatus]}
                   </p>
                   {isOverLimit ? (

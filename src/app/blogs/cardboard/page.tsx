@@ -639,17 +639,17 @@ export default function BlogCardBoardPage() {
         <div className={DATA_PAGE_STACK_CLASS}>
           <nav
             aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
           >
-            <Link href="/dashboard" className="hover:text-slate-700">
+            <Link href="/dashboard" className="hover:text-navy-500">
               Dashboard
             </Link>
             <span>/</span>
-            <Link href="/blogs" className="hover:text-slate-700">
+            <Link href="/blogs" className="hover:text-navy-500">
               Blogs
             </Link>
             <span>/</span>
-            <span className="text-slate-700">CardBoard</span>
+            <span className="text-navy-500">CardBoard</span>
           </nav>
           <DataPageHeader
             title="CardBoard"
@@ -683,7 +683,7 @@ export default function BlogCardBoardPage() {
                   onChange={(event) => {
                     setProductFilter(event.target.value as ProductFilter);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   {PRODUCT_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -697,7 +697,7 @@ export default function BlogCardBoardPage() {
                   onChange={(event) => {
                     setAuthorFilter(event.target.value as AuthorFilter);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   <option value="all">All Authors</option>
                   {authors.map((author) => (
@@ -712,7 +712,7 @@ export default function BlogCardBoardPage() {
                   onChange={(event) => {
                     setWebsiteFilter(event.target.value as WebsiteFilter);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   {WEBSITE_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -726,7 +726,7 @@ export default function BlogCardBoardPage() {
                   onChange={(event) => {
                     setStatusFilter(event.target.value as BoardStageFilter);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   {STATUS_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -750,7 +750,7 @@ export default function BlogCardBoardPage() {
           <DataPageFilterPills pills={activeFilterPills} />
 
 
-          <section className="rounded-lg border border-slate-200 bg-white p-3">
+          <section className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3">
             <div className="overflow-x-auto pb-1">
               <div className="flex min-w-max gap-4">
                 {BOARD_STAGES.map((stage) => {
@@ -761,10 +761,10 @@ export default function BlogCardBoardPage() {
                   return (
                     <div
                       key={stage}
-                      className={`w-[300px] shrink-0 rounded-xl border bg-slate-50 p-3 transition ${
+                      className={`w-[300px] shrink-0 rounded-xl border bg-[color:var(--sh-gray)] p-3 transition ${
                         isDropTarget
-                          ? "border-blue-300 ring-2 ring-blue-200"
-                          : "border-slate-200"
+                          ? "border-blurple-300 ring-2 ring-[color:var(--sh-blurple-100)]"
+                          : "border-[color:var(--sh-gray-200)]"
                       }`}
                       onDragOver={(event) => {
                         event.preventDefault();
@@ -778,7 +778,7 @@ export default function BlogCardBoardPage() {
                         void handleDropOnStage(stage);
                       }}
                     >
-                      <div className="sticky top-0 z-10 -mx-3 -mt-3 mb-3 rounded-t-xl border-b border-slate-200 bg-slate-100 px-3 py-2">
+                      <div className="sticky top-0 z-10 -mx-3 -mt-3 mb-3 rounded-t-xl border-b border-[color:var(--sh-gray-200)] bg-blurple-50 px-3 py-2">
                         <button
                           type="button"
                           className="w-full text-left"
@@ -786,16 +786,16 @@ export default function BlogCardBoardPage() {
                             handleOpenTableForStage(stage);
                           }}
                         >
-                          <p className="text-sm font-semibold text-slate-900">
+                          <p className="text-sm font-semibold text-ink">
                             {BOARD_STAGE_LABELS[stage]}{" "}
-                            <span className="text-slate-500">({stageBlogs.length})</span>
+                            <span className="text-navy-500">({stageBlogs.length})</span>
                             {wipLimit ? (
-                              <span className="ml-1 text-xs font-medium text-slate-500">
+                              <span className="ml-1 text-xs font-medium text-navy-500">
                                 / {wipLimit}
                               </span>
                             ) : null}
                           </p>
-                          <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                          <p className="text-[11px] uppercase tracking-wide text-navy-500">
                             Open table view
                           </p>
                         </button>
@@ -804,10 +804,10 @@ export default function BlogCardBoardPage() {
                         <div className="mb-3">
                           {isQuickAddOpen ? (
                             <form
-                              className="space-y-2 rounded-lg border border-slate-200 bg-white p-3"
+                              className="space-y-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3"
                               onSubmit={handleQuickAddIdea}
                             >
-                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-navy-500">
                                 Title
                                 <input
                                   value={quickAddTitle}
@@ -815,17 +815,17 @@ export default function BlogCardBoardPage() {
                                     setQuickAddTitle(event.target.value);
                                   }}
                                   placeholder="Campus ALPR Privacy Concerns"
-                                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-navy-500"
                                 />
                               </label>
-                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-navy-500">
                                 Product
                                 <select
                                   value={quickAddSite}
                                   onChange={(event) => {
                                     setQuickAddSite(event.target.value as BlogSite);
                                   }}
-                                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-slate-700"
+                                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-navy-500"
                                 >
                                   {SITES.map((site) => (
                                     <option key={site} value={site}>
@@ -834,7 +834,7 @@ export default function BlogCardBoardPage() {
                                   ))}
                                 </select>
                               </label>
-                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-navy-500">
                                 Author
                                 <select
                                   value={quickAddAuthorId}
@@ -842,7 +842,7 @@ export default function BlogCardBoardPage() {
                                   onChange={(event) => {
                                     setQuickAddAuthorId(event.target.value);
                                   }}
-                                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-navy-500 disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                                 >
                                   <option value="">Unassigned</option>
                                   {authors.map((author) => (
@@ -898,7 +898,7 @@ export default function BlogCardBoardPage() {
                             />
                           ))
                         ) : stageBlogs.length === 0 ? (
-                          <p className="rounded-lg border border-dashed border-slate-300 bg-white px-3 py-4 text-center text-xs text-slate-500">
+                          <p className="rounded-lg border border-dashed border-[color:var(--sh-gray-200)] bg-white px-3 py-4 text-center text-xs text-navy-500">
                             No blogs in this stage.
                           </p>
                         ) : (
@@ -918,7 +918,7 @@ export default function BlogCardBoardPage() {
                                   setDraggingBlogId(null);
                                   setDragOverStage(null);
                                 }}
-                                className="group relative rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow"
+                                className="group relative rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-sm transition hover:shadow"
                               >
                                 <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
                                   {isPublishedStage ? (
@@ -949,7 +949,7 @@ export default function BlogCardBoardPage() {
                                       </Button>
                                       <Button
                                         type="button"
-                                        className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] text-navy-500 hover:bg-blurple-50"
                                         aria-label="Copy blog title"
                                         onClick={() => {
                                           void copyValue(blog.title, "Copied title.");
@@ -984,7 +984,7 @@ export default function BlogCardBoardPage() {
                                       ) : null}
                                       <Button
                                         type="button"
-                                        className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] text-navy-500 hover:bg-blurple-50"
                                         aria-label="Copy blog title"
                                         onClick={() => {
                                           void copyValue(blog.title, "Copied title.");
@@ -994,7 +994,7 @@ export default function BlogCardBoardPage() {
                                       </Button>
                                       <Button
                                         type="button"
-                                        className="pressable rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] text-navy-500 hover:bg-blurple-50"
                                         aria-label="Copy blog URL"
                                         onClick={() => {
                                           void copyValue(blog.live_url ?? "", "Copied URL.");
@@ -1016,32 +1016,32 @@ export default function BlogCardBoardPage() {
                                   )}
                                 </div>
 
-                                <h3 className="max-w-[92%] line-clamp-2 text-sm font-semibold text-slate-900">
+                                <h3 className="max-w-[92%] line-clamp-2 text-sm font-semibold text-ink">
                                   {blog.title}
                                 </h3>
                                 {isPublishedStage ? (
-                                  <div className="mt-2 space-y-1 text-xs text-slate-600">
+                                  <div className="mt-2 space-y-1 text-xs text-navy-500">
                                     <p>
-                                      <span className="font-medium text-slate-700">Published:</span>{" "}
+                                      <span className="font-medium text-navy-500">Published:</span>{" "}
                                       {formatPublishedDate(blog)}
                                     </p>
                                     <p>
-                                      <span className="font-medium text-slate-700">Website:</span>{" "}
+                                      <span className="font-medium text-navy-500">Website:</span>{" "}
                                       {getSiteShortLabel(blog.site)}
                                     </p>
                                   </div>
                                 ) : (
-                                  <div className="mt-2 space-y-1 text-xs text-slate-600">
+                                  <div className="mt-2 space-y-1 text-xs text-navy-500">
                                     <p>
-                                      <span className="font-medium text-slate-700">Product:</span>{" "}
+                                      <span className="font-medium text-navy-500">Product:</span>{" "}
                                       {productLabel}
                                     </p>
                                     <p>
-                                      <span className="font-medium text-slate-700">Author:</span>{" "}
+                                      <span className="font-medium text-navy-500">Author:</span>{" "}
                                       {getAuthorLabel(blog)}
                                     </p>
                                     <p>
-                                      <span className="font-medium text-slate-700">Updated:</span>{" "}
+                                      <span className="font-medium text-navy-500">Updated:</span>{" "}
                                       {formatUpdatedDistance(blog.updated_at)}
                                     </p>
                                   </div>

@@ -1193,22 +1193,22 @@ export default function BlogDetailPage() {
         <div className="space-y-6">
           <nav
             aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
           >
-            <Link href="/dashboard" className="hover:text-slate-700">
+            <Link href="/dashboard" className="hover:text-navy-500">
               Dashboard
             </Link>
             <span>/</span>
-            <Link href="/blogs" className="hover:text-slate-700">
+            <Link href="/blogs" className="hover:text-navy-500">
               Blogs
             </Link>
             <span>/</span>
-            <span className="text-slate-700">Details</span>
+            <span className="text-navy-500">Details</span>
           </nav>
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-semibold text-slate-900">{blog.title}</h2>
-              <p className="text-xs uppercase tracking-wide text-slate-500">
+              <h2 className="text-2xl font-semibold text-ink">{blog.title}</h2>
+              <p className="text-xs uppercase tracking-wide text-navy-500">
                 {blog.site} • Created {formatDateInTimezone(blog.created_at, profile?.timezone)}
               </p>
             </div>
@@ -1223,14 +1223,14 @@ export default function BlogDetailPage() {
               <StatusBadge status={blog.overall_status} />
             </div>
           </header>
-          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 xl:hidden">
+          <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4 xl:hidden">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Next Action
                 </h3>
-                <p className="text-sm font-medium text-slate-900">{blogNextAction.title}</p>
-                <p className="text-sm text-slate-600">{blogNextAction.helper}</p>
+                <p className="text-sm font-medium text-ink">{blogNextAction.title}</p>
+                <p className="text-sm text-navy-500">{blogNextAction.helper}</p>
                 <p
                   className={`text-xs ${
                     isDetailDirty ? "text-amber-700" : "text-emerald-700"
@@ -1252,7 +1252,7 @@ export default function BlogDetailPage() {
                     type="button"
                     disabled={blogNextAction.disabled}
                     aria-keyshortcuts="Alt+Shift+Enter"
-                    className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={runBlogPrimaryAction}
                   >
                     {blogNextAction.ctaLabel}
@@ -1260,15 +1260,15 @@ export default function BlogDetailPage() {
                 ) : null}
               </div>
             </div>
-            <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                 Transition Preflight
               </p>
               {blogPreflightRequiredFields.length === 0 ? (
                 <p className="text-xs text-emerald-700">No required blockers for the current stage.</p>
               ) : (
                 <>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-navy-500">
                     {readyBlogPreflightCount} / {blogPreflightRequiredFields.length} required items
                     ready for next completion action.
                   </p>
@@ -1279,12 +1279,12 @@ export default function BlogDetailPage() {
                       {missingBlogPreflightFields.map((field) => (
                         <li
                           key={field}
-                          className="flex items-center justify-between gap-2 text-xs text-slate-700"
+                          className="flex items-center justify-between gap-2 text-xs text-navy-500"
                         >
                           <span>{BLOG_PREFLIGHT_FIELD_META[field].label}</span>
                           <button
                             type="button"
-                            className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                            className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
                             onClick={() => {
                               jumpToBlogField(field);
                             }}
@@ -1301,16 +1301,16 @@ export default function BlogDetailPage() {
           </section>
           <nav
             aria-label="Detail sections"
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 lg:hidden"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 lg:hidden"
           >
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
               Jump to
             </span>
             {blogSectionLinks.map((sectionLink) => (
               <a
                 key={sectionLink.href}
                 href={sectionLink.href}
-                className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                className="rounded border border-[color:var(--sh-gray-200)] px-2 py-1 text-xs text-navy-500 hover:bg-blurple-50"
               >
                 {sectionLink.label}
               </a>
@@ -1320,15 +1320,15 @@ export default function BlogDetailPage() {
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-6">
-              <section id="blog-details" className="rounded-lg border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <section id="blog-details" className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
               Blog Details
             </h3>
 
             <form className="mt-4 space-y-4" onSubmit={handleDetailsSave}>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Title
                   </span>
                   <input
@@ -1346,12 +1346,12 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ title: nextTitle }, "Saved");
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   />
                 </label>
 
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Site
                   </span>
                   <select
@@ -1368,7 +1368,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ site: form.site }, "Saved");
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     {SITES.map((siteValue) => (
                       <option key={siteValue} value={siteValue}>
@@ -1381,7 +1381,7 @@ export default function BlogDetailPage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Writer
                   </span>
                   <select
@@ -1402,7 +1402,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ writer_id: form.writer_id || null }, "Saved");
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     <option value="">Unassigned</option>
                     {users.map((nextUser) => (
@@ -1414,7 +1414,7 @@ export default function BlogDetailPage() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Publisher
                   </span>
                   <select
@@ -1435,7 +1435,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ publisher_id: form.publisher_id || null }, "Saved");
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     <option value="">Unassigned</option>
                     {users.map((nextUser) => (
@@ -1449,7 +1449,7 @@ export default function BlogDetailPage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Scheduled Publish Date
                   </span>
                   <input
@@ -1477,12 +1477,12 @@ export default function BlogDetailPage() {
                         "Saved"
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   />
                 </label>
 
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Display Publish Date
                   </span>
                   <input
@@ -1509,18 +1509,18 @@ export default function BlogDetailPage() {
                         "Saved"
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   />
                 </label>
               </div>
 
               <label className="block">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-sm font-medium text-navy-500">
                     Actual Published Timestamp
                   </span>
                   {blog?.actual_published_at && form.actual_published_at && (
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-navy-500">
                       Auto-captured • Editable by admin
                     </span>
                   )}
@@ -1545,16 +1545,16 @@ export default function BlogDetailPage() {
                     }
                     void updateBlog({ actual_published_at: nextIso }, "Saved");
                   }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 />
                 {!form.actual_published_at && blog?.publisher_status === "completed" && (
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-navy-500">
                     Automatically captured when blog is published. Admins can edit anytime.
                   </p>
                 )}
               </label>
 
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+              <label className="inline-flex items-center gap-2 text-sm text-navy-500">
                 <input
                   disabled={!canArchiveBlog}
                   type="checkbox"
@@ -1577,13 +1577,13 @@ export default function BlogDetailPage() {
                 <button
                   type="submit"
                   disabled={!canSaveDetails || isSaving}
-                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Save Metadata
                 </button>
                 <button
                   type="button"
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                   onClick={() => {
                     router.push("/dashboard");
                   }}
@@ -1595,17 +1595,17 @@ export default function BlogDetailPage() {
               </section>
 
           <section id="blog-workflow" className="grid gap-4 xl:grid-cols-2">
-            <div className="rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <div className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                 Writer Workflow
               </h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-navy-500">
                 Assigned writer: {selectedWriter?.full_name ?? "Unassigned"}
               </p>
 
               <div className="mt-3 space-y-3">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Writing Stage
                   </span>
                   <select
@@ -1622,7 +1622,7 @@ export default function BlogDetailPage() {
                           : prev
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     {WRITER_STATUSES.map((status) => (
                       <option
@@ -1645,7 +1645,7 @@ export default function BlogDetailPage() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Google Doc URL
                   </span>
                   <input
@@ -1658,7 +1658,7 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, google_doc_url: event.target.value } : prev
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                     placeholder="https://docs.google.com/..."
                   />
                 </label>
@@ -1668,7 +1668,7 @@ export default function BlogDetailPage() {
                   <button
                     type="button"
                     disabled={!canWriterEdit || isSaving}
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleWriterSave();
                     }}
@@ -1691,17 +1691,17 @@ export default function BlogDetailPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <div className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                 Publisher Workflow
               </h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-navy-500">
                 Assigned publisher: {selectedPublisher?.full_name ?? "Unassigned"}
               </p>
 
               <div className="mt-3 space-y-3">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Publishing Stage
                   </span>
                   <select
@@ -1717,7 +1717,7 @@ export default function BlogDetailPage() {
                           : prev
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     {PUBLISHER_STATUSES.map((status) => (
                       <option
@@ -1740,7 +1740,7 @@ export default function BlogDetailPage() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Live URL
                   </span>
                   <input
@@ -1753,7 +1753,7 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, live_url: event.target.value } : prev
                       );
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                     placeholder="https://..."
                   />
                 </label>
@@ -1763,7 +1763,7 @@ export default function BlogDetailPage() {
                   <button
                     type="button"
                     disabled={!canPublisherEdit || isSaving}
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handlePublisherSave();
                     }}
@@ -1788,8 +1788,8 @@ export default function BlogDetailPage() {
           </section>
 
 
-          <section id="blog-comments" className="rounded-lg border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <section id="blog-comments" className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
               Comments
             </h3>
             {commentsUnavailableMessage ? (
@@ -1804,7 +1804,7 @@ export default function BlogDetailPage() {
                 onChange={(event) => {
                   setNewComment(event.target.value);
                 }}
-                className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 placeholder="Add context or feedback…"
                 maxLength={2000}
               />
@@ -1816,38 +1816,38 @@ export default function BlogDetailPage() {
                     Boolean(commentsUnavailableMessage) ||
                     !canCreateComments
                   }
-                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isCommentSaving ? "Adding…" : "Add Comment"}
                 </button>
               </div>
             </form>
             {!canCreateComments ? (
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-navy-500">
                 You do not have permission to add comments.
               </p>
             ) : null}
 
             {comments.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">
+              <p className="mt-3 text-sm text-navy-500">
                 No comments yet. Add context to keep handoffs clear.
               </p>
             ) : (
               <ul className="mt-3 space-y-3">
                 {comments.map((comment) => (
-                  <li key={comment.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
+                      <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-semibold text-white">
                         {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-slate-600">
-                          {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
-                          <time className="font-normal text-slate-400">
+                        <p className="text-xs font-semibold text-navy-500">
+                          {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}
+                          <time className="font-normal text-navy-500/60">
                             {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                           </time>
                         </p>
-                        <div className="mt-2 text-sm text-slate-700">
+                        <div className="mt-2 text-sm text-navy-500">
                           <MarkdownComment content={comment.comment} />
                         </div>
                       </div>
@@ -1857,57 +1857,57 @@ export default function BlogDetailPage() {
               </ul>
             )}
           </section>
-          <section id="blog-links" className="rounded-lg border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <section id="blog-links" className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
               Links
             </h3>
             <div className="mt-2 space-y-3 text-sm">
               <div>
-                <p className="text-xs font-medium text-slate-500">Draft</p>
+                <p className="text-xs font-medium text-navy-500">Draft</p>
                 <LinkQuickActions href={blog.google_doc_url} label="Draft URL" />
                 {!blog.google_doc_url ? (
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-navy-500">
                     Add a Google Doc URL in Writing Workflow to unlock this link.
                   </p>
                 ) : null}
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500">Live URL</p>
+                <p className="text-xs font-medium text-navy-500">Live URL</p>
                 <LinkQuickActions href={blog.live_url} label="Live URL" />
                 {!blog.live_url ? (
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-navy-500">
                     Add a Live URL in Publishing Workflow when the post is published.
                   </p>
                 ) : null}
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500">Blog Page</p>
+                <p className="text-xs font-medium text-navy-500">Blog Page</p>
                 <LinkQuickActions href={`/blogs/${blog.id}`} label="Blog page URL" />
               </div>
             </div>
           </section>
-          <section id="blog-assignment-changes" className="rounded-lg border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <section id="blog-assignment-changes" className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
               Assignment & Changes
             </h3>
             {groupedHistory.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">
+              <p className="mt-3 text-sm text-navy-500">
                 No assignment or status changes yet. Workflow updates will appear here.
               </p>
             ) : (
               <div className="mt-3 space-y-3">
                 {groupedHistory.map((group) => (
                   <section key={group.dayLabel} className="space-y-2">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                       {group.dayLabel}
                     </h4>
                     <ul className="space-y-2">
                       {group.entries.map((entry) => (
                         <li
                           key={entry.id}
-                          className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                          className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2"
                         >
-                          <p className="text-sm font-medium text-slate-800">
+                          <p className="text-sm font-medium text-ink">
                             {formatActivityEventTitle(entry)}
                           </p>
                           {(() => {
@@ -1915,10 +1915,10 @@ export default function BlogDetailPage() {
                               userNameById: activityUserNameById,
                             });
                             return detail ? (
-                              <p className="text-xs text-slate-500">{detail}</p>
+                              <p className="text-xs text-navy-500">{detail}</p>
                             ) : null;
                           })()}
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs text-navy-500/60">
                             {(entry.changed_by && activityUserNameById[entry.changed_by]) || "System"} •{" "}
                             {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                           </p>
@@ -1933,14 +1933,14 @@ export default function BlogDetailPage() {
             </div>
             <aside className="hidden lg:block">
               <div className="space-y-3 lg:sticky lg:top-20">
-                <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                         Next Action
                       </h3>
-                      <p className="text-sm font-medium text-slate-900">{blogNextAction.title}</p>
-                      <p className="text-sm text-slate-600">{blogNextAction.helper}</p>
+                      <p className="text-sm font-medium text-ink">{blogNextAction.title}</p>
+                      <p className="text-sm text-navy-500">{blogNextAction.helper}</p>
                       <p
                         className={`text-xs ${
                           isDetailDirty ? "text-amber-700" : "text-emerald-700"
@@ -1960,15 +1960,15 @@ export default function BlogDetailPage() {
                         type="button"
                         disabled={blogNextAction.disabled}
                         aria-keyshortcuts="Alt+Shift+Enter"
-                        className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={runBlogPrimaryAction}
                       >
                         {blogNextAction.ctaLabel}
                       </button>
                     ) : null}
                   </div>
-                  <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                       Transition Preflight
                     </p>
                     {blogPreflightRequiredFields.length === 0 ? (
@@ -1977,7 +1977,7 @@ export default function BlogDetailPage() {
                       </p>
                     ) : (
                       <>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-xs text-navy-500">
                           {readyBlogPreflightCount} / {blogPreflightRequiredFields.length} required
                           items ready for next completion action.
                         </p>
@@ -1988,12 +1988,12 @@ export default function BlogDetailPage() {
                             {missingBlogPreflightFields.map((field) => (
                               <li
                                 key={field}
-                                className="flex items-center justify-between gap-2 text-xs text-slate-700"
+                                className="flex items-center justify-between gap-2 text-xs text-navy-500"
                               >
                                 <span>{BLOG_PREFLIGHT_FIELD_META[field].label}</span>
                                 <button
                                   type="button"
-                                  className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                                  className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
                                   onClick={() => {
                                     jumpToBlogField(field);
                                   }}
@@ -2010,16 +2010,16 @@ export default function BlogDetailPage() {
                 </section>
                 <nav
                   aria-label="Detail sections"
-                  className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+                  className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2"
                 >
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Jump to
                   </span>
                   {blogSectionLinks.map((sectionLink) => (
                     <a
                       key={sectionLink.href}
                       href={sectionLink.href}
-                      className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                      className="rounded border border-[color:var(--sh-gray-200)] px-2 py-1 text-xs text-navy-500 hover:bg-blurple-50"
                     >
                       {sectionLink.label}
                     </a>

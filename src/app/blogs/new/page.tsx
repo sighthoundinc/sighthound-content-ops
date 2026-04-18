@@ -341,21 +341,21 @@ function NewBlogPageContent() {
         <div className="max-w-3xl space-y-6">
           <nav
             aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
           >
-            <Link href="/dashboard" className="hover:text-slate-700">
+            <Link href="/dashboard" className="hover:text-navy-500">
               Dashboard
             </Link>
             <span>/</span>
-            <Link href="/blogs" className="hover:text-slate-700">
+            <Link href="/blogs" className="hover:text-navy-500">
               Blogs
             </Link>
             <span>/</span>
-            <span className="text-slate-700">New</span>
+            <span className="text-navy-500">New</span>
           </nav>
           <header>
-            <h2 className="text-xl font-semibold text-slate-900">Add Blog</h2>
-            <p className="text-sm text-slate-600">
+            <h2 className="text-xl font-semibold text-ink">Add Blog</h2>
+            <p className="text-sm text-navy-500">
               Create a new blog assignment for Sighthound or Redactor.
             </p>
           </header>
@@ -381,7 +381,7 @@ function NewBlogPageContent() {
               </div>
             ) : null}
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">
+              <span className="mb-1 block text-sm font-medium text-navy-500">
                 Title
               </span>
               <input
@@ -390,13 +390,13 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setTitle(event.target.value);
                 }}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
               />
             </label>
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-navy-500">
                   Site
                 </span>
                 <select
@@ -404,7 +404,7 @@ function NewBlogPageContent() {
                   onChange={(event) => {
                     setSite(event.target.value as BlogSite);
                   }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   {SITES.map((nextSite) => (
                     <option key={nextSite} value={nextSite}>
@@ -415,7 +415,7 @@ function NewBlogPageContent() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-navy-500">
                   Scheduled Publish Date
                 </span>
                 <input
@@ -424,7 +424,7 @@ function NewBlogPageContent() {
                   onChange={(event) => {
                     setScheduledPublishDate(event.target.value);
                   }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 />
               </label>
             </div>
@@ -441,13 +441,13 @@ function NewBlogPageContent() {
                       setDisplayPublishDate(scheduledPublishDate);
                     }
                   }}
-                  className="rounded border-slate-300"
+                  className="rounded border-[color:var(--sh-gray-200)]"
                 />
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-navy-500">
                   Same as Scheduled Publish Date
                 </span>
               </div>
-              <span className="mb-1 block text-sm font-medium text-slate-700">
+              <span className="mb-1 block text-sm font-medium text-navy-500">
                 Display Publish Date
               </span>
               <input
@@ -457,14 +457,14 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setDisplayPublishDate(event.target.value);
                 }}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
               />
             </label>
 
             {/* Assignment section: admins can assign both, non-admins can select writer (defaults to self) */}
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-navy-500">
                   Writer
                 </span>
                 <select
@@ -473,7 +473,7 @@ function NewBlogPageContent() {
                   onChange={(event) => {
                     setWriterId(event.target.value);
                   }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   <option value="">Select writer</option>
                   {users.map((nextUser) => (
@@ -483,7 +483,7 @@ function NewBlogPageContent() {
                   ))}
                 </select>
                 {!canManageWriterAssignment && writerId && (
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-navy-500">
                     Defaults to you, but you can select another writer if needed.
                   </p>
                 )}
@@ -491,11 +491,11 @@ function NewBlogPageContent() {
 
               <label className="block">
                 <span className="mb-1 flex items-center gap-2">
-                  <span className="block text-sm font-medium text-slate-700">
+                  <span className="block text-sm font-medium text-navy-500">
                     Publisher
                   </span>
                   {lastPublisherName && (
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-navy-500">
                       (Last used: {lastPublisherName})
                     </span>
                   )}
@@ -520,7 +520,7 @@ function NewBlogPageContent() {
                       setLastPublisherName(null);
                     }
                   }}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   <option value="">Unassigned</option>
                   {users.map((nextUser) => (
@@ -533,7 +533,7 @@ function NewBlogPageContent() {
             </div>
 
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">
+              <span className="mb-1 block text-sm font-medium text-navy-500">
                 Google Doc URL
               </span>
               <input
@@ -542,16 +542,16 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setGoogleDocUrl(event.target.value);
                 }}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 placeholder="https://docs.google.com/..."
               />
             </label>
 
-            <section className="rounded-md border border-slate-200 bg-slate-50 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <section className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                 Comments
               </h3>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-xs text-navy-500">
                 Optional comment to start discussion before writing or publishing.
               </p>
               <textarea
@@ -560,12 +560,12 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setInitialComment(event.target.value);
                 }}
-                className="mt-3 min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                className="mt-3 min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 placeholder="Add an initial comment..."
                 maxLength={2000}
               />
               {!canCreateComments ? (
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-navy-500">
                   You do not have permission to add comments.
                 </p>
               ) : null}
@@ -576,13 +576,13 @@ function NewBlogPageContent() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Creating..." : "Create Blog"}
               </button>
               <button
                 type="button"
-                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                 onClick={() => {
                   router.push("/dashboard");
                 }}

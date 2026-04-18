@@ -456,13 +456,13 @@ function SocialPostCard({
     <div
       ref={setNodeRef}
       style={dragStyle}
-      className={`relative rounded-md border border-slate-200 bg-white shadow-sm transition ${
+      className={`relative rounded-md border border-[color:var(--sh-gray-200)] bg-white shadow-sm transition ${
         isDragging ? "opacity-60" : ""
       }`}
     >
       <button
         type="button"
-        className={`block w-full rounded-md p-3 text-left hover:border-slate-300 hover:bg-slate-50 ${
+        className={`block w-full rounded-md p-3 text-left hover:border-[color:var(--sh-gray-200)] hover:bg-blurple-50 ${
           !canTransition ? "cursor-not-allowed" : ""
         }`}
         onClick={onOpen}
@@ -470,23 +470,23 @@ function SocialPostCard({
         {...listeners}
       >
         <div className="flex items-start justify-between gap-2">
-          <p className="line-clamp-2 text-sm font-semibold text-slate-900">{post.title}</p>
+          <p className="line-clamp-2 text-sm font-semibold text-ink">{post.title}</p>
           <SocialPostStatusBadge status={post.status} />
         </div>
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="mt-1 text-xs text-navy-500">
           {SOCIAL_POST_PRODUCT_LABELS[post.product]} • {SOCIAL_POST_TYPE_LABELS[post.type]}
         </p>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-navy-500">
           Scheduled: {formatDateOnly(post.scheduled_date) || "Unscheduled"}
         </p>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-navy-500">
           Platforms:{" "}
           {post.platforms.length > 0
             ? post.platforms.map((platform) => SOCIAL_PLATFORM_LABELS[platform]).join(", ")
             : "—"}
         </p>
         {post.associated_blog ? (
-          <p className="mt-1 truncate text-xs text-slate-500">
+          <p className="mt-1 truncate text-xs text-navy-500">
             Blog: {post.associated_blog.title}
           </p>
         ) : null}
@@ -503,7 +503,7 @@ function SocialPostCard({
         {!canTransition && post.status !== "published" ? (
           <p className="mt-1 text-[11px] text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
         ) : null}
-        <p className="mt-2 text-[11px] text-slate-400">{linkCount} published links</p>
+        <p className="mt-2 text-[11px] text-navy-500/60">{linkCount} published links</p>
       </button>
       <div className="absolute right-2 top-2">
         <button
@@ -512,14 +512,14 @@ function SocialPostCard({
             event.stopPropagation();
             setIsMenuOpen(!isMenuOpen);
           }}
-          className="rounded px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          className="rounded px-2 py-1 text-navy-500/60 hover:bg-blurple-50 hover:text-navy-500"
           aria-label="Open row actions"
         >
           <span className="text-lg leading-none">⋯</span>
         </button>
         {isMenuOpen ? (
           <div
-            className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+            className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-lg"
             onClick={(event) => {
               event.stopPropagation();
             }}
@@ -529,7 +529,7 @@ function SocialPostCard({
               disabled={isDeleting || post.status === "published"}
               onClick={handleDelete}
               title={post.status === "published" ? "Published posts cannot be deleted" : ""}
-              className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
+              className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-navy-500/60"
             >
               {isDeleting ? "Deleting…" : "Delete"}
             </button>
@@ -574,21 +574,21 @@ function SocialStatusColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`min-h-80 rounded-lg border border-slate-200 bg-slate-50 p-3 ${
-        isOver ? "ring-2 ring-blue-300 ring-offset-1" : ""
+      className={`min-h-80 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3 ${
+        isOver ? "ring-2 ring-blurple-300 ring-offset-1" : ""
       }`}
     >
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
           {SOCIAL_POST_STATUS_LABELS[status]}
         </h3>
-        <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">
+        <span className="rounded-full bg-white px-2 py-0.5 text-xs text-navy-500">
           {posts.length}
         </span>
       </div>
       <div className="space-y-2">
         {posts.length === 0 ? (
-          <p className="rounded-md border border-dashed border-slate-300 bg-white px-2 py-3 text-xs text-slate-400">
+          <p className="rounded-md border border-dashed border-[color:var(--sh-gray-200)] bg-white px-2 py-3 text-xs text-navy-500/60">
             No posts
           </p>
         ) : (
@@ -2325,19 +2325,19 @@ function SocialPostsPageContent() {
     }
 
     return (
-      <ul className={depth === 0 ? "space-y-3" : "mt-3 space-y-3 border-l-2 border-slate-200 pl-4"}>
+      <ul className={depth === 0 ? "space-y-3" : "mt-3 space-y-3 border-l-2 border-[color:var(--sh-gray-200)] pl-4"}>
         {comments.map((comment) => (
           <li
             key={comment.id}
-            className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+            className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
           >
-            <p className="text-xs font-semibold text-slate-600">
-              {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
-              <time className="font-normal text-slate-400">
+            <p className="text-xs font-semibold text-navy-500">
+              {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}
+              <time className="font-normal text-navy-500/60">
                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
               </time>
             </p>
-            <div className="mt-2 text-sm text-slate-700">
+            <div className="mt-2 text-sm text-navy-500">
               <MarkdownComment content={comment.comment} />
             </div>
             <div className="mt-3">
@@ -2456,14 +2456,14 @@ function SocialPostsPageContent() {
                   event.stopPropagation();
                   setOpenRowMenuId(isOpen ? null : post.id);
                 }}
-                className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded px-2 py-1 text-navy-500 hover:bg-blurple-50 hover:text-navy-500"
                 aria-label="Open row actions"
               >
                 <span className="text-lg leading-none">⋯</span>
               </button>
               {isOpen ? (
                 <div
-                  className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+                  className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-lg"
                   onClick={(event) => {
                     event.stopPropagation();
                   }}
@@ -2475,7 +2475,7 @@ function SocialPostsPageContent() {
                       void handleDeletePost(post.id);
                     }}
                     title={isPublished ? "Published posts cannot be deleted" : ""}
-                    className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                    className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-navy-500/60"
                   >
                     {isDeletingPost ? "Deleting…" : "Delete"}
                   </button>
@@ -2566,7 +2566,7 @@ function SocialPostsPageContent() {
                   onChange={(event) => {
                     setStatusFilter(event.target.value as SocialPostStatus | "all");
                   }}
-                  className="focus-field rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   <option value="all">All Statuses</option>
                   {SOCIAL_POST_STATUSES.map((status) => (
@@ -2581,7 +2581,7 @@ function SocialPostsPageContent() {
                   onChange={(event) => {
                     setAssociatedBlogFilter(event.target.value);
                   }}
-                  className="focus-field rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   <option value="all">All Blogs</option>
                   {Array.from(
@@ -2609,7 +2609,7 @@ function SocialPostsPageContent() {
 
 
           {isLoading ? (
-            <div className="space-y-3 rounded-lg border border-slate-200 p-4 sm:p-5">
+            <div className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] p-4 sm:p-5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
               ))}
@@ -2645,18 +2645,18 @@ function SocialPostsPageContent() {
                   <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
                     <details className="relative">
                       <summary
-                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
                       >
                         Customize
                       </summary>
-                      <div className="absolute right-0 z-20 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-md">
+                      <div className="absolute right-0 z-20 mt-1 w-72 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-md">
                         <div className="flex items-center justify-between">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                             Show Columns
                           </p>
                           <button
                             type="button"
-                            className="pressable rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                            className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
                             onClick={() => {
                               setVisibleColumns(
                                 new Set(SOCIAL_POST_LIST_MANDATORY_COLUMNS)
@@ -2668,8 +2668,8 @@ function SocialPostsPageContent() {
                             Reset Defaults
                           </button>
                         </div>
-                        <div className="mt-2 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <div className="mt-2 flex items-center justify-between rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1.5">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                             Density
                           </span>
                           <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
@@ -2700,14 +2700,14 @@ function SocialPostsPageContent() {
                           </div>
                         </div>
                         <div className="mt-3">
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                             Mandatory Columns
                           </p>
                           <div className="space-y-1">
                             {mandatoryTableColumns.map((column) => (
                               <label
                                 key={column.id}
-                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-slate-700"
+                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-navy-500"
                               >
                                 <span>{column.label}</span>
                                 <input
@@ -2721,14 +2721,14 @@ function SocialPostsPageContent() {
                           </div>
                         </div>
                         <div className="mt-3">
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                             Optional Columns
                           </p>
                           <div className="space-y-1">
                             {optionalTableColumns.map((column) => (
                               <label
                                 key={column.id}
-                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-navy-500 hover:bg-blurple-50"
                               >
                                 <span>{column.label || "Actions"}</span>
                                 <input
@@ -2757,8 +2757,8 @@ function SocialPostsPageContent() {
                 </div>
               </div>
               {selectedRowIndices.size > 0 ? (
-                <div className="mb-3 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
-                  <span className="text-sm font-medium text-blue-900">
+                <div className="mb-3 flex items-center gap-2 rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-3 py-2">
+                  <span className="text-sm font-medium text-blurple-800">
                     {selectedRowIndices.size} selected
                   </span>
                   <Button
@@ -2881,19 +2881,19 @@ function SocialPostsPageContent() {
                         className={compact ? "" : "min-h-[18rem]"}
                         bodyScrollable={!compact}
                         bodyClassName="space-y-1"
-                        todayContainerClassName="border-blue-300 bg-blue-50"
-                        todayDayLabelClassName="font-semibold text-blue-700"
-                        dayLabelClassName={!isToday ? "text-slate-700" : undefined}
+                        todayContainerClassName="border-blurple-300 bg-blurple-50"
+                        todayDayLabelClassName="font-semibold text-blurple-700"
+                        dayLabelClassName={!isToday ? "text-navy-500" : undefined}
                       >
                         <div className="space-y-1">
                           {!compact && visiblePosts.length === 0 ? (
-                            <p className="text-xs text-slate-400">No posts</p>
+                            <p className="text-xs text-navy-500/60">No posts</p>
                           ) : null}
                           {visiblePosts.map((post) => (
                             <button
                               key={post.id}
                               type="button"
-                              className="block w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-left text-xs text-slate-700 hover:bg-slate-100"
+                              className="block w-full rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1 text-left text-xs text-navy-500 hover:bg-blurple-50"
                               onClick={() => {
                                 openPostPanel(post.id);
                               }}
@@ -2903,7 +2903,7 @@ function SocialPostsPageContent() {
                               }}
                             >
                               <p className="truncate font-medium">{post.title}</p>
-                              <p className="text-[10px] text-slate-500">
+                              <p className="text-[10px] text-navy-500">
                                 {SOCIAL_POST_STATUS_LABELS[post.status]}
                               </p>
                             </button>
@@ -2911,7 +2911,7 @@ function SocialPostsPageContent() {
                           {hiddenItemCount > 0 ? (
                             <button
                               type="button"
-                              className="w-full rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-100"
+                              className="w-full rounded-md border border-dashed border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1 text-[11px] font-medium text-navy-500 transition-colors hover:border-[color:var(--sh-gray-400)] hover:bg-blurple-50"
                               onClick={() => {
                                 setCalendarMode("week");
                                 setActiveMonth(day);
@@ -2928,11 +2928,11 @@ function SocialPostsPageContent() {
                 })}
               </CalendarGridSurface>
               <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Unscheduled
                 </h3>
                 {unscheduledPosts.length === 0 ? (
-                  <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
+                  <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-4 text-sm text-navy-500">
                     All visible posts have a scheduled date.
                   </p>
                 ) : (
@@ -2940,7 +2940,7 @@ function SocialPostsPageContent() {
                     {unscheduledPosts.map((post) => (
                       <li
                         key={post.id}
-                        className="rounded-md border border-slate-200 px-3 py-2"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2"
                       >
                         <button
                           type="button"
@@ -2949,7 +2949,7 @@ function SocialPostsPageContent() {
                             openPostPanel(post.id);
                           }}
                         >
-                          <span className="font-medium text-slate-900">{post.title}</span>
+                          <span className="font-medium text-ink">{post.title}</span>
                           <SocialPostStatusBadge status={post.status} />
                         </button>
                       </li>
@@ -2966,16 +2966,16 @@ function SocialPostsPageContent() {
             <button
               type="button"
               aria-label="Close social post panel"
-              className="fixed inset-0 z-30 bg-slate-900/25"
+              className="fixed inset-0 z-30 bg-ink/25"
               onClick={() => {
                 setActivePostId(null);
               }}
             />
-            <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl">
+            <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">{activePost.title}</h3>
-              <p className="text-sm text-slate-600">
+                  <h3 className="text-lg font-semibold text-ink">{activePost.title}</h3>
+              <p className="text-sm text-navy-500">
                     Created {formatDateInTimezone(activePost.created_at, profile?.timezone)}
                   </p>
                 </div>
@@ -3015,9 +3015,9 @@ function SocialPostsPageContent() {
               </div>
 
 
-              <section className="mt-4 space-y-3 rounded-lg border border-slate-200 p-4">
+              <section className="mt-4 space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                     Basic Information
                   </h4>
                   <SocialPostStatusBadge status={panelForm.status} />
@@ -3042,11 +3042,11 @@ function SocialPostsPageContent() {
 
                 {/* STAGE 1: EDITOR CREATES */}
                 {panelCanEditBrief && (
-                  <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Required</p>
+                  <div className="space-y-3 rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blurple-700">Required</p>
                     <div className="grid gap-3 md:grid-cols-2">
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">Product</span>
+                        <span className="mb-1 block text-sm font-medium text-navy-500">Product</span>
                         <select
                           value={panelForm.product}
                           onChange={(event) => {
@@ -3056,7 +3056,7 @@ function SocialPostsPageContent() {
                                 : previous
                             );
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {SOCIAL_POST_PRODUCTS.map((product) => (
                             <option key={product} value={product}>
@@ -3066,7 +3066,7 @@ function SocialPostsPageContent() {
                         </select>
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">Type</span>
+                        <span className="mb-1 block text-sm font-medium text-navy-500">Type</span>
                         <select
                           value={panelForm.type}
                           onChange={(event) => {
@@ -3076,7 +3076,7 @@ function SocialPostsPageContent() {
                                 : previous
                             );
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {SOCIAL_POST_TYPES.map((type) => (
                             <option key={type} value={type}>
@@ -3087,7 +3087,7 @@ function SocialPostsPageContent() {
                       </label>
                     </div>
                     <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Canva URL</span>
+                      <span className="mb-1 block text-sm font-medium text-navy-500">Canva URL</span>
                       <input
                         type="url"
                         value={panelForm.canva_url}
@@ -3096,7 +3096,7 @@ function SocialPostsPageContent() {
                             previous ? { ...previous, canva_url: event.target.value } : previous
                           );
                         }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         placeholder="https://www.canva.com/..."
                       />
                     </label>
@@ -3105,9 +3105,9 @@ function SocialPostsPageContent() {
 
                 {/* OPTIONAL FIELDS (ALWAYS EDITABLE) */}
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Optional</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">Optional</p>
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Canva Page</span>
+                    <span className="mb-1 block text-sm font-medium text-navy-500">Canva Page</span>
                     <input
                       type="number"
                       min={1}
@@ -3117,12 +3117,12 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, canva_page: event.target.value } : previous
                         );
                       }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       disabled={!panelCanEditBrief}
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
+                    <span className="mb-1 block text-sm font-medium text-navy-500">Title</span>
                     <input
                       value={panelForm.title}
                       onChange={(event) => {
@@ -3130,12 +3130,12 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, title: event.target.value } : previous
                         );
                       }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       disabled={!panelCanEditBrief}
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Caption / Write-up</span>
+                    <span className="mb-1 block text-sm font-medium text-navy-500">Caption / Write-up</span>
                     <textarea
                       value={panelForm.caption}
                       onChange={(event) => {
@@ -3143,13 +3143,13 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, caption: event.target.value } : previous
                         );
                       }}
-                      className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      className="min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       placeholder="Main social caption..."
                       disabled={!panelCanEditBrief}
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Associated Blog</span>
+                    <span className="mb-1 block text-sm font-medium text-navy-500">Associated Blog</span>
                     <input
                       value={blogSearchQuery}
                       onFocus={() => {
@@ -3159,16 +3159,16 @@ function SocialPostsPageContent() {
                         setBlogSearchQuery(event.target.value);
                         setIsBlogSearchOpen(true);
                       }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       placeholder="Search blog title or slug..."
                       disabled={!panelCanEditBrief}
                     />
                     {panelForm.associated_blog_id ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-navy-500">
                         <span>Linked blog ID: {panelForm.associated_blog_id}</span>
                         <button
                           type="button"
-                          className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => {
                             setPanelForm((previous) =>
                               previous ? { ...previous, associated_blog_id: null } : previous
@@ -3184,17 +3184,17 @@ function SocialPostsPageContent() {
                       </div>
                     ) : null}
                     {isBlogSearchOpen && panelCanEditBrief ? (
-                      <div className="mt-2 max-h-52 overflow-y-auto rounded-md border border-slate-200 bg-white">
+                      <div className="mt-2 max-h-52 overflow-y-auto rounded-md border border-[color:var(--sh-gray-200)] bg-white">
                         {isBlogSearchLoading ? (
-                          <p className="px-3 py-2 text-sm text-slate-500">Searching blogs…</p>
+                          <p className="px-3 py-2 text-sm text-navy-500">Searching blogs…</p>
                         ) : blogSearchResults.length === 0 ? (
-                          <p className="px-3 py-2 text-sm text-slate-500">No matching blogs.</p>
+                          <p className="px-3 py-2 text-sm text-navy-500">No matching blogs.</p>
                         ) : (
                           blogSearchResults.map((blog) => (
                             <button
                               key={blog.id}
                               type="button"
-                              className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                              className="block w-full border-b border-[color:var(--sh-gray)] px-3 py-2 text-left last:border-b-0 hover:bg-blurple-50"
                               onClick={() => {
                                 setPanelForm((previous) =>
                                   previous
@@ -3206,8 +3206,8 @@ function SocialPostsPageContent() {
                                 setIsBlogSearchOpen(false);
                               }}
                             >
-                              <p className="text-sm font-medium text-slate-900">{blog.title}</p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-sm font-medium text-ink">{blog.title}</p>
+                              <p className="text-xs text-navy-500">
                                 {blog.slug || "no-slug"} • {blog.site}
                               </p>
                             </button>
@@ -3220,10 +3220,10 @@ function SocialPostsPageContent() {
 
                 {/* SCHEDULING */}
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Schedule</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">Schedule</p>
                   <div className="grid gap-3 md:grid-cols-2">
                     <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Scheduled Publish Date</span>
+                      <span className="mb-1 block text-sm font-medium text-navy-500">Scheduled Publish Date</span>
                       <input
                         type="date"
                         value={panelForm.scheduled_date}
@@ -3234,11 +3234,11 @@ function SocialPostsPageContent() {
                               : previous
                           );
                         }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Published Date</span>
+                      <span className="mb-1 block text-sm font-medium text-navy-500">Published Date</span>
                       <input
                         type="date"
                         value={panelForm.scheduled_date}
@@ -3249,7 +3249,7 @@ function SocialPostsPageContent() {
                               : previous
                           );
                         }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       />
                     </label>
                   </div>
@@ -3257,7 +3257,7 @@ function SocialPostsPageContent() {
 
                 {/* PLATFORMS SELECTION */}
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Platforms</span>
+                  <span className="mb-2 block text-sm font-medium text-navy-500">Platforms</span>
                   <div className="flex flex-wrap gap-2">
                     {SOCIAL_PLATFORMS.map((platform) => {
                       const isSelected = panelForm.platforms.includes(platform);
@@ -3267,8 +3267,8 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                             isSelected
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                              ? "border-ink bg-ink text-white"
+                              : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           } ${!panelCanEditBrief ? "cursor-not-allowed opacity-60" : ""}`}
                           onClick={() => {
                             if (panelCanEditBrief) {
@@ -3294,7 +3294,7 @@ function SocialPostsPageContent() {
                   <button
                     type="button"
                     disabled={isPanelSaving || !panelCanEditBrief}
-                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleSavePostDetails();
                     }}
@@ -3304,36 +3304,36 @@ function SocialPostsPageContent() {
                 </div>
               </section>
 
-              <section className="mt-4 rounded-lg border border-slate-200 p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <section className="mt-4 rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Assignment
                 </h4>
                 <div className="mt-3 grid gap-2 md:grid-cols-2">
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-600">
+                  <div className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-navy-500">
                       Assigned to
                     </p>
-                    <p className="mt-1 text-sm text-slate-900">
+                    <p className="mt-1 text-sm text-ink">
                       {activePost.worker?.full_name ?? "Not assigned"}
                     </p>
                   </div>
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-600">
+                  <div className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-navy-500">
                       Reviewer
                     </p>
-                    <p className="mt-1 text-sm text-slate-900">
+                    <p className="mt-1 text-sm text-ink">
                       {activePost.reviewer?.full_name ?? "Not assigned"}
                     </p>
                   </div>
                 </div>
               </section>
-              <section className="mt-4 rounded-lg border border-slate-200 p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <section className="mt-4 rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Comments
                 </h4>
                 <form className="mt-3 space-y-2" onSubmit={handleAddComment}>
                   {replyToComment ? (
-                    <div className="flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                    <div className="flex items-center justify-between rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-3 py-2 text-xs text-blurple-700">
                       <span>
                         Replying to {replyToComment.author?.full_name ?? "comment"}
                       </span>
@@ -3353,14 +3353,14 @@ function SocialPostsPageContent() {
                     onChange={(event) => {
                       setPanelCommentDraft(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Add discussion or feedback..."
                   />
                   <div className="flex justify-end">
                     <button
                       type="submit"
                       disabled={isCommentSaving}
-                      className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isCommentSaving ? "Adding..." : "Add Comment"}
                     </button>
@@ -3368,7 +3368,7 @@ function SocialPostsPageContent() {
                 </form>
                 <div className="mt-3">
                   {panelComments.length === 0 ? (
-                    <p className="text-sm text-slate-500">No comments yet.</p>
+                    <p className="text-sm text-navy-500">No comments yet.</p>
                   ) : (
                     renderCommentTree(null, 0)
                   )}
@@ -3377,12 +3377,12 @@ function SocialPostsPageContent() {
 
               {/* EXECUTION STAGE: LIVE LINKS */}
               {(panelForm.status === "ready_to_publish" || panelForm.status === "awaiting_live_link" || panelForm.status === "published") && (
-                <section className="mt-4 space-y-3 rounded-lg border border-slate-200 p-4">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Live Links</h4>
+                <section className="mt-4 space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-navy-500">Live Links</h4>
                   <div className="space-y-2">
                     {SOCIAL_PLATFORMS.map((platform) => (
                       <label key={platform} className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">{SOCIAL_PLATFORM_LABELS[platform]}</span>
+                        <span className="mb-1 block text-sm font-medium text-navy-500">{SOCIAL_PLATFORM_LABELS[platform]}</span>
                         <input
                           type="url"
                           value={panelLinksDraft[platform] ?? ""}
@@ -3392,19 +3392,19 @@ function SocialPostsPageContent() {
                               [platform]: event.target.value,
                             }));
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           placeholder={`https://${platform}.com/...`}
                         />
                       </label>
                     ))}
                   </div>
                   {activePostLinks.length > 0 ? (
-                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                      <p className="font-medium text-slate-700">Saved Links</p>
+                    <div className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-xs text-navy-500">
+                      <p className="font-medium text-navy-500">Saved Links</p>
                       <ul className="mt-2 space-y-2">
                         {activePostLinks.map((link) => (
                           <li key={link.id} className="space-y-1">
-                            <p className="font-medium text-slate-700">
+                            <p className="font-medium text-navy-500">
                               {SOCIAL_PLATFORM_LABELS[link.platform]}
                             </p>
                             <LinkQuickActions
@@ -3421,7 +3421,7 @@ function SocialPostsPageContent() {
                     <button
                       type="button"
                       disabled={isLinksSaving}
-                      className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         void handleSaveLinks();
                       }}
@@ -3432,22 +3432,22 @@ function SocialPostsPageContent() {
                 </section>
               )}
 
-              <section className="mt-4 rounded-lg border border-slate-200 p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <section className="mt-4 rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Assignment & Changes (latest 5)
                 </h4>
                 {isPanelLoading ? (
-                  <p className="mt-3 text-sm text-slate-500">Loading assignment and status changes…</p>
+                  <p className="mt-3 text-sm text-navy-500">Loading assignment and status changes…</p>
                 ) : panelActivity.length === 0 ? (
-                  <p className="mt-3 text-sm text-slate-500">No assignment or status changes yet.</p>
+                  <p className="mt-3 text-sm text-navy-500">No assignment or status changes yet.</p>
                 ) : (
                   <ul className="mt-3 space-y-2">
                     {panelActivity.slice(0, 5).map((entry) => (
                       <li
                         key={entry.id}
-                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2"
                       >
-                        <p className="text-sm font-medium text-slate-800">
+                        <p className="text-sm font-medium text-ink">
                           {formatActivityEventTitle(entry)}
                         </p>
                         {(() => {
@@ -3455,10 +3455,10 @@ function SocialPostsPageContent() {
                             userNameById: activityUserNameById,
                           });
                           return detail ? (
-                            <p className="text-xs text-slate-500">{detail}</p>
+                            <p className="text-xs text-navy-500">{detail}</p>
                           ) : null;
                         })()}
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-navy-500/60">
                           {entry.actor?.full_name ?? "System"} •{" "}
                           {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                         </p>
@@ -3526,7 +3526,7 @@ function SocialPostsPageContent() {
           }}
         >
           <div className="space-y-3">
-            <label className="space-y-1 text-sm text-slate-700">
+            <label className="space-y-1 text-sm text-navy-500">
               <span className="font-medium">Category</span>
               <select
                 value={pendingChangeRequestTransition?.template.category ?? ""}
@@ -3543,7 +3543,7 @@ function SocialPostsPageContent() {
                       : previous
                   );
                 }}
-                className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
               >
                 <option value="">Select category</option>
                 {CHANGE_REQUEST_CATEGORY_OPTIONS.map((option) => (
@@ -3554,7 +3554,7 @@ function SocialPostsPageContent() {
               </select>
             </label>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-slate-700">
+              <legend className="text-sm font-medium text-navy-500">
                 Action checklist
               </legend>
               {CHANGE_REQUEST_CHECKLIST_OPTIONS.map((option) => {
@@ -3566,7 +3566,7 @@ function SocialPostsPageContent() {
                 return (
                   <label
                     key={option.id}
-                    className="flex items-start gap-2 text-sm text-slate-700"
+                    className="flex items-start gap-2 text-sm text-navy-500"
                   >
                     <input
                       type="checkbox"
@@ -3597,7 +3597,7 @@ function SocialPostsPageContent() {
                 );
               })}
             </fieldset>
-            <label className="space-y-1 text-sm text-slate-700">
+            <label className="space-y-1 text-sm text-navy-500">
               <span className="font-medium">Context (optional)</span>
               <textarea
                 value={pendingChangeRequestTransition?.template.note ?? ""}
@@ -3615,7 +3615,7 @@ function SocialPostsPageContent() {
                   );
                 }}
                 rows={3}
-                className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 placeholder="Add implementation context for the next pass..."
               />
             </label>
@@ -3652,7 +3652,7 @@ function SocialPostsPageContent() {
             void submitReopenBrief(reason.length > 0 ? reason : null);
           }}
         >
-          <label className="space-y-1 text-sm text-slate-700">
+          <label className="space-y-1 text-sm text-navy-500">
             <span className="font-medium">Reason (optional)</span>
             <textarea
               value={reopenBriefReason}
@@ -3660,7 +3660,7 @@ function SocialPostsPageContent() {
                 setReopenBriefReason(event.target.value);
               }}
               rows={3}
-              className="focus-field w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
               placeholder="Add context for why this brief is being reopened..."
             />
           </label>
@@ -3671,24 +3671,24 @@ function SocialPostsPageContent() {
             <button
               type="button"
               aria-label="Close social post modal"
-              className="absolute inset-0 bg-slate-900/30"
+              className="absolute inset-0 bg-ink/30"
               onClick={() => {
                 if (!isCreating) {
                   closeCreateModal();
                 }
               }}
             />
-            <div className="relative z-10 w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+            <div className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">New Social Post</h3>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">New Social Post</h3>
+                  <p className="mt-1 text-sm text-navy-500">
                     Create a single card and move it from Draft to Published.
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-sm text-navy-500 hover:bg-blurple-50"
                   onClick={() => {
                     if (!isCreating) {
                       closeCreateModal();
@@ -3700,18 +3700,18 @@ function SocialPostsPageContent() {
               </div>
               <form className="mt-4 space-y-4" onSubmit={handleCreatePost}>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
+                  <span className="mb-1 block text-sm font-medium text-navy-500">Title</span>
                   <input
                     value={newTitle}
                     onChange={(event) => {
                       setNewTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Quick Presets
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -3729,8 +3729,8 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium ${
                             isActive
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                              ? "border-ink bg-ink text-white"
+                              : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           }`}
                           onClick={() => {
                             applyCreatePreset(preset);
@@ -3744,7 +3744,7 @@ function SocialPostsPageContent() {
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
+                    <span className="mb-1 block text-sm font-medium text-navy-500">
                       Product
                     </span>
                     <select
@@ -3752,7 +3752,7 @@ function SocialPostsPageContent() {
                       onChange={(event) => {
                         setNewProduct(event.target.value as SocialPostProduct);
                       }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       {SOCIAL_POST_PRODUCTS.map((product) => (
                         <option key={product} value={product}>
@@ -3762,13 +3762,13 @@ function SocialPostsPageContent() {
                     </select>
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Type</span>
+                    <span className="mb-1 block text-sm font-medium text-navy-500">Type</span>
                     <select
                       value={newType}
                       onChange={(event) => {
                         setNewType(event.target.value as SocialPostType);
                       }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       {SOCIAL_POST_TYPES.map((type) => (
                         <option key={type} value={type}>
@@ -3779,7 +3779,7 @@ function SocialPostsPageContent() {
                   </label>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Platforms (optional)
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -3791,8 +3791,8 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium ${
                             isSelected
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                              ? "border-ink bg-ink text-white"
+                              : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           }`}
                           onClick={() => {
                             setNewPlatforms((previous) =>
@@ -3809,7 +3809,7 @@ function SocialPostsPageContent() {
                   </div>
                 </div>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Associated Blog (optional)
                   </span>
                   <input
@@ -3822,15 +3822,15 @@ function SocialPostsPageContent() {
                       setNewAssociatedBlogId(null);
                       setIsCreateBlogSearchOpen(true);
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Search blog title or slug..."
                   />
                   {newAssociatedBlogId ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-navy-500">
                       <span>Linked blog ID: {newAssociatedBlogId}</span>
                       <button
                         type="button"
-                        className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-100"
+                        className="rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 font-medium text-navy-500 hover:bg-blurple-50"
                         onClick={() => {
                           setNewAssociatedBlogId(null);
                           setCreateBlogSearchQuery("");
@@ -3843,21 +3843,21 @@ function SocialPostsPageContent() {
                     </div>
                   ) : null}
                   {isCreateBlogSearchOpen ? (
-                    <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white">
+                    <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-[color:var(--sh-gray-200)] bg-white">
                       {isCreateBlogSearchLoading ? (
-                        <p className="px-3 py-2 text-sm text-slate-500">Searching blogs…</p>
+                        <p className="px-3 py-2 text-sm text-navy-500">Searching blogs…</p>
                       ) : createBlogSearchQuery.trim().length === 0 ? (
-                        <p className="px-3 py-2 text-sm text-slate-500">
+                        <p className="px-3 py-2 text-sm text-navy-500">
                           Type to search blogs.
                         </p>
                       ) : createBlogSearchResults.length === 0 ? (
-                        <p className="px-3 py-2 text-sm text-slate-500">No matching blogs.</p>
+                        <p className="px-3 py-2 text-sm text-navy-500">No matching blogs.</p>
                       ) : (
                         createBlogSearchResults.map((blog) => (
                           <button
                             key={blog.id}
                             type="button"
-                            className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                            className="block w-full border-b border-[color:var(--sh-gray)] px-3 py-2 text-left last:border-b-0 hover:bg-blurple-50"
                             onClick={() => {
                               setNewAssociatedBlogId(blog.id);
                               setCreateBlogSearchQuery(blog.title);
@@ -3865,8 +3865,8 @@ function SocialPostsPageContent() {
                               setIsCreateBlogSearchOpen(false);
                             }}
                           >
-                            <p className="text-sm font-medium text-slate-900">{blog.title}</p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-sm font-medium text-ink">{blog.title}</p>
+                            <p className="text-xs text-navy-500">
                               {blog.slug || "no-slug"} • {blog.site}
                             </p>
                           </button>
@@ -3878,13 +3878,13 @@ function SocialPostsPageContent() {
                 <div className="grid gap-3 md:grid-cols-2">
                   {isAdmin ? (
                     <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Assigned to</span>
+                      <span className="mb-1 block text-sm font-medium text-navy-500">Assigned to</span>
                       <select
                         value={newWorkerUserId ?? ""}
                         onChange={(event) => {
                           setNewWorkerUserId(event.target.value || null);
                         }}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       >
                         <option value="">— Select person —</option>
                         {availableUsers.map((u) => (
@@ -3896,20 +3896,20 @@ function SocialPostsPageContent() {
                     </label>
                   ) : (
                     <div>
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Assigned to</span>
-                      <div className="rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                      <span className="mb-1 block text-sm font-medium text-navy-500">Assigned to</span>
+                      <div className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-sm text-navy-500">
                         You
                       </div>
                     </div>
                   )}
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Reviewer</span>
+                    <span className="mb-1 block text-sm font-medium text-navy-500">Reviewer</span>
                     <select
                       value={newReviewerUserId ?? ""}
                       onChange={(event) => {
                         setNewReviewerUserId(event.target.value || null);
                       }}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       <option value="">— Select reviewer —</option>
                       {availableUsers.map((u) => (
@@ -3924,13 +3924,13 @@ function SocialPostsPageContent() {
                   <button
                     type="submit"
                     disabled={isCreating}
-                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isCreating ? "Creating..." : "Create Social Post"}
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                     onClick={() => {
                       if (!isCreating) {
                         closeCreateModal();

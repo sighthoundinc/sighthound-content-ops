@@ -278,7 +278,7 @@ function normalizeRecordRows(rows: unknown): Array<Record<string, unknown>> {
 
 export default function MyTasksPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-slate-600">Loading your work…</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-navy-500">Loading your work…</div>}>
       <MyTasksPageContent />
     </Suspense>
   );
@@ -1519,7 +1519,7 @@ function MyTasksPageContent() {
       id: "content",
       label: "Content",
       sortable: true,
-      render: (task) => <span className="text-xs text-slate-700">{task.contentLabel}</span>,
+      render: (task) => <span className="text-xs text-navy-500">{task.contentLabel}</span>,
     },
     {
       id: "task",
@@ -1530,11 +1530,11 @@ function MyTasksPageContent() {
           <Link
             href={task.href}
             title={task.title}
-            className="interactive-link block max-w-[28rem] truncate font-medium text-slate-800"
+            className="interactive-link block max-w-[28rem] truncate font-medium text-ink"
           >
             {task.title}
           </Link>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-navy-500">
             {task.contentType === "blog" && task.blogTask
               ? task.blogTask.kind === "writer"
                 ? "Writing task"
@@ -1566,7 +1566,7 @@ function MyTasksPageContent() {
                     event.target.value as WriterStageStatus
                   );
                 }}
-                className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                className="focus-field rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
               >
                 {WRITER_STATUSES.map((status) => (
                   <option key={status} value={status}>
@@ -1674,7 +1674,7 @@ function MyTasksPageContent() {
                     setAssignmentFilter(event.target.value as "all" | "personal" | "admin");
                     setCurrentPage(1);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   <option value="all">All Tasks</option>
                   <option value="personal">My Tasks</option>
@@ -1687,7 +1687,7 @@ function MyTasksPageContent() {
                     setActionFilter(event.target.value as "all" | TaskActionState);
                     setCurrentPage(1);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   <option value="all">All Action States</option>
                   <option value="action_required">Required by: {requiredByLabel}</option>
@@ -1700,7 +1700,7 @@ function MyTasksPageContent() {
                     setStatusFilter(event.target.value as "all" | WriterStageStatus | PublisherStageStatus);
                     setCurrentPage(1);
                   }}
-                  className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
                   <option value="all">All Statuses</option>
                   {TASK_STATUS_FILTER_OPTIONS.map((option) => (
@@ -1718,7 +1718,7 @@ function MyTasksPageContent() {
                         setSocialStatusFilter(event.target.value as "all" | SocialPostStatus);
                         setCurrentPage(1);
                       }}
-                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                     >
                       <option value="all">All Social Statuses</option>
                       {SOCIAL_POST_STATUSES.map((status) => (
@@ -1734,7 +1734,7 @@ function MyTasksPageContent() {
                         setKindFilter(event.target.value as TaskKind | "all");
                         setCurrentPage(1);
                       }}
-                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                     >
                       <option value="all">All Task Types</option>
                       <option value="writer">Writing</option>
@@ -1747,7 +1747,7 @@ function MyTasksPageContent() {
                         setSiteFilter(event.target.value as "all" | "sighthound.com" | "redactor.com");
                         setCurrentPage(1);
                       }}
-                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                     >
                       <option value="all">All Sites</option>
                       <option value="sighthound.com">Sighthound (SH)</option>
@@ -1760,7 +1760,7 @@ function MyTasksPageContent() {
                         setContentFilter(event.target.value as "all" | MixedContentFilterValue);
                         setCurrentPage(1);
                       }}
-                      className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                     >
                       <option value="all">All Content</option>
                       {MIXED_CONTENT_FILTER_OPTIONS.map((option) => (
@@ -1779,7 +1779,7 @@ function MyTasksPageContent() {
 
           {isLoading ? (
             <>
-              <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
                 <div className="skeleton h-4 w-24" />
                 <div className="space-y-2">
                   <div className="skeleton h-12 w-full" />
@@ -1787,7 +1787,7 @@ function MyTasksPageContent() {
                   <div className="skeleton h-12 w-full" />
                 </div>
               </section>
-              <section className="space-y-3 rounded-lg border border-slate-200 p-4">
+              <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] p-4">
                 <div className="space-y-2">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="skeleton h-12 w-full" />
@@ -1797,8 +1797,8 @@ function MyTasksPageContent() {
             </>
           ) : (
             <>
-              <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold text-slate-700">
+              <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
+                <h3 className="text-sm font-semibold text-navy-500">
                   Next Tasks
                 </h3>
                 {nextTasks.length === 0 ? (
@@ -1812,15 +1812,15 @@ function MyTasksPageContent() {
                       <li key={task.id}>
                         <Link
                           href={task.href}
-                          className="pressable block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-100"
+                          className="pressable block w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-left hover:bg-blurple-50"
                         >
-                          <p className="font-medium text-slate-900">
+                          <p className="font-medium text-ink">
                             {index + 1}. {task.title}
                           </p>
-                          <p className="mt-1 text-xs text-slate-600">
+                          <p className="mt-1 text-xs text-navy-500">
                             Status: {task.statusLabel}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-navy-500">
                             Publish Date: {formatDateOnly(task.scheduledDate) || "Not scheduled"}
                           </p>
                         </Link>
@@ -1842,16 +1842,16 @@ function MyTasksPageContent() {
                     <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
                       <details className="relative">
                         <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
                         >
                           Copy
                         </summary>
-                        <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                        <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
                           <button
                             type="button"
                             disabled={combinedTaskRows.length === 0}
 
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               closeOpenDetailsMenus();
                               void copyAllTasks("title");
@@ -1862,7 +1862,7 @@ function MyTasksPageContent() {
                           <button
                             type="button"
                             disabled={combinedTaskRows.length === 0}
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
                               closeOpenDetailsMenus();
                               void copyAllTasks("url");
@@ -1874,18 +1874,18 @@ function MyTasksPageContent() {
                       </details>
                       <details className="relative">
                         <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
                         >
                           Customize
                         </summary>
-                        <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-md">
+                        <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-md">
                           <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-medium text-slate-500">
+                            <p className="text-[11px] font-medium text-navy-500">
                               Show Columns
                             </p>
                             <button
                               type="button"
-                              className="pressable rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                              className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
                               onClick={() => {
                                 resetColumnVisibility();
                               }}
@@ -1893,8 +1893,8 @@ function MyTasksPageContent() {
                               Reset Defaults
                             </button>
                           </div>
-                          <div className="mt-2 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
-                            <span className="text-[11px] font-medium text-slate-500">
+                          <div className="mt-2 flex items-center justify-between rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1.5">
+                            <span className="text-[11px] font-medium text-navy-500">
                               Density
                             </span>
                             <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
@@ -1928,7 +1928,7 @@ function MyTasksPageContent() {
                             {columnOrder.map((column) => (
                               <label
                                 key={column}
-                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-navy-500 hover:bg-blurple-50"
                               >
                                 <span>{TASK_TABLE_COLUMN_LABELS[column]}</span>
                                 <input
@@ -1950,18 +1950,18 @@ function MyTasksPageContent() {
                       {canRunDataImport ? (
                         <Link
                           href="/blogs?import=1"
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-slate-900 bg-slate-900 text-white hover:bg-slate-700`}
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-ink bg-ink text-white hover:bg-navy-700`}
                         >
                           Import
                         </Link>
                       ) : null}
                       <details className="relative">
                         <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-900 bg-slate-900 text-white hover:bg-slate-700`}
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-ink bg-ink text-white hover:bg-navy-700`}
                         >
                           Export
                         </summary>
-                        <div className="absolute right-0 z-20 mt-1 rounded-md border border-slate-200 bg-white shadow-md">
+                        <div className="absolute right-0 z-20 mt-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white shadow-md">
                           <button
                             type="button"
                             disabled={combinedTaskRows.length === 0}
@@ -1969,7 +1969,7 @@ function MyTasksPageContent() {
                               exportTaskCsv();
                               closeOpenDetailsMenus();
                             }}
-                            className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                            className="block w-full px-3 py-1.5 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:bg-[color:var(--sh-gray)] disabled:text-navy-500/60"
                           >
                             As .CSV file
                           </button>
@@ -1980,7 +1980,7 @@ function MyTasksPageContent() {
                               exportTaskPdf();
                               closeOpenDetailsMenus();
                             }}
-                            className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                            className="block w-full px-3 py-1.5 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:bg-[color:var(--sh-gray)] disabled:text-navy-500/60"
                           >
                             As .PDF file
                           </button>

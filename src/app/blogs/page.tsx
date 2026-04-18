@@ -228,7 +228,7 @@ function getPublishedDateKey(blog: BlogRecord) {
 
 export default function BlogLibraryPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading blog library...</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-navy-500">Loading blog library...</div>}>
       <BlogLibraryPageContent />
     </Suspense>
   );
@@ -292,7 +292,7 @@ function getStageBadgeClasses(stage: LibraryStage) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (stage === "publishing") {
-    return "border-blue-200 bg-blue-50 text-blue-700";
+    return "border-[color:var(--sh-blurple-100)] bg-blurple-50 text-blurple-700";
   }
   if (stage === "ready_to_publish") {
     return "border-sky-200 bg-sky-50 text-sky-700";
@@ -300,7 +300,7 @@ function getStageBadgeClasses(stage: LibraryStage) {
   if (stage === "needs_revision") {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  return "border-slate-200 bg-slate-100 text-slate-700";
+  return "border-[color:var(--sh-gray-200)] bg-blurple-50 text-navy-500";
 }
 
 function getAssigneeLabel(name: string | null | undefined) {
@@ -781,7 +781,7 @@ function BlogLibraryPageContent() {
             return (
               <Link
                 href={`/blogs/${blog.id}`}
-                className="interactive-link block truncate font-medium text-slate-800"
+                className="interactive-link block truncate font-medium text-ink"
                 title={blog.title}
               >
                 {blog.title}
@@ -802,7 +802,7 @@ function BlogLibraryPageContent() {
           }
           if (column === "live_url") {
             return (
-              <span className="block max-w-[15rem] truncate text-slate-600" title={blog.live_url ?? ""}>
+              <span className="block max-w-[15rem] truncate text-navy-500" title={blog.live_url ?? ""}>
                 {blog.live_url || "—"}
               </span>
             );
@@ -814,12 +814,12 @@ function BlogLibraryPageContent() {
             return <PublisherStatusBadge status={blog.publisher_status} />;
           }
           if (column === "published_date") {
-            return <span className="text-slate-600">{formatPublishedDate(blog)}</span>;
+            return <span className="text-navy-500">{formatPublishedDate(blog)}</span>;
           }
           if (column === "writer") {
             return (
               <span
-                className="block max-w-[10rem] truncate text-slate-600"
+                className="block max-w-[10rem] truncate text-navy-500"
                 title={blog.writer?.full_name ?? "Unassigned"}
               >
                 {blog.writer?.full_name ?? "Unassigned"}
@@ -829,7 +829,7 @@ function BlogLibraryPageContent() {
           if (column === "publisher") {
             return (
               <span
-                className="block max-w-[10rem] truncate text-slate-600"
+                className="block max-w-[10rem] truncate text-navy-500"
                 title={blog.publisher?.full_name ?? "Unassigned"}
               >
                 {blog.publisher?.full_name ?? "Unassigned"}
@@ -846,14 +846,14 @@ function BlogLibraryPageContent() {
               : "—";
             return (
               <span 
-                className="text-slate-600 cursor-pointer hover:underline" 
+                className="text-navy-500 cursor-pointer hover:underline" 
                 title={displayValue}
               >
                 {displayValue}
               </span>
             );
           }
-          return <span className="text-slate-600">{getStageLabel(getStageForBadge(blog))}</span>;
+          return <span className="text-navy-500">{getStageLabel(getStageForBadge(blog))}</span>;
         },
       })),
     [visibleColumnOrder]
@@ -1323,13 +1323,13 @@ function BlogLibraryPageContent() {
             filters={
               <>
                 <label className="space-y-1">
-                  <span className="block text-xs font-medium text-slate-700">Publish State</span>
+                  <span className="block text-xs font-medium text-navy-500">Publish State</span>
                   <select
                     value={statusFilter}
                     onChange={(event) => {
                       setStatusFilter(event.target.value as LibraryStatusFilter);
                     }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                   >
                     {STATUS_FILTER_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1339,13 +1339,13 @@ function BlogLibraryPageContent() {
                   </select>
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-xs font-medium text-slate-700">Website</span>
+                  <span className="block text-xs font-medium text-navy-500">Website</span>
                   <select
                     value={siteFilter}
                     onChange={(event) => {
                       setSiteFilter(event.target.value as LibrarySiteFilter);
                     }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                   >
                     {SITE_FILTER_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1355,13 +1355,13 @@ function BlogLibraryPageContent() {
                   </select>
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-xs font-medium text-slate-700">Writer Status</span>
+                  <span className="block text-xs font-medium text-navy-500">Writer Status</span>
                   <select
                     value={writerStatusFilter}
                     onChange={(event) => {
                       setWriterStatusFilter(event.target.value as LibraryWriterStatusFilter);
                     }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                   >
                     {WRITER_STATUS_FILTER_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1371,13 +1371,13 @@ function BlogLibraryPageContent() {
                   </select>
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-xs font-medium text-slate-700">Publisher Status</span>
+                  <span className="block text-xs font-medium text-navy-500">Publisher Status</span>
                   <select
                     value={publisherStatusFilter}
                     onChange={(event) => {
                       setPublisherStatusFilter(event.target.value as LibraryPublisherStatusFilter);
                     }}
-                    className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                   >
                     {PUBLISHER_STATUS_FILTER_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1403,15 +1403,15 @@ function BlogLibraryPageContent() {
                 <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
                   <details className="relative">
                     <summary
-                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
                     >
                       Copy
                     </summary>
-                    <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                    <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
                       <button
                         type="button"
                         disabled={sortedBlogs.length === 0}
-                        className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() => {
                           closeOpenDetailsMenus();
                           void copyAll("title");
@@ -1422,7 +1422,7 @@ function BlogLibraryPageContent() {
                       <button
                         type="button"
                         disabled={sortedBlogs.length === 0}
-                        className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() => {
                           closeOpenDetailsMenus();
                           void copyAll("url");
@@ -1434,18 +1434,18 @@ function BlogLibraryPageContent() {
                   </details>
                   <details className="relative">
                     <summary
-                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-300 bg-white text-slate-700 hover:bg-slate-100`}
+                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
                     >
                       Customize
                     </summary>
-                    <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-md">
+                    <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-md">
                       <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                           Show Columns
                         </p>
                         <button
                           type="button"
-                          className="pressable rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                          className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
                           onClick={() => {
                             resetColumnVisibility();
                           }}
@@ -1453,8 +1453,8 @@ function BlogLibraryPageContent() {
                           Reset Defaults
                         </button>
                       </div>
-                      <div className="mt-2 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      <div className="mt-2 flex items-center justify-between rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                           Density
                         </span>
                         <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
@@ -1488,7 +1488,7 @@ function BlogLibraryPageContent() {
                         {columnOrder.map((column) => (
                           <label
                             key={column}
-                            className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                            className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-navy-500 hover:bg-blurple-50"
                           >
                             <span>{LIBRARY_COLUMN_LABELS[column]}</span>
                             <input
@@ -1528,15 +1528,15 @@ function BlogLibraryPageContent() {
                   >
                     <details className="relative">
                       <summary
-                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-slate-900 bg-slate-900 text-white hover:bg-slate-700`}
+                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-ink bg-ink text-white hover:bg-navy-700`}
                       >
                         Export
                       </summary>
-                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-slate-200 bg-white p-1 shadow-md">
+                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
                         <button
                           type="button"
                           disabled={sortedBlogs.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={() => {
                             closeOpenDetailsMenus();
                             exportCsv(getSmartExportScope());
@@ -1547,7 +1547,7 @@ function BlogLibraryPageContent() {
                         <button
                           type="button"
                           disabled={sortedBlogs.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={() => {
                             closeOpenDetailsMenus();
                             exportPdf(getSmartExportScope());
@@ -1562,9 +1562,9 @@ function BlogLibraryPageContent() {
               </div>
             </div>
             {canSelectRows && selectedBlogs.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-sm text-slate-700">
-                  <span className="font-semibold text-slate-900">{selectedBlogs.length}</span>{" "}
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-4 py-3">
+                <p className="text-sm text-navy-500">
+                  <span className="font-semibold text-ink">{selectedBlogs.length}</span>{" "}
                   selected
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1614,15 +1614,15 @@ function BlogLibraryPageContent() {
               </div>
             ) : null}
             {hasNoResults && !hasActiveFilters ? (
-              <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-4 py-4">
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-slate-900">No blogs yet.</p>
-                  <p className="text-sm text-slate-600">Create your first blog to start building the content library.</p>
+                  <p className="text-sm font-semibold text-ink">No blogs yet.</p>
+                  <p className="text-sm text-navy-500">Create your first blog to start building the content library.</p>
                 </div>
                 {canCreateBlogs ? (
                   <Link
                     href="/blogs/new"
-                    className="pressable inline-flex items-center rounded border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                    className="pressable inline-flex items-center rounded border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                   >
                     New Blog
                   </Link>
@@ -1631,7 +1631,7 @@ function BlogLibraryPageContent() {
             ) : null}
 
             {isLoading ? (
-              <div className="space-y-3 rounded-lg border border-slate-200 p-4 sm:p-5">
+              <div className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] p-4 sm:p-5">
                 {Array.from({ length: 5 }).map((_, rowIndex) => (
                   <div key={`skeleton-row-${rowIndex}`} className="skeleton h-12 w-full" />
                 ))}
@@ -1780,9 +1780,9 @@ function BlogLibraryPageContent() {
             }
             linksContent={
               activeBlog ? (
-                <div className="space-y-3 text-sm text-slate-700">
+                <div className="space-y-3 text-sm text-navy-500">
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-500">Google Doc</p>
+                    <p className="text-xs text-navy-500">Google Doc</p>
                     <LinkQuickActions
                       href={activeBlog.google_doc_url}
                       label="Google Doc URL"
@@ -1790,7 +1790,7 @@ function BlogLibraryPageContent() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-500">Live URL</p>
+                    <p className="text-xs text-navy-500">Live URL</p>
                     <LinkQuickActions
                       href={activeBlog.live_url}
                       label="Live URL"
@@ -1798,7 +1798,7 @@ function BlogLibraryPageContent() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-500">Blog Page</p>
+                    <p className="text-xs text-navy-500">Blog Page</p>
                     <LinkQuickActions
                       href={`/blogs/${activeBlog.id}`}
                       label="Blog page URL"
@@ -1819,22 +1819,22 @@ function BlogLibraryPageContent() {
                     </p>
                   ) : null}
                   {isPanelLoading ? (
-                    <p className="text-sm text-slate-500">Loading comments…</p>
+                    <p className="text-sm text-navy-500">Loading comments…</p>
                   ) : panelComments.length === 0 ? (
-                    <p className="text-sm text-slate-500">No comments yet.</p>
+                    <p className="text-sm text-navy-500">No comments yet.</p>
                   ) : (
                     <ul className="space-y-3">
                       {panelComments.map((comment) => (
-                        <li key={comment.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
-                          <p className="text-xs font-semibold text-slate-600">
-                            {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
-                            <time className="font-normal text-slate-400">
+                        <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                          <p className="text-xs font-semibold text-navy-500">
+                            {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}
+                            <time className="font-normal text-navy-500/60">
                               {formatDistanceToNow(new Date(comment.created_at), {
                                 addSuffix: true,
                               })}
                             </time>
                           </p>
-                          <div className="mt-2 text-sm text-slate-700">
+                          <div className="mt-2 text-sm text-navy-500">
                             <MarkdownComment content={comment.comment} />
                           </div>
                         </li>
@@ -1847,17 +1847,17 @@ function BlogLibraryPageContent() {
             timelineContent={
               activeBlog ? (
                 isPanelLoading ? (
-                  <p className="text-sm text-slate-500">Loading activity…</p>
+                  <p className="text-sm text-navy-500">Loading activity…</p>
                 ) : panelHistory.length === 0 ? (
-                  <p className="text-sm text-slate-500">No activity history yet.</p>
+                  <p className="text-sm text-navy-500">No activity history yet.</p>
                 ) : (
                   <ol className="space-y-2">
                     {panelHistory.map((entry) => (
                       <li
                         key={entry.id}
-                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2"
                       >
-                        <p className="text-sm font-medium text-slate-800">
+                        <p className="text-sm font-medium text-ink">
                           {formatActivityEventTitle(entry)}
                         </p>
                         {(() => {
@@ -1865,10 +1865,10 @@ function BlogLibraryPageContent() {
                             userNameById: panelHistoryUserNameById,
                           });
                           return detail ? (
-                            <p className="text-xs text-slate-600">{detail}</p>
+                            <p className="text-xs text-navy-500">{detail}</p>
                           ) : null;
                         })()}
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-navy-500/60">
                           {formatDateInTimezone(entry.changed_at, profile?.timezone)}
                         </p>
                       </li>

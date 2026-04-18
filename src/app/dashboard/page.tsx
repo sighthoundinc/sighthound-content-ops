@@ -3,13 +3,49 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { AssociatedSocialPostsSection } from "@/components/associated-social-posts-section";
-import { MarkdownComment } from "@/components/markdown-comment";
 import { Button } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
+
+// Inline relative-time formatter. Avoids pulling date-fns into the initial
+// /dashboard bundle for a single `formatDistanceToNow` usage buried inside
+// the drawer's comment list.
+function formatRelativeTimeAgo(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  if (Number.isNaN(diffMs)) return "";
+  if (diffMs < 0) return "just now";
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 45) return "less than a minute ago";
+  const min = Math.floor(sec / 60);
+  if (min < 2) return "about a minute ago";
+  if (min < 60) return `${min} minutes ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 2) return "about an hour ago";
+  if (hr < 24) return `about ${hr} hours ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 2) return "a day ago";
+  if (day < 30) return `${day} days ago`;
+  const month = Math.floor(day / 30);
+  if (month < 2) return "about a month ago";
+  if (month < 12) return `${month} months ago`;
+  const year = Math.floor(month / 12);
+  if (year < 2) return "about a year ago";
+  return `${year} years ago`;
+}
+
+// Drawer-only children: only rendered when the lazy BlogDetailsDrawer opens.
+const AssociatedSocialPostsSection = dynamic(
+  () =>
+    import("@/components/associated-social-posts-section").then(
+      (m) => m.AssociatedSocialPostsSection
+    ),
+  { ssr: false, loading: () => null }
+);
+const MarkdownComment = dynamic(
+  () => import("@/components/markdown-comment").then((m) => m.MarkdownComment),
+  { ssr: false, loading: () => null }
+);
 
 // Interaction-gated heavy components: the drawer opens on row click, the
 // modals/editor render on explicit user action. Deferring their JS off the
@@ -31,8 +67,14 @@ const ColumnEditor = dynamic(
   () => import("@/components/column-editor").then((m) => m.ColumnEditor),
   { ssr: false, loading: () => null }
 );
+// Hero card does its own API fetch + internal skeleton; lazy-loading adds a
+// tiny network hop but does not worsen perceived UX because the card shows
+// a skeleton while fetching anyway.
+const NeedsYouHero = dynamic(
+  () => import("@/components/dashboard/needs-you-hero").then((m) => m.NeedsYouHero),
+  { ssr: false, loading: () => null }
+);
 import { DashboardTable } from "@/components/dashboard-table";
-import { NeedsYouHero } from "@/components/dashboard/needs-you-hero";
 import { DetailDrawerField } from "@/components/detail-drawer";
 import { Tooltip } from "@/components/tooltip";
 import {
@@ -5147,9 +5189,7 @@ export default function DashboardPage() {
                               <p className="text-xs font-semibold text-slate-600">
                                 {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-slate-400">•</span>{" "}
                                 <time className="font-normal text-slate-400">
-                                  {formatDistanceToNow(new Date(comment.created_at), {
-                                    addSuffix: true,
-                                  })}
+                                  {formatRelativeTimeAgo(new Date(comment.created_at))}
                                 </time>
                               </p>
                               <div className="mt-2 text-sm text-slate-700">

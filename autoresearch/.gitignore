@@ -1,0 +1,18 @@
+# research.env contains local paths and baseline values — never commit
+research.env
+
+# Experiment logs and session state — all gitignored
+# Only validated improvements get committed via git ratchet
+results/autoresearch.tsv
+results/last_experiment.log
+results/session.env
+results/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# OS
+.DS_Store

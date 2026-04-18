@@ -46,6 +46,7 @@ supabase/.temp/
 *.tsbuildinfo
 next-env.d.ts
 
-# sh-autoresearch runtime state (see program.md)
+# sh-autoresearch runtime state (see autoresearch/README.md)
 /research.env
+/program.md
 /results/

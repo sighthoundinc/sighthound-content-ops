@@ -157,9 +157,17 @@ const SUBMIT_LINK_EVENT_TYPES = new Set([
   "social_live_link_reminder",
 ]);
 
-// Per-event CTA label mapping. Used as the `|label>` tail in Slack link syntax
-// so each notification communicates its specific next action instead of a
-// generic "Open".
+// Events that warrant an `[URGENT]` prefix in the header so readers scanning
+// a busy channel can triage at a glance.
+export const OVERDUE_EVENT_TYPES = new Set([
+  "blog_publish_overdue",
+  "social_review_overdue",
+  "social_publish_overdue",
+]);
+
+// Per-event CTA label mapping. Used as the `|[label]>` tail in Slack link
+// syntax so each notification communicates its specific next action instead
+// of a generic "Open". The label is bracket-wrapped to read as a button.
 export function ctaLabelFor(eventType) {
   if (COMMENT_EVENT_TYPES.has(eventType)) return "Open thread";
   if (SUBMIT_LINK_EVENT_TYPES.has(eventType)) return "Submit link";
@@ -172,11 +180,46 @@ export function ctaLabelFor(eventType) {
 export function buildOpenLinkLine(eventType, deepLink) {
   if (!deepLink) return null;
   const label = ctaLabelFor(eventType);
-  // Emit the bare Slack link (`<URL|label>`) as its own line. The `|label>`
-  // tail IS the visible clickable text in Slack, so a prefix like
-  // "Open link: Open blog" would render redundantly as "Open link: Open blog"
-  // where both halves describe the same action.
-  return `<${deepLink}|${label}>`;
+  // Slack link syntax `<URL|label>`. The visible clickable text is the
+  // `|label` tail — we bracket-wrap it (`[Open blog]`) so it visually reads
+  // as a button, matching the rest of the tag-style UI in the notification.
+  return `<${deepLink}|[${label}]>`;
+}
+
+// Normalize "Action" text by upgrading ASCII hyphens used as sentence
+// separators (" - ") to typographic em-dashes (" — ") for polish. Leaves
+// intra-word hyphens (e.g. "pre-publish") untouched.
+export function normalizeActionText(action) {
+  if (typeof action !== "string") return "";
+  return action.replace(/\s-\s/g, " \u2014 ");
+}
+
+// Decide how to render the assignment line. Handles 5 cases:
+//   - both known + same user  →  "By {actor}"          (self-assignment)
+//   - both known + different  →  "Assigned to: {t} · By: {a}"
+//   - only actor known        →  "By {actor}"
+//   - only target known       →  "Assigned to: {target}"
+//   - neither known           →  "By Team"
+export function buildAssignmentLine(assignedTo, assignedBy) {
+  const actorKnown = typeof assignedBy === "string" && assignedBy !== "Team";
+  const targetKnown = typeof assignedTo === "string" && assignedTo !== "Team";
+  if (!actorKnown && !targetKnown) return "By Team";
+  if (actorKnown && !targetKnown) return `By ${assignedBy}`;
+  if (!actorKnown && targetKnown) return `Assigned to: ${assignedTo}`;
+  if (assignedTo === assignedBy) return `By ${assignedBy}`;
+  return `Assigned to: ${assignedTo} \u00b7 By: ${assignedBy}`;
+}
+
+// Render a comment body as Slack blockquote lines (each line prefixed with
+// "> "). Returns the fallback string for empty/missing bodies.
+export function blockquoteCommentBody(body) {
+  if (typeof body !== "string" || body.trim().length === 0) {
+    return "> (No comment text)";
+  }
+  return body
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n");
 }
 
 export function normalizeTitle(title) {
@@ -228,6 +271,7 @@ export function buildMessage(payload, options = {}) {
   const action = EVENT_ACTION[payload.eventType];
   const assignedBy = normalizeName(payload.actorName) ?? "Team";
   const isCommentEvent = COMMENT_EVENT_TYPES.has(payload.eventType);
+  const isOverdueEvent = OVERDUE_EVENT_TYPES.has(payload.eventType);
 
   const title = escapeHeaderTitle(normalizeTitle(payload.title));
   // Prefer the linked blog's site when callers provide it. Social post
@@ -242,31 +286,29 @@ export function buildMessage(payload, options = {}) {
       ? payload.associatedBlogSite
       : payload.site;
   const site = canonicalizeSite(rawSite);
-  const headerLine = `[${contentType}] ${title} (${site})`;
-  const actionLine = `Action: ${action}`;
-  // Slack link syntax `<URL|label>` guarantees a clickable hyperlink across
-  // desktop/mobile clients even with unfurl_links: false. A bare URL is not
-  // reliably auto-linkified when unfurl is suppressed. The `|label>` tail
-  // comes from ctaLabelFor() so each notification describes its own next
-  // action (e.g. "Submit link" for live-link reminders).
+  // New header shape: `[URGENT]? [Type] [Site] *Title*` — bracketed tags
+  // read as pills, `*Title*` uses Slack mrkdwn bold. Overdue events lead
+  // with `[URGENT]` so readers can triage in a busy channel.
+  const urgentPrefix = isOverdueEvent ? "[URGENT] " : "";
+  const headerLine = `${urgentPrefix}[${contentType}] [${site}] *${title}*`;
+  // Drop the "Action:" prefix — the second line IS the action.
+  const actionLine = normalizeActionText(action);
   const openLine = buildOpenLinkLine(payload.eventType, deepLink);
 
   if (isCommentEvent) {
+    // Merge actor into the action line: "New comment — By Haris".
+    const commentActionLine = `${actionLine} \u2014 By ${assignedBy}`;
     const commentBody = normalizeCommentBody(payload.commentBody);
-    const byLine = `By: ${assignedBy}`;
-    const commentLine = commentBody
-      ? `Comment:\n${commentBody}`
-      : "Comment:\n(No comment text)";
-    const parts = [headerLine, actionLine, byLine, commentLine];
+    const quotedBody = blockquoteCommentBody(commentBody);
+    const parts = [headerLine, commentActionLine, quotedBody];
     if (openLine) parts.push(openLine);
     return parts.join("\n");
   }
 
   const assignedTo = resolveAssignedTo(payload);
-  const assignedToLine = `Assigned to: ${assignedTo}`;
-  const assignedByLine = `Assigned by: ${assignedBy}`;
+  const assignmentLine = buildAssignmentLine(assignedTo, assignedBy);
 
-  const parts = [headerLine, actionLine, assignedToLine, assignedByLine];
+  const parts = [headerLine, actionLine, assignmentLine];
   if (openLine) parts.push(openLine);
   return parts.join("\n");
 }

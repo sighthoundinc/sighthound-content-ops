@@ -15,6 +15,13 @@ const SUBMIT_LINK_EVENTS = new Set([
   "social_live_link_reminder",
 ]);
 
+// Events that warrant an `[URGENT]` header prefix.
+const OVERDUE_EVENTS = new Set([
+  "blog_publish_overdue",
+  "social_review_overdue",
+  "social_publish_overdue",
+]);
+
 // Per-event CTA label mapping. Canonical labels for the Slack `<URL|label>`
 // tail so the clickable link is self-describing.
 export function expectedCtaLabelFor(eventType) {
@@ -42,7 +49,10 @@ function extractLabelFromOpenLineValue(rawValue) {
   const trimmed = rawValue.trim();
   const slackMatch = trimmed.match(/^<[^|>]+\|([^>]*)>$/);
   if (!slackMatch) return null;
-  return slackMatch[1].trim();
+  const label = slackMatch[1].trim();
+  // Strip the bracket-wrapping used for button-like appearance.
+  // `[Open blog]` -> `Open blog`.
+  return label.replace(/^\[(.+)\]$/, "$1");
 }
 
 // Locate the Slack link line in the message. Accepts the new, clean form
@@ -93,10 +103,12 @@ function ruleHeaderFormat(message, fixture) {
   const lines = splitLines(message);
   const header = lines[0] ?? "";
   const contentType = fixture.payload.socialPostId ? "Social" : "Blog";
-  const ok = header === `[${contentType}] ${fixture.payload.title} (${fixture.payload.site})`;
+  const urgentPrefix = OVERDUE_EVENTS.has(fixture.payload.eventType) ? "[URGENT] " : "";
+  const expected = `${urgentPrefix}[${contentType}] [${fixture.payload.site}] *${fixture.payload.title}*`;
+  const ok = header === expected;
   return {
     pass: ok,
-    reason: ok ? undefined : `Header mismatch: "${header}"`,
+    reason: ok ? undefined : `Header mismatch: expected "${expected}", got "${header}"`,
   };
 }
 
@@ -127,7 +139,11 @@ function ruleAssignedToEquals(message, fixture) {
   const expect = fixture.expect ?? {};
   if (!expect.assignedToEquals) return { pass: true };
   const line = splitLines(message).find((l) => l.startsWith("Assigned to: ")) ?? "";
-  const value = line.replace(/^Assigned to:\s*/, "");
+  // Strip the ` \u00b7 By: {actor}` suffix when the assignment line is a
+  // handoff; the rule asserts only the assignee list.
+  const value = line
+    .replace(/^Assigned to:\s*/, "")
+    .replace(/\s*\u00b7\s*By:.*$/, "");
   const ok = value === expect.assignedToEquals;
   return {
     pass: ok,
@@ -137,13 +153,24 @@ function ruleAssignedToEquals(message, fixture) {
   };
 }
 
-function ruleActionLine(message) {
+function ruleActionLine(message, fixture) {
   const lines = splitLines(message);
   const line = lines[1] ?? "";
-  const ok = /^Action: .+$/.test(line);
+  if (COMMENT_EVENTS.has(fixture.payload.eventType)) {
+    // Comment action line merges the actor: "New comment \u2014 By Haris".
+    const ok = /^New comment \u2014 By .+$/.test(line);
+    return {
+      pass: ok,
+      reason: ok ? undefined : `Comment line 2 must be 'New comment \u2014 By {actor}', got "${line}"`,
+    };
+  }
+  // Workflow action line: action text, NO "Action:" prefix.
+  const ok = line.length > 0 && !line.startsWith("Action:");
   return {
     pass: ok,
-    reason: ok ? undefined : `Line 2 must be 'Action: …', got "${line}"`,
+    reason: ok
+      ? undefined
+      : `Line 2 must be action text without the 'Action:' prefix, got "${line}"`,
   };
 }
 
@@ -152,14 +179,18 @@ function ruleWorkflowLineOrder(message, fixture) {
     return { pass: true };
   }
   const lines = splitLines(message);
+  const third = lines[2] ?? "";
+  // Either self-assignment "By X", only-target "Assigned to: X", or
+  // handoff "Assigned to: X \u00b7 By: Y".
   const ok =
-    /^Assigned to: /.test(lines[2] ?? "") &&
-    /^Assigned by: /.test(lines[3] ?? "");
+    /^By .+$/.test(third) ||
+    /^Assigned to: [^\u00b7]+$/.test(third) ||
+    /^Assigned to: .+\s\u00b7\sBy: .+$/.test(third);
   return {
     pass: ok,
     reason: ok
       ? undefined
-      : `Workflow lines must be: header, Action, Assigned to, Assigned by, [Open link]. Got:\n${message}`,
+      : `Workflow line 3 must be 'By {actor}' or 'Assigned to: {target}' or 'Assigned to: {target} \u00b7 By: {actor}'. Got "${third}"`,
   };
 }
 
@@ -168,14 +199,15 @@ function ruleCommentLineOrder(message, fixture) {
     return { pass: true };
   }
   const lines = splitLines(message);
-  const ok =
-    /^By: /.test(lines[2] ?? "") &&
-    /^Comment:$/.test(lines[3] ?? "");
+  // Line 2 already checked by ruleActionLine. Here we verify line 3 is the
+  // blockquoted body or the empty-comment fallback.
+  const third = lines[2] ?? "";
+  const ok = third.startsWith("> ");
   return {
     pass: ok,
     reason: ok
       ? undefined
-      : `Comment lines must be: header, Action: New comment, By:, Comment:\\n…, [Open link]. Got:\n${message}`,
+      : `Comment line 3 must be a blockquoted body line starting with '> ', got "${third}"`,
   };
 }
 
@@ -294,23 +326,27 @@ function ruleOpenLinkCtaLabel(message, fixture) {
   return { pass: true };
 }
 
+// Extract the comment body from the new blockquoted format. Collects all
+// consecutive lines that start with "> ", strips the prefix, and joins with
+// newlines so the caller sees the original multi-line body.
+function extractQuotedCommentBody(message) {
+  const lines = splitLines(message);
+  const bodyLines = lines.filter((l) => l.startsWith("> "));
+  return bodyLines.map((l) => l.slice(2)).join("\n");
+}
+
 function ruleCommentPingsNeutralized(message, fixture) {
   if (!COMMENT_EVENTS.has(fixture.payload.eventType)) {
     return { pass: true };
   }
-  // Only scan the comment body portion (after the "Comment:" line).
-  const idx = message.indexOf("\nComment:\n");
-  const body = idx >= 0 ? message.slice(idx + "\nComment:\n".length) : "";
+  const body = extractQuotedCommentBody(message);
   const issues = [];
-  // Raw @channel/@here/@everyone (not preceded by zero-width space).
   if (/(^|[^\u200B])@(here|channel|everyone)\b/i.test(body)) {
     issues.push({ pass: false, reason: "Raw @here/@channel/@everyone not neutralized" });
   }
-  // Raw <@USERID> mention token.
   if (/<@(?!\u200B)/.test(body)) {
     issues.push({ pass: false, reason: "Raw <@USER> mention not neutralized" });
   }
-  // Raw <!subteam> / <!channel> / <!everyone> tokens.
   if (/<!(?!\u200B)/.test(body)) {
     issues.push({ pass: false, reason: "Raw <!subteam> mention not neutralized" });
   }
@@ -324,12 +360,10 @@ function ruleCommentPreservesLineBreaks(message, fixture) {
   const originalBody = fixture.payload.commentBody ?? "";
   const trimmed = originalBody.trim();
   if (!trimmed || !trimmed.includes("\n")) {
-    return { pass: true }; // nothing to preserve
+    return { pass: true };
   }
-  const idx = message.indexOf("\nComment:\n");
-  if (idx < 0) return { pass: false, reason: "Missing Comment: body segment" };
-  const body = message.slice(idx + "\nComment:\n".length);
-  const ok = body.includes("\n");
+  const quoteLineCount = splitLines(message).filter((l) => l.startsWith("> ")).length;
+  const ok = quoteLineCount >= 2;
   return {
     pass: ok,
     reason: ok ? undefined : "Multi-line comment body collapsed to single line",
@@ -342,23 +376,15 @@ function ruleCommentLengthCap(message, fixture) {
   }
   const expect = fixture.expect ?? {};
   if (!expect.commentMaxLength) return { pass: true };
-  const idx = message.indexOf("\nComment:\n");
-  const body = idx >= 0 ? message.slice(idx + "\nComment:\n".length) : "";
-  // Strip optional trailing link line for length check. Supports both
-  // the new bare form (line starts with "<http") and the legacy
-  // "Open link: " prefix form.
-  const bareIdx = body.search(/\n<https?:\/\//);
-  const legacyIdx = body.lastIndexOf("\nOpen link: ");
-  const trimIdx = [bareIdx, legacyIdx].filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? -1;
-  const pureBody = trimIdx >= 0 ? body.slice(0, trimIdx) : body;
+  const body = extractQuotedCommentBody(message);
   const issues = [];
-  if (pureBody.length > expect.commentMaxLength) {
+  if (body.length > expect.commentMaxLength) {
     issues.push({
       pass: false,
-      reason: `Comment body length ${pureBody.length} exceeds cap ${expect.commentMaxLength}`,
+      reason: `Comment body length ${body.length} exceeds cap ${expect.commentMaxLength}`,
     });
   }
-  if (expect.commentEndsWithEllipsis && !pureBody.endsWith("...")) {
+  if (expect.commentEndsWithEllipsis && !body.endsWith("...")) {
     issues.push({ pass: false, reason: "Long comment must end with '...'" });
   }
   return issues.length > 0 ? issues : { pass: true };
@@ -372,20 +398,19 @@ function ruleEmptyCommentFallback(message, fixture) {
   if (typeof raw !== "string" || raw.trim().length > 0) {
     return { pass: true };
   }
-  const ok = message.includes("\nComment:\n(No comment text)");
+  const ok = message.includes("\n> (No comment text)");
   return {
     pass: ok,
-    reason: ok ? undefined : "Empty/whitespace comments must fall back to '(No comment text)'",
+    reason: ok ? undefined : "Empty/whitespace comments must fall back to '> (No comment text)'",
   };
 }
 
-function ruleNoBlankLinesBetweenStructuralLines(message, fixture) {
-  // The contract specifies consecutive structural lines (header / Action / Assigned to / Assigned by / Open link).
-  // Comment bodies are allowed multi-line. We check only the structural prefix.
+function ruleNoBlankLinesBetweenStructuralLines(message) {
+  // The first three lines are always structural (header, action/summary,
+  // assignment or body-start) regardless of event type. They must all be
+  // non-empty; blockquote lines and CTA link follow without gaps.
   const lines = splitLines(message);
-  const isCommentEvent = COMMENT_EVENTS.has(fixture.payload.eventType);
-  const structuralCount = isCommentEvent ? 3 : 4; // up to start of Comment: or Open link
-  for (let i = 0; i < Math.min(structuralCount, lines.length - 1); i++) {
+  for (let i = 0; i < Math.min(3, lines.length); i++) {
     if (lines[i] === "") {
       return {
         pass: false,

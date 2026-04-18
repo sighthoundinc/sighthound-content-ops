@@ -321,8 +321,8 @@ export const fixtures = [
       appUrl: APP_URL,
     },
     expect: {
-      headerContains: ["(SH)"],
-      headerForbids: ["(sighthound.com)", "(Sighthound)"],
+      headerContains: ["[SH]"],
+      headerForbids: ["[sighthound.com]", "[Sighthound]"],
     },
     aspirational: true,
   },
@@ -338,8 +338,8 @@ export const fixtures = [
       appUrl: APP_URL,
     },
     expect: {
-      headerContains: ["(RED)"],
-      headerForbids: ["(redactor.com)", "(Redactor)"],
+      headerContains: ["[RED]"],
+      headerForbids: ["[redactor.com]", "[Redactor]"],
     },
     aspirational: true,
   },
@@ -371,7 +371,7 @@ export const fixtures = [
       appUrl: APP_URL,
     },
     expect: {
-      headerContains: ["[Blog] Padded Title Case (SH)"],
+      headerContains: ["[Blog] [SH] *Padded Title Case*"],
       headerForbids: ["   Padded", "Case   "],
     },
     aspirational: true,
@@ -393,8 +393,8 @@ export const fixtures = [
       appUrl: APP_URL,
     },
     expect: {
-      headerContains: ["(RED)"],
-      headerForbids: ["(general_company)", "(SH)"],
+      headerContains: ["[RED]"],
+      headerForbids: ["[general_company]", "[SH]"],
     },
     aspirational: true,
   },
@@ -413,14 +413,14 @@ export const fixtures = [
       appUrl: APP_URL,
     },
     expect: {
-      headerContains: ["(SH)"],
-      headerForbids: ["(edge_vision)", "(platform)", "(general_company)"],
+      headerContains: ["[SH]"],
+      headerForbids: ["[edge_vision]", "[platform]", "[general_company]"],
     },
     aspirational: true,
   },
   // Another linked-blog case covering a different event type (publish
   // overdue). Ensures the site derivation covers all social event code
-  // paths, not just submit-for-review.
+  // paths, not just submit-for-review. Also asserts the [URGENT] prefix.
   {
     id: "social_publish_overdue_site_from_linked_blog",
     payload: {
@@ -434,8 +434,8 @@ export const fixtures = [
       appUrl: APP_URL,
     },
     expect: {
-      headerContains: ["(SH)"],
-      headerForbids: ["(platform)"],
+      headerContains: ["[URGENT]", "[SH]"],
+      headerForbids: ["[platform]"],
     },
     aspirational: true,
   },
@@ -453,8 +453,8 @@ export const fixtures = [
       appUrl: APP_URL,
     },
     expect: {
-      headerContains: ["(RED)"],
-      headerForbids: ["(general_company)", "(SH)"],
+      headerContains: ["[RED]"],
+      headerForbids: ["[general_company]", "[SH]"],
     },
     aspirational: true,
   },

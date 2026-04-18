@@ -54,28 +54,28 @@ export function ConfirmationModal({
       <button
         type="button"
         aria-label="Close confirmation dialog"
-        className="absolute inset-0 bg-slate-900/40"
+        className="absolute inset-0 bg-ink/40"
         onClick={onCancel}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-2xl"
+        className="relative w-full max-w-md rounded-xl border border-[color:var(--sh-gray-200)] bg-surface p-4 shadow-brand-lg"
       >
         <div className="flex items-start gap-3">
           <span
             className={`mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm ${
               tone === "danger"
                 ? "bg-rose-100 text-rose-700"
-                : "bg-blue-100 text-blue-700"
+                : "bg-blurple-100 text-blurple-700"
             }`}
           >
             {tone === "danger" ? "!" : "?"}
           </span>
           <div>
-            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-            <p className="mt-1 text-sm text-slate-600">{description}</p>
+            <h3 className="text-base font-semibold text-ink">{title}</h3>
+            <p className="mt-1 text-sm text-navy-500">{description}</p>
             {children ? <div className="mt-3">{children}</div> : null}
           </div>
         </div>

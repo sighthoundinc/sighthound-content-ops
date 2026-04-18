@@ -509,6 +509,81 @@ export default function DesignSystemPreviewPage() {
           </div>
         </section>
 
+        {/* ---- Phase 3.6: confirmation modal primitive ---- */}
+        <section className="mb-14">
+          <SectionTitle>
+            Phase 3.6 — confirmation modal primitive
+          </SectionTitle>
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--sh-navy-500)",
+              marginBottom: 12,
+              maxWidth: 640,
+            }}
+          >
+            The shared <code>&lt;ConfirmationModal&gt;</code> uses
+            <code>bg-surface</code> + <code>--sh-gray-200</code> border +
+            <code>shadow-brand-lg</code>. Default-tone icon badge migrated to
+            <code>bg-blurple-100</code> / <code>text-blurple-700</code> (Strategy
+            B sweep). Danger tone keeps the semantic <code>rose-100 / rose-700</code>.
+            Backdrop is <code>bg-ink/40</code>. Inline snapshots below show
+            both tones without the fixed-position overlay.
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Default tone */}
+            <div className="relative w-full max-w-md rounded-xl border border-[color:var(--sh-gray-200)] bg-surface p-4 shadow-brand-lg">
+              <div className="flex items-start gap-3">
+                <span className="bg-blurple-100 text-blurple-700 mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm">
+                  ?
+                </span>
+                <div>
+                  <h3 className="text-ink text-base font-semibold">
+                    Submit for editorial review?
+                  </h3>
+                  <p className="text-navy-500 mt-1 text-sm">
+                    The brief will be locked once submitted. Ali will be notified.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <Button variant="secondary" size="md">
+                  Cancel
+                </Button>
+                <Button variant="primary" size="md">
+                  Submit
+                </Button>
+              </div>
+            </div>
+
+            {/* Danger tone */}
+            <div className="relative w-full max-w-md rounded-xl border border-[color:var(--sh-gray-200)] bg-surface p-4 shadow-brand-lg">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-100 text-sm text-rose-700">
+                  !
+                </span>
+                <div>
+                  <h3 className="text-ink text-base font-semibold">
+                    Delete this blog?
+                  </h3>
+                  <p className="text-navy-500 mt-1 text-sm">
+                    This action cannot be undone. All comments and history will
+                    also be removed.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <Button variant="secondary" size="md">
+                  Cancel
+                </Button>
+                <Button variant="destructive" size="md">
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ---- Phase 3.5: detail drawer primitive ---- */}
         <section className="mb-14">
           <SectionTitle>

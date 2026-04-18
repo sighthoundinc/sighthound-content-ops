@@ -517,3 +517,61 @@ Animations live in `src/app/globals.css` under `.detail-drawer-overlay` / `.deta
 **Preview smoke test**: `/design-system-preview` → new “Phase 3.5 — detail drawer primitive” section renders a static inline snapshot with `DetailDrawerHeader` + non-collapsible and collapsible `DetailDrawerSection`s (brief + links), three `DetailDrawerField`s, three `DetailDrawerQuickAction`s (including a disabled one), and a `DetailDrawerFooter` with a primary `<Button>`. The snapshot uses `shadow-brand-lg` directly so the full panel visual is reproduced without needing the real fixed-position overlay.
 
 **Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.
+
+### Phase 3.6 — Confirmation modal primitive
+
+The shared `<ConfirmationModal>` in `src/components/confirmation-modal.tsx` is the canonical confirmation dialog for the app (delete flows, status transitions, destructive bulk actions, etc.). Required globally per AGENTS.md Delete Confirmation Pattern.
+
+**Token migration**
+| Surface | Before | After |
+|---|---|---|
+| Backdrop | `bg-slate-900/40` | `bg-ink/40` |
+| Panel border | `border border-slate-200` | `border border-[color:var(--sh-gray-200)]` |
+| Panel surface | `bg-white` | `bg-surface` |
+| Panel shadow | `shadow-2xl` | `shadow-brand-lg` (Phase 2 navy-tinted) |
+| Panel radius | `rounded-xl` (12px) | **unchanged** — matches DS card radius spec |
+| Default tone icon badge | `bg-blue-100 text-blue-700` | `bg-blurple-100 text-blurple-700` (Strategy B sweep) |
+| Danger tone icon badge | `bg-rose-100 text-rose-700` | **unchanged** (semantic danger) |
+| Title | `text-slate-900` | `text-ink` |
+| Description | `text-slate-600` | `text-navy-500` |
+| Confirm / Cancel buttons | `<Button variant="primary">` / `destructive` / `secondary` | **already brand-aligned via Phase 3.1** |
+
+**Deliberately unchanged**
+- Rose-100/700 danger tone icon badge — semantic “destructive”, parallels the Phase 3.1 Button retention.
+- `Escape` key handler, focus/trap logic — behaviour-only.
+- `useEffect` for escape listener — unchanged.
+
+**Cross-app visual impact**: every call site using the shared modal (blog delete, social post delete, idea delete, bulk deletion preview, admin wipe confirm, `buttonClass` primary-on-navy replaced by primary-on-blurple) renders Blurple/navy ink on a gray-200 bordered panel with a navy-tinted large shadow. The question-mark tone flash is now Blurple; danger exclamation stays rose.
+
+**Preview smoke test**: `/design-system-preview` → new “Phase 3.6 — confirmation modal primitive” section renders both tones side-by-side (default `?` Blurple-100 + danger `!` rose-100) without the fixed-position overlay.
+
+**Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.
+
+---
+
+## 15. Phase 3 — COMPLETE
+
+All real shared primitives in this codebase have been migrated to Content Relay tokens:
+
+| # | Primitive | Commit | Scope |
+|---|---|---|---|
+| 3.1 | `<Button>` + `buttonClass()` | `8965c81` | brand bg/text, split button radii (CTA 20px / compact 8px), `shadow-brand-focus` focus ring |
+| 3.2 | `.focus-field` (input focus) | `6f8d6a3` | Blurple border + Blurple-50 bg + `shadow-brand-focus` |
+| 3.3 | `.tooltip-bubble` + `<Tooltip>` portal | `f4b9ca2` | navy ink bg, white text, `shadow-brand-md` |
+| 3.4 | `.skeleton` + shimmer + `<Skeleton>` wrappers | `fceb590` | `--sh-gray-200` base, `--sh-white` shimmer, `--sh-gray` dividers |
+| 3.5 | `<DetailDrawer>` family | `9dae2c7` | panel on `bg-surface`, ink/navy-500 text, `shadow-brand-lg`, gray-200 borders |
+| 3.6 | `<ConfirmationModal>` | _this PR_ | panel + ink backdrop + blurple default tone + rose danger (semantic) |
+
+**Not primitives in this codebase — explicitly deferred:**
+- **Card** — no shared primitive exists. Creating one is Phase 4.
+- **Badge** — no shared primitive. The existing “badge” surface is the contract-locked status palette in `src/lib/status.ts` (§11.5).
+
+**Follow-ups still queued**
+- `.interactive-link:hover` still uses `#0f172a` (slate-900). Very small primitive; can be rolled into a cleanup PR whenever.
+- `.table-row-focus:hover` bg `#f8fafc` + stripe `#cbd5e1` — same treatment opportunity.
+- `src/lib/typography.ts` + `@apply text-slate-*` utility classes (`.page-title`, `.body-text`, etc.) — Phase 4 text system migration.
+- Status chip palette — contract-locked; remains out-of-scope until §11.5 is explicitly reopened.
+- Zombie file cleanup (`src/app/font-variants.tsx`, `docs/TYPOGRAPHY_SYSTEM.md`).
+- `design-system/uploads/*.pdf` Git LFS decision.
+
+**Phase 4 preview** (per original user plan): migrate page-level layouts — global nav/header, footer, typography defaults (swap `@apply text-slate-*` → Content Relay), and page-level marketing/app screens (login, dashboard hero, etc.). Phase 5 is cleanup (remove Inter fallback alias, delete zombie files, grep for stragglers).

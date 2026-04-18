@@ -214,3 +214,25 @@ Keep all four docs aligned on:
 - transition gates
 - ownership rules
 - usage flow
+## 12) Bundle-size autoresearch tool (`autoresearch/`)
+The repo vendors a single-metric git-ratchet tool at `autoresearch/` (adapted from `sighthoundinc/sh-autoresearch`). It runs `next build`, extracts a single bundle-size metric from the route table, and keeps code changes only when the metric improves beyond `MIN_DELTA`.
+### How to run a bundle optimization session
+1. Write a fresh `research.env` at repo root pointing `TRAIN_CMD` at `./autoresearch/scripts/measure-route-bundle.sh <route>` (for example `./autoresearch/scripts/measure-route-bundle.sh /`). Set `METRIC_PATTERN="ROUTE_PAGE_SIZE_KB=([0-9.]+)"`, `METRIC_DIRECTION="lower"`, and scope `EDITABLE_FILES` tightly to the files the session may mutate.
+2. Measure baseline once: `./autoresearch/scripts/measure-route-bundle.sh <route>`. Paste the emitted `ROUTE_PAGE_SIZE_KB=<v>` into `BASELINE_METRIC`.
+3. Start a timed session: `./autoresearch/scripts/start-session.sh <hours> <baseline>`.
+4. For each iteration: check time (`check-time.sh`), edit within `EDITABLE_FILES`, then `./autoresearch/scripts/autoresearch.sh "<short description>"`. The script runs the build, extracts the metric, and commits + updates `BASELINE_METRIC` on improvement or `git restore`s on regression/crash.
+### Inputs, outputs, and state
+- Config: `research.env` (gitignored).
+- Strategy doc: `program.md` (gitignored).
+- Session state: `results/session.env`, `results/autoresearch.tsv`, `results/last_experiment.log` (gitignored).
+- Archived prior sessions live under `autoresearch/history/<session-name>/`.
+- Measurement wrapper: `autoresearch/scripts/measure-route-bundle.sh <route>` emits `ROUTE_PAGE_SIZE_KB=<v>` and `ROUTE_FIRST_LOAD_KB=<v>` for any Next route that appears in the build route table.
+### Known quirks to work around
+- Ratchet commit messages use `perf(ui): <lowercased description>` to satisfy this repo's commitlint config. Keep descriptions short (<60 chars) and ASCII; multi-line bodies trigger the 100-char body rule.
+- `git restore` inside `autoresearch.sh` is atomic: if an experiment adds new files and fails the build, the restore aborts for the whole path list and leaves the tree dirty. Clean up manually with `git checkout HEAD -- <tracked paths> && rm -f <untracked paths>`.
+- Next's `.next` cache plus node_modules state must be healthy before the ratchet starts; stale `_ssgManifest.js` references or broken `@types/* 2` / broken package folders from macOS file duplication will surface as crashes. If a baseline measurement crashes on something unrelated to your change, repair node_modules first (`rm -rf node_modules/<broken-pkg> && npm install` or a full clean install) rather than widening scope.
+- Do not run two autoresearch sessions concurrently against the same repo; both write to the root `research.env`, `program.md`, and `results/` and will clobber each other's state. Archive the closed session into `autoresearch/history/<name>/` before starting a new one.
+- Each iteration does a full `next build` (~60–90s on a warm cache). Budget accordingly; a 1h session typically yields 6–10 iterations with agent thinking time.
+### Reference
+- Vendored upstream docs: `autoresearch/README.md`.
+- Archived sessions with outcomes: `autoresearch/history/`.

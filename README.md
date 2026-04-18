@@ -118,6 +118,11 @@ Detail page ordering rule:
 - UX upgrade rollout + primitive adoption: `docs/UX_UPGRADE_PLAN.md`
 - Design tokens reference: `docs/DESIGN_TOKENS.md`
 - Performance budgets: `docs/PERFORMANCE_BUDGET.md`
+- Bundle-size autoresearch tool: `autoresearch/README.md` (runbook in `OPERATIONS.md` §12)
+## Home page rendering
+- `/` is a Server Component. Dashboard summary + tasks snapshot are fetched server-side via `@supabase/ssr` cookies before the initial HTML is returned.
+- Only the bucket tile `onClick` (filter intent) lives in a client component (`src/app/home-bucket-link.tsx`); everything else on `/` is server-rendered.
+- Contract + constraints: `SPECIFICATION.md` §15.
 
 ## Local setup
 Prerequisite:

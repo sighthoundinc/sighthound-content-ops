@@ -324,3 +324,12 @@ A workflow change is complete only when:
    - `HOW_TO_USE_APP.md`
    - `OPERATIONS.md`
    - `SPECIFICATION.md`
+## 15) Home page rendering contract
+`/` is a Server Component (`src/app/page.tsx`). Dashboard summary + tasks snapshot are fetched server-side before the initial HTML is returned.
+- Session is read via `@supabase/ssr` cookie-based client inside `src/app/home-data.ts`. The session's `access_token` is forwarded as a `Bearer` header to the existing `/api/dashboard/summary` and `/api/dashboard/tasks-snapshot` endpoints — the API contracts themselves are unchanged.
+- Data shaping runs server-side via `src/app/home-work-buckets.ts` (`buildWorkBuckets`) and passes a fully-resolved `WorkBucket[]` into JSX at render time.
+- The only client island on `/` is `src/app/home-bucket-link.tsx` (`HomeBucketLink`). It wraps `<Link href="/tasks">` with an `onClick` that writes `setDashboardFilterIntent(...)` to client storage before navigation. All other bucket tile presentation is server-rendered.
+- The route is declared `export const dynamic = "force-dynamic"` so per-user dashboard data is never collapsed into a cross-user static cache.
+- Unauthenticated viewers render the same "Hi there," empty-state shell as before — no forced redirect from `/` itself. Redirects on unauthenticated access belong to the layout/auth-provider chain, not this route.
+- Error envelope, empty-state copy, and role pill are all rendered server-side. The previous client-side loading spinner and randomized loading messages are removed because data resolves before first paint.
+- When adding new interactivity to `/`, keep the surface minimal: every new `onClick`/`useEffect` incurs a client component boundary that pulls shared chunks back into the route's First Load JS.

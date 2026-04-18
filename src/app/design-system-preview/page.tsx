@@ -12,6 +12,12 @@ import Image from "next/image";
 import type { CSSProperties } from "react";
 
 import { Button } from "@/components/button";
+import {
+  DetailSkeleton,
+  Skeleton,
+  TableSkeleton,
+  TableSkeletonRow,
+} from "@/components/skeleton";
 import { Tooltip } from "@/components/tooltip";
 
 export const metadata = {
@@ -490,6 +496,57 @@ export default function DesignSystemPreviewPage() {
                 <Button variant="destructive" disabled>
                   Destructive disabled
                 </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---- Phase 3.4: skeleton primitives ---- */}
+        <section className="mb-14">
+          <SectionTitle>
+            Phase 3.4 — skeleton primitives
+          </SectionTitle>
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--sh-navy-500)",
+              marginBottom: 12,
+              maxWidth: 640,
+            }}
+          >
+            Skeletons now use <code>--sh-gray-200</code> as the base tone with
+            a white shimmer highlight. Exported surfaces are the primitive
+            <code>&lt;Skeleton&gt;</code>, plus the composed
+            <code>&lt;TableSkeletonRow&gt;</code>, <code>&lt;TableSkeleton&gt;</code>,
+            and <code>&lt;DetailSkeleton&gt;</code>. The shimmer is disabled
+            when <code>prefers-reduced-motion</code> is set.
+          </p>
+          <div className="grid gap-8">
+            <div>
+              <Tag>&lt;Skeleton&gt; — raw bars</Tag>
+              <div className="flex max-w-md flex-col gap-2">
+                <Skeleton className="h-7 w-3/5" />
+                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-10/12" />
+                <Skeleton className="h-4 w-9/12" />
+              </div>
+            </div>
+            <div>
+              <Tag>&lt;TableSkeletonRow&gt; — single-row placeholder</Tag>
+              <div className="rounded-button-compact overflow-hidden border border-[color:var(--sh-gray-200)]">
+                <TableSkeletonRow columns={[1, 2, 1, 1]} />
+              </div>
+            </div>
+            <div>
+              <Tag>&lt;TableSkeleton&gt; — 6-row table placeholder</Tag>
+              <div className="rounded-button-compact overflow-hidden border border-[color:var(--sh-gray-200)]">
+                <TableSkeleton rows={6} columns={[2, 1, 1, 1]} />
+              </div>
+            </div>
+            <div>
+              <Tag>&lt;DetailSkeleton&gt; — drawer / detail placeholder</Tag>
+              <div className="rounded-button-compact max-w-xl border border-[color:var(--sh-gray-200)] bg-surface">
+                <DetailSkeleton />
               </div>
             </div>
           </div>

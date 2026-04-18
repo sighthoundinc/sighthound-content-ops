@@ -454,3 +454,30 @@ Two tooltip surfaces exist and both were migrated together to avoid a split visu
 **Preview smoke test**: `/design-system-preview` → new “Phase 3.3 — tooltip primitives” section with both the CSS-only pattern and the portal component across three `<Button>` triggers.
 
 **Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.
+
+### Phase 3.4 — Skeleton primitive
+
+The skeleton primitive has two parts, both migrated in this PR:
+
+1. **`.skeleton` CSS class + `::after` shimmer** in `src/app/globals.css` — the visual substrate. Consumed by `<Skeleton>` / `<TableSkeletonRow>` / `<TableSkeleton>` / `<DetailSkeleton>` via `className`.
+2. **`src/components/skeleton.tsx`** — React wrappers around `.skeleton`. One inline Tailwind class (`border-slate-100`) still referenced the old palette and was migrated.
+
+**Token migration**
+| Surface | Property | Before | After |
+|---|---|---|---|
+| `.skeleton` | `background` | `#e2e8f0` (slate-200) | `var(--sh-gray-200)` (`#d9dfe6`) |
+| `.skeleton` | `border-radius` | `0.375rem` (6px) | **unchanged** (matches Tailwind `rounded-md`; DS doesn’t specify a skeleton radius) |
+| `.skeleton::after` | gradient edges | `rgba(226, 232, 240, 0)` (slate-200 / 0 alpha) | `rgba(217, 223, 230, 0)` (`--sh-gray-200` / 0 alpha) — fades cleanly into new base |
+| `.skeleton::after` | gradient highlight | `rgba(248, 250, 252, 0.75)` (slate-50 / 75%) | `rgba(255, 255, 255, 0.75)` (`--sh-white` / 75%) — slightly more visible on-brand shimmer |
+| `.skeleton::after` | `animation` | `skeleton-shimmer 1.2s ease-in-out infinite` | **unchanged** |
+| `@keyframes skeleton-shimmer` | | translateX -100% → 100% | **unchanged** |
+| `prefers-reduced-motion` override | | pauses shimmer via `.skeleton::after { animation: none !important }` | **unchanged** |
+| `TableSkeletonRow` | `border-b` colour | `border-slate-100` | `border-[color:var(--sh-gray)]` (`#eff3f7` — nearest Sighthound subtle divider) |
+
+**Note on gradient stops**: Phase 2 `@theme inline` exposes `--sh-gray-200` and `--sh-white` as Tailwind utilities but they cannot be interpolated directly into `rgba(...)` functions. The new gradient keeps inline `rgba` literals whose RGB components are the exact Sighthound palette values — documented in a comment block above `.skeleton`.
+
+**Cross-app visual impact**: every loading placeholder (dashboard first-page, blog/task/social list skeletons, detail drawer + detail page skeletons) renders slightly warmer / navier gray and shimmers through pure white instead of slate-50. No component-code changes required.
+
+**Preview smoke test**: `/design-system-preview` → new “Phase 3.4 — skeleton primitives” section shows `<Skeleton>` bars, `<TableSkeletonRow>`, `<TableSkeleton>` (6 rows), and `<DetailSkeleton>`. All animate.
+
+**Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.

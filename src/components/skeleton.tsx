@@ -43,7 +43,7 @@ export function TableSkeletonRow({
     <div
       role="presentation"
       className={cn(
-        "grid items-center gap-3 px-3 py-2 border-b border-slate-100",
+        "grid items-center gap-3 px-3 py-2 border-b border-[color:var(--sh-gray)]",
         className
       )}
       style={{

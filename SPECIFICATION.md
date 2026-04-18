@@ -326,10 +326,53 @@ A workflow change is complete only when:
    - `SPECIFICATION.md`
 ## 15) Home page rendering contract
 `/` is a Server Component (`src/app/page.tsx`). Dashboard summary + tasks snapshot are fetched server-side before the initial HTML is returned.
-- Session is read via `@supabase/ssr` cookie-based client inside `src/app/home-data.ts`. The session's `access_token` is forwarded as a `Bearer` header to the existing `/api/dashboard/summary` and `/api/dashboard/tasks-snapshot` endpoints — the API contracts themselves are unchanged.
+- Session is read via `@supabase/ssr` cookie-based client inside `src/app/home-data.ts` (which delegates to the shared `getSupabaseServerClient()` in `src/lib/supabase/ssr.ts`). The session's `access_token` is forwarded as a `Bearer` header to the existing `/api/dashboard/summary` and `/api/dashboard/tasks-snapshot` endpoints — the API contracts themselves are unchanged.
 - Data shaping runs server-side via `src/app/home-work-buckets.ts` (`buildWorkBuckets`) and passes a fully-resolved `WorkBucket[]` into JSX at render time.
 - The only client island on `/` is `src/app/home-bucket-link.tsx` (`HomeBucketLink`). It wraps `<Link href="/tasks">` with an `onClick` that writes `setDashboardFilterIntent(...)` to client storage before navigation. All other bucket tile presentation is server-rendered.
 - The route is declared `export const dynamic = "force-dynamic"` so per-user dashboard data is never collapsed into a cross-user static cache.
 - Unauthenticated viewers render the same "Hi there," empty-state shell as before — no forced redirect from `/` itself. Redirects on unauthenticated access belong to the layout/auth-provider chain, not this route.
 - Error envelope, empty-state copy, and role pill are all rendered server-side. The previous client-side loading spinner and randomized loading messages are removed because data resolves before first paint.
 - When adding new interactivity to `/`, keep the surface minimal: every new `onClick`/`useEffect` incurs a client component boundary that pulls shared chunks back into the route's First Load JS.
+## 16) Authentication architecture (MUST)
+Authentication is enforced at three layers. Each layer is independent and none is load-bearing on its own — removing any one of them creates a hole.
+### 16.1) Edge middleware (`src/middleware.ts`)
+- Runs on every request except paths starting with the prefixes in `AUTH_BYPASS_PREFIXES` (`src/lib/middleware-auth.ts`): `/login`, `/api`, `/_next`, `/favicon`, `/public`.
+- Gate 1: if no cookie whose name starts with `sb-`, `302` to `/login`. This is a fast-path that avoids a Supabase round-trip for obviously-unauthenticated requests.
+- Gate 2: if an `sb-` cookie exists but `supabase.auth.getUser()` returns an error or no user, `302` to `/login`. This handles expired/invalid sessions.
+- On success, the `NextResponse` is constructed with the cookies Supabase wants to set (session refresh happens here, not in Server Components).
+- `/login` is explicitly bypassed — otherwise the redirect would loop.
+### 16.2) Server Components (`/`, `/login`)
+- Use `getSupabaseServerClient()` from `src/lib/supabase/ssr.ts`. This is a `createServerClient` wired to Next's `cookies()` with a no-op `setAll()` — Server Components cannot write cookies, so session refresh is the middleware's job, not this layer's.
+- `/login`: on render, call `supabase.auth.getSession()`. If a session exists, `redirect("/settings" | "/")` before any HTML is sent. The `reconnect` search param switches destination to `/settings`.
+- `/`: on render, read session, forward `access_token` as `Bearer` to the internal API routes. If session is null, render the unauthenticated "Hi there," shell (matches pre-migration behaviour; explicit redirect to `/login` from `/` is left to the middleware).
+- Both routes are `export const dynamic = "force-dynamic"` to prevent per-user state from being collapsed into a static cache across users.
+### 16.3) Client layer (`AuthProvider` + browser client)
+- `src/lib/supabase/browser.ts` creates the browser Supabase client via `createBrowserClient` (from `@supabase/ssr`, which mirrors session state into cookies automatically).
+- `src/providers/auth-provider.tsx` wraps the root layout. On mount it calls `supabase.auth.getSession()`, then subscribes to `onAuthStateChange`. Whenever the session changes it refetches `profile`, `user_integrations`, and `role_permissions`, then calls `logLoginEvent(userId)` (fire-and-forget) for the audit trail.
+- `useAuth()` exposes `session`, `user`, `profile`, `permissions`, `googleConnected`, `slackConnected`, `hasPermission`, `refreshProfile`, `refreshPermissions`, `refreshIntegrations`, and `signOut`.
+### 16.4) Sign-in paths (MUST)
+1. **Email + password (interactive)** — `src/app/login/login-form.tsx#handlePasswordSignIn`:
+   - `supabase.auth.signInWithPassword(...)` → browser client writes `sb-*` cookies.
+   - On success: `router.replace(destination)` followed by `router.refresh()` so the destination's Server Components observe the new cookie.
+   - The form keeps `isSubmitting = true` through the navigation so the button stays disabled.
+2. **OAuth (Google, Slack)** — `handleGoogleSignIn` / `handleSlackSignIn`:
+   - `supabase.auth.signInWithOAuth({ provider, options: { redirectTo: ${origin}${destination} } })` with provider strings `"google"` and `"slack_oidc"` (do not change these).
+   - Browser navigates to the provider, provider returns to Supabase, Supabase returns to `${origin}${destination}`.
+   - On return, middleware may bounce the user to `/login` because cookies have not been written yet. The URL hash / `code` is preserved through the 302.
+   - The browser Supabase client detects the hash / code on page load, exchanges it, and fires `onAuthStateChange`. AuthProvider updates its React state.
+   - `login-form.tsx` has a session-watching `useEffect` whose sole purpose is to catch this case: when `session` becomes non-null, it `router.replace(destination)` + `router.refresh()`. DO NOT remove this effect — it is the only thing that completes the OAuth return chain.
+3. **Already-signed-in user hits `/login`** directly — handled by the Server Component redirect at render time; no client code runs.
+### 16.5) Sign-out
+- `useAuth().signOut()` → `supabase.auth.signOut()` clears cookies. The next navigation goes through middleware and is redirected to `/login`.
+### 16.6) API route auth contract
+- Routes under `/api/*` bypass the middleware redirect but enforce their own auth via `authenticateRequest()` in `src/lib/server-permissions.ts`, which requires an `Authorization: Bearer <access_token>` header.
+- Callers:
+  - Client code reads `useAuth().session?.access_token` and includes it in `fetch()` headers.
+  - Server Components (currently only `/`) read `session.access_token` from the SSR client and forward it the same way.
+### 16.7) Invariants (do not break)
+- `/login` MUST remain in `AUTH_BYPASS_PREFIXES` or the redirect loops.
+- Both auth-aware Server Components MUST declare `export const dynamic = "force-dynamic"`.
+- The session-watching `useEffect` in `login-form.tsx` MUST stay — removing it breaks OAuth return.
+- `getSupabaseServerClient()` is read-only on cookies; any code that tries to write cookies from a Server Component will throw at runtime. Session refresh is middleware-only.
+- OAuth provider strings are `"google"` and `"slack_oidc"` — do not rename.
+- `redirectTo` in `signInWithOAuth` MUST be an absolute URL (use `NEXT_PUBLIC_APP_URL` with `window.location.origin` fallback).

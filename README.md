@@ -123,6 +123,10 @@ Detail page ordering rule:
 - `/` is a Server Component. Dashboard summary + tasks snapshot are fetched server-side via `@supabase/ssr` cookies before the initial HTML is returned.
 - Only the bucket tile `onClick` (filter intent) lives in a client component (`src/app/home-bucket-link.tsx`); everything else on `/` is server-rendered.
 - Contract + constraints: `SPECIFICATION.md` §15.
+## Authentication
+- Three-layer model: edge middleware (`src/middleware.ts`), Server Components (`/`, `/login`) using `src/lib/supabase/ssr.ts`, and client state (`src/providers/auth-provider.tsx`) using `src/lib/supabase/browser.ts`.
+- `/login` is a Server Component. Already-signed-in users are redirected server-side (`/` or `/settings` based on `?reconnect`); the `LoginForm` client island navigates after interactive password sign-in and carries a session-watching `useEffect` as the safety net for the OAuth return chain.
+- Full contract: `SPECIFICATION.md` §16. Troubleshooting runbook: `OPERATIONS.md` §13.
 
 ## Local setup
 Prerequisite:

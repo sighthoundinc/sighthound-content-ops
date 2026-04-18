@@ -45,7 +45,7 @@ export function ProtectedPage({
 
   if (loading || !session) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
+      <div className="flex min-h-[50vh] items-center justify-center text-sm text-navy-500">
         Loading…
       </div>
     );
@@ -58,7 +58,7 @@ export function ProtectedPage({
     !hasRequiredPermissions
   ) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
+      <div className="flex min-h-[50vh] items-center justify-center text-sm text-navy-500">
         You do not have permission to view this page.
       </div>
     );

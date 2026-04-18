@@ -167,7 +167,7 @@ export function DashboardTable({
                 <button
                   type="button"
                   className={cn(
-                    "inline-flex w-full items-center gap-1 text-xs font-semibold leading-4 tracking-wide text-slate-600 hover:text-slate-900",
+                    "inline-flex w-full items-center gap-1 text-xs font-semibold leading-4 tracking-wide text-navy-500 hover:text-ink",
                     CENTER_ALIGNED_COLUMNS.includes(column)
                       ? "justify-center"
                       : "justify-start"
@@ -182,7 +182,7 @@ export function DashboardTable({
                     name={getColumnSortIndicatorIcon(column)}
                     boxClassName="h-3 w-3"
                     size={12}
-                    className="text-slate-500"
+                    className="text-navy-500"
                   />
                 </button>
               </th>
@@ -193,7 +193,7 @@ export function DashboardTable({
           {rows.length === 0 ? (
             <tr>
               <td
-                className={cn(bodyCellClass, "text-center text-slate-500 text-sm")}
+                className={cn(bodyCellClass, "text-center text-navy-500 text-sm")}
                 colSpan={visibleColumns.length + (canSelectRows ? 1 : 0)}
               >
                 No content found with current filters.
@@ -235,7 +235,7 @@ export function DashboardTable({
                     if (column === "content_type") {
                       return (
                         <td key={column} className={cn(bodyCellClass, "text-center")}>
-                          <span className="truncate text-slate-800" title={row.content_label}>
+                          <span className="truncate text-ink" title={row.content_label}>
                             {row.content_label}
                           </span>
                         </td>
@@ -244,7 +244,7 @@ export function DashboardTable({
                     if (column === "site") {
                       return (
                         <td key={column} className={bodyCellClass}>
-                          <span className="truncate text-slate-800" title={row.site}>
+                          <span className="truncate text-ink" title={row.site}>
                             {row.site}
                           </span>
                         </td>
@@ -253,7 +253,7 @@ export function DashboardTable({
                     if (column === "id") {
                       return (
                         <td key={column} className={bodyCellClass}>
-                          <span className="truncate text-slate-700" title={row.id}>
+                          <span className="truncate text-navy-500" title={row.id}>
                             {row.id}
                           </span>
                         </td>
@@ -262,7 +262,7 @@ export function DashboardTable({
                     if (column === "title") {
                       return (
                         <td key={column} className={cn(bodyCellClass, "max-w-[26rem] font-medium")}>
-                          <span className="block truncate text-slate-900" title={row.title}>
+                          <span className="block truncate text-ink" title={row.title}>
                             {row.title}
                           </span>
                         </td>
@@ -271,7 +271,7 @@ export function DashboardTable({
                     if (column === "status_display") {
                       return (
                         <td key={column} className={cn(bodyCellClass, "text-center")}>
-                          <span className="truncate text-slate-800" title={row.status_display}>
+                          <span className="truncate text-ink" title={row.status_display}>
                             {row.status_display}
                           </span>
                         </td>
@@ -281,7 +281,7 @@ export function DashboardTable({
                       return (
                         <td key={column} className={cn(bodyCellClass, "text-center")}>
                           <span
-                            className="truncate text-slate-700"
+                            className="truncate text-navy-500"
                             title={row.lifecycle_bucket.replaceAll("_", " ")}
                           >
                             {row.lifecycle_bucket.replaceAll("_", " ")}
@@ -336,7 +336,7 @@ export function DashboardTable({
                                 onAssociatedContentClick(row);
                               }
                             }}
-                            className="truncate text-slate-700 hover:underline cursor-pointer"
+                            className="truncate text-navy-500 hover:underline cursor-pointer"
                             title={displayValue}
                             disabled={displayValue === "—"}
                           >
@@ -347,7 +347,7 @@ export function DashboardTable({
                     }
                     return (
                       <td key={column} className={bodyCellClass}>
-                        <span className="truncate text-slate-800" title={row.product ?? "—"}>
+                        <span className="truncate text-ink" title={row.product ?? "—"}>
                           {row.product ?? "—"}
                         </span>
                       </td>

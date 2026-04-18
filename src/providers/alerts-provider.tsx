@@ -198,8 +198,8 @@ function AlertCard({
         : item.type === "success"
           ? "border-emerald-100"
           : item.type === "info"
-            ? "border-blue-100"
-            : "border-slate-200";
+            ? "border-[color:var(--sh-blurple-100)]"
+            : "border-[color:var(--sh-gray-200)]";
 
   const iconColor =
     item.type === "error"
@@ -209,8 +209,8 @@ function AlertCard({
         : item.type === "success"
           ? "text-emerald-600"
           : item.type === "info"
-            ? "text-blue-600"
-            : "text-slate-600";
+            ? "text-brand"
+            : "text-navy-500";
 
   return (
     <div
@@ -231,19 +231,19 @@ function AlertCard({
         <div className="flex items-center justify-between gap-2">
           <p
             className={`text-sm ${
-              item.type === "error" ? "font-medium text-slate-900" : "text-slate-800"
+              item.type === "error" ? "font-medium text-ink" : "text-ink"
             }`}
           >
             {item.message}
           </p>
           {item.dedupCount > 1 ? (
-            <span className="text-[10px] text-slate-500">({item.dedupCount}x)</span>
+            <span className="text-[10px] text-navy-500">({item.dedupCount}x)</span>
           ) : null}
         </div>
         {item.actionLabel && item.onAction ? (
           <button
             type="button"
-            className="mt-1 inline-flex rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+            className="mt-1 inline-flex rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-0.5 text-xs font-medium text-navy-500 hover:bg-blurple-50"
             onClick={() => {
               item.onAction?.();
             }}
@@ -254,7 +254,7 @@ function AlertCard({
       </div>
       <button
         type="button"
-        className="rounded px-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+        className="rounded px-1 text-xs text-navy-500 hover:bg-blurple-50 hover:text-navy-500"
         aria-label="Dismiss alert"
         onClick={() => {
           onDismiss(item.id);

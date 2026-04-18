@@ -29,12 +29,12 @@ export function NextActionCell({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 truncate text-xs font-normal text-slate-600",
+          "inline-flex items-center gap-1.5 truncate text-xs font-normal text-navy-500",
           className
         )}
         title={waitingFor}
       >
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--sh-gray-400)]" />
         <span className="truncate">{waitingFor}</span>
       </span>
     );
@@ -43,7 +43,7 @@ export function NextActionCell({
   const content = (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 truncate text-xs font-semibold text-slate-900",
+        "inline-flex items-center gap-1.5 truncate text-xs font-semibold text-ink",
         className
       )}
     >
@@ -51,7 +51,7 @@ export function NextActionCell({
       <span className="truncate">{label}</span>
       <ArrowRightIcon boxClassName="h-3.5 w-3.5"
         size={12}
-        className="text-slate-500" />
+        className="text-navy-500" />
     </span>
   );
 
@@ -63,7 +63,7 @@ export function NextActionCell({
     <button
       type="button"
       onClick={onAction}
-      className="inline-flex items-center gap-1.5 rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+      className="inline-flex items-center gap-1.5 rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
     >
       {content}
     </button>

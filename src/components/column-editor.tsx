@@ -63,10 +63,10 @@ function SortableColumnItem({
       className={cn(
         "inline-flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-xs transition",
         isDragging
-          ? "border-indigo-400 bg-indigo-50 shadow-md"
+          ? "border-brand bg-blurple-50 shadow-md"
           : isVisible
-            ? "border-slate-300 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm"
-            : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300 hover:bg-white"
+            ? "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:border-blurple-300 hover:bg-blurple-50 hover:shadow-sm"
+            : "border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] text-navy-500 hover:border-[color:var(--sh-gray-200)] hover:bg-white"
       )}
     >
       <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ function SortableColumnItem({
           type="button"
           className={cn(
             "cursor-grab transition active:cursor-grabbing",
-            isVisible ? "text-slate-400 hover:text-slate-600" : "text-slate-300 hover:text-slate-400"
+            isVisible ? "text-navy-500/60 hover:text-navy-500" : "text-[color:var(--sh-gray-400)] hover:text-navy-500/60"
           )}
           {...listeners}
           {...attributes}
@@ -96,13 +96,13 @@ function SortableColumnItem({
           <span
             className={cn(
               "font-medium transition",
-              isVisible ? "text-slate-700" : "text-slate-400"
+              isVisible ? "text-navy-500" : "text-navy-500/60"
             )}
           >
             {label}
           </span>
           {!isVisible ? (
-            <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+            <span className="rounded-full bg-[color:var(--sh-gray-200)] px-1.5 py-0.5 text-[10px] font-medium text-navy-500">
               Hidden
             </span>
           ) : null}
@@ -152,7 +152,7 @@ export function ColumnEditor<T extends ColumnItem = ColumnItem>({
         strategy={verticalListSortingStrategy}
       >
         {columns.length === 0 ? (
-          <p className="text-xs text-slate-500">{emptyMessage}</p>
+          <p className="text-xs text-navy-500">{emptyMessage}</p>
         ) : (
           <div className={cn("grid gap-2", gridCols)}>
             {columns.map((column) => (

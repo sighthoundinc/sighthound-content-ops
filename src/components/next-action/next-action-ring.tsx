@@ -32,7 +32,7 @@ export function NextActionRing({
   const stroke = report.ready
     ? "stroke-emerald-500"
     : missingCount === report.requiredCount
-      ? "stroke-slate-300"
+      ? "stroke-[color:var(--sh-gray-400)]"
       : "stroke-amber-500";
 
   const label = report.ready
@@ -57,7 +57,7 @@ export function NextActionRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          className="stroke-slate-200"
+          className="stroke-[color:var(--sh-gray-200)]"
           strokeWidth={2}
           fill="none"
         />

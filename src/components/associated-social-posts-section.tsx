@@ -65,61 +65,61 @@ export function AssociatedSocialPostsSection({
   const hasContent = socialPosts.length > 0;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
-      <div className="px-4 py-3 border-b border-slate-200">
-        <h3 className="font-semibold text-slate-900">
+    <div className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white">
+      <div className="px-4 py-3 border-b border-[color:var(--sh-gray-200)]">
+        <h3 className="font-semibold text-ink">
           Associated Social Posts
         </h3>
         {hasContent && (
-          <p className="text-xs text-slate-600 mt-1">
+          <p className="text-xs text-navy-500 mt-1">
             {socialPosts.length} post{socialPosts.length !== 1 ? "s" : ""}
           </p>
         )}
       </div>
-      <div className="divide-y divide-slate-200">
+      <div className="divide-y divide-[color:var(--sh-gray-200)]">
         {displayLoading && !hasContent ? (
           <div className="px-4 py-6 text-center">
-            <p className="text-sm text-slate-600">Loading...</p>
+            <p className="text-sm text-navy-500">Loading...</p>
           </div>
         ) : hasContent ? (
           socialPosts.map((post) => (
             <Link
               key={post.id}
               href={`/social-posts/${post.id}`}
-              className="block px-4 py-3 hover:bg-slate-50 transition-colors"
+              className="block px-4 py-3 hover:bg-blurple-50 transition-colors"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-slate-900 truncate hover:underline">
+                  <h4 className="font-medium text-ink truncate hover:underline">
                     {post.title || "(Untitled)"}
                   </h4>
                   <div className="flex gap-1 mt-1 flex-wrap">
-                    <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-700">
+                    <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-blurple-50 text-navy-500">
                       {post.type}
                     </span>
-                    <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-700">
+                    <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-blurple-50 text-navy-500">
                       {post.status}
                     </span>
                     {post.platforms && post.platforms.length > 0 && (
-                      <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-700">
+                      <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-blurple-50 text-navy-500">
                         {post.platforms.join(", ")}
                       </span>
                     )}
                   </div>
                   {post.scheduled_date && (
-                    <p className="text-xs text-slate-600 mt-1">
+                    <p className="text-xs text-navy-500 mt-1">
                       Scheduled: {formatDateOnly(post.scheduled_date)}
                     </p>
                   )}
                 </div>
                 <ArrowRightIcon size={16}
-                  className="flex-shrink-0 text-slate-400 group-hover:text-slate-600" />
+                  className="flex-shrink-0 text-navy-500/60 group-hover:text-navy-500" />
               </div>
             </Link>
           ))
         ) : (
           <div className="px-4 py-6 text-center">
-            <p className="text-sm text-slate-600">No associated social posts.</p>
+            <p className="text-sm text-navy-500">No associated social posts.</p>
           </div>
         )}
       </div>

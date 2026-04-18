@@ -56,25 +56,25 @@ export function SocialPostStatusInfo({
       {/* Status badge and label */}
       <div className="flex items-center gap-2">
         <SocialPostStatusBadge status={status} />
-        <span className="text-xs font-medium text-slate-600">{statusLabel}</span>
+        <span className="text-xs font-medium text-navy-500">{statusLabel}</span>
       </div>
 
       {/* Ownership and next action */}
       <div className="flex flex-col gap-0.5">
         {currentOwnerUserId && currentOwnerUserName ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-navy-500">
             {isOwner ? (
-              <strong className="text-slate-700">Assigned to you</strong>
+              <strong className="text-navy-500">Assigned to you</strong>
             ) : (
               <>
-                Assigned to <strong className="text-slate-700">{currentOwnerUserName}</strong>
+                Assigned to <strong className="text-navy-500">{currentOwnerUserName}</strong>
               </>
             )}
           </p>
         ) : null}
 
         {status !== 'published' && (
-          <p className="text-xs font-medium text-slate-600">
+          <p className="text-xs font-medium text-navy-500">
             {isOwner ? (
               <>Your next: {nextAction}</>
             ) : (

@@ -105,7 +105,7 @@ export function CheckboxMultiSelect({
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-700"
+        className="flex w-full items-center justify-between rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-left text-sm text-navy-500"
         onClick={() => {
           setIsOpen((previous) => {
             const nextIsOpen = !previous;
@@ -125,16 +125,16 @@ export function CheckboxMultiSelect({
           name={isOpen ? "chevronUp" : "chevronDown"}
           boxClassName="ml-3 h-3 w-3"
           size={12}
-          className="text-slate-500"
+          className="text-navy-500"
         />
       </button>
 
       {isOpen ? (
-        <div className="absolute z-30 mt-1 w-full min-w-56 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
-          <div className="mb-2 flex items-center justify-between border-b border-slate-100 pb-2">
+        <div className="absolute z-30 mt-1 w-full min-w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-lg">
+          <div className="mb-2 flex items-center justify-between border-b border-[color:var(--sh-gray)] pb-2">
             <button
               type="button"
-              className="text-xs font-medium text-slate-600 hover:text-slate-900"
+              className="text-xs font-medium text-navy-500 hover:text-ink"
               onClick={() => {
                 onChange(options.map((option) => option.value));
               }}
@@ -143,7 +143,7 @@ export function CheckboxMultiSelect({
             </button>
             <button
               type="button"
-              className="text-xs font-medium text-slate-600 hover:text-slate-900"
+              className="text-xs font-medium text-navy-500 hover:text-ink"
               onClick={() => {
                 onChange([]);
               }}
@@ -155,7 +155,7 @@ export function CheckboxMultiSelect({
             {options.map((option) => (
               <label
                 key={option.value}
-                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-navy-500 hover:bg-blurple-50"
               >
                 <input
                   type="checkbox"

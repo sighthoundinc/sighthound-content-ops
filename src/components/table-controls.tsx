@@ -13,10 +13,10 @@ export function TableRowLimitSelect({
   onChange: (value: TableRowLimit) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-slate-600">
-      <span className="font-medium text-slate-700">Rows per page</span>
+    <label className="flex items-center gap-2 text-xs text-navy-500">
+      <span className="font-medium text-navy-500">Rows per page</span>
       <select
-        className="focus-field rounded-md border border-slate-300 px-2 py-1 text-xs font-normal text-slate-800"
+        className="focus-field rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-xs font-normal text-ink"
         value={String(value)}
         onChange={(event) => {
           const nextValue =
@@ -49,10 +49,10 @@ export function TableResultsSummary({
 }) {
   const range = getTableVisibleRange(totalRows, currentPage, rowLimit);
   return (
-    <p className="text-xs text-slate-500 font-normal">
-      Showing <span className="font-medium text-slate-900">{range.start}</span>-
-      <span className="font-medium text-slate-900">{range.end}</span> of{" "}
-      <span className="font-medium text-slate-900">{totalRows}</span> {noun}
+    <p className="text-xs text-navy-500 font-normal">
+      Showing <span className="font-medium text-ink">{range.start}</span>-
+      <span className="font-medium text-ink">{range.end}</span> of{" "}
+      <span className="font-medium text-ink">{totalRows}</span> {noun}
     </p>
   );
 }
@@ -83,9 +83,9 @@ export function TablePaginationControls({
       >
         Prev
       </Button>
-      <p className="text-xs text-slate-500 font-normal">
-        Page <span className="font-medium text-slate-900">{currentPage}</span> of{" "}
-        <span className="font-medium text-slate-900">{pageCount}</span>
+      <p className="text-xs text-navy-500 font-normal">
+        Page <span className="font-medium text-ink">{currentPage}</span> of{" "}
+        <span className="font-medium text-ink">{pageCount}</span>
       </p>
       <Button
         type="button"

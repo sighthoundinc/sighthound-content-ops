@@ -209,7 +209,7 @@ export function DataTable<TData>({
                     type="button"
                     onClick={() => handleColumnSort(column.id)}
                     className={cn(
-                      "inline-flex w-full items-center gap-1 text-xs font-semibold leading-4 tracking-wide text-slate-600 hover:text-slate-900",
+                      "inline-flex w-full items-center gap-1 text-xs font-semibold leading-4 tracking-wide text-navy-500 hover:text-ink",
                       column.align === "center"
                         ? "justify-center"
                         : column.align === "right"
@@ -224,11 +224,11 @@ export function DataTable<TData>({
                       name={getColumnSortIndicatorIcon(column.id)}
                       boxClassName="h-3 w-3"
                       size={12}
-                      className="text-slate-500"
+                      className="text-navy-500"
                     />
                   </button>
                 ) : (
-                  <span className="text-xs font-semibold leading-4 tracking-wide text-slate-600">{column.label}</span>
+                  <span className="text-xs font-semibold leading-4 tracking-wide text-navy-500">{column.label}</span>
                 )}
               </th>
             ))}
@@ -240,7 +240,7 @@ export function DataTable<TData>({
               <td
                 className={cn(
                   bodyCellClass,
-                  "text-center text-slate-500"
+                  "text-center text-navy-500"
                 )}
                 colSpan={visibleColumns.length + (showSelection ? 1 : 0)}
               >

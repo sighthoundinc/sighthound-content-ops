@@ -180,26 +180,26 @@ export function ConnectedServicesForm() {
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-slate-200 p-4">
-        <p className="text-sm text-slate-500">Loading connected services…</p>
+      <div className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+        <p className="text-sm text-navy-500">Loading connected services…</p>
       </div>
     );
   }
 
   if (!services) {
     return (
-      <div className="rounded-lg border border-slate-200 p-4">
-        <p className="text-sm text-slate-500">Unable to load connected services.</p>
+      <div className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+        <p className="text-sm text-navy-500">Unable to load connected services.</p>
       </div>
     );
   }
 
   return (
-    <section className="rounded-lg border border-slate-200 p-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+    <section className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
         Connected Services
       </h3>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-navy-500">
         Manage your connected accounts for sign-in and notifications.
       </p>
 
@@ -212,21 +212,21 @@ export function ConnectedServicesForm() {
           return (
             <div
               key={service.key}
-              className="flex items-start justify-between rounded-md border border-slate-200 bg-white px-4 py-3"
+              className="flex items-start justify-between rounded-md border border-[color:var(--sh-gray-200)] bg-white px-4 py-3"
             >
               <div className="flex items-start gap-3">
                 <AppIcon
                   name={service.icon}
-                  boxClassName="h-10 w-10 bg-slate-50"
+                  boxClassName="h-10 w-10 bg-[color:var(--sh-gray)]"
                   size={20}
-                  className={isConnected ? "text-slate-700" : "text-slate-400"}
+                  className={isConnected ? "text-navy-500" : "text-navy-500/60"}
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium text-slate-900">
+                    <h4 className="text-sm font-medium text-ink">
                       {service.name}
                     </h4>
-                    <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                    <span className="inline-flex rounded-full bg-blurple-50 px-2 py-0.5 text-xs font-medium text-navy-500">
                       {service.purpose}
                     </span>
                     {isConnected ? (
@@ -235,17 +235,17 @@ export function ConnectedServicesForm() {
                         Connected
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-blurple-50 px-2 py-0.5 text-xs font-medium text-navy-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--sh-gray-400)]" />
                         Not connected
                       </span>
                     )}
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-600">
+                  <p className="mt-0.5 text-xs text-navy-500">
                     {isConnected ? service.descriptionConnected : service.descriptionDisconnected}
                   </p>
                   {isConnected && connectedDate && (
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-navy-500">
                       Connected on {connectedDate}
                     </p>
                   )}
@@ -256,7 +256,7 @@ export function ConnectedServicesForm() {
                 <button
                   type="button"
                   disabled={disconnectingService === service.key}
-                  className="ml-4 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="ml-4 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1.5 text-xs font-medium text-navy-500 transition hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => handleDisconnect(service.key)}
                 >
                   {disconnectingService === service.key ? "Disconnecting…" : "Disconnect"}
@@ -265,7 +265,7 @@ export function ConnectedServicesForm() {
                 <button
                   type="button"
                   disabled={connectingService === service.key}
-                  className="ml-4 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="ml-4 rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => handleConnect(service.key)}
                 >
                   {connectingService === service.key ? "Connecting…" : "Connect"}

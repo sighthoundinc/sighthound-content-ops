@@ -16,11 +16,11 @@ export function CalendarWeekdayHeaderRow({
       {labels.map((label, index) => (
         <div key={`${label}-${index}`} className="flex flex-col items-center justify-center gap-1">
           {todayColumnIndex === index ? (
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
           ) : (
             <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
           )}
-          <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-center text-xs font-semibold uppercase tracking-wide text-navy-500">
             {label}
           </p>
         </div>
@@ -45,7 +45,7 @@ export function CalendarGridSurface({
   return (
     <div
       className={cn(
-        "rounded-xl border border-slate-200/90 bg-slate-50/70 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]",
+        "rounded-xl border border-[color:var(--sh-gray-200)]/90 bg-[color:var(--sh-gray)]/70 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]",
         surfaceClassName
       )}
     >

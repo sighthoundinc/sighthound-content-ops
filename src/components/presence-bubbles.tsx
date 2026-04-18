@@ -20,7 +20,7 @@ const BUBBLE_PALETTE = [
   "bg-amber-100 text-amber-700",
   "bg-violet-100 text-violet-700",
   "bg-rose-100 text-rose-700",
-  "bg-slate-200 text-slate-700",
+  "bg-[color:var(--sh-gray-200)] text-navy-500",
 ] as const;
 
 function initialsFor(name: string): string {
@@ -70,7 +70,7 @@ export function PresenceBubbles({
       aria-label={`${label}: ${tooltip}`}
       className={cn("inline-flex items-center gap-2", className)}
     >
-      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-navy-500">
         {label}
       </span>
       <div className="flex items-center -space-x-1.5">
@@ -89,7 +89,7 @@ export function PresenceBubbles({
         {overflow > 0 ? (
           <span
             title={tooltip}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white bg-slate-100 text-[10px] font-semibold text-slate-600 shadow-sm"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white bg-blurple-50 text-[10px] font-semibold text-navy-500 shadow-sm"
           >
             +{overflow}
           </span>

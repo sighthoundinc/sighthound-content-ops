@@ -185,7 +185,7 @@ export function GlobalQuickCreate() {
                 className={cn(
                   "w-full px-6 py-4 text-left transition-colors",
                   index === activeIndex
-                    ? "bg-indigo-50 ring-2 ring-inset ring-indigo-200"
+                    ? "bg-blurple-50 ring-2 ring-inset ring-[color:var(--sh-blurple-100)]"
                     : "hover:bg-gray-50"
                 )}
               >
@@ -194,7 +194,7 @@ export function GlobalQuickCreate() {
                     name={action.icon}
                     boxClassName="h-8 w-8"
                     size={18}
-                    className="text-slate-700"
+                    className="text-navy-500"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3 font-medium text-gray-900">

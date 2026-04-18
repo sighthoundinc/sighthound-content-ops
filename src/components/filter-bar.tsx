@@ -55,12 +55,12 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3",
+        "flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3",
         className
       )}
     >
       {filters.length === 0 ? (
-        <p className="text-sm text-slate-500">{emptyMessage || "No active filters"}</p>
+        <p className="text-sm text-navy-500">{emptyMessage || "No active filters"}</p>
       ) : (
         <>
           <div className="flex flex-wrap gap-2">
@@ -79,7 +79,7 @@ export function FilterBar({
               variant="ghost"
               size="sm"
               onClick={onClearAll}
-              className="ml-auto text-slate-600 hover:text-slate-900"
+              className="ml-auto text-navy-500 hover:text-ink"
             >
               Clear All
             </Button>

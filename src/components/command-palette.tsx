@@ -131,7 +131,7 @@ export function CommandPalette() {
                             onMouseEnter={() => selectResult(itemIndex)}
                             className={`w-full px-4 py-3 text-left text-sm flex items-center gap-3 transition-colors ${
                               isSelected
-                                ? "bg-blue-50 text-blue-900"
+                                ? "bg-blurple-50 text-blurple-800"
                                 : "text-gray-700 hover:bg-gray-50"
                             }`}
                             role="option"
@@ -140,7 +140,7 @@ export function CommandPalette() {
                             <div className="flex-shrink-0">
                               <AppIcon
                                 name={command.icon ?? "chevronRight"}
-                                className={isSelected ? "text-blue-700" : "text-gray-500"}
+                                className={isSelected ? "text-blurple-700" : "text-gray-500"}
                                 boxClassName="h-6 w-6"
                                 size={16}
                               />

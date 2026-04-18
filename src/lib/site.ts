@@ -11,7 +11,7 @@ export const SITE_SHORT_LABELS: Record<BlogSite, string> = {
 };
 
 export const SITE_BADGE_CLASSES: Record<BlogSite, string> = {
-  "sighthound.com": "border-blue-200 bg-blue-50 text-blue-700",
+  "sighthound.com": "border-[color:var(--sh-blurple-100)] bg-blurple-50 text-blurple-700",
   "redactor.com": "border-orange-200 bg-orange-50 text-orange-700",
 };
 

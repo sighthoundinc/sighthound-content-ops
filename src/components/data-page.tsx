@@ -21,9 +21,9 @@ type FilterPill = {
 
 export const DATA_PAGE_STACK_CLASS = "space-y-6";
 export const DATA_PAGE_TABLE_SECTION_CLASS =
-  "space-y-3 rounded-lg border border-slate-200 bg-white p-4";
+  "space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4";
 export const DATA_PAGE_CONTROL_STRIP_CLASS =
-  "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2";
+  "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2";
 export const DATA_PAGE_CONTROL_ROW_CLASS =
   "flex w-full min-w-0 flex-wrap items-center justify-between gap-3";
 export const DATA_PAGE_CONTROL_ACTIONS_CLASS =
@@ -44,8 +44,8 @@ export function DataPageHeader({
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
-        {description ? <p className="text-sm text-slate-600">{description}</p> : null}
+        <h2 className="text-xl font-semibold text-ink">{title}</h2>
+        {description ? <p className="text-sm text-navy-500">{description}</p> : null}
       </div>
       {primaryAction ? <div>{primaryAction}</div> : null}
     </header>
@@ -67,9 +67,9 @@ export function DataPageTableFeedback({
         <div
           aria-live="polite"
           role="status"
-          className="inline-flex items-center gap-2 text-xs text-slate-500"
+          className="inline-flex items-center gap-2 text-xs text-navy-500"
         >
-          <span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[color:var(--sh-gray-400)]" />
           {label}
         </div>
       ) : null}
@@ -93,7 +93,7 @@ export function DataPageToolbar({
   actions?: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+    <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
       <div className="flex flex-wrap items-center gap-2">
         {showSearch ? (
           <label className="relative min-w-[16rem] flex-1">
@@ -104,7 +104,7 @@ export function DataPageToolbar({
                 onSearchChange(event.target.value);
               }}
               placeholder={searchPlaceholder}
-              className="focus-field w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-8 text-sm"
+              className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 pr-8 text-sm"
             />
             {searchValue.trim().length > 0 ? (
               <Button
@@ -112,7 +112,7 @@ export function DataPageToolbar({
                 size="xs"
                 variant="ghost"
                 aria-label="Clear search"
-                className="absolute right-1 top-1/2 -translate-y-1/2 px-1 py-0.5 text-slate-500 hover:text-slate-700"
+                className="absolute right-1 top-1/2 -translate-y-1/2 px-1 py-0.5 text-navy-500 hover:text-navy-500"
                 onClick={() => {
                   onSearchChange("");
                 }}
@@ -138,7 +138,7 @@ export function DataPageFilterPills({ pills }: { pills: FilterPill[] }) {
       {pills.map((pill) => (
         <span
           key={pill.id}
-          className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
+          className="inline-flex items-center gap-1 rounded-full border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs text-navy-500"
         >
           {pill.label}
           <Button
@@ -146,7 +146,7 @@ export function DataPageFilterPills({ pills }: { pills: FilterPill[] }) {
             size="xs"
             variant="ghost"
             aria-label={`Remove ${pill.label}`}
-            className="px-1 py-0.5 text-slate-500 hover:text-slate-700"
+            className="px-1 py-0.5 text-navy-500 hover:text-navy-500"
             onClick={pill.onRemove}
           >
             <CloseIcon boxClassName="h-4 w-4" size={13} />
@@ -208,10 +208,10 @@ export function DataPageEmptyState({
   // primitive when `action` is omitted.
   if (action) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-slate-900">{title}</p>
-          <p className="text-sm text-slate-600">{description}</p>
+          <p className="text-sm font-medium text-ink">{title}</p>
+          <p className="text-sm text-navy-500">{description}</p>
         </div>
         <div>{action}</div>
       </div>

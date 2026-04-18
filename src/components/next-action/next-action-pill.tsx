@@ -28,11 +28,11 @@ export function NextActionPill({
     return (
       <div
         className={cn(
-          "inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600",
+          "inline-flex items-center gap-2 rounded-full border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-1 text-xs text-navy-500",
           className
         )}
       >
-        <span className="h-2 w-2 rounded-full bg-slate-300" />
+        <span className="h-2 w-2 rounded-full bg-[color:var(--sh-gray-400)]" />
         <span className="truncate">{waitingFor}</span>
       </div>
     );
@@ -44,7 +44,7 @@ export function NextActionPill({
       onClick={onAction}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 disabled:cursor-not-allowed disabled:bg-slate-300",
+        "inline-flex items-center gap-2 rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:bg-[color:var(--sh-gray-400)]",
         className
       )}
     >

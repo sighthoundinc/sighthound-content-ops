@@ -779,41 +779,41 @@ export function BlogImportModal({
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/40"
+            className="absolute inset-0 bg-ink/40"
             aria-label="Close import modal"
             onClick={closeModal}
           />
-          <div className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-5">
+          <div className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-xl border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Import Blogs</h2>
-                <p className="text-sm text-slate-600">Upload file → review rows → import.</p>
+                <h2 className="text-base font-semibold text-ink">Import Blogs</h2>
+                <p className="text-sm text-navy-500">Upload file → review rows → import.</p>
               </div>
               <Button type="button" variant="ghost" size="sm" onClick={closeModal}>
                 <CloseIcon boxClassName="h-4 w-4" size={13} />
               </Button>
             </div>
 
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="mt-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
               <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-slate-500">Need a template?</span>
+                <span className="text-navy-500">Need a template?</span>
                 <a
                   href="/templates/blog-import-template.xlsx"
-                  className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-blue-700 hover:bg-slate-100"
+                  className="rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 font-medium text-blurple-700 hover:bg-blurple-50"
                 >
                   XLSX
                 </a>
                 <a
                   href="/templates/blog-import-template.csv"
-                  className="rounded border border-slate-300 bg-white px-2 py-1 font-medium text-blue-700 hover:bg-slate-100"
+                  className="rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 font-medium text-blurple-700 hover:bg-blurple-50"
                 >
                   CSV
                 </a>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                 Step 1 · Upload file
               </p>
-              <label className="mt-2 block text-sm text-slate-700">
+              <label className="mt-2 block text-sm text-navy-500">
                 <span className="mb-2 block">Choose a `.csv` or `.xlsx` file</span>
                 <input
                   type="file"
@@ -822,30 +822,30 @@ export function BlogImportModal({
                     const file = event.target.files?.[0] ?? null;
                     void onFileSelected(file);
                   }}
-                  className="block w-full cursor-pointer rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-sm"
+                  className="block w-full cursor-pointer rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500 file:mr-3 file:rounded file:border-0 file:bg-blurple-50 file:px-2 file:py-1 file:text-sm"
                 />
               </label>
               {fileName ? (
-                <p className="mt-2 text-xs text-slate-600">
-                  <span className="font-medium text-slate-800">{fileName}</span> selected
+                <p className="mt-2 text-xs text-navy-500">
+                  <span className="font-medium text-ink">{fileName}</span> selected
                 </p>
               ) : null}
-              {isParsing ? <p className="mt-2 text-xs text-slate-600">Parsing file…</p> : null}
+              {isParsing ? <p className="mt-2 text-xs text-navy-500">Parsing file…</p> : null}
             </div>
 
             {rows.length > 0 && detectedColumns.size > 0 ? (
-              <div className="mt-4 rounded-lg border border-slate-200 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <div className="mt-4 rounded-lg border border-[color:var(--sh-gray-200)] p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                   Step 1.5 · Select Columns
                 </p>
-                <p className="mt-2 text-sm text-slate-700">
+                <p className="mt-2 text-sm text-navy-500">
                   Required columns are locked. Optional columns can be included or skipped.
                 </p>
                 <div className="mt-3 space-y-2">
                   {Array.from(REQUIRED_COLUMNS_SET).map((key) => (
                     <label
                       key={key}
-                      className="flex items-center gap-2 rounded px-2 py-2 text-sm text-slate-700 bg-slate-50"
+                      className="flex items-center gap-2 rounded px-2 py-2 text-sm text-navy-500 bg-[color:var(--sh-gray)]"
                     >
                       <input
                         type="checkbox"
@@ -865,8 +865,8 @@ export function BlogImportModal({
                         key={key}
                         className={`flex items-center gap-2 rounded px-2 py-2 text-sm ${
                           isDetected
-                            ? "text-slate-700 hover:bg-slate-50"
-                            : "text-slate-500 bg-slate-50 cursor-not-allowed"
+                            ? "text-navy-500 hover:bg-blurple-50"
+                            : "text-navy-500 bg-[color:var(--sh-gray)] cursor-not-allowed"
                         }`}
                       >
                         <input
@@ -897,11 +897,11 @@ export function BlogImportModal({
             ) : null}
 
             {rows.length > 0 && selectedRows.length > 0 ? (
-              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <div className="mt-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                   Step 1.75 · Name Resolution (Automatic)
                 </p>
-                <p className="mt-1 text-slate-700">
+                <p className="mt-1 text-navy-500">
                   {isResolvingNames
                     ? "Resolving writer/publisher names in the background..."
                     : isNameResolutionAccepted
@@ -934,8 +934,8 @@ export function BlogImportModal({
 
             {rows.length > 0 ? (
               <div className="mt-4 space-y-4">
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <div className="rounded-lg border border-[color:var(--sh-gray-200)] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Step 2 · Preview ({rows.length} rows)
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
@@ -976,11 +976,11 @@ export function BlogImportModal({
                     >
                       Valid only
                     </Button>
-                    <span className="text-slate-600">
-                      Selected <span className="font-semibold text-slate-900">{selectedRows.length}</span>
+                    <span className="text-navy-500">
+                      Selected <span className="font-semibold text-ink">{selectedRows.length}</span>
                     </span>
                   </div>
-                  <div className="mt-2 overflow-auto rounded-md border border-slate-200">
+                  <div className="mt-2 overflow-auto rounded-md border border-[color:var(--sh-gray-200)]">
                     <table className={`${TABLE_BASE_CLASS} text-left text-xs`}>
                       <thead className={`${TABLE_HEAD_CLASS} text-[11px]`}>
                         <tr>
@@ -1012,7 +1012,7 @@ export function BlogImportModal({
                                 }}
                               />
                             </td>
-                            <td className="h-10 px-2 py-2 align-middle text-slate-500">
+                            <td className="h-10 px-2 py-2 align-middle text-navy-500">
                               {row.rowNumber}
                             </td>
                             <td className="h-10 max-w-[90px] px-2 py-2 align-middle overflow-hidden">
@@ -1049,8 +1049,8 @@ export function BlogImportModal({
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <div className="rounded-lg border border-[color:var(--sh-gray-200)] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Step 3 · Review
                   </p>
                   {selectedValidationErrors.length === 0 ? (
@@ -1071,12 +1071,12 @@ export function BlogImportModal({
                           </li>
                         ))}
                         {selectedValidationErrors.length > 5 ? (
-                          <li className="text-slate-600">... and {selectedValidationErrors.length - 5} more</li>
+                          <li className="text-navy-500">... and {selectedValidationErrors.length - 5} more</li>
                         ) : null}
                       </ul>
                     </div>
                   )}
-                  <p className="mt-3 text-xs text-slate-600">
+                  <p className="mt-3 text-xs text-navy-500">
                     <strong>{selectedValidCount} blog(s)</strong> ready to import{selectedInvalidCount > 0 ? ` (${selectedInvalidCount} with errors)` : ''}
                   </p>
                 </div>
@@ -1090,19 +1090,19 @@ export function BlogImportModal({
             ) : null}
 
             {result ? (
-              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+              <div className="mt-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3 text-sm">
                 {result.failed === 0 ? (
                   <div>
                     <p className="inline-flex items-center gap-1 font-semibold text-emerald-700">
                       <SuccessIcon boxClassName="h-4 w-4" size={13} />
                       All {result.created + result.updated} blog(s) imported successfully!
                     </p>
-                    {result.created > 0 && <p className="mt-1 text-xs text-slate-600">Created: {result.created}</p>}
-                    {result.updated > 0 && <p className="text-xs text-slate-600">Updated: {result.updated}</p>}
+                    {result.created > 0 && <p className="mt-1 text-xs text-navy-500">Created: {result.created}</p>}
+                    {result.updated > 0 && <p className="text-xs text-navy-500">Updated: {result.updated}</p>}
                   </div>
                 ) : (
                   <div>
-                    <p className="text-slate-900 font-semibold">Import summary</p>
+                    <p className="text-ink font-semibold">Import summary</p>
                     <div className="mt-2 space-y-1 text-sm">
                       {result.created > 0 && (
                         <div className="inline-flex items-center gap-1 text-emerald-700">
@@ -1111,7 +1111,7 @@ export function BlogImportModal({
                         </div>
                       )}
                       {result.updated > 0 && (
-                        <div className="inline-flex items-center gap-1 text-blue-700">
+                        <div className="inline-flex items-center gap-1 text-blurple-700">
                           <InfoIcon boxClassName="h-4 w-4" size={13} />
                           Updated {result.updated}
                         </div>
@@ -1126,8 +1126,8 @@ export function BlogImportModal({
                     {result.failed > 0 ? (
                       <div className="mt-3 space-y-2">
                         <div>
-                          <p className="text-xs font-semibold text-slate-600 mb-2">Error details (first 10):</p>
-                          <ul className="max-h-40 space-y-1 overflow-auto rounded bg-white p-2 text-xs border border-slate-300">
+                          <p className="text-xs font-semibold text-navy-500 mb-2">Error details (first 10):</p>
+                          <ul className="max-h-40 space-y-1 overflow-auto rounded bg-white p-2 text-xs border border-[color:var(--sh-gray-200)]">
                             {result.failures?.slice(0, 10).map((failure, idx) => (
                               <li key={idx} className="text-rose-700">
                                 Row {failure.rowNumber}: {failure.message}

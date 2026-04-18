@@ -34,20 +34,20 @@ export function FilterChip({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700 border border-slate-200",
+        "inline-flex items-center gap-2 rounded-full bg-blurple-50 px-3 py-1.5 text-sm text-navy-500 border border-[color:var(--sh-gray-200)]",
         className
       )}
     >
       <span className="font-medium">{label}</span>
-      {value && <span className="text-slate-600">{value}</span>}
+      {value && <span className="text-navy-500">{value}</span>}
       {removable && (
         <button
           type="button"
           onClick={onRemove}
-          className="ml-1 inline-flex items-center justify-center rounded-full p-0.5 hover:bg-slate-200 transition-colors"
+          className="ml-1 inline-flex items-center justify-center rounded-full p-0.5 hover:bg-[color:var(--sh-gray-200)] transition-colors"
           aria-label={`Remove ${label} filter`}
         >
-          <span className="text-slate-600 font-semibold text-sm leading-none">×</span>
+          <span className="text-navy-500 font-semibold text-sm leading-none">×</span>
         </button>
       )}
     </div>

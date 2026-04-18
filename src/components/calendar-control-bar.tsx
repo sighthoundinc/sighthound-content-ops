@@ -117,24 +117,24 @@ export function CalendarControlBar({
   return (
     <section
       className={cn(
-        "flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2",
+        "flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-2",
         className
       )}
     >
       {showPeriodLabel || mode === "week" ? (
-        <p className="text-sm font-semibold text-slate-800 tabular-nums">{periodLabel}</p>
+        <p className="text-sm font-semibold text-ink tabular-nums">{periodLabel}</p>
       ) : (
         <span aria-hidden className="hidden sm:inline-block" />
       )}
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-        <div className="inline-flex items-center rounded-md border border-slate-300 bg-white p-0.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="inline-flex items-center rounded-md border border-[color:var(--sh-gray-200)] bg-white p-0.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <Button
             type="button"
             variant="ghost"
             size="md"
             onClick={onPrev}
             aria-label={mode === "month" ? "Previous month" : "Previous week"}
-            className="rounded-md px-2.5 text-slate-600 hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+            className="rounded-md px-2.5 text-navy-500 hover:bg-blurple-50 active:bg-[color:var(--sh-gray-200)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
           >
             <span className="inline-flex items-center gap-1">
               <ChevronLeftIcon boxClassName="h-4 w-4" size={14} />
@@ -147,7 +147,7 @@ export function CalendarControlBar({
             size="md"
             onClick={onToday}
             aria-label="Go to today"
-            className="rounded-md px-3 shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+            className="rounded-md px-3 shadow-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
           >
             Today
           </Button>
@@ -157,7 +157,7 @@ export function CalendarControlBar({
             size="md"
             onClick={onNext}
             aria-label={mode === "month" ? "Next month" : "Next week"}
-            className="rounded-md px-2.5 text-slate-600 hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+            className="rounded-md px-2.5 text-navy-500 hover:bg-blurple-50 active:bg-[color:var(--sh-gray-200)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
           >
             <span className="inline-flex items-center gap-1">
               Next
@@ -168,7 +168,7 @@ export function CalendarControlBar({
         <div className="relative" ref={popoverRef}>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:bg-slate-50 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-ink shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:bg-blurple-50 active:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
             aria-expanded={isMonthPopoverOpen}
             aria-haspopup="dialog"
             aria-label="Jump to month"
@@ -176,15 +176,15 @@ export function CalendarControlBar({
               setIsMonthPopoverOpen((previous) => !previous);
             }}
           >
-            <CalendarIcon boxClassName="h-4 w-4" size={14} className="text-slate-500" />
+            <CalendarIcon boxClassName="h-4 w-4" size={14} className="text-navy-500" />
             <span>{monthPickerLabel}</span>
           </button>
           {isMonthPopoverOpen ? (
-            <div className="absolute right-0 top-full z-30 mt-2 w-60 rounded-md border border-slate-200 bg-white p-3 shadow-lg">
+            <div className="absolute right-0 top-full z-30 mt-2 w-60 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-lg">
               <div className="mb-2 flex items-center justify-between">
                 <button
                   type="button"
-                  className="rounded-md border border-slate-200 bg-white p-1 text-slate-600 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                   aria-label="Previous year"
                   onClick={() => {
                     setMonthPickerYear((previous) => previous - 1);
@@ -192,10 +192,10 @@ export function CalendarControlBar({
                 >
                   <ChevronLeftIcon boxClassName="h-4 w-4" size={14} />
                 </button>
-                <p className="text-sm font-semibold text-slate-800 tabular-nums">{monthPickerYear}</p>
+                <p className="text-sm font-semibold text-ink tabular-nums">{monthPickerYear}</p>
                 <button
                   type="button"
-                  className="rounded-md border border-slate-200 bg-white p-1 text-slate-600 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                   aria-label="Next year"
                   onClick={() => {
                     setMonthPickerYear((previous) => previous + 1);
@@ -215,10 +215,10 @@ export function CalendarControlBar({
                       key={monthLabel}
                       type="button"
                       className={cn(
-                        "rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1",
+                        "rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1",
                         isActive
-                          ? "bg-slate-900 text-white"
-                          : "text-slate-700 hover:bg-slate-100 active:bg-slate-200"
+                          ? "bg-ink text-white"
+                          : "text-navy-500 hover:bg-blurple-50 active:bg-[color:var(--sh-gray-200)]"
                       )}
                       onClick={() => {
                         onMonthInputChange(monthValue);
@@ -234,7 +234,7 @@ export function CalendarControlBar({
           ) : null}
         </div>
         {todayChipLabel ? (
-          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+          <span className="inline-flex items-center rounded-full border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2.5 py-1 text-xs font-medium text-navy-500">
             Today · {todayChipLabel}
           </span>
         ) : null}

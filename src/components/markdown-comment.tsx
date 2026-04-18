@@ -31,7 +31,7 @@ export function MarkdownComment({ content }: MarkdownCommentProps) {
                 .split("\n")
                 .filter((line) => line.trim().match(/^[-*•]\s/))
                 .map((line, lidx) => (
-                  <li key={lidx} className="text-slate-800">
+                  <li key={lidx} className="text-ink">
                     <MarkdownInline
                       text={line.replace(/^[-*•]\s+/, "").trim()}
                     />
@@ -47,13 +47,13 @@ export function MarkdownComment({ content }: MarkdownCommentProps) {
           const level = headingMatch[1].length;
           const text = headingMatch[2];
           const headingClasses = {
-            1: "text-base font-bold text-slate-900",
-            2: "text-sm font-semibold text-slate-900",
-            3: "text-sm font-semibold text-slate-800",
-            4: "text-sm font-medium text-slate-800",
-            5: "text-xs font-medium text-slate-700",
-            6: "text-xs font-medium text-slate-600",
-          }[level] || "text-sm font-semibold text-slate-900";
+            1: "text-base font-bold text-ink",
+            2: "text-sm font-semibold text-ink",
+            3: "text-sm font-semibold text-ink",
+            4: "text-sm font-medium text-ink",
+            5: "text-xs font-medium text-navy-500",
+            6: "text-xs font-medium text-navy-500",
+          }[level] || "text-sm font-semibold text-ink";
 
           return (
             <div key={idx} className={headingClasses}>
@@ -64,7 +64,7 @@ export function MarkdownComment({ content }: MarkdownCommentProps) {
 
         // Regular paragraph
         return (
-          <p key={idx} className="text-slate-800">
+          <p key={idx} className="text-ink">
             <MarkdownInline text={para.trim()} />
           </p>
         );
@@ -117,7 +117,7 @@ function MarkdownInline({ text }: { text: string }) {
       parts.push(
         <code
           key={`code-${match.index}`}
-          className="rounded-sm bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700"
+          className="rounded-sm bg-blurple-50 px-1.5 py-0.5 font-mono text-xs text-navy-500"
         >
           {match[3]}
         </code>
@@ -130,7 +130,7 @@ function MarkdownInline({ text }: { text: string }) {
           href={match[5]}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 underline hover:text-blue-700"
+          className="text-brand underline hover:text-blurple-700"
         >
           {match[4]}
         </a>

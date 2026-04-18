@@ -123,7 +123,7 @@ export function NameResolutionModal({
           </div>
           <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-500 transition-all duration-300"
+              className="h-full bg-brand transition-all duration-300"
               style={{ width: `${totalCount > 0 ? (resolvedCount / totalCount) * 100 : 0}%` }}
             />
           </div>
@@ -252,7 +252,7 @@ function NameResolutionItem({
         onClick={onCreateNew}
         className={`w-full px-3 py-2 text-sm rounded border transition-colors ${
           isCreateNewSelected
-            ? "bg-blue-50 border-blue-300 text-blue-900"
+            ? "bg-blurple-50 border-blurple-300 text-blurple-800"
             : "border-gray-300 text-gray-700 hover:border-gray-400"
         }`}
       >
@@ -302,7 +302,7 @@ function CandidateButton({
       onClick={onClick}
       className={`w-full px-3 py-2 text-left rounded border transition-colors ${
         isSelected
-          ? "bg-blue-50 border-blue-300"
+          ? "bg-blurple-50 border-blurple-300"
           : isBestMatch
             ? "bg-green-50 border-green-200"
             : "border-gray-300 hover:border-gray-400"
@@ -314,7 +314,7 @@ function CandidateButton({
             <span className="font-medium text-gray-900">{candidate.full_name}</span>
             {isBestMatch && <span className="text-xs font-semibold text-green-700">★ Recommended</span>}
             {isSelected && (
-              <span className="inline-flex text-blue-700">
+              <span className="inline-flex text-blurple-700">
                 <SuccessIcon boxClassName="h-4 w-4" size={13} />
               </span>
             )}

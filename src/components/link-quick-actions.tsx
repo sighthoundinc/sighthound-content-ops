@@ -27,7 +27,7 @@ export function LinkQuickActions({
 
   return (
     <div className={cn("space-y-1", className)}>
-      <p className="truncate text-xs text-slate-500" title={trimmedHref || "No link added"}>
+      <p className="truncate text-xs text-navy-500" title={trimmedHref || "No link added"}>
         {trimmedHref || "No link added"}
       </p>
       <div className="flex flex-wrap items-center gap-1">

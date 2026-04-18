@@ -47,27 +47,27 @@ export function EmptyState({
     <div
       role="status"
       className={cn(
-        "flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-200 bg-white px-6 py-10 text-center",
+        "flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[color:var(--sh-gray-200)] bg-white px-6 py-10 text-center",
         className
       )}
     >
       <AppIcon
         name={icon}
-        className="text-slate-400"
-        boxClassName="h-10 w-10 rounded-full bg-slate-50"
+        className="text-navy-500/60"
+        boxClassName="h-10 w-10 rounded-full bg-[color:var(--sh-gray)]"
         size={20}
       />
       <div className="flex flex-col gap-1">
-        <p className="subsection-label text-slate-900">{title}</p>
+        <p className="subsection-label text-ink">{title}</p>
         {description ? (
-          <p className="body-text max-w-md text-slate-600">{description}</p>
+          <p className="body-text max-w-md text-navy-500">{description}</p>
         ) : null}
       </div>
       {action ? (
         action.href ? (
           <Link
             href={action.href}
-            className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             {action.label}
           </Link>
@@ -75,7 +75,7 @@ export function EmptyState({
           <button
             type="button"
             onClick={action.onClick}
-            className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             {action.label}
           </button>
@@ -84,7 +84,7 @@ export function EmptyState({
       {secondary ? (
         <Link
           href={secondary.href}
-          className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+          className="text-xs text-navy-500 underline-offset-2 hover:text-navy-500 hover:underline"
         >
           {secondary.label}
         </Link>

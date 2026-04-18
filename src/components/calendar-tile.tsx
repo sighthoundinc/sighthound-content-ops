@@ -42,28 +42,28 @@ export function CalendarTile({
   return (
     <article
       className={cn(
-        "relative flex h-40 flex-col rounded-xl border border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/55 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
-        !isCurrentMonth && "border-slate-200/70 bg-slate-50/75",
+        "relative flex h-40 flex-col rounded-xl border border-[color:var(--sh-gray-200)]/90 bg-gradient-to-b from-white via-white to-[color:var(--sh-gray)]/55 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
+        !isCurrentMonth && "border-[color:var(--sh-gray-200)]/70 bg-[color:var(--sh-gray)]/75",
         isToday &&
-          "border-indigo-400 bg-indigo-50/80 shadow-[0_0_0_1px_rgba(79,70,229,0.24),0_14px_24px_-16px_rgba(79,70,229,0.5)]",
-        isFocused && "ring-2 ring-indigo-500 ring-offset-2 ring-offset-white",
+          "border-brand bg-blurple-50/80 shadow-[0_0_0_1px_rgba(79,70,229,0.24),0_14px_24px_-16px_rgba(79,70,229,0.5)]",
+        isFocused && "ring-2 ring-brand ring-offset-2 ring-offset-white",
         todayContainerClassName && isToday && todayContainerClassName,
         className,
       )}
     >
       <div
         className={cn(
-          "flex items-center justify-between gap-2 border-b border-slate-200/80 px-3 py-2",
+          "flex items-center justify-between gap-2 border-b border-[color:var(--sh-gray-200)]/80 px-3 py-2",
           headerClassName,
         )}
       >
         <div className="inline-flex items-center gap-1.5">
           <p
             className={cn(
-              "text-sm font-semibold text-slate-900",
-              !isCurrentMonth && "text-slate-400",
-              !isToday && isCurrentMonth && "text-slate-900",
-              isToday && "text-indigo-700",
+              "text-sm font-semibold text-ink",
+              !isCurrentMonth && "text-navy-500/60",
+              !isToday && isCurrentMonth && "text-ink",
+              isToday && "text-blurple-700",
               isToday && todayDayLabelClassName,
               isCurrentMonth &&
                 !isToday &&
@@ -79,7 +79,7 @@ export function CalendarTile({
           {hasEvents ? (
             <span
               aria-hidden
-              className="h-1.5 w-1.5 rounded-full bg-indigo-500"
+              className="h-1.5 w-1.5 rounded-full bg-brand"
             />
           ) : null}
         </div>

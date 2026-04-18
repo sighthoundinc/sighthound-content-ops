@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Lexend, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/providers/auth-provider";
 import { AlertsProvider } from "@/providers/alerts-provider";
@@ -9,12 +9,14 @@ import { CommandPalette } from "@/components/command-palette";
 import { GlobalQuickCreate } from "@/components/global-quick-create";
 import { AIFloatingAssistant } from "@/components/ai/ai-floating-assistant";
 
-// App sans: Inter (unchanged). Lexend is defined as the brand-spec sans in
-// design-system/colors_and_type.css but the app retains Inter per Phase-1
-// decision (see design-system/MIGRATION_AUDIT.md §11.1). Re-evaluate later.
-const interSans = Inter({
-  variable: "--font-inter-sans",
+// Sighthound Content Relay primary sans: Lexend (final decision, Phase 1).
+// Weights 300/400/500/600/700. Exposed as --font-lexend-sans.
+// globals.css aliases --font-inter-sans to the same loader result until
+// Phase 5 cleanup so any in-flight references keep resolving.
+const lexendSans = Lexend({
+  variable: "--font-lexend-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -37,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${interSans.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${lexendSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <AlertsProvider>
           <NotificationsProvider>

@@ -19,6 +19,7 @@ import {
   TableSkeletonRow,
 } from "@/components/skeleton";
 import { Tooltip } from "@/components/tooltip";
+import { TYPOGRAPHY } from "@/lib/typography";
 
 import { DetailDrawerPreview } from "./detail-drawer-preview";
 
@@ -498,6 +499,86 @@ export default function DesignSystemPreviewPage() {
                 <Button variant="destructive" disabled>
                   Destructive disabled
                 </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---- Phase 4.1: typography system ---- */}
+        <section className="mb-14">
+          <SectionTitle>
+            Phase 4.1 — typography system
+          </SectionTitle>
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--sh-navy-500)",
+              marginBottom: 12,
+              maxWidth: 640,
+            }}
+          >
+            Eight <code>@apply</code> utility classes in <code>globals.css</code>
+            and twenty <code>TYPOGRAPHY.*</code> constants in
+            <code>src/lib/typography.ts</code> have moved from
+            <code>text-slate-*</code> to Content Relay tokens
+            (<code>text-ink</code>, <code>text-navy-500</code>,
+            <code>text-navy-500/60</code>,
+            <code>text-brand</code>). Sizes/weights unchanged
+            (14px body / 400 weight).
+          </p>
+
+          <div className="grid gap-8 md:grid-cols-2">
+            <div>
+              <Tag>globals.css utility classes</Tag>
+              <div className="grid gap-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-surface p-4">
+                <div className="page-title">.page-title — page heading</div>
+                <div className="section-title">.section-title — section heading</div>
+                <div className="subsection-label">.subsection-label — minor heading</div>
+                <div className="table-header-text">.table-header-text — column label</div>
+                <div className="body-text">
+                  .body-text — default paragraph at 14/400 renders on
+                  <code> text-ink</code>.
+                </div>
+                <div className="text-secondary text-sm">.text-secondary — mid-weight secondary</div>
+                <div className="meta-text">.meta-text — timestamps &amp; captions</div>
+                <div className="disabled-text">.disabled-text — locked / muted</div>
+                <div className="monospace-technical">
+                  .monospace-technical — alpr_plus-42
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Tag>TYPOGRAPHY.* constants</Tag>
+              <div className="grid gap-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-surface p-4">
+                <div className={TYPOGRAPHY.PAGE_TITLE}>PAGE_TITLE</div>
+                <div className={TYPOGRAPHY.SECTION_TITLE}>SECTION_TITLE</div>
+                <div className={TYPOGRAPHY.CARD_TITLE}>CARD_TITLE</div>
+                <div className={TYPOGRAPHY.FORM_LABEL}>FORM_LABEL</div>
+                <div className={TYPOGRAPHY.BODY}>
+                  BODY — paragraph copy on <code>text-ink</code>.
+                </div>
+                <div className={TYPOGRAPHY.BODY_MUTED}>BODY_MUTED — secondary paragraph on text-navy-500.</div>
+                <div className={TYPOGRAPHY.META}>META — meta line</div>
+                <div className={TYPOGRAPHY.DISABLED}>DISABLED — locked field helper</div>
+                <div className={TYPOGRAPHY.MONOSPACE_TECHNICAL}>
+                  MONOSPACE_TECHNICAL — POST /api/blogs/[id]
+                </div>
+                <div className={TYPOGRAPHY.BUTTON_LABEL}>BUTTON_LABEL</div>
+                <div className={TYPOGRAPHY.BADGE}>BADGE</div>
+                <a href="#" className={TYPOGRAPHY.LINK}>
+                  LINK — brand Blurple underline
+                </a>
+                <div className={TYPOGRAPHY.FORM_HELPER}>
+                  FORM_HELPER — hint text below a field
+                </div>
+                <div className={TYPOGRAPHY.CAPTION}>CAPTION — figure caption</div>
+                <div className={TYPOGRAPHY.TABLE_HEADER}>TABLE_HEADER</div>
+                <div className={TYPOGRAPHY.NOTIFICATION}>
+                  NOTIFICATION — new assignment
+                </div>
+                <div className={TYPOGRAPHY.LIST_ITEM}>LIST_ITEM — compact list row</div>
+                <div className={TYPOGRAPHY.TOAST}>TOAST — transient message</div>
               </div>
             </div>
           </div>

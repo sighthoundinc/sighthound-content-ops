@@ -575,3 +575,67 @@ All real shared primitives in this codebase have been migrated to Content Relay 
 - `design-system/uploads/*.pdf` Git LFS decision.
 
 **Phase 4 preview** (per original user plan): migrate page-level layouts — global nav/header, footer, typography defaults (swap `@apply text-slate-*` → Content Relay), and page-level marketing/app screens (login, dashboard hero, etc.). Phase 5 is cleanup (remove Inter fallback alias, delete zombie files, grep for stragglers).
+
+---
+
+## 16. Phase 4 — page-level layouts + typography defaults
+
+Phase 4 migrates the app-level surfaces now that the primitives are brand-aligned. Scope per user direction:
+
+| # | Area | Approach |
+|---|---|---|
+| 4.1 | Typography system (`src/lib/typography.ts` + utility classes in `globals.css`) | Single PR — unblocks every page |
+| 4.2 | Global chrome (app-shell, dashboard-sidebar, sidebar footer, nav/header) | Sidebar stays white per §11.6; migrate slate borders/backgrounds/text only |
+| 4.3 | Login / landing (`src/app/login/*`, `src/app/page.tsx`) | Brand-showcase surface; Blurple CTAs (`size="cta"`), 16px body OK here, `--sh-gradient-brand` hero backgrounds |
+| 4.4 | Dashboard + list pages | 1 PR per page or 2–3 batched |
+| 4.5 | AI surfaces (`src/components/ai/*`) | Own PR; preserve violet/blue status chips (contract-locked); migrate chrome only |
+| 4.6 | Bespoke cards (ai-blocker-card, ai-quality-card, ai-next-steps-card, associated-blog-context-card) | In-place migration; no shared `<Card>` extracted |
+
+**Guardrails (still in force):**
+- Do NOT touch `src/lib/status.ts` (contract-locked pastel palette).
+- Body size stays 14px, body weight stays 400 app-wide (§§11.2–11.3). The 16px exception is reserved for `/login` and `/` marketing surfaces (4.3).
+- No component API changes. No refactor of unrelated code.
+- One PR per sub-phase.
+
+### Phase 4.1 — Typography system
+
+The typography system has two surfaces, both migrated in this PR:
+
+1. `src/app/globals.css` — eight `@apply`-driven utility classes previously hardcoded to `text-slate-*`. Consumed everywhere via `className="page-title"` / `className="body-text"` etc.
+2. `src/lib/typography.ts` — twenty `TYPOGRAPHY.*` string constants + the `buildTypography` default colour arg.
+
+Sizes and weights are unchanged (app density: 14px body / 400 weight). Only the colour tokens moved.
+
+**Token migration (utility classes in `globals.css`)**
+| Class | Old colour | New token |
+|---|---|---|
+| `.page-title`, `.section-title`, `.subsection-label` | `text-slate-900` | `text-ink` |
+| `.body-text` | `text-slate-800` | `text-ink` |
+| `.table-header-text`, `.meta-text` | `text-slate-600` | `text-navy-500` |
+| `.text-secondary` | `text-slate-700` | `text-navy-500` |
+| `.disabled-text` | `text-slate-400` | `text-navy-500/60` (navy-500 at 60% alpha) |
+| `.monospace-technical`, `.tabular-nums` | no colour | **unchanged** |
+
+**Token migration (`TYPOGRAPHY.*` constants)**
+| Constant | Old colour | New token |
+|---|---|---|
+| `PAGE_TITLE`, `SECTION_TITLE`, `SUBSECTION_LABEL`, `BUTTON_LABEL`, `FORM_LABEL`, `CARD_TITLE` | `text-slate-900` | `text-ink` |
+| `BODY`, `LIST_ITEM`, `NOTIFICATION`, `TOAST` | `text-slate-800` | `text-ink` |
+| `BADGE`, `MONOSPACE_TECHNICAL` | `text-slate-700` | `text-navy-500` |
+| `BODY_MUTED`, `TABLE_HEADER`, `META`, `FORM_HELPER`, `CAPTION` | `text-slate-600` | `text-navy-500` |
+| `DISABLED` | `text-slate-400` | `text-navy-500/60` |
+| `LINK` | `text-blue-600` | `text-brand` (Strategy B) |
+| `buildTypography` default `color` | `text-slate-800` | `text-ink` |
+
+**On the `/60` opacity notation**: Tailwind v4 supports the `/alpha` modifier on any colour utility including Content Relay tokens registered in `@theme inline`. `text-navy-500/60` resolves to `color: color-mix(in oklab, var(--color-navy-500) 60%, transparent)`. `@apply text-navy-500/60` inside `globals.css` works the same way. This replaces the previous `text-slate-400` (a flat colour) with a translucent navy — the disabled text still sits visually beneath the meta tone, which is the desired hierarchy.
+
+**Deliberately unchanged**
+- Text sizes (`text-2xl` / `text-lg` / `text-base` / `text-sm` / `text-xs`), font weights (`font-semibold` / `font-medium` / `font-normal`), line heights, and tracking.
+- `.monospace-technical` (no colour) and `.tabular-nums` (no colour) utility classes.
+- `.interactive-link:hover` still uses `#0f172a` (slate-900). Deferred per earlier queue — will be rolled into a small CSS-primitive cleanup PR.
+
+**Cross-app visual impact**: every surface that consumes `.page-title` / `.body-text` / `.meta-text` etc. or `TYPOGRAPHY.*` constants — which is most of the app — now renders text in Sighthound navy (`#1a1d38`) instead of Tailwind slate-900 (`#0f172a`). Meta text shifts from slate-600 (`#475569`) to navy-500 (`#4b4f73`). Links shift from blue-600 to Blurple.
+
+**Preview smoke test**: `/design-system-preview` → new “Phase 4.1 — typography system” section renders a two-column grid: utility classes on the left, every `TYPOGRAPHY.*` constant on the right, so the migration is visually verifiable in isolation before touching any page.
+
+**Caller compatibility**: no API surface changed. Constant names and utility class names are stable. `npx tsc --noEmit` → exit 0.

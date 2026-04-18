@@ -162,45 +162,49 @@
   --shadow-brand-focus: var(--shadow-brand-focus);
 }
 
-/* Typography Scale - Modern Minimalist */
-/* Page titles (h1): text-2xl, font-semibold, leading-snug, text-slate-900, letter-spacing tighter */
+/* Typography Scale — Sighthound Content Relay (Phase 4.1).
+   Sizes/weights kept at app density per MIGRATION_AUDIT §§11.2–11.3.
+   Colour tokens: text-ink (navy) for body/headings, text-navy-500 for
+   meta/secondary, text-navy-500/60 for disabled, text-brand for links. */
+
+/* Page titles (h1) */
 .page-title {
-  @apply text-2xl font-semibold leading-snug text-slate-900 tracking-tight;
+  @apply text-2xl font-semibold leading-snug text-ink tracking-tight;
 }
 
-/* Section titles (h2): text-lg, font-semibold, leading-snug, text-slate-900 */
+/* Section titles (h2) */
 .section-title {
-  @apply text-lg font-semibold leading-snug text-slate-900 tracking-tight;
+  @apply text-lg font-semibold leading-snug text-ink tracking-tight;
 }
 
-/* Subsection labels (h3): text-base, font-semibold, leading-6, text-slate-900 */
+/* Subsection labels (h3) */
 .subsection-label {
-  @apply text-base font-semibold leading-6 text-slate-900;
+  @apply text-base font-semibold leading-6 text-ink;
 }
 
-/* Table column headers: text-xs, font-semibold, leading-4, tracking-normal, text-slate-600 */
+/* Table column headers */
 .table-header-text {
-  @apply text-xs font-semibold leading-4 tracking-normal text-slate-600;
+  @apply text-xs font-semibold leading-4 tracking-normal text-navy-500;
 }
 
-/* Body text (default): text-sm, font-normal, leading-6, text-slate-800 */
+/* Body text (default) */
 .body-text {
-  @apply text-sm font-normal leading-6 text-slate-800;
+  @apply text-sm font-normal leading-6 text-ink;
 }
 
-/* Meta text: text-xs, font-normal, leading-4, text-slate-600 */
+/* Meta text */
 .meta-text {
-  @apply text-xs font-normal leading-4 text-slate-600;
+  @apply text-xs font-normal leading-4 text-navy-500;
 }
 
-/* Disabled/muted text: text-xs, font-normal, leading-4, text-slate-400 */
+/* Disabled / muted text (navy-500 at 60% alpha) */
 .disabled-text {
-  @apply text-xs font-normal leading-4 text-slate-400;
+  @apply text-xs font-normal leading-4 text-navy-500/60;
 }
 
-/* Secondary text: text-slate-700 */
+/* Secondary text */
 .text-secondary {
-  @apply text-slate-700;
+  @apply text-navy-500;
 }
 
 /* Monospace for technical values (IDs, slugs, codes): font-mono, text-xs */

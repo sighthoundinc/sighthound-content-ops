@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AppIcon } from "@/lib/icons";
+import { AppIcon, InfoIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -64,7 +64,7 @@ export function BasedOnPanel({
         aria-expanded={isOpen}
       >
         <span className="inline-flex items-center gap-1.5">
-          <AppIcon name="info" boxClassName="h-3.5 w-3.5" size={12} />
+          <InfoIcon boxClassName="h-3.5 w-3.5" size={12} />
           Based on
           <span className="text-slate-500">
             · {facts.length} facts{links.length > 0 ? ` · ${links.length} links` : ""}

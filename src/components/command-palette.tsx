@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import type { Command } from "@/lib/command-palette-config";
-import { AppIcon } from "@/lib/icons";
+import { AppIcon, SearchIcon } from "@/lib/icons";
 
 export function CommandPalette() {
   const {
@@ -72,12 +72,9 @@ export function CommandPalette() {
           {/* Search Input */}
           <div className="border-b border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <AppIcon
-                name="search"
-                className="text-gray-400"
+              <SearchIcon className="text-gray-400"
                 boxClassName="h-5 w-5"
-                size={16}
-              />
+                size={16} />
               <input
                 ref={inputRef}
                 type="text"

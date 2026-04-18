@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AppIcon } from '@/lib/icons';
+import { SuccessIcon, WarningIcon } from "@/lib/icons";
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 export interface AIFeedbackContext {
@@ -72,7 +72,7 @@ export function AIFeedback({ context }: { context: AIFeedbackContext }) {
         aria-label="Helpful"
         title="Helpful"
       >
-        <AppIcon name="success" size={12} boxClassName="h-3.5 w-3.5" />
+        <SuccessIcon size={12} boxClassName="h-3.5 w-3.5" />
       </button>
       <button
         type="button"
@@ -82,7 +82,7 @@ export function AIFeedback({ context }: { context: AIFeedbackContext }) {
         aria-label="Not helpful"
         title="Not helpful"
       >
-        <AppIcon name="warning" size={12} boxClassName="h-3.5 w-3.5" />
+        <WarningIcon size={12} boxClassName="h-3.5 w-3.5" />
       </button>
       {error && <span className="text-rose-600">{error}</span>}
     </div>

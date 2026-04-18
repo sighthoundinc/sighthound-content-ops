@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 
-import { AppIcon } from "@/lib/icons";
+import { AppIcon, CheckIcon } from "@/lib/icons";
 
 import { fetchHomeData } from "./home-data";
 import { HomeBucketLink } from "./home-bucket-link";
@@ -169,12 +169,9 @@ export default async function HomePage() {
 
         {!hasAnyWork && !error && (
           <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center">
-            <AppIcon
-              name="check"
-              boxClassName="h-12 w-12 mx-auto"
+            <CheckIcon boxClassName="h-12 w-12 mx-auto"
               size={32}
-              className="text-emerald-600"
-            />
+              className="text-emerald-600" />
             <h2 className="mt-4 text-lg font-semibold text-slate-900">
               All work is on track
             </h2>

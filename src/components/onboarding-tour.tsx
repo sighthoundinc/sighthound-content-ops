@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AppIcon, type AppIconName } from "@/lib/icons";
+import { AppIcon, CloseIcon, type AppIconName } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -127,7 +127,7 @@ export function OnboardingTour({ initiallyOpen }: { initiallyOpen?: boolean }) {
           className="rounded p-1 text-slate-500 hover:bg-slate-100"
           aria-label="Skip onboarding"
         >
-          <AppIcon name="close" boxClassName="h-4 w-4" size={12} />
+          <CloseIcon boxClassName="h-4 w-4" size={12} />
         </button>
       </div>
       <div className="flex flex-col gap-3 px-4 py-3">

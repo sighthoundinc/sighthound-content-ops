@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useAIAssistant } from '@/providers/ai-assistant-provider';
-import { AppIcon } from '@/lib/icons';
+import { ArrowRightIcon } from "@/lib/icons";
 
 const WORKFLOW_PROMPTS = [
   'What should I do next?',
@@ -119,7 +119,7 @@ export function AIQuickPrompts() {
           className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-slate-900 text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Send"
         >
-          <AppIcon name="arrowRight" size={16} boxClassName="h-4 w-4" />
+          <ArrowRightIcon size={16} boxClassName="h-4 w-4" />
         </button>
       </form>
     </div>
@@ -152,12 +152,9 @@ function PromptGroup({
           >
             <span className="inline-flex w-full items-center justify-between gap-2">
               <span className="truncate">{prompt}</span>
-              <AppIcon
-                name="arrowRight"
-                size={12}
+              <ArrowRightIcon size={12}
                 boxClassName="h-3.5 w-3.5"
-                className="shrink-0 text-slate-400 transition-colors group-hover:text-slate-700"
-              />
+                className="shrink-0 text-slate-400 transition-colors group-hover:text-slate-700" />
             </span>
           </button>
         ))}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { NameResolutionResult, UserCandidate } from "@/lib/user-matching";
 import { Button } from "@/components/button";
-import { AppIcon } from "@/lib/icons";
+import { SuccessIcon } from "@/lib/icons";
 
 export type NameResolution = {
   action: "use_existing" | "create_new";
@@ -258,7 +258,7 @@ function NameResolutionItem({
       >
         {isCreateNewSelected && (
           <span className="mr-2 inline-flex">
-            <AppIcon name="success" boxClassName="h-4 w-4" size={13} />
+            <SuccessIcon boxClassName="h-4 w-4" size={13} />
           </span>
         )}
         Create New User
@@ -315,7 +315,7 @@ function CandidateButton({
             {isBestMatch && <span className="text-xs font-semibold text-green-700">★ Recommended</span>}
             {isSelected && (
               <span className="inline-flex text-blue-700">
-                <AppIcon name="success" boxClassName="h-4 w-4" size={13} />
+                <SuccessIcon boxClassName="h-4 w-4" size={13} />
               </span>
             )}
           </div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/utils";
-import { AppIcon } from "@/lib/icons";
+import { ExternalLinkIcon } from "@/lib/icons";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -118,7 +118,7 @@ export function AssociatedBlogContextCard({
           className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded hover:bg-slate-200 transition-colors"
           title="Open blog"
         >
-          <AppIcon name="externalLink" size={16} />
+          <ExternalLinkIcon size={16} />
         </Link>
       </div>
       <div className="mt-4 pt-4 border-t border-slate-200">

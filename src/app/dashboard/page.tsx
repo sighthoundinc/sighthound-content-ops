@@ -144,7 +144,7 @@ import {
   type MixedContentFilterValue,
 } from "@/lib/content-classification";
 import { getSiteBadgeClasses, getSiteLabel, getSiteShortLabel } from "@/lib/site";
-import { AppIcon } from "@/lib/icons";
+import { ChevronDownIcon, InfoIcon } from "@/lib/icons";
 import type {
   BlogSite,
   BlogHistoryRecord,
@@ -4005,12 +4005,9 @@ export default function DashboardPage() {
               aria-label={`${metricLabel} logic`}
               className={isActive ? "text-slate-200" : "text-slate-500"}
             >
-              <AppIcon
-                name="info"
-                size={14}
+              <InfoIcon size={14}
                 boxClassName="h-4 w-4"
-                className={isActive ? "text-slate-200" : "text-slate-500"}
-              />
+                className={isActive ? "text-slate-200" : "text-slate-500"} />
             </span>
           </Tooltip>
         </div>
@@ -4624,12 +4621,9 @@ export default function DashboardPage() {
                         <details className="relative">
                           <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
                             <span>Load View</span>
-                            <AppIcon
-                              name="chevronDown"
-                              boxClassName="h-3 w-3"
+                            <ChevronDownIcon boxClassName="h-3 w-3"
                               size={12}
-                              className="text-slate-500"
-                            />
+                              className="text-slate-500" />
                           </summary>
                           <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
                             {sortedSavedViews.length === 0 ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { AppIcon } from "@/lib/icons";
+import { AppIcon, CloseIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -87,7 +87,7 @@ export function SelectionCart({
         onClick={onClear}
         className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
       >
-        <AppIcon name="close" boxClassName="h-4 w-4" size={12} />
+        <CloseIcon boxClassName="h-4 w-4" size={12} />
         Clear
       </button>
     </div>

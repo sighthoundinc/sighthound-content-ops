@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAIAssistant } from '@/providers/ai-assistant-provider';
-import { AppIcon } from '@/lib/icons';
+import { SparkleIcon } from "@/lib/icons";
 
 export function AIFloatingButton() {
   const { togglePanel, isOpen } = useAIAssistant();
@@ -17,7 +17,7 @@ export function AIFloatingButton() {
         className="ai-floating-sparkle-button group fixed bottom-6 right-6 z-40 inline-flex h-11 items-center gap-2 rounded-full border border-slate-900 bg-slate-900 pl-3 pr-4 text-sm font-semibold text-white shadow-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 motion-reduce:transform-none motion-reduce:transition-none"
       >
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-indigo-200 transition-colors group-hover:bg-white/15 group-hover:text-indigo-100">
-          <AppIcon name="sparkle" size={14} boxClassName="h-4 w-4" />
+          <SparkleIcon size={14} boxClassName="h-4 w-4" />
         </span>
         <span className="tracking-tight">Ask AI</span>
       </button>

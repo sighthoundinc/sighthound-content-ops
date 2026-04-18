@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAIAssistant } from '@/providers/ai-assistant-provider';
 import { AIMessage } from './ai-message';
 import { AIQuickPrompts } from './ai-quick-prompts';
-import { AppIcon } from '@/lib/icons';
+import { ChevronLeftIcon, CloseIcon, SparkleIcon, WarningIcon } from "@/lib/icons";
 
 const LOADING_HINTS = [
   'Reading this page’s context…',
@@ -67,7 +67,7 @@ export function AIChatPanel() {
         <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-gradient-to-b from-white to-slate-50/50">
           <div className="flex items-center gap-2.5">
             <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-indigo-200 shadow-inner">
-              <AppIcon name="sparkle" size={14} boxClassName="h-4 w-4" />
+              <SparkleIcon size={14} boxClassName="h-4 w-4" />
               {isLoading && (
                 <span className="absolute inset-0 rounded-full ring-2 ring-indigo-300/70 animate-ping motion-reduce:hidden" />
               )}
@@ -86,7 +86,7 @@ export function AIChatPanel() {
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             aria-label="Close"
           >
-            <AppIcon name="close" size={16} />
+            <CloseIcon size={16} />
           </button>
         </header>
 
@@ -109,7 +109,7 @@ export function AIChatPanel() {
                 className="inline-flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                 aria-label="Ask another question"
               >
-                <AppIcon name="chevronLeft" size={12} boxClassName="h-3.5 w-3.5" />
+                <ChevronLeftIcon size={12} boxClassName="h-3.5 w-3.5" />
                 Ask another question
               </button>
             </div>
@@ -151,12 +151,9 @@ function LoadingState({ hint }: { hint: string }) {
       <div className="relative flex h-12 w-12 items-center justify-center">
         <span className="absolute inset-0 rounded-full bg-slate-900/5 animate-ping motion-reduce:hidden" />
         <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-indigo-200 shadow-sm">
-          <AppIcon
-            name="sparkle"
-            size={18}
+          <SparkleIcon size={18}
             boxClassName="h-5 w-5"
-            className="animate-pulse motion-reduce:animate-none"
-          />
+            className="animate-pulse motion-reduce:animate-none" />
         </span>
       </div>
       <p
@@ -183,12 +180,9 @@ function ErrorState({
   return (
     <div className="flex flex-col gap-3 animate-in fade-in-50 duration-200">
       <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3.5">
-        <AppIcon
-          name="warning"
-          size={16}
+        <WarningIcon size={16}
           boxClassName="h-4 w-4 mt-0.5"
-          className="text-rose-600 shrink-0"
-        />
+          className="text-rose-600 shrink-0" />
         <p className="text-sm text-rose-800 leading-5">{message}</p>
       </div>
       <div className="flex items-center gap-2">
@@ -215,7 +209,7 @@ function EmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center px-2">
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-700 text-indigo-200 shadow-sm">
-        <AppIcon name="sparkle" size={20} boxClassName="h-5 w-5" />
+        <SparkleIcon size={20} boxClassName="h-5 w-5" />
       </span>
       <h3 className="mt-4 text-sm font-semibold text-slate-900 tracking-tight">
         What can I help with?

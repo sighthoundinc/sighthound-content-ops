@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
-import { AppIcon } from "@/lib/icons";
+import { CloseIcon } from "@/lib/icons";
 import {
   TABLE_BASE_CLASS,
   TABLE_BODY_CLASS,
@@ -117,7 +117,7 @@ export function DataPageToolbar({
                   onSearchChange("");
                 }}
               >
-                <AppIcon name="close" boxClassName="h-4 w-4" size={13} />
+                <CloseIcon boxClassName="h-4 w-4" size={13} />
               </Button>
             ) : null}
           </label>
@@ -149,7 +149,7 @@ export function DataPageFilterPills({ pills }: { pills: FilterPill[] }) {
             className="px-1 py-0.5 text-slate-500 hover:text-slate-700"
             onClick={pill.onRemove}
           >
-            <AppIcon name="close" boxClassName="h-4 w-4" size={13} />
+            <CloseIcon boxClassName="h-4 w-4" size={13} />
           </Button>
         </span>
       ))}

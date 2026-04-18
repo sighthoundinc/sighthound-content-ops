@@ -7,7 +7,7 @@
 // React state (the decision is made at render time, not after a client-side
 // onError fires).
 
-import { AppIcon } from "@/lib/icons";
+import { CheckIcon } from "@/lib/icons";
 
 const LOGIN_HIGHLIGHTS = [
   "See upcoming and overdue publishing work in one calendar view",
@@ -43,12 +43,9 @@ export function LoginHero() {
       <ul className="mt-6 space-y-3">
         {LOGIN_HIGHLIGHTS.map((highlight) => (
           <li key={highlight} className="flex items-start gap-2 text-sm text-slate-700">
-            <AppIcon
-              name="check"
-              boxClassName="mt-0.5 h-4 w-4"
+            <CheckIcon boxClassName="mt-0.5 h-4 w-4"
               size={13}
-              className="text-slate-700"
-            />
+              className="text-slate-700" />
             <span>{highlight}</span>
           </li>
         ))}

@@ -40,7 +40,7 @@ import {
 import { getSiteShortLabel } from "@/lib/site";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AppIcon } from "@/lib/icons";
+import { CopyIcon, EditIcon, ExternalLinkIcon, FileIcon, LinkIcon, MoreIcon } from "@/lib/icons";
 import type {
   BlogRecord,
   BlogSite,
@@ -932,11 +932,8 @@ export default function BlogCardBoardPage() {
                                           })}
                                           aria-label="Open blog"
                                         >
-                                          <AppIcon
-                                            name="externalLink"
-                                            boxClassName="h-4 w-4"
-                                            size={13}
-                                          />
+                                          <ExternalLinkIcon boxClassName="h-4 w-4"
+                                            size={13} />
                                         </ExternalLink>
                                       ) : null}
                                       <Button
@@ -948,7 +945,7 @@ export default function BlogCardBoardPage() {
                                           void copyValue(blog.live_url ?? "", "Copied URL.");
                                         }}
                                       >
-                                        <AppIcon name="link" boxClassName="h-4 w-4" size={13} />
+                                        <LinkIcon boxClassName="h-4 w-4" size={13} />
                                       </Button>
                                       <Button
                                         type="button"
@@ -958,7 +955,7 @@ export default function BlogCardBoardPage() {
                                           void copyValue(blog.title, "Copied title.");
                                         }}
                                       >
-                                        <AppIcon name="copy" boxClassName="h-4 w-4" size={13} />
+                                        <CopyIcon boxClassName="h-4 w-4" size={13} />
                                       </Button>
                                     </>
                                   ) : (
@@ -971,7 +968,7 @@ export default function BlogCardBoardPage() {
                                         })}
                                         aria-label="Edit blog"
                                       >
-                                        <AppIcon name="edit" boxClassName="h-4 w-4" size={13} />
+                                        <EditIcon boxClassName="h-4 w-4" size={13} />
                                       </Link>
                                       {blog.google_doc_url ? (
                                         <ExternalLink
@@ -982,7 +979,7 @@ export default function BlogCardBoardPage() {
                                           })}
                                           aria-label="Open document"
                                         >
-                                          <AppIcon name="file" boxClassName="h-4 w-4" size={13} />
+                                          <FileIcon boxClassName="h-4 w-4" size={13} />
                                         </ExternalLink>
                                       ) : null}
                                       <Button
@@ -993,7 +990,7 @@ export default function BlogCardBoardPage() {
                                           void copyValue(blog.title, "Copied title.");
                                         }}
                                       >
-                                        <AppIcon name="copy" boxClassName="h-4 w-4" size={13} />
+                                        <CopyIcon boxClassName="h-4 w-4" size={13} />
                                       </Button>
                                       <Button
                                         type="button"
@@ -1003,7 +1000,7 @@ export default function BlogCardBoardPage() {
                                           void copyValue(blog.live_url ?? "", "Copied URL.");
                                         }}
                                       >
-                                        <AppIcon name="link" boxClassName="h-4 w-4" size={13} />
+                                        <LinkIcon boxClassName="h-4 w-4" size={13} />
                                       </Button>
                                       <Link
                                         href={`/blogs/${blog.id}`}
@@ -1013,7 +1010,7 @@ export default function BlogCardBoardPage() {
                                         })}
                                         aria-label="More options"
                                       >
-                                        <AppIcon name="more" boxClassName="h-4 w-4" size={13} />
+                                        <MoreIcon boxClassName="h-4 w-4" size={13} />
                                       </Link>
                                     </>
                                   )}

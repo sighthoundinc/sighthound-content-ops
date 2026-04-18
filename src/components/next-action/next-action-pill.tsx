@@ -1,6 +1,6 @@
 "use client";
 
-import { AppIcon } from "@/lib/icons";
+import { ArrowRightIcon } from "@/lib/icons";
 import type { NextActionDescriptor } from "@/lib/next-action";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +50,7 @@ export function NextActionPill({
     >
       <span className="h-2 w-2 rounded-full bg-emerald-400" />
       <span className="truncate">{label}</span>
-      <AppIcon name="arrowRight" boxClassName="h-3.5 w-3.5" size={12} />
+      <ArrowRightIcon boxClassName="h-3.5 w-3.5" size={12} />
     </button>
   );
 }

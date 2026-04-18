@@ -20,7 +20,7 @@ import {
   buildPresenceChannelKey,
   useRealtimePresence,
 } from "@/hooks/useRealtimePresence";
-import { AppIcon } from "@/lib/icons";
+import { SuccessIcon } from "@/lib/icons";
 import {
   getApiErrorMessage,
   isApiFailure,
@@ -2970,7 +2970,7 @@ export default function SocialPostEditorPage() {
                         }`}
                       >
                         {item.done ? (
-                          <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                          <SuccessIcon boxClassName="h-3.5 w-3.5" size={11} />
                         ) : (
                           <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
                         )}

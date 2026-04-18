@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { Skeleton } from "@/components/skeleton";
-import { AppIcon } from "@/lib/icons";
+import { AppIcon, ArrowRightIcon, TaskIcon } from "@/lib/icons";
 import { UI_VOCAB } from "@/lib/ui-vocab";
 import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
@@ -157,7 +157,7 @@ function InboxView() {
             href="/tasks"
             className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
           >
-            <AppIcon name="task" boxClassName="h-4 w-4" size={14} />
+            <TaskIcon boxClassName="h-4 w-4" size={14} />
             Open tasks
           </Link>
         </div>
@@ -249,12 +249,9 @@ function InboxView() {
                     {item.statusLabel}
                   </p>
                 </div>
-                <AppIcon
-                  name="arrowRight"
-                  boxClassName="h-4 w-4"
+                <ArrowRightIcon boxClassName="h-4 w-4"
                   size={12}
-                  className="text-slate-400"
-                />
+                  className="text-slate-400" />
               </Link>
             </li>
           ))}

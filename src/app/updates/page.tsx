@@ -16,7 +16,7 @@ import {
   isApiFailure,
   parseApiResponseJson,
 } from "@/lib/api-response";
-import { AppIcon } from "@/lib/icons";
+import { ChevronRightIcon } from "@/lib/icons";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useAuth } from "@/providers/auth-provider";
 import { useNotifications } from "@/providers/notifications-provider";
@@ -285,7 +285,7 @@ export default function UpdatesPage() {
                             className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
                           >
                             Open
-                            <AppIcon name="chevronRight" boxClassName="h-3 w-3" size={11} />
+                            <ChevronRightIcon boxClassName="h-3 w-3" size={11} />
                           </Link>
                         ) : null}
                         <Button

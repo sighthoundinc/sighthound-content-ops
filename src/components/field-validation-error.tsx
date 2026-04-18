@@ -1,4 +1,4 @@
-import { AppIcon } from '@/lib/icons';
+import { ErrorIcon } from "@/lib/icons";
 
 interface FieldValidationErrorProps {
   field: string;
@@ -20,11 +20,8 @@ export function FieldValidationError({
 
   return (
     <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 flex items-start gap-2">
-      <AppIcon
-        name="error"
-        boxClassName="h-5 w-5 flex-shrink-0 mt-0.5"
-        size={16}
-      />
+      <ErrorIcon boxClassName="h-5 w-5 flex-shrink-0 mt-0.5"
+        size={16} />
       <div className="flex-1">
         <strong>{field}:</strong>{' '}
         {message || 'This field is required before proceeding.'}

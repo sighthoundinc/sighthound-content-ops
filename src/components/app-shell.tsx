@@ -21,7 +21,7 @@ import {
 } from "@/lib/shortcuts";
 import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AppIcon, type AppIconName } from "@/lib/icons";
+import { AppIcon, BellIcon, ChevronDownIcon, ChevronRightIcon, SearchIcon, type AppIconName } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/tooltip";
 import { useAuth } from "@/providers/auth-provider";
@@ -661,7 +661,7 @@ export function AppShell({
                 window.dispatchEvent(new CustomEvent("command-palette:open"));
               }}
             >
-              <AppIcon name="search" boxClassName="h-4 w-4" size={12} />
+              <SearchIcon boxClassName="h-4 w-4" size={12} />
               <span className="hidden sm:inline">Search</span>
               <KbdShortcut>⌘K</KbdShortcut>
             </button>
@@ -680,7 +680,7 @@ export function AppShell({
                   setIsNotificationPanelOpen((previous) => !previous);
                 }}
               >
-                <AppIcon name="bell" boxClassName="h-5 w-5" size={16} />
+                <BellIcon boxClassName="h-5 w-5" size={16} />
                 {unreadCount > 0 ? (
                   <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     {unreadCount}
@@ -727,12 +727,9 @@ export function AppShell({
                             >
                               <div className="flex items-start gap-2">
                                 <span className="mt-0.5 inline-flex shrink-0">
-                                  <AppIcon
-                                    name="bell"
-                                    boxClassName="h-4 w-4"
+                                  <BellIcon boxClassName="h-4 w-4"
                                     size={14}
-                                    className="text-slate-600"
-                                  />
+                                    className="text-slate-600" />
                                 </span>
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-semibold text-slate-900">
@@ -745,12 +742,9 @@ export function AppShell({
                                     {formatNotificationAge(entry.createdAt)}
                                   </p>
                                 </div>
-                                <AppIcon
-                                  name="chevronDown"
-                                  boxClassName="h-3.5 w-3.5 mt-1"
+                                <ChevronDownIcon boxClassName="h-3.5 w-3.5 mt-1"
                                   size={12}
-                                  className="text-slate-400"
-                                />
+                                  className="text-slate-400" />
                               </div>
                             </button>
                           </li>
@@ -769,12 +763,9 @@ export function AppShell({
                             >
                               <div className="flex items-start gap-2">
                                 <span className="mt-0.5 inline-flex shrink-0">
-                                  <AppIcon
-                                    name="bell"
-                                    boxClassName="h-4 w-4"
+                                  <BellIcon boxClassName="h-4 w-4"
                                     size={14}
-                                    className="text-blue-600"
-                                  />
+                                    className="text-blue-600" />
                                 </span>
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-medium text-slate-900">
@@ -816,15 +807,12 @@ export function AppShell({
                   {profileInitials || "U"}
                 </span>
                 <span className="max-w-[160px] truncate">{profileDisplayName}</span>
-                <AppIcon
-                  name="chevronRight"
-                  boxClassName="h-4 w-4"
+                <ChevronRightIcon boxClassName="h-4 w-4"
                   size={12}
                   className={cn(
                     "text-slate-500 transition-transform",
                     isProfileMenuOpen ? "rotate-90" : null
-                  )}
-                />
+                  )} />
               </button>
               {isProfileMenuOpen ? (
                 <div

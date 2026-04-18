@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/button";
-import { AppIcon } from "@/lib/icons";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "@/lib/icons";
 import {
   SEGMENTED_CONTROL_CLASS,
   segmentedControlItemClass,
@@ -137,7 +137,7 @@ export function CalendarControlBar({
             className="rounded-md px-2.5 text-slate-600 hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
           >
             <span className="inline-flex items-center gap-1">
-              <AppIcon name="chevronLeft" boxClassName="h-4 w-4" size={14} />
+              <ChevronLeftIcon boxClassName="h-4 w-4" size={14} />
               Prev
             </span>
           </Button>
@@ -161,7 +161,7 @@ export function CalendarControlBar({
           >
             <span className="inline-flex items-center gap-1">
               Next
-              <AppIcon name="chevronRight" boxClassName="h-4 w-4" size={14} />
+              <ChevronRightIcon boxClassName="h-4 w-4" size={14} />
             </span>
           </Button>
         </div>
@@ -176,7 +176,7 @@ export function CalendarControlBar({
               setIsMonthPopoverOpen((previous) => !previous);
             }}
           >
-            <AppIcon name="calendar" boxClassName="h-4 w-4" size={14} className="text-slate-500" />
+            <CalendarIcon boxClassName="h-4 w-4" size={14} className="text-slate-500" />
             <span>{monthPickerLabel}</span>
           </button>
           {isMonthPopoverOpen ? (
@@ -190,7 +190,7 @@ export function CalendarControlBar({
                     setMonthPickerYear((previous) => previous - 1);
                   }}
                 >
-                  <AppIcon name="chevronLeft" boxClassName="h-4 w-4" size={14} />
+                  <ChevronLeftIcon boxClassName="h-4 w-4" size={14} />
                 </button>
                 <p className="text-sm font-semibold text-slate-800 tabular-nums">{monthPickerYear}</p>
                 <button
@@ -201,7 +201,7 @@ export function CalendarControlBar({
                     setMonthPickerYear((previous) => previous + 1);
                   }}
                 >
-                  <AppIcon name="chevronRight" boxClassName="h-4 w-4" size={14} />
+                  <ChevronRightIcon boxClassName="h-4 w-4" size={14} />
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-1">

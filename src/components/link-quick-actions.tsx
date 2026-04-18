@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { buttonClass } from "@/components/button";
 import { ExternalLink } from "@/components/external-link";
-import { AppIcon } from "@/lib/icons";
+import { AppIcon, ExternalLinkIcon } from "@/lib/icons";
 import { copyText, type CopySubject } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { useAlerts } from "@/providers/alerts-provider";
@@ -40,7 +40,7 @@ export function LinkQuickActions({
               className: "gap-1 no-underline",
             })}
           >
-            <AppIcon name="externalLink" boxClassName="h-4 w-4" size={13} />
+            <ExternalLinkIcon boxClassName="h-4 w-4" size={13} />
             Open
           </ExternalLink>
         ) : (
@@ -52,7 +52,7 @@ export function LinkQuickActions({
               className: "gap-1 cursor-not-allowed no-underline opacity-60",
             })}
           >
-            <AppIcon name="externalLink" boxClassName="h-4 w-4" size={13} />
+            <ExternalLinkIcon boxClassName="h-4 w-4" size={13} />
             Open
           </span>
         )}

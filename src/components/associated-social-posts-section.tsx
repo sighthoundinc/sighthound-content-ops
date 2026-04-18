@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/utils";
-import { AppIcon } from "@/lib/icons";
+import { ArrowRightIcon } from "@/lib/icons";
 import { useAuth } from "@/providers/auth-provider";
 
 interface SocialPost {
@@ -112,11 +112,8 @@ export function AssociatedSocialPostsSection({
                     </p>
                   )}
                 </div>
-                <AppIcon
-                  name="arrowRight"
-                  size={16}
-                  className="flex-shrink-0 text-slate-400 group-hover:text-slate-600"
-                />
+                <ArrowRightIcon size={16}
+                  className="flex-shrink-0 text-slate-400 group-hover:text-slate-600" />
               </div>
             </Link>
           ))

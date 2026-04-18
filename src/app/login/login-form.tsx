@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AppIcon } from "@/lib/icons";
+import { GoogleIcon, SlackIcon } from "@/lib/icons";
 import { useAlerts } from "@/providers/alerts-provider";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -142,7 +142,7 @@ export function LoginForm() {
           void handleGoogleSignIn();
         }}
       >
-        <AppIcon name="google" boxClassName="h-4 w-4" size={14} className="text-slate-700" />
+        <GoogleIcon boxClassName="h-4 w-4" size={14} className="text-slate-700" />
         Continue with Google
       </button>
 
@@ -153,7 +153,7 @@ export function LoginForm() {
           void handleSlackSignIn();
         }}
       >
-        <AppIcon name="slack" boxClassName="h-4 w-4" size={14} className="text-slate-700" />
+        <SlackIcon boxClassName="h-4 w-4" size={14} className="text-slate-700" />
         Continue with Slack
       </button>
 

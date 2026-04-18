@@ -1,7 +1,7 @@
 "use client";
 
 import { useAIAssistant } from "@/providers/ai-assistant-provider";
-import { AppIcon } from "@/lib/icons";
+import { SparkleIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -46,7 +46,7 @@ export function UnstickThisButton({
       )}
       title="Ask AI for a checklist of what's blocking this record"
     >
-      <AppIcon name="sparkle" boxClassName="h-3.5 w-3.5" size={12} />
+      <SparkleIcon boxClassName="h-3.5 w-3.5" size={12} />
       {isLoading ? "Thinking…" : label}
     </button>
   );

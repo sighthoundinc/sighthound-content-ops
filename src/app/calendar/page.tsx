@@ -61,7 +61,7 @@ import {
 } from "@/lib/status";
 import { getSiteLabel, getSiteShortLabel } from "@/lib/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AppIcon } from "@/lib/icons";
+import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, MegaphoneIcon, SuccessIcon, WarningIcon, WritingIcon } from "@/lib/icons";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
   getTablePageCount,
@@ -392,12 +392,9 @@ function CalendarBlogEventCard({
       <span className={`self-stretch w-1 rounded-full ${getBlogBarClass(blog.site)}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1 text-[11px] text-slate-600">
-          <AppIcon
-            name="writing"
-            boxClassName="h-4 w-4"
+          <WritingIcon boxClassName="h-4 w-4"
             size={12}
-            className="text-slate-500"
-          />
+            className="text-slate-500" />
           <span className="font-semibold">{getSiteShortLabel(blog.site)} Blog</span>
         </div>
         <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
@@ -435,12 +432,9 @@ function CalendarSocialEventCard({
       <span className={`self-stretch w-1 rounded-full ${getSocialBarClass(socialSite)}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1 text-[11px] text-slate-600">
-          <AppIcon
-            name="megaphone"
-            boxClassName="h-4 w-4"
+          <MegaphoneIcon boxClassName="h-4 w-4"
             size={12}
-            className="text-slate-500"
-          />
+            className="text-slate-500" />
           <span className="font-semibold">{getSiteShortLabel(socialSite)} Social</span>
         </div>
         <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
@@ -1503,12 +1497,9 @@ export default function CalendarPage() {
                 className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
                 title="Export calendar to iCalendar format for Outlook, Apple Calendar, or Google Calendar"
               >
-                <AppIcon
-                  name="download"
-                  boxClassName="h-4 w-4"
+                <DownloadIcon boxClassName="h-4 w-4"
                   size={14}
-                  className="text-slate-600"
-                />
+                  className="text-slate-600" />
                 <span>Export to Calendar</span>
               </button>
             }
@@ -1531,7 +1522,7 @@ export default function CalendarPage() {
                   className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
                   title="Previous"
                 >
-                  <AppIcon name="chevronLeft" boxClassName="h-4 w-4" size={14} />
+                  <ChevronLeftIcon boxClassName="h-4 w-4" size={14} />
                 </button>
                 <button
                   type="button"
@@ -1557,7 +1548,7 @@ export default function CalendarPage() {
                   className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
                   title="Next"
                 >
-                  <AppIcon name="chevronRight" boxClassName="h-4 w-4" size={14} />
+                  <ChevronRightIcon boxClassName="h-4 w-4" size={14} />
                 </button>
               </div>
 
@@ -1601,7 +1592,7 @@ export default function CalendarPage() {
                 >
                   <span className="inline-flex items-center gap-1">
                     {hasBlogsEnabled ? (
-                      <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                      <SuccessIcon boxClassName="h-3.5 w-3.5" size={11} />
                     ) : null}
                     Blogs
                   </span>
@@ -1621,7 +1612,7 @@ export default function CalendarPage() {
                 >
                   <span className="inline-flex items-center gap-1">
                     {hasSocialPostsEnabled ? (
-                      <AppIcon name="success" boxClassName="h-3.5 w-3.5" size={11} />
+                      <SuccessIcon boxClassName="h-3.5 w-3.5" size={11} />
                     ) : null}
                     Social Posts
                   </span>
@@ -2050,12 +2041,9 @@ export default function CalendarPage() {
                         className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
                         title="Export this month's overview as CSV"
                       >
-                        <AppIcon
-                          name="download"
-                          boxClassName="h-3.5 w-3.5"
+                        <DownloadIcon boxClassName="h-3.5 w-3.5"
                           size={12}
-                          className="text-slate-600"
-                        />
+                          className="text-slate-600" />
                         <span>Export CSV</span>
                       </button>
                     </div>
@@ -2191,14 +2179,11 @@ export default function CalendarPage() {
                             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                               Unscheduled Blogs ({noPublishDateBlogs.length})
                             </span>
-                            <AppIcon
-                              name="chevronRight"
-                              boxClassName="h-4 w-4"
+                            <ChevronRightIcon boxClassName="h-4 w-4"
                               size={14}
                               className={`text-slate-500 transition-transform ${
                                 isUnscheduledBlogsExpanded ? "rotate-90" : ""
-                              }`}
-                            />
+                              }`} />
                           </button>
                           {isUnscheduledBlogsExpanded ? (
                             <>
@@ -2269,14 +2254,11 @@ export default function CalendarPage() {
                             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                               Unscheduled Social Posts ({unscheduledSocialPosts.length})
                             </span>
-                            <AppIcon
-                              name="chevronRight"
-                              boxClassName="h-4 w-4"
+                            <ChevronRightIcon boxClassName="h-4 w-4"
                               size={14}
                               className={`text-slate-500 transition-transform ${
                                 isUnscheduledSocialPostsExpanded ? "rotate-90" : ""
-                              }`}
-                            />
+                              }`} />
                           </button>
                           {isUnscheduledSocialPostsExpanded ? (
                             <ul className="space-y-2">
@@ -2371,11 +2353,8 @@ export default function CalendarPage() {
                         activeBlog.publisher_status !== "completed";
                       return isOverdue ? (
                         <span className="inline-flex items-center justify-center gap-1 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700">
-                          <AppIcon
-                            name="warning"
-                            boxClassName="h-3.5 w-3.5"
-                            size={11}
-                          />
+                          <WarningIcon boxClassName="h-3.5 w-3.5"
+                            size={11} />
                           Overdue
                         </span>
                       ) : null;

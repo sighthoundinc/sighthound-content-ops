@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { AppIcon, type AppIconName } from "@/lib/icons";
+import { AppIcon, CloseIcon, type AppIconName } from "@/lib/icons";
 
 type AlertType = "saving" | "success" | "warning" | "error" | "info";
 
@@ -260,7 +260,7 @@ function AlertCard({
           onDismiss(item.id);
         }}
       >
-        <AppIcon name="close" boxClassName="h-4 w-4" />
+        <CloseIcon boxClassName="h-4 w-4" />
       </button>
     </div>
   );

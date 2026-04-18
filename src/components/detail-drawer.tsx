@@ -4,7 +4,7 @@ import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { buttonClass } from "@/components/button";
-import { AppIcon } from "@/lib/icons";
+import { AppIcon, ExternalLinkIcon } from "@/lib/icons";
 import { cn, isExternalHref } from "@/lib/utils";
 
 export const DETAIL_DRAWER_WIDTH_CLASS = "w-full max-w-[460px]";
@@ -218,7 +218,7 @@ export function DetailDrawerQuickAction({
           )}
         >
           <span>{label}</span>
-          <AppIcon name="externalLink" boxClassName="h-4 w-4" size={13} />
+          <ExternalLinkIcon boxClassName="h-4 w-4" size={13} />
         </span>
         {disabledReason ? (
           <p className="text-xs text-slate-500">{disabledReason}</p>
@@ -236,7 +236,7 @@ export function DetailDrawerQuickAction({
         className={cn(DETAIL_DRAWER_QUICK_ACTION_CLASS, "flex-1")}
       >
         <span>{label}</span>
-        <AppIcon name="externalLink" boxClassName="h-4 w-4" size={13} />
+        <ExternalLinkIcon boxClassName="h-4 w-4" size={13} />
       </Link>
       <button
         type="button"

@@ -36,10 +36,10 @@ export const SidebarToggle = forwardRef<HTMLButtonElement, SidebarToggleProps>(
         onClick={onToggle}
         aria-label={collapsed ? "Open sidebar" : "Close sidebar"}
         className={cn(
-          "group flex items-center justify-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset",
+          "group flex items-center justify-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
           collapsed
-            ? "w-full min-h-11 px-2 py-2 hover:bg-slate-50"
-            : "h-9 w-9 p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+            ? "w-full min-h-11 px-2 py-2 hover:bg-blurple-50"
+            : "h-9 w-9 p-2 text-navy-500 hover:bg-blurple-50 hover:text-ink"
         )}
       >
         <AppIcon
@@ -48,8 +48,8 @@ export const SidebarToggle = forwardRef<HTMLButtonElement, SidebarToggleProps>(
           boxClassName="h-4 w-4 shrink-0"
           className={cn(
             collapsed
-              ? "text-slate-400 group-hover:text-slate-600"
-              : "text-slate-500 group-hover:text-slate-700"
+              ? "text-navy-500/60 group-hover:text-navy-500"
+              : "text-navy-500 group-hover:text-navy-500"
           )}
         />
       </button>

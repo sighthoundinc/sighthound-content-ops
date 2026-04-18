@@ -123,21 +123,21 @@ export function DashboardSidebar({
           event.preventDefault();
           onWriterFilterToggle(!isWriterFilterOpen);
         }}
-        className="rounded-md border border-slate-200 bg-slate-50"
+        className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]"
       >
-        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-navy-500">
           Writing Filters
         </summary>
         {isWriterFilterOpen && (
-          <div className="space-y-1 border-t border-slate-200 p-2">
+          <div className="space-y-1 border-t border-[color:var(--sh-gray-200)] p-2">
             {writingItems.map((item) => (
               <button
                 key={item.key}
                 type="button"
                 className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition ${
                   activeQuickQueue === item.key
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-700 hover:bg-white"
+                    ? "bg-ink text-white"
+                    : "text-navy-500 hover:bg-white"
                 }`}
                 onClick={() => {
                   onApplyQuickQueueFilter(item.key);
@@ -157,21 +157,21 @@ export function DashboardSidebar({
           event.preventDefault();
           onPublisherFilterToggle(!isPublisherFilterOpen);
         }}
-        className="rounded-md border border-slate-200 bg-slate-50"
+        className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]"
       >
-        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-navy-500">
           Publishing Filters
         </summary>
         {isPublisherFilterOpen && (
-          <div className="space-y-1 border-t border-slate-200 p-2">
+          <div className="space-y-1 border-t border-[color:var(--sh-gray-200)] p-2">
             {publishingItems.map((item) => (
               <button
                 key={item.key}
                 type="button"
                 className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition ${
                   activeQuickQueue === item.key
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-700 hover:bg-white"
+                    ? "bg-ink text-white"
+                    : "text-navy-500 hover:bg-white"
                 }`}
                 onClick={() => {
                   onApplyQuickQueueFilter(item.key);
@@ -185,27 +185,27 @@ export function DashboardSidebar({
         )}
       </details>
 
-      <div className="rounded-md border border-slate-200 bg-slate-50 p-2">
-        <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      <div className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-2">
+        <p className="px-1 text-xs font-semibold uppercase tracking-wide text-navy-500">
           Recently Published
         </p>
         {recentlyPublished ? (
           <button
             type="button"
-            className="mt-2 block w-full rounded border border-slate-200 bg-white px-2 py-2 text-left hover:bg-slate-50"
+            className="mt-2 block w-full rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-2 text-left hover:bg-blurple-50"
             onClick={() => {
               onOpenBlog(recentlyPublished.id);
             }}
           >
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-navy-500">
               {publishedDateLabel ?? "—"} {siteIndicator ? `· ${siteIndicator}` : ""}
             </p>
-            <p className="mt-0.5 truncate text-xs font-medium text-slate-800">
+            <p className="mt-0.5 truncate text-xs font-medium text-ink">
               {recentlyPublished.title}
             </p>
           </button>
         ) : (
-          <p className="mt-2 px-1 text-xs text-slate-500">No recently published blogs.</p>
+          <p className="mt-2 px-1 text-xs text-navy-500">No recently published blogs.</p>
         )}
       </div>
     </div>

@@ -639,3 +639,62 @@ Sizes and weights are unchanged (app density: 14px body / 400 weight). Only the 
 **Preview smoke test**: `/design-system-preview` → new “Phase 4.1 — typography system” section renders a two-column grid: utility classes on the left, every `TYPOGRAPHY.*` constant on the right, so the migration is visually verifiable in isolation before touching any page.
 
 **Caller compatibility**: no API surface changed. Constant names and utility class names are stable. `npx tsc --noEmit` → exit 0.
+
+### Phase 4.2 — Global chrome
+
+Migrates the app-wide chrome shared across every page: `src/components/app-shell.tsx` (header / nav / sidebar / quick-create / shortcuts modals), `src/components/dashboard-sidebar.tsx` (writing / publishing filter drawer), `src/components/sidebar-toggle.tsx`, and `src/components/sidebar-version-footer.tsx`. Sidebar surface stays **white** per §11.6.
+
+**Approach**: mechanical `perl -pe` sweep across the four files with 18 boundary-aware substitutions, then targeted hand-edits for the 6 context-sensitive stragglers (accent indigo on quick-view banner + selected quick-create item, dashed slate-300 borders, avatar fallback background).
+
+**Mapping applied** (via sweep)
+| Before | After |
+|---|---|
+| `text-slate-900` / `-800` | `text-ink` |
+| `text-slate-700` / `-600` / `-500` | `text-navy-500` |
+| `text-slate-400` | `text-navy-500/60` |
+| `bg-slate-900` | `bg-ink` |
+| `hover:bg-slate-100` / `hover:bg-slate-50` / `group-hover:bg-slate-50` | `hover:bg-blurple-50` / `group-hover:bg-blurple-50` |
+| `bg-slate-50` | `bg-[color:var(--sh-gray)]` |
+| `bg-slate-100` | `bg-blurple-50` |
+| `bg-slate-200/70` | `bg-[color:var(--sh-gray-200)]/70` |
+| `border-slate-200` | `border-[color:var(--sh-gray-200)]` |
+| `hover:border-slate-300` | `hover:border-[color:var(--sh-gray-400)]` |
+| `border-slate-100` | `border-[color:var(--sh-gray)]` |
+| `ring-indigo-500` | `ring-brand` |
+| `text-blue-600` | `text-brand` |
+
+**Context-sensitive hand-edits in `app-shell.tsx`**
+| Location | Before | After |
+|---|---|---|
+| L806 — profile avatar fallback | `bg-slate-200` | `bg-[color:var(--sh-gray-200)]` |
+| L876–878 — “Quick-view active” admin banner | `border-indigo-200 bg-indigo-50 text-indigo-800` | `bg-blurple-50 border-[color:var(--sh-blurple-100)] text-blurple-800` |
+| L1097 — selected Quick-Create item | `border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200` | `border-brand bg-blurple-50 ring-2 ring-[color:var(--sh-blurple-100)]` |
+| L1098 — unselected Quick-Create item | `border-slate-300 bg-white` | `border-[color:var(--sh-gray-200)] bg-white` |
+| L1233 — dashed empty-state border (shortcuts modal) | `border-dashed border-slate-300` | `border-dashed border-[color:var(--sh-gray-200)]` |
+
+**Deliberately unchanged**
+- Sidebar surface remains white (§11.6 decision — navy sidebar is a Redactor pattern, not Content Relay).
+- Active-nav-item text stays `text-white` (literal) on `bg-ink`; this matches the `Tailwind text-white === --sh-white` equivalence. Keeping `text-white` avoids rewriting active-state conditionals across nav maps.
+- `bg-white` surfaces inside popovers / modals retained — these are explicit surface choices paired with the brand border/shadow and render identical output to `bg-surface`.
+- `border-amber-200 bg-amber-50 text-amber-800` shortcut tip-box (L1209) is a **semantic warning tone**, parallel to rose for destructive. Untouched.
+- `text-rose-700` quick-view error message (L883) is a **semantic error tone**. Untouched.
+- All other structural/layout/animation classes.
+
+**Files changed**
+- `src/components/app-shell.tsx` (1246 lines; 62 slate/blue/indigo lines migrated)
+- `src/components/dashboard-sidebar.tsx` (10 lines migrated)
+- `src/components/sidebar-toggle.tsx` (5 lines migrated, incl. `ring-indigo-500` → `ring-brand`)
+- `src/components/sidebar-version-footer.tsx` (3 lines migrated, incl. `ring-indigo-500` → `ring-brand`)
+
+**Cross-app visual impact**: the header, top-of-page search/notification/profile menus, left nav, writer/publisher filter drawer, sidebar version footer, quick-create modal, and shortcuts modal all render in Sighthound navy ink + Blurple accents + `--sh-gray-200` borders. Active nav items render on navy ink; hovers flash Blurple-50. Focus rings switch from indigo-500 to brand Blurple. The “admin quick-view active” banner now reads in Blurple, signaling brand-aware admin context.
+
+**Caller compatibility**: no API changed. No prop signatures touched. `npx tsc --noEmit` → exit 0.
+
+**Not in this PR** (still queued for Phase 4.3+)
+- `/login` + `/` marketing surfaces (Phase 4.3).
+- List and detail pages (Phase 4.4).
+- AI chrome (Phase 4.5).
+- Bespoke cards (Phase 4.6).
+- `.interactive-link:hover` (still `#0f172a`).
+- `.table-row-focus:hover` bg `#f8fafc` + stripe `#cbd5e1` — queued for a small CSS-primitive cleanup.
+- Any stray slate-only classes inside app-shell's `globals.css`-style block that aren't Tailwind utilities.

@@ -23,18 +23,18 @@ export function SidebarVersionFooter() {
   };
 
   return (
-    <div className="shrink-0 border-t border-slate-200 px-3 py-2">
+    <div className="shrink-0 border-t border-[color:var(--sh-gray-200)] px-3 py-2">
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
           Build
         </p>
         <button
           type="button"
           onClick={handleCopyCommit}
-          className="group rounded-sm text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset"
+          className="group rounded-sm text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
           title="Click to copy commit hash"
         >
-          <code className="inline-block rounded px-1.5 py-0.5 text-xs font-mono text-slate-600 transition group-hover:bg-slate-50 group-hover:text-slate-900">
+          <code className="inline-block rounded px-1.5 py-0.5 text-xs font-mono text-navy-500 transition group-hover:bg-blurple-50 group-hover:text-ink">
             {commit}
           </code>
         </button>

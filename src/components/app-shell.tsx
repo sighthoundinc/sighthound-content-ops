@@ -140,9 +140,9 @@ export function AppShell({
     .join("");
   const activeHeaderLogo = APP_SHELL_LOGO_SEQUENCE[headerLogoSourceIndex] ?? null;
   const headerMenuTriggerClass =
-    "inline-flex min-h-9 items-center justify-center rounded-md px-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset";
+    "inline-flex min-h-9 items-center justify-center rounded-md px-1.5 text-sm font-medium text-navy-500 transition hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
   const headerMenuItemClass =
-    "flex w-full items-center rounded-md px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset";
+    "flex w-full items-center rounded-md px-2 py-2 text-left text-sm text-navy-500 transition hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
   const closeOpenDetailsMenus = useCallback(
     (excludeDetails: HTMLDetailsElement | null = null) => {
       document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
@@ -598,12 +598,12 @@ export function AppShell({
   );
 
   return (
-    <div className="min-h-screen bg-slate-50" data-density={density}>
-      <header className="border-b border-slate-200 bg-surface">
+    <div className="min-h-screen bg-[color:var(--sh-gray)]" data-density={density}>
+      <header className="border-b border-[color:var(--sh-gray-200)] bg-surface">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3">
           <Link
             href="/"
-            className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-blurple-50"
             aria-label="Sighthound Content Relay"
           >
             <div className="relative flex h-9 w-16 shrink-0 items-center">
@@ -613,7 +613,7 @@ export function AppShell({
                     <span
                       aria-hidden="true"
                       className={cn(
-                        "absolute left-0 top-0 h-9 animate-pulse rounded-md bg-slate-200/70",
+                        "absolute left-0 top-0 h-9 animate-pulse rounded-md bg-[color:var(--sh-gray-200)]/70",
                         activeHeaderLogo.width === 64 ? "w-16" : "w-9"
                       )}
                     />
@@ -639,14 +639,14 @@ export function AppShell({
                   />
                 </>
               ) : (
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-slate-900 text-[10px] font-semibold uppercase tracking-wide text-white">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-ink text-[10px] font-semibold uppercase tracking-wide text-white">
                   SH
                 </span>
               )}
             </div>
             <span className="leading-tight">
-              <span className="block text-sm font-semibold text-slate-900">Sighthound</span>
-              <span className="block text-xs text-slate-600">Content Relay</span>
+              <span className="block text-sm font-semibold text-ink">Sighthound</span>
+              <span className="block text-xs text-navy-500">Content Relay</span>
             </span>
           </Link>
 
@@ -655,7 +655,7 @@ export function AppShell({
               type="button"
               aria-label="Search and commands"
               className={cn(
-                "inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 transition hover:border-slate-300 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                "inline-flex items-center gap-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs text-navy-500 transition hover:border-[color:var(--sh-gray-400)] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               )}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("command-palette:open"));
@@ -690,25 +690,25 @@ export function AppShell({
               {isNotificationPanelOpen ? (
                 <div
                   id="header-notifications-menu"
-                  className="absolute right-0 z-40 mt-2 w-[320px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                  className="absolute right-0 z-40 mt-2 w-[320px] rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-lg"
                   role="menu"
                   aria-label="Notifications menu"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-slate-900">Assignment & Changes</h3>
+                    <h3 className="text-sm font-semibold text-ink">Assignment & Changes</h3>
                     <button
                       type="button"
                       onClick={() => {
                         setIsNotificationPanelOpen(false);
                         router.push("/updates");
                       }}
-                      className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
+                      className="text-xs font-medium text-navy-500 transition hover:text-ink"
                     >
                       Open inbox
                     </button>
                   </div>
                   {unreadNotificationItems.length === 0 ? (
-                    <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-500">
+                    <p className="mt-3 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-2 text-xs text-navy-500">
                       No unread assignments or changes.
                     </p>
                   ) : (
@@ -718,7 +718,7 @@ export function AppShell({
                           <li key={entry.id}>
                             <button
                               type="button"
-                              className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-left transition hover:bg-white"
+                              className="w-full rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-2 text-left transition hover:bg-white"
                               onClick={() => {
                                 entry.items.forEach((item) => markAsRead(item.id));
                                 setIsNotificationPanelOpen(false);
@@ -729,22 +729,22 @@ export function AppShell({
                                 <span className="mt-0.5 inline-flex shrink-0">
                                   <BellIcon boxClassName="h-4 w-4"
                                     size={14}
-                                    className="text-slate-600" />
+                                    className="text-navy-500" />
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-semibold text-slate-900">
+                                  <p className="truncate text-sm font-semibold text-ink">
                                     {entry.title}
                                   </p>
-                                  <p className="mt-0.5 text-xs text-slate-600">
+                                  <p className="mt-0.5 text-xs text-navy-500">
                                     {entry.message}
                                   </p>
-                                  <p className="mt-1 text-xs text-slate-500">
+                                  <p className="mt-1 text-xs text-navy-500">
                                     {formatNotificationAge(entry.createdAt)}
                                   </p>
                                 </div>
                                 <ChevronDownIcon boxClassName="h-3.5 w-3.5 mt-1"
                                   size={12}
-                                  className="text-slate-400" />
+                                  className="text-navy-500/60" />
                               </div>
                             </button>
                           </li>
@@ -752,7 +752,7 @@ export function AppShell({
                           <li key={entry.id}>
                             <button
                               type="button"
-                              className="w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-left transition hover:bg-slate-50"
+                              className="w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2 py-2 text-left transition hover:bg-blurple-50"
                               onClick={() => {
                                 markAsRead(entry.id);
                                 setIsNotificationPanelOpen(false);
@@ -765,16 +765,16 @@ export function AppShell({
                                 <span className="mt-0.5 inline-flex shrink-0">
                                   <BellIcon boxClassName="h-4 w-4"
                                     size={14}
-                                    className="text-blue-600" />
+                                    className="text-brand" />
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium text-slate-900">
+                                  <p className="truncate text-sm font-medium text-ink">
                                     {entry.title}
                                   </p>
-                                  <p className="mt-0.5 line-clamp-2 text-sm text-slate-700">
+                                  <p className="mt-0.5 line-clamp-2 text-sm text-navy-500">
                                     {entry.message}
                                   </p>
-                                  <p className="mt-1 text-xs text-slate-500">
+                                  <p className="mt-1 text-xs text-navy-500">
                                     {formatNotificationAge(entry.createdAt)}
                                   </p>
                                 </div>
@@ -803,21 +803,21 @@ export function AppShell({
                   setIsProfileMenuOpen((previous) => !previous);
                 }}
               >
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--sh-gray-200)] text-xs font-semibold text-navy-500">
                   {profileInitials || "U"}
                 </span>
                 <span className="max-w-[160px] truncate">{profileDisplayName}</span>
                 <ChevronRightIcon boxClassName="h-4 w-4"
                   size={12}
                   className={cn(
-                    "text-slate-500 transition-transform",
+                    "text-navy-500 transition-transform",
                     isProfileMenuOpen ? "rotate-90" : null
                   )} />
               </button>
               {isProfileMenuOpen ? (
                 <div
                   id="header-profile-menu"
-                  className="absolute right-0 z-40 mt-2 w-52 rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+                  className="absolute right-0 z-40 mt-2 w-52 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-lg"
                   role="menu"
                   aria-label="Profile menu"
                 >
@@ -873,9 +873,9 @@ export function AppShell({
         </div>
       </header>
       {isQuickViewActive || quickViewError ? (
-        <div className="border-b border-indigo-200 bg-indigo-50">
+        <div className="bg-blurple-50 border-b border-[color:var(--sh-blurple-100)]">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2 text-sm">
-            <p className="text-indigo-800">
+            <p className="text-blurple-800">
               {isQuickViewActive && quickViewSnapshot
                 ? `Quick-view active: actions are being performed as ${quickViewSnapshot.targetDisplayName}.`
                 : null}
@@ -899,11 +899,11 @@ export function AppShell({
         </div>
       ) : null}
 
-      <div className="flex min-h-[calc(100vh-8rem)] w-full bg-slate-50">
+      <div className="flex min-h-[calc(100vh-8rem)] w-full bg-[color:var(--sh-gray)]">
         <aside
           ref={sidebarRef}
           className={cn(
-            "sticky top-0 h-screen shrink-0 flex flex-col border-r border-slate-200 bg-white transition-[width] duration-200 ease-in-out motion-reduce:transition-none",
+            "sticky top-0 h-screen shrink-0 flex flex-col border-r border-[color:var(--sh-gray-200)] bg-white transition-[width] duration-200 ease-in-out motion-reduce:transition-none",
             collapsed ? "w-[72px]" : "w-[240px]"
           )}
         >
@@ -923,7 +923,7 @@ export function AppShell({
               </Tooltip>
             ) : (
               <div className="flex items-center justify-between">
-                <span className="px-1 text-xs font-medium text-slate-500">Menu</span>
+                <span className="px-1 text-xs font-medium text-navy-500">Menu</span>
                 <Tooltip
                   content="Close sidebar"
                   delay={100}
@@ -945,11 +945,11 @@ export function AppShell({
                 const renderNavItem = (item: NavItem, isActive: boolean) => {
                   const navKey = `${item.href}-${item.label}`;
                   const navItemClassName = cn(
-                    "group flex w-full min-h-11 items-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset",
+                    "group flex w-full min-h-11 items-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
                     collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2",
                     isActive
-                      ? "bg-slate-900 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)] hover:bg-slate-900 hover:text-white"
-                      : "text-slate-700 font-medium hover:bg-slate-100 hover:text-slate-900"
+                      ? "bg-ink text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)] hover:bg-ink hover:text-white"
+                      : "text-navy-500 font-medium hover:bg-blurple-50 hover:text-ink"
                   );
 
                   const navContent = (
@@ -964,7 +964,7 @@ export function AppShell({
                         boxClassName="h-4 w-4 shrink-0"
                         size={14}
                         className={cn(
-                          isActive ? "text-white" : "text-slate-400 group-hover:text-slate-700"
+                          isActive ? "text-white" : "text-navy-500/60 group-hover:text-navy-500"
                         )}
                       />
                       {!collapsed ? <span className="text-sm">{item.label}</span> : null}
@@ -1002,7 +1002,7 @@ export function AppShell({
                     </div>
 
                     {/* Content workflow */}
-                    <div className="mt-2 space-y-0.5 border-t border-slate-200 pt-2">
+                    <div className="mt-2 space-y-0.5 border-t border-[color:var(--sh-gray-200)] pt-2">
                       {CONTENT_WORKFLOW_NAV_ITEMS.map((item) => {
                         const isActive = pathname === item.href;
                         return renderNavItem(item, isActive);
@@ -1010,7 +1010,7 @@ export function AppShell({
                     </div>
 
                     {/* Supporting tools */}
-                    <div className="mt-2 space-y-0.5 border-t border-slate-200 pt-2">
+                    <div className="mt-2 space-y-0.5 border-t border-[color:var(--sh-gray-200)] pt-2">
                       {SECONDARY_NAV_ITEMS.map((item) => {
                         const isActive = pathname === item.href;
                         return renderNavItem(item, isActive);
@@ -1018,7 +1018,7 @@ export function AppShell({
                     </div>
 
                     {/* System/Admin */}
-                    <div className="mt-2 space-y-0.5 border-t border-slate-200 pt-2">
+                    <div className="mt-2 space-y-0.5 border-t border-[color:var(--sh-gray-200)] pt-2">
                       {renderNavItem({ href: "/settings", label: "Settings", icon: "settings" }, pathname === "/settings")}
                       {canManagePermissions
                         ? renderNavItem(
@@ -1033,7 +1033,7 @@ export function AppShell({
             </nav>
           </div>
           {!collapsed && sidebarContent ? (
-            <div className="shrink-0 border-t border-slate-200 px-1 pt-3 pb-3">{sidebarContent}</div>
+            <div className="shrink-0 border-t border-[color:var(--sh-gray-200)] px-1 pt-3 pb-3">{sidebarContent}</div>
           ) : null}
           {!collapsed ? <SidebarVersionFooter /> : null}
         </aside>
@@ -1050,16 +1050,16 @@ export function AppShell({
           <button
             type="button"
             aria-label="Close quick create"
-            className="absolute inset-0 bg-slate-900/35"
+            className="absolute inset-0 bg-ink/35"
             onClick={() => {
               setIsQuickCreateOpen(false);
             }}
           />
-          <section className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+          <section className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Quick Create</h2>
-                <p className="mt-1 text-sm text-slate-600">
+                <h2 className="text-base font-semibold text-ink">Quick Create</h2>
+                <p className="mt-1 text-sm text-navy-500">
                   Jump straight into a new content item.
                 </p>
               </div>
@@ -1092,10 +1092,10 @@ export function AppShell({
                     }
                     aria-keyshortcuts={item.isDirectShortcut ? item.shortcut : undefined}
                     className={cn(
-                      "pressable mt-2 block rounded-md border px-3 py-2 text-sm font-medium text-slate-800 transition",
+                      "pressable mt-2 block rounded-md border px-3 py-2 text-sm font-medium text-ink transition",
                       index === activeQuickCreateIndex
-                        ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200"
-                        : "border-slate-300 bg-white hover:bg-slate-50"
+                        ? "border-brand bg-blurple-50 ring-2 ring-[color:var(--sh-blurple-100)]"
+                        : "border-[color:var(--sh-gray-200)] bg-white hover:bg-blurple-50"
                     )}
                     onMouseEnter={() => {
                       setActiveQuickCreateIndex(index);
@@ -1119,7 +1119,7 @@ export function AppShell({
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
-                className="text-xs font-medium text-slate-700 underline-offset-2 hover:underline"
+                className="text-xs font-medium text-navy-500 underline-offset-2 hover:underline"
                 onClick={() => {
                   setIsQuickCreateOpen(false);
                   setIsShortcutModalOpen(true);
@@ -1136,16 +1136,16 @@ export function AppShell({
           <button
             type="button"
             aria-label="Close shortcuts modal"
-            className="absolute inset-0 bg-slate-900/35"
+            className="absolute inset-0 bg-ink/35"
             onClick={() => {
               setIsShortcutModalOpen(false);
             }}
           />
-          <section className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+          <section className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Shortcuts</h2>
-                <p className="mt-1 text-sm text-slate-600">
+                <h2 className="text-base font-semibold text-ink">Shortcuts</h2>
+                <p className="mt-1 text-sm text-navy-500">
                   Keyboard shortcuts grouped by global and page scope.
                 </p>
               </div>
@@ -1160,9 +1160,9 @@ export function AppShell({
                 Close
               </Button>
             </div>
-            <div className="mt-4 space-y-4 text-xs text-slate-700">
+            <div className="mt-4 space-y-4 text-xs text-navy-500">
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                   Navigation
                 </p>
                 <div className="space-y-2">
@@ -1171,7 +1171,7 @@ export function AppShell({
                     .map((shortcut) => (
                       <div
                         key={shortcut.id}
-                        className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2"
+                        className="flex items-center justify-between gap-3 rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2"
                       >
                         <span>{shortcut.label}</span>
                         <div className="flex items-center gap-1">
@@ -1184,23 +1184,23 @@ export function AppShell({
                 </div>
               </div>
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                   Create
                 </p>
                 <div className="space-y-2">
-                  <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
                     <div className="flex items-center justify-between gap-3">
                       <span>New Blog</span>
                       <KbdShortcut>N</KbdShortcut>
                     </div>
-                    <p className="mt-1 text-[10px] text-slate-500">Direct shortcut</p>
+                    <p className="mt-1 text-[10px] text-navy-500">Direct shortcut</p>
                   </div>
-                  <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
                     <div className="flex items-center justify-between gap-3">
                       <span>New Idea / Social Post</span>
                       <KbdShortcut>Q</KbdShortcut>
                     </div>
-                    <p className="mt-1 text-[10px] text-slate-500">
+                    <p className="mt-1 text-[10px] text-navy-500">
                       Opens Quick Create. Use Up/Down arrow keys and Enter to select.
                     </p>
                   </div>
@@ -1210,7 +1210,7 @@ export function AppShell({
                 <p className="font-medium">Tip: Press Q, then Up/Down arrow keys to navigate, Enter to select action</p>
               </div>
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
                   {pageShortcutScopeLabel} shortcuts
                 </p>
                 {pageShortcuts.length > 0 ? (
@@ -1218,7 +1218,7 @@ export function AppShell({
                     {pageShortcuts.map((shortcut) => (
                       <div
                         key={shortcut.id}
-                        className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-slate-50 px-3 py-2"
+                        className="flex items-center justify-between gap-3 rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2"
                       >
                         <span>{shortcut.label}</span>
                         <div className="flex items-center gap-1">
@@ -1230,7 +1230,7 @@ export function AppShell({
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-slate-500">
+                  <div className="rounded border border-dashed border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-navy-500">
                     No page-specific shortcuts on this page.
                   </div>
                 )}

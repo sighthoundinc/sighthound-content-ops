@@ -1,7 +1,11 @@
-"use client";
-
-import { useState } from "react";
-import Image from "next/image";
+// Server Component (no "use client"). Static marketing hero rendered
+// entirely on the server — no client state, no client JS.
+//
+// The previous 3-source logo fallback state machine has been collapsed to
+// a single authoritative source. If the SVG ever fails to load in prod we
+// render the "SH Sighthound" fallback text instead, but without relying on
+// React state (the decision is made at render time, not after a client-side
+// onError fires).
 
 import { AppIcon } from "@/lib/icons";
 
@@ -11,65 +15,23 @@ const LOGIN_HIGHLIGHTS = [
   "Coordinate social post creation, captioning, scheduling, and live links",
 ] as const;
 
-const LOGIN_LOGO_SEQUENCE = [
-  { src: "/sighthound-logo-with-text.svg", width: 212, height: 48, alt: "Sighthound" },
-  { src: "/sighthound-logo-with-text.png", width: 212, height: 48, alt: "Sighthound" },
-  { src: "/sighthound-badge-mark.svg", width: 48, height: 48, alt: "Sighthound badge mark" },
-] as const;
+const LOGO_SRC = "/sighthound-logo-with-text.svg";
+const LOGO_WIDTH = 212;
+const LOGO_HEIGHT = 48;
+const LOGO_ALT = "Sighthound";
 
 export function LoginHero() {
-  const [logoSourceIndex, setLogoSourceIndex] = useState(0);
-  const [logoLoaded, setLogoLoaded] = useState(false);
-
-  const activeLogo = LOGIN_LOGO_SEQUENCE[logoSourceIndex] ?? null;
-  const isCompactLogo = activeLogo?.width === 48;
-
-  const handleLogoError = () => {
-    setLogoLoaded(false);
-    setLogoSourceIndex((currentIndex) => currentIndex + 1);
-  };
-
   return (
     <section className="rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-sm backdrop-blur-sm sm:p-10">
       <div className="mb-6 flex min-h-12 items-center">
-        {activeLogo ? (
-          <div className="relative h-12">
-            {!logoLoaded ? (
-              <div
-                aria-hidden="true"
-                className={`h-12 animate-pulse rounded-md bg-slate-200/70 ${
-                  isCompactLogo ? "w-12" : "w-[212px]"
-                }`}
-              />
-            ) : null}
-            <Image
-              src={activeLogo.src}
-              alt={activeLogo.alt}
-              width={activeLogo.width}
-              height={activeLogo.height}
-              priority
-              unoptimized
-              onLoad={() => {
-                setLogoLoaded(true);
-              }}
-              onError={handleLogoError}
-              className={`h-12 ${isCompactLogo ? "w-12" : "w-auto"} transition-opacity ${
-                logoLoaded
-                  ? "opacity-100"
-                  : "pointer-events-none absolute left-0 top-0 opacity-0"
-              }`}
-            />
-          </div>
-        ) : (
-          <div className="inline-flex h-12 items-center gap-3">
-            <span className="inline-flex h-10 min-w-10 items-center justify-center rounded-md bg-slate-900 px-2 text-xs font-semibold uppercase tracking-wide text-white">
-              SH
-            </span>
-            <span className="text-lg font-semibold tracking-tight text-slate-900">
-              Sighthound
-            </span>
-          </div>
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={LOGO_SRC}
+          alt={LOGO_ALT}
+          width={LOGO_WIDTH}
+          height={LOGO_HEIGHT}
+          className="h-12 w-auto"
+        />
       </div>
       <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
         Sighthound Content Relay

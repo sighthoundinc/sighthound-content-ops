@@ -3,8 +3,9 @@
 // the dashboard summary + tasks snapshot server-side. Keeps the existing
 // HTTP API contracts intact (API routes still expect Bearer tokens).
 
-import { createServerClient } from "@supabase/ssr";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
+
+import { getSupabaseServerClient } from "@/lib/supabase/ssr";
 
 import type {
   DashboardSummary,
@@ -27,41 +28,8 @@ const EMPTY_SNAPSHOT: TasksSnapshot = {
   waitingOnOthers: [],
 };
 
-function requireEnv() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY."
-    );
-  }
-  return { url, anonKey };
-}
-
 /**
- * Creates a Supabase server client wired to Next's cookie store. Reads
- * session cookies set by the browser client; no cookie writes are attempted
- * (read-only context fits Server Components).
- */
-async function getSupabaseServerClient() {
-  const { url, anonKey } = requireEnv();
-  const cookieStore = await cookies();
-  return createServerClient(url, anonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll().map(({ name, value }) => ({ name, value }));
-      },
-      // Server components cannot set cookies; intentionally a no-op to
-      // avoid runtime errors. Session refresh happens client-side.
-      setAll() {
-        /* noop */
-      },
-    },
-  });
-}
-
-/**
- * Resolves the current request origin from forwarded headers. Works in
+ * Resolves the current request origin from forwarded headers.
  * both local dev and Vercel production.
  */
 async function getRequestOrigin(): Promise<string> {

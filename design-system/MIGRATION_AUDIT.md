@@ -698,3 +698,47 @@ Migrates the app-wide chrome shared across every page: `src/components/app-shell
 - `.interactive-link:hover` (still `#0f172a`).
 - `.table-row-focus:hover` bg `#f8fafc` + stripe `#cbd5e1` — queued for a small CSS-primitive cleanup.
 - Any stray slate-only classes inside app-shell's `globals.css`-style block that aren't Tailwind utilities.
+
+### Phase 4.3 — Login / landing (brand-showcase surface)
+
+Migrates the two “brand showcase” surfaces outside the app shell: the `/login` page (hero + form) and the root `/` premium landing. Per Phase 4 scope these are the surfaces allowed to go heavier on brand — Blurple gradients, 16px marketing body, CTA-size buttons, brand-pop pills.
+
+**Files touched (4)**
+| File | Role | LOC | Migrations |
+|---|---|---|---|
+| `src/app/login/page.tsx` | Server component, page shell + session guard | 43 | Hero background gradient. |
+| `src/app/login/login-hero.tsx` | Static marketing hero | 55 | Card surface, heading/body/highlight colours, checkmark icon pop, `shadow-brand-sm`. |
+| `src/app/login/login-form.tsx` | Client form (password + OAuth) | 216 | Card surface, OAuth button surfaces, divider rule colour, input `.focus-field` adoption, sign-in CTA swapped to shared `<Button size="cta">`. |
+| `src/app/page.tsx` | Server component, premium landing / buckets / tasks snapshot | 203 | Hero gradient, role pill brand-pop, work-bucket and snapshot card surfaces, “View all” link as `text-brand`, Dashboard + Calendar CTAs as `buttonClass secondary size="cta"`. |
+
+**Approach**: perl sweep (same 18 mappings as 4.2 plus `border-slate-900 → border-ink`) to migrate the routine slate → brand-token mappings, then hand-edits for the seven brand-showcase moves.
+
+**Brand-showcase hand-edits**
+| Where | Before | After |
+|---|---|---|
+| `/login` hero bg + `/` landing hero bg | `bg-gradient-to-b from-slate-100 via-slate-50 to-white` | `bg-gradient-to-b from-blurple-50 via-white to-white` — soft Blurple wash |
+| Hero cards + snapshot card + login form card + sign-in card | `shadow-sm` | `shadow-brand-sm` (Phase 2 navy-tinted) |
+| Login hero checkmark icons | `text-slate-700` (→ `text-navy-500` via sweep) | `text-brand` — Blurple pop on trust bullets |
+| Login form email + password inputs | bespoke `focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200` | `.focus-field` utility (Phase 3.2 Blurple ring); explicit `bg-white` kept to override the focus-field bg during rest |
+| Login form sign-in button | raw `<button className="bg-slate-900 … text-white…">` | `<Button variant="primary" size="cta" type="submit" className="mt-1 w-full">` — brand Blurple CTA at 20px radius + Lexend Light 16 |
+| `/` landing role pill | neutral gray chip | `border-[color:var(--sh-blurple-100)] bg-blurple-50 text-blurple-800` — Blurple pop for the role badge |
+| `/` landing “View all” link | `text-slate-700 hover:text-slate-900` | `text-brand hover:text-blurple-700` (Strategy B) |
+| `/` landing Dashboard + Calendar CTAs | raw Link className soup | `buttonClass({ variant: "secondary", size: "cta" })` — reuses the shared button primitive |
+
+**Deliberately unchanged**
+- Heading sizes `text-3xl sm:text-4xl` (landing + login hero) kept — marketing surfaces allowed the bigger type per §11 marketing exception.
+- Paragraph body `text-base text-… sm:text-lg` kept at 16 (sm:18) per the marketing exception in Phase 4.3 scope; the app-density 14px rule still applies everywhere else.
+- Rose semantic tones retained: error banner + `high` priority work-bucket (`border-rose-300`, `bg-rose-50`, hover rose variants).
+- Emerald “all on track” check icon retained (semantic success).
+- Google + Slack OAuth provider icons left at inherited text colour; the buttons themselves were swept to brand borders/hover.
+
+**Cross-surface visual impact**
+- `/login` renders on a soft Blurple wash background. Hero card + form card both sit on `shadow-brand-sm`. Trust bullets show Blurple check icons. Inputs focus with the Blurple ring + Blurple-50 tint. Primary “Sign in” button is the full CTA-size Blurple pill (20px radius, 14/29 padding, Lexend Light 16).
+- `/` landing matches the same Blurple wash. Role pill reads in Blurple-100 border + Blurple-50 fill + blurple-800 text. Work buckets keep rose semantics for high-priority; default buckets are `sh-gray-200` bordered, hover flashes Blurple-50, active presses to ink. Snapshot card surfaces get `shadow-brand-sm`. Dashboard + Calendar footer CTAs are the Content Relay secondary-CTA pill.
+
+**Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.
+
+**Not in this PR** (still queued)
+- Page-level app pages (Phase 4.4: dashboard, blogs, social-posts, tasks, ideas, calendar, settings, inbox, updates, resources).
+- AI components (Phase 4.5).
+- Bespoke cards (Phase 4.6).

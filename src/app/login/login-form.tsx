@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { Button } from "@/components/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { GoogleIcon, SlackIcon } from "@/lib/icons";
 import { useAlerts } from "@/providers/alerts-provider";
@@ -129,45 +130,45 @@ export function LoginForm() {
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <h2 className="text-xl font-semibold tracking-tight text-slate-900">Sign in</h2>
-      <p className="mt-1 text-sm text-slate-600">
+    <section className="rounded-2xl border border-[color:var(--sh-gray-200)] bg-white p-6 shadow-brand-sm sm:p-8">
+      <h2 className="text-xl font-semibold tracking-tight text-ink">Sign in</h2>
+      <p className="mt-1 text-sm text-navy-500">
         Use your @sighthound.com account to get started.
       </p>
 
       <button
         type="button"
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-blurple-50"
         onClick={() => {
           void handleGoogleSignIn();
         }}
       >
-        <GoogleIcon boxClassName="h-4 w-4" size={14} className="text-slate-700" />
+        <GoogleIcon boxClassName="h-4 w-4" size={14} className="text-navy-500" />
         Continue with Google
       </button>
 
       <button
         type="button"
-        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-blurple-50"
         onClick={() => {
           void handleSlackSignIn();
         }}
       >
-        <SlackIcon boxClassName="h-4 w-4" size={14} className="text-slate-700" />
+        <SlackIcon boxClassName="h-4 w-4" size={14} className="text-navy-500" />
         Continue with Slack
       </button>
 
       <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-slate-200" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+        <div className="h-px flex-1 bg-[color:var(--sh-gray-200)]" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-navy-500">
           or email sign in
         </span>
-        <div className="h-px flex-1 bg-slate-200" />
+        <div className="h-px flex-1 bg-[color:var(--sh-gray-200)]" />
       </div>
 
       <form className="space-y-3" onSubmit={handlePasswordSignIn}>
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-navy-500">
             Email
           </span>
           <input
@@ -180,13 +181,13 @@ export function LoginForm() {
             onChange={(event) => {
               setEmail(event.target.value);
             }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="focus-field w-full rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2.5 text-sm text-ink placeholder:text-navy-500/60"
             placeholder="you@sighthound.com"
           />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-navy-500">
             Password
           </span>
           <input
@@ -198,18 +199,20 @@ export function LoginForm() {
             onChange={(event) => {
               setPassword(event.target.value);
             }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="focus-field w-full rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2.5 text-sm text-ink placeholder:text-navy-500/60"
             placeholder="••••••••"
           />
         </label>
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          size="cta"
           disabled={isSubmitting}
-          className="mt-1 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-1 w-full"
         >
           {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
+        </Button>
       </form>
     </section>
   );

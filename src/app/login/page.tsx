@@ -33,7 +33,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white px-4 py-10 sm:px-6 lg:py-16">
+    <main className="min-h-screen bg-gradient-to-b from-blurple-50 via-white to-white px-4 py-10 sm:px-6 lg:py-16">
       <div className="mx-auto grid w-full max-w-6xl items-stretch gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <LoginHero />
         <LoginForm />

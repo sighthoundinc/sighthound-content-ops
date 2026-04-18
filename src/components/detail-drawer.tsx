@@ -33,7 +33,7 @@ export function DetailDrawer({
       <button
         type="button"
         aria-label={closeLabel}
-        className="detail-drawer-overlay fixed inset-0 z-30 bg-slate-900/25"
+        className="detail-drawer-overlay fixed inset-0 z-30 bg-ink/25"
         onClick={onClose}
       />
       <aside
@@ -41,7 +41,7 @@ export function DetailDrawer({
         aria-modal="true"
         aria-label={drawerLabel}
         className={cn(
-          "detail-drawer-panel fixed inset-y-0 right-0 z-40 flex h-full flex-col overflow-hidden border-l border-slate-200 bg-white shadow-2xl",
+          "detail-drawer-panel fixed inset-y-0 right-0 z-40 flex h-full flex-col overflow-hidden border-l border-[color:var(--sh-gray-200)] bg-surface shadow-brand-lg",
           widthClassName ?? DETAIL_DRAWER_WIDTH_CLASS
         )}
       >
@@ -65,14 +65,14 @@ export function DetailDrawerHeader({
   onClose: () => void;
 }) {
   return (
-    <header className="border-b border-slate-200 bg-white px-4 py-3">
+    <header className="border-b border-[color:var(--sh-gray-200)] bg-surface px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium leading-4 tracking-wide text-slate-600">
+          <p className="text-xs font-medium leading-4 tracking-wide text-navy-500">
             {label}
           </p>
-          <h3 className="mt-1 text-lg font-medium leading-snug text-slate-900">{title}</h3>
-          {subtitle ? <p className="mt-1 text-sm font-normal leading-5 text-slate-700">{subtitle}</p> : null}
+          <h3 className="mt-1 text-lg font-medium leading-snug text-ink">{title}</h3>
+          {subtitle ? <p className="mt-1 text-sm font-normal leading-5 text-navy-500">{subtitle}</p> : null}
           {badges ? <div className="mt-2 flex flex-wrap items-center gap-2">{badges}</div> : null}
         </div>
         <button
@@ -107,7 +107,7 @@ export function DetailDrawerFooter({
   return (
     <footer
       className={cn(
-        "border-t border-slate-200 bg-white px-4 py-3",
+        "border-t border-[color:var(--sh-gray-200)] bg-surface px-4 py-3",
         className
       )}
     >
@@ -137,8 +137,8 @@ export function DetailDrawerSection({
 
   if (!collapsible) {
     return (
-      <section className={cn("rounded-lg border border-slate-200 bg-white p-3", className)}>
-        <h4 className="text-xs font-medium leading-4 uppercase tracking-wide text-slate-600">{sectionTitle}</h4>
+      <section className={cn("rounded-lg border border-[color:var(--sh-gray-200)] bg-surface p-3", className)}>
+        <h4 className="text-xs font-medium leading-4 uppercase tracking-wide text-navy-500">{sectionTitle}</h4>
         <div className="mt-2">{children}</div>
       </section>
     );
@@ -146,16 +146,16 @@ export function DetailDrawerSection({
 
   return (
     <details
-      className={cn("rounded-lg border border-slate-200 bg-white", className)}
+      className={cn("rounded-lg border border-[color:var(--sh-gray-200)] bg-surface", className)}
       open={isOpen}
       onToggle={(event) => {
         setIsOpen(event.currentTarget.open);
       }}
     >
-      <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium leading-4 uppercase tracking-wide text-slate-600">
+      <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium leading-4 uppercase tracking-wide text-navy-500">
         {sectionTitle}
       </summary>
-      <div className="border-t border-slate-200 p-3">{children}</div>
+      <div className="border-t border-[color:var(--sh-gray-200)] p-3">{children}</div>
     </details>
   );
 }
@@ -169,8 +169,8 @@ export function DetailDrawerField({
 }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs font-medium leading-4 text-slate-600">{label}</p>
-      <div className="text-sm font-normal leading-5 text-slate-800">{value}</div>
+      <p className="text-xs font-medium leading-4 text-navy-500">{label}</p>
+      <div className="text-sm font-normal leading-5 text-ink">{value}</div>
     </div>
   );
 }
@@ -221,7 +221,7 @@ export function DetailDrawerQuickAction({
           <ExternalLinkIcon boxClassName="h-4 w-4" size={13} />
         </span>
         {disabledReason ? (
-          <p className="text-xs text-slate-500">{disabledReason}</p>
+          <p className="text-xs text-navy-500">{disabledReason}</p>
         ) : null}
       </div>
     );

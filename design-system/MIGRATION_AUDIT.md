@@ -481,3 +481,39 @@ The skeleton primitive has two parts, both migrated in this PR:
 **Preview smoke test**: `/design-system-preview` → new “Phase 3.4 — skeleton primitives” section shows `<Skeleton>` bars, `<TableSkeletonRow>`, `<TableSkeleton>` (6 rows), and `<DetailSkeleton>`. All animate.
 
 **Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.
+
+### Phase 3.5 — Detail Drawer primitive
+
+The shared detail drawer primitive lives in `src/components/detail-drawer.tsx` and exports `<DetailDrawer>`, `<DetailDrawerHeader>`, `<DetailDrawerBody>`, `<DetailDrawerFooter>`, `<DetailDrawerSection>`, `<DetailDrawerField>`, and `<DetailDrawerQuickAction>`. Used across dashboard list/detail, social post list, blog list, and any “open detail” action site-wide.
+
+Animations live in `src/app/globals.css` under `.detail-drawer-overlay` / `.detail-drawer-panel` + `@keyframes detail-drawer-overlay-in` / `@keyframes detail-drawer-panel-in`. These are palette-agnostic and **untouched** in this PR.
+
+**Token migration (Tailwind utilities in `detail-drawer.tsx`)**
+| Subcomponent | Before | After |
+|---|---|---|
+| `DetailDrawer` overlay backdrop | `bg-slate-900/25` | `bg-ink/25` |
+| `DetailDrawer` panel border | `border-l border-slate-200` | `border-l border-[color:var(--sh-gray-200)]` |
+| `DetailDrawer` panel surface | `bg-white` | `bg-surface` |
+| `DetailDrawer` panel shadow | `shadow-2xl` (Tailwind default) | `shadow-brand-lg` (Phase 2 navy-tinted) |
+| `DetailDrawerHeader` border / surface | `border-b border-slate-200 bg-white` | `border-b border-[color:var(--sh-gray-200)] bg-surface` |
+| `DetailDrawerHeader` label | `text-slate-600` | `text-navy-500` |
+| `DetailDrawerHeader` title | `text-slate-900` | `text-ink` |
+| `DetailDrawerHeader` subtitle | `text-slate-700` | `text-navy-500` |
+| `DetailDrawerFooter` | `border-t border-slate-200 bg-white` | `border-t border-[color:var(--sh-gray-200)] bg-surface` |
+| `DetailDrawerSection` (non-collapsible) | `rounded-lg border border-slate-200 bg-white` | `rounded-lg border border-[color:var(--sh-gray-200)] bg-surface` |
+| `DetailDrawerSection` (collapsible) | same pattern + internal `border-t border-slate-200` | migrated with same two-token mapping |
+| `DetailDrawerSection` title | `text-slate-600` | `text-navy-500` |
+| `DetailDrawerField` label | `text-slate-600` | `text-navy-500` |
+| `DetailDrawerField` value | `text-slate-800` | `text-ink` |
+| `DetailDrawerQuickAction` disabled reason | `text-slate-500` | `text-navy-500` |
+
+**Deliberately unchanged**
+- `isCopied` copy-success flash (`bg-green-50 text-green-700 border-green-300`). Green reads as “success confirmation” and parallels the destructive `rose` retention in Phase 3.1 Button — semantic colours stay.
+- `.detail-drawer-overlay` / `.detail-drawer-panel` CSS classes (animations only, no colour references).
+- `buttonClass({ variant: "secondary" })` call sites inside the drawer — already migrated via Phase 3.1.
+
+**Cross-app visual impact**: every drawer surface (dashboard row drawer, blog/social-post list drawer, any new “Open details” target) picks up Sighthound navy ink, surface-white panel, gray-200 borders, and the navy-tinted `shadow-brand-lg`. No callers refactored; all consume the primitive as-is.
+
+**Preview smoke test**: `/design-system-preview` → new “Phase 3.5 — detail drawer primitive” section renders a static inline snapshot with `DetailDrawerHeader` + non-collapsible and collapsible `DetailDrawerSection`s (brief + links), three `DetailDrawerField`s, three `DetailDrawerQuickAction`s (including a disabled one), and a `DetailDrawerFooter` with a primary `<Button>`. The snapshot uses `shadow-brand-lg` directly so the full panel visual is reproduced without needing the real fixed-position overlay.
+
+**Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.

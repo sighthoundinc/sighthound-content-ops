@@ -1,406 +1,35 @@
-"use client";
+// Server Component (no "use client"). The home page renders server-side
+// using data fetched in fetchHomeData(); only the bucket tiles' onClick
+// handler lives in a client component (HomeBucketLink).
+//
+// Disable Next's route-level caching: dashboard data is per-user and must
+// not be collapsed across requests.
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AppIcon, type AppIconName } from "@/lib/icons";
-import { setDashboardFilterIntent } from "@/lib/dashboard-filter-state";
-import {
-  ACTIVE_SOCIAL_STATUSES,
-  ACTIVE_WRITER_STATUSES,
-  validateTaskLogicConsistency,
-} from "@/lib/task-logic";
-import { useAuth } from "@/providers/auth-provider";
-import {
-  getApiErrorMessage,
-  isApiFailure,
-  parseApiResponseJson,
-} from "@/lib/api-response";
 
-interface DashboardSummary {
-  writerCounts: Record<string, number>;
-  publisherCounts: Record<string, number>;
-  socialPostCounts: Record<string, number>;
-  userRoles: string[];
-}
-interface SnapshotTask {
-  id: string;
-  title: string;
-  kind: "blog" | "social";
-  href: string;
-  statusLabel: string;
-  scheduledDate: string | null;
-  actionState: "action_required" | "waiting_on_others";
-}
-interface TasksSnapshot {
-  requiredByMe: SnapshotTask[];
-  waitingOnOthers: SnapshotTask[];
-}
+import { AppIcon } from "@/lib/icons";
 
-interface WorkBucket {
-  id: string;
-  title: string;
-  count: number;
-  href: string;
-  icon: AppIconName;
-  priority: "high" | "normal";
-}
+import { fetchHomeData } from "./home-data";
+import { HomeBucketLink } from "./home-bucket-link";
+import { buildWorkBuckets } from "./home-work-buckets";
 
-const LOADING_MESSAGES = [
-  "Preparing your standup...",
-  "Gathering your work queue...",
-  "Loading your dashboard...",
-  "Setting up your workspace...",
-  "Syncing your tasks...",
-  "Getting you ready to go...",
-] as const;
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
-  const { session, profile, loading: authLoading } = useAuth();
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [tasksSnapshot, setTasksSnapshot] = useState<TasksSnapshot>({
-    requiredByMe: [],
-    waitingOnOthers: [],
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingMessage] = useState(
-    () => LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]
-  );
+export default async function HomePage() {
+  const { displayName, summary, tasksSnapshot, error } = await fetchHomeData();
 
-  const getUserDisplayName = () => {
-    return profile?.display_name || profile?.full_name || "there";
-  };
-  const requiredByLabel = profile?.display_name || profile?.full_name || "You";
-
-  const getRoleDisplay = () => {
-    if (!summary?.userRoles) return "";
-    return summary.userRoles.join(", ");
-  };
-
-  const shouldShowMultiRoleNote = summary && summary.userRoles.length > 1;
-
-  useEffect(() => {
-    // Wait for auth to fully load before fetching summary
-    // This ensures we have a valid session and avoid race conditions on OAuth redirect
-    if (authLoading || !session?.access_token) {
-      if (!authLoading && !session) {
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    const fetchSummary = async () => {
-      try {
-        const [summaryResponse, snapshotResponse] = await Promise.all([
-          fetch("/api/dashboard/summary", {
-            headers: {
-              authorization: `Bearer ${session.access_token}`,
-            },
-          }),
-          fetch("/api/dashboard/tasks-snapshot", {
-            headers: {
-              authorization: `Bearer ${session.access_token}`,
-            },
-          }),
-        ]);
-        const summaryPayload = await parseApiResponseJson<DashboardSummary>(
-          summaryResponse
-        );
-        if (isApiFailure(summaryResponse, summaryPayload)) {
-          throw new Error(
-            getApiErrorMessage(summaryPayload, "Failed to fetch work summary")
-          );
-        }
-        setSummary(summaryPayload);
-        const snapshotPayload = await parseApiResponseJson<TasksSnapshot>(
-          snapshotResponse
-        );
-        if (!isApiFailure(snapshotResponse, snapshotPayload)) {
-          setTasksSnapshot(snapshotPayload);
-        } else {
-          setTasksSnapshot({ requiredByMe: [], waitingOnOthers: [] });
-        }
-        setError(null);
-      } catch (err) {
-        console.error("Dashboard summary load failed:", err);
-        setError("Couldn't load your workspace summary. Please try again.");
-        setSummary(null);
-        setTasksSnapshot({ requiredByMe: [], waitingOnOthers: [] });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void fetchSummary();
-  }, [session, session?.access_token, authLoading]);
-
-  const buildWorkBuckets = (data: DashboardSummary): WorkBucket[] => {
-    const buckets: WorkBucket[] = [];
-
-    if (data.userRoles.includes("writer") || data.userRoles.includes("admin")) {
-      const needsRevision = data.writerCounts.needs_revision ?? 0;
-      const inProgress = data.writerCounts.in_progress ?? 0;
-      const pendingReview = data.writerCounts.pending_review ?? 0;
-      const completed = data.writerCounts.completed ?? 0;
-      const notStarted = data.writerCounts.not_started ?? 0;
-
-      if (needsRevision > 0) {
-        buckets.push({
-          id: "writer-needs-revision",
-          title: "Awaiting Your Revision",
-          count: needsRevision,
-          href: "/dashboard",
-          icon: "warning",
-          priority: "high",
-        });
-      }
-
-      if (inProgress > 0) {
-        buckets.push({
-          id: "writer-in-progress",
-          title: "Writing in Progress",
-          count: inProgress,
-          href: "/dashboard",
-          icon: "writing",
-          priority: "normal",
-        });
-      }
-
-      if (pendingReview > 0) {
-        buckets.push({
-          id: "writer-pending-review",
-          title: "Submitted for Editorial Review",
-          count: pendingReview,
-          href: "/dashboard",
-          icon: "writing",
-          priority: "normal",
-        });
-      }
-
-      if (completed > 0) {
-        buckets.push({
-          id: "writer-completed",
-          title: "Writing Approved",
-          count: completed,
-          href: "/dashboard",
-          icon: "check",
-          priority: "normal",
-        });
-      }
-
-      if (notStarted > 0 && data.userRoles.includes("admin")) {
-        buckets.push({
-          id: "writer-not-started",
-          title: "Not Started (Admin View)",
-          count: notStarted,
-          href: "/dashboard",
-          icon: "home",
-          priority: "normal",
-        });
-      }
-    }
-
-    if (data.userRoles.includes("publisher") || data.userRoles.includes("admin")) {
-      const inProgress = data.publisherCounts.in_progress ?? 0;
-      const pendingReview = data.publisherCounts.pending_review ?? 0;
-      const publisherApproved = data.publisherCounts.publisher_approved ?? 0;
-      const completed = data.publisherCounts.completed ?? 0;
-      const notStarted = data.publisherCounts.not_started ?? 0;
-
-      if (inProgress > 0) {
-        buckets.push({
-          id: "publisher-in-progress",
-          title: "Awaiting Publishing Approval",
-          count: inProgress,
-          href: "/dashboard",
-          icon: "warning",
-          priority: "high",
-        });
-      }
-
-      if (pendingReview > 0) {
-        buckets.push({
-          id: "publisher-pending-review",
-          title: "Awaiting Publishing Review",
-          count: pendingReview,
-          href: "/dashboard",
-          icon: "warning",
-          priority: "high",
-        });
-      }
-
-      if (publisherApproved > 0) {
-        buckets.push({
-          id: "publisher-approved",
-          title: "Publishing Approved — Ready to Publish",
-          count: publisherApproved,
-          href: "/dashboard",
-          icon: "check",
-          priority: "high",
-        });
-      }
-
-      if (completed > 0) {
-        buckets.push({
-          id: "publisher-completed",
-          title: "Published",
-          count: completed,
-          href: "/dashboard",
-          icon: "check",
-          priority: "normal",
-        });
-      }
-
-      if (notStarted > 0) {
-        buckets.push({
-          id: "publisher-not-started",
-          title: "Awaiting Publishing Review",
-          count: notStarted,
-          href: "/dashboard",
-          icon: "home",
-          priority: "normal",
-        });
-      }
-    }
-
-    if (
-      data.userRoles.includes("admin") ||
-      data.userRoles.includes("publisher") ||
-      data.userRoles.includes("editor") ||
-      data.userRoles.includes("writer")
-    ) {
-      const draft = data.socialPostCounts.draft ?? 0;
-      const changesRequested = data.socialPostCounts.changes_requested ?? 0;
-      const inReview = data.socialPostCounts.in_review ?? 0;
-      const creativeApproved = data.socialPostCounts.creative_approved ?? 0;
-      const readyToPublish = data.socialPostCounts.ready_to_publish ?? 0;
-      const awaitingLink = data.socialPostCounts.awaiting_live_link ?? 0;
-
-      if (draft > 0) {
-        buckets.push({
-          id: "social-draft",
-          title: "Social Posts in Draft",
-          count: draft,
-          href: "/social-posts",
-          icon: "writing",
-          priority: "normal",
-        });
-      }
-
-      if (changesRequested > 0) {
-        buckets.push({
-          id: "social-changes-requested",
-          title: "Social Posts Need Changes",
-          count: changesRequested,
-          href: "/social-posts",
-          icon: "warning",
-          priority: "high",
-        });
-      }
-
-      if (readyToPublish > 0) {
-        buckets.push({
-          id: "social-ready-to-publish",
-          title: "Social Posts Ready to Publish",
-          count: readyToPublish,
-          href: "/social-posts",
-          icon: "writing",
-          priority: "high",
-        });
-      }
-
-      if (awaitingLink > 0) {
-        buckets.push({
-          id: "social-awaiting-live-link",
-          title: "Social Posts Awaiting Live Link",
-          count: awaitingLink,
-          href: "/social-posts",
-          icon: "warning",
-          priority: "high",
-        });
-      }
-
-      if (inReview > 0) {
-        buckets.push({
-          id: "social-in-review",
-          title: "Social Posts in Review",
-          count: inReview,
-          href: "/social-posts",
-          icon: "writing",
-          priority: "normal",
-        });
-      }
-
-      if (creativeApproved > 0) {
-        buckets.push({
-          id: "social-creative-approved",
-          title: "Social Posts Creative Approved",
-          count: creativeApproved,
-          href: "/social-posts",
-          icon: "check",
-          priority: "normal",
-        });
-      }
-    }
-
-    const sorted = buckets.sort((a, b) => {
-      if (a.priority === "high" && b.priority !== "high") return -1;
-      if (a.priority !== "high" && b.priority === "high") return 1;
-      return b.count - a.count;
-    });
-
-    validateTaskLogicConsistency(
-      {
-        writerCounts: Object.keys(data.writerCounts),
-        publisherCounts: Object.keys(data.publisherCounts),
-        socialPostCounts: Object.keys(data.socialPostCounts),
-      },
-      sorted.map((b) => b.id)
-    );
-
-    return sorted;
-  };
+  const userName = displayName ?? "there";
+  const roleList = summary?.userRoles ?? [];
+  const roleDisplay = roleList.join(", ");
+  const hasMultipleRoles = roleList.length > 1;
 
   const workBuckets = summary ? buildWorkBuckets(summary) : [];
   const hasWork = workBuckets.length > 0;
   const hasSnapshotItems =
-    tasksSnapshot.requiredByMe.length > 0 || tasksSnapshot.waitingOnOthers.length > 0;
+    tasksSnapshot.requiredByMe.length > 0 ||
+    tasksSnapshot.waitingOnOthers.length > 0;
   const hasAnyWork = hasWork || hasSnapshotItems;
-
-  const handleBucketClick = (bucket: WorkBucket) => {
-    // Determine filter type and value based on bucket ID
-    if (bucket.id.startsWith("writer-")) {
-      // Derived from ACTIVE_WRITER_STATUSES — stays in sync automatically
-      const statusMap: Record<string, string> = Object.fromEntries(
-        ACTIVE_WRITER_STATUSES.map((s) => [`writer-${s.replace(/_/g, "-")}`, s])
-      );
-      const value = statusMap[bucket.id];
-      if (value) {
-        setDashboardFilterIntent({ type: "writer_status", value });
-      }
-    } else if (bucket.id.startsWith("publisher-")) {
-      const statusMap: Record<string, string> = {
-        "publisher-in-progress": "in_progress",
-        "publisher-pending-review": "pending_review",
-        "publisher-approved": "publisher_approved",
-        "publisher-completed": "completed",
-        "publisher-not-started": "not_started",
-      };
-      const value = statusMap[bucket.id];
-      if (value) {
-        setDashboardFilterIntent({ type: "publisher_status", value });
-      }
-    } else if (bucket.id.startsWith("social-")) {
-      // Derived from ACTIVE_SOCIAL_STATUSES — stays in sync automatically
-      const statusMap: Record<string, string> = Object.fromEntries(
-        ACTIVE_SOCIAL_STATUSES.map((s) => [`social-${s.replace(/_/g, "-")}`, s])
-      );
-      const value = statusMap[bucket.id];
-      if (value) {
-        setDashboardFilterIntent({ type: "social_status", value });
-      }
-    }
-  };
+  const requiredByLabel = displayName ?? "You";
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white px-4 py-12 sm:px-6 lg:py-20">
@@ -409,20 +38,18 @@ export default function HomePage() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                Hi {getUserDisplayName()},
+                Hi {userName},
               </h1>
             </div>
-            {summary && getRoleDisplay() && (
+            {summary && roleDisplay && (
               <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600 whitespace-nowrap">
-                {getRoleDisplay()}
-                {shouldShowMultiRoleNote && " (Multiple roles)"}
+                {roleDisplay}
+                {hasMultipleRoles && " (Multiple roles)"}
               </span>
             )}
           </div>
           <p className="mt-3 max-w-2xl text-base text-slate-600 sm:text-lg">
-            {isLoading
-              ? loadingMessage
-              : hasAnyWork
+            {hasAnyWork
               ? "Jump into what needs your attention now."
               : "All caught up—no pending work right now."}
           </p>
@@ -434,13 +61,12 @@ export default function HomePage() {
           </div>
         )}
 
-        {!isLoading && hasWork && (
+        {hasWork && (
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             {workBuckets.map((bucket) => (
-              <Link
+              <HomeBucketLink
                 key={bucket.id}
-                href="/tasks"
-                onClick={() => handleBucketClick(bucket)}
+                bucketId={bucket.id}
                 className={`group rounded-xl border p-4 transition sm:p-5 ${
                   bucket.priority === "high"
                     ? "border-rose-300 bg-rose-50 text-slate-900 hover:border-rose-400 hover:bg-rose-100 active:bg-slate-900 active:text-white active:border-slate-900"
@@ -470,12 +96,12 @@ export default function HomePage() {
                 <h2 className="mt-4 text-base font-semibold text-slate-900 group-active:text-white">
                   {bucket.title}
                 </h2>
-              </Link>
+              </HomeBucketLink>
             ))}
           </div>
         )}
 
-        {!isLoading && hasSnapshotItems && (
+        {hasSnapshotItems && (
           <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold text-slate-900">My Tasks Snapshot</h2>
@@ -541,7 +167,7 @@ export default function HomePage() {
           </section>
         )}
 
-        {!isLoading && !hasAnyWork && !error && (
+        {!hasAnyWork && !error && (
           <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center">
             <AppIcon
               name="check"
@@ -554,23 +180,9 @@ export default function HomePage() {
             </h2>
             <p className="mt-2 text-sm text-slate-600">
               No items awaiting action right now.
-              {shouldShowMultiRoleNote &&
+              {hasMultipleRoles &&
                 " No blogs need writing, and all completed writing is approved for publishing."}
             </p>
-          </div>
-        )}
-
-        {error && (
-          <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-            {error}
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center">
-            <div className="inline-flex animate-spin rounded-full border-4 border-slate-300 border-t-slate-900 h-8 w-8" />
-            <p className="mt-4 text-sm text-slate-600">{loadingMessage}</p>
-            <p className="mt-1 text-xs text-slate-500">Welcome back.</p>
           </div>
         )}
 

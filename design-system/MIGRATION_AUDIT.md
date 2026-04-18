@@ -286,3 +286,47 @@ Decision history in-commit:
 - This commit — restores Lexend as the final Phase-1 state. Inter is no longer loaded.
 
 Explicitly **not** touched in Phase 1: `src/lib/status.ts`, `src/lib/typography.ts`, any `src/components/*`, any route other than the new preview. Body size remains 14px and body weight remains 400 per §§11.2–11.3.
+
+---
+
+## 12. Phase 2 — token mapping (framework glue)
+
+Phase 2 scope: make the brand palette accessible as Tailwind utilities via `@theme inline`. Additive only; no existing tokens renamed or removed; no component code touched.
+
+### New Tailwind utilities generated
+
+**Raw brand color scales** (generate `bg-*`, `text-*`, `border-*`, `ring-*`, etc.):
+- Blurple: `blurple`, `blurple-50`, `blurple-100`, `blurple-300`, `blurple-700`, `blurple-800`.
+- Navy: `navy`, `navy-500`, `navy-700`.
+- Orange accents: `orange-warm`, `orange-medium`, `orange-hot`.
+
+**Semantic aliases** (Phase 1 — unchanged): `brand`, `ink`, `surface`, `accent-warm`, `accent-hot`.
+
+**Shadow ramp** (generates `shadow-*`): `shadow-brand-xs`, `shadow-brand-sm`, `shadow-brand-md`, `shadow-brand-lg`, `shadow-brand-focus`. Named with a `-brand-` prefix to avoid overriding Tailwind v4 defaults (`shadow-sm/md/lg`).
+
+**Radius**: `rounded-button-cta` (20px) and `rounded-button-compact` (8px) (Phase 1, unchanged).
+
+**Fonts**: `font-sans` → Lexend, `font-mono` → JetBrains Mono (Phase 1, unchanged).
+
+### Deliberately NOT exposed as Tailwind utilities
+
+- **Neutral Gray ramp** (`--sh-gray`, `--sh-gray-200/400/600`): would collide semantically with Tailwind's default `gray-*` scale. Consume directly via raw CSS vars: `bg-[var(--sh-gray-200)]`, `border-[var(--sh-gray-200)]`, or `style={{ background: "var(--sh-gray)" }}`.
+- **Gradients** (`--sh-gradient-brand/warm/cool/surface`): Tailwind's gradient utilities compose from `from-*`/`to-*` color stops, not named gradient tokens. Apply inline: `style={{ background: "var(--sh-gradient-brand)" }}` or as arbitrary values.
+- **Spacing scale extensions** (48/64/80/96 px): not yet registered. Tailwind v4 already has `p-12/16/20/24` (48/64/80/96 px) via its 0.25rem-unit default spacing scale, so no new tokens are required for Phase 2.
+- **Motion/easing tokens** (`--ease-standard`, `--dur-*`): the app uses the pre-Content-Relay `--motion-*` tokens from `:root`. DS motion tokens are not registered in `@theme inline` because Tailwind v4 doesn't have a first-class `ease/duration` theme category we'd benefit from here.
+
+### Files changed in Phase 2
+
+- `src/app/globals.css`:
+  - `:root` gained `--shadow-brand-xs / -sm / -md / -lg / -focus` (navy-tinted shadow ramp).
+  - `@theme inline` gained blurple, navy, orange color scales + brand shadow ramp.
+- `src/app/design-system-preview/page.tsx`:
+  - New section “Phase 2 — Tailwind utilities from `@theme inline`” demonstrating `bg-blurple-*`, `text-navy-*`, `bg-orange-*`, `shadow-brand-*`, and the raw `--sh-gray-*` CSS-var escape hatch.
+
+### Phase 2 explicitly NOT touched
+
+- Any component under `src/components/*`.
+- `src/lib/status.ts` (contract-locked status palette per §11.5).
+- `src/lib/typography.ts` (slate-based typography constants remain until Phase 3/4).
+- Any existing CSS utility class in `globals.css` (`.page-title`, `.body-text`, `.focus-field`, etc.).
+- All other routes (`/dashboard`, `/social-posts`, `/blogs`, `/tasks`, `/calendar`, `/settings`, `/login`, …).

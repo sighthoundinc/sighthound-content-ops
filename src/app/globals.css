@@ -79,6 +79,14 @@
   --radius-button-cta: 20px;
   --radius-button-compact: 8px;
 
+  /* Navy-tinted shadow ramp (Phase 2, mirror of design-system/colors_and_type.css).
+     Named --shadow-brand-* to avoid overriding Tailwind v4's default shadow-sm/md/lg. */
+  --shadow-brand-xs: 0 1px 2px rgba(26, 29, 56, 0.06);
+  --shadow-brand-sm: 0 2px 6px rgba(26, 29, 56, 0.08);
+  --shadow-brand-md: 0 8px 20px rgba(26, 29, 56, 0.10);
+  --shadow-brand-lg: 0 20px 40px rgba(26, 29, 56, 0.14);
+  --shadow-brand-focus: 0 0 0 3px rgba(79, 96, 220, 0.35);
+
   /* Transitional font-var alias. Inter has been replaced by Lexend;
      --font-inter-sans still resolves for in-flight references and is
      removed in Phase 5 cleanup. */
@@ -103,22 +111,55 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Sighthound Content Relay brand utilities (additive, non-breaking).
-     Enables: bg-brand, text-brand, border-brand, ring-brand,
-              bg-ink, text-ink, bg-surface, text-surface,
-              bg-accent-warm, bg-accent-hot,
-              rounded-button-cta, rounded-button-compact. */
+  /* Sighthound Content Relay — semantic brand utilities (Phase 1).
+     bg-brand / text-brand / border-brand / ring-brand
+     bg-ink / text-ink / border-ink
+     bg-surface / text-surface
+     bg-accent-warm / text-accent-warm
+     bg-accent-hot / text-accent-hot */
   --color-brand: var(--color-brand);
   --color-ink: var(--color-ink);
   --color-surface: var(--color-surface);
   --color-accent-warm: var(--color-accent-warm);
   --color-accent-hot: var(--color-accent-hot);
 
+  /* Phase 2 — raw brand color scales exposed as Tailwind utilities.
+     bg-blurple / -50 / -100 / -300 / -700 / -800 (and text-/border-/ring- variants). */
+  --color-blurple: var(--sh-blurple);
+  --color-blurple-50: var(--sh-blurple-50);
+  --color-blurple-100: var(--sh-blurple-100);
+  --color-blurple-300: var(--sh-blurple-300);
+  --color-blurple-700: var(--sh-blurple-700);
+  --color-blurple-800: var(--sh-blurple-800);
+
+  /* bg-navy / -500 / -700 (matches Dark Navy + mid ramp). */
+  --color-navy: var(--sh-navy);
+  --color-navy-500: var(--sh-navy-500);
+  --color-navy-700: var(--sh-navy-700);
+
+  /* bg-orange-warm / -medium / -hot (10% accent band). */
+  --color-orange-warm: var(--sh-orange-light);
+  --color-orange-medium: var(--sh-orange-medium);
+  --color-orange-hot: var(--sh-orange-red);
+
+  /* NOTE: Neutral Gray ramp (--sh-gray / -200 / -400 / -600) is intentionally
+     NOT exposed as Tailwind utilities to avoid conflict with the default
+     gray-* scale. Consume via raw CSS vars: bg-[var(--sh-gray-200)] etc.
+     Gradients (--sh-gradient-*) are also not Tailwind utilities; use inline
+     style={{ background: "var(--sh-gradient-brand)" }} or arbitrary values. */
+
   --font-sans: var(--font-lexend-sans);
   --font-mono: var(--font-jetbrains-mono);
 
   --radius-button-cta: var(--radius-button-cta);
   --radius-button-compact: var(--radius-button-compact);
+
+  /* Phase 2 — navy-tinted shadow ramp (brand-safe names). */
+  --shadow-brand-xs: var(--shadow-brand-xs);
+  --shadow-brand-sm: var(--shadow-brand-sm);
+  --shadow-brand-md: var(--shadow-brand-md);
+  --shadow-brand-lg: var(--shadow-brand-lg);
+  --shadow-brand-focus: var(--shadow-brand-focus);
 }
 
 /* Typography Scale - Modern Minimalist */

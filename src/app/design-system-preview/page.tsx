@@ -429,6 +429,123 @@ export default function DesignSystemPreviewPage() {
           </div>
         </section>
 
+        {/* ---- Phase 2: Tailwind utility smoke test ---- */}
+        <section className="mb-14">
+          <SectionTitle>
+            Phase 2 — Tailwind utilities from <code>@theme inline</code>
+          </SectionTitle>
+          <div className="grid gap-6">
+            <div>
+              <Tag>Blurple scale (bg-blurple / -50 / -100 / -300 / -700 / -800)</Tag>
+              <div className="flex flex-wrap gap-2">
+                <span className="bg-blurple-50 text-navy rounded-md px-3 py-1 text-xs">
+                  bg-blurple-50
+                </span>
+                <span className="bg-blurple-100 text-navy rounded-md px-3 py-1 text-xs">
+                  bg-blurple-100
+                </span>
+                <span className="bg-blurple-300 rounded-md px-3 py-1 text-xs text-white">
+                  bg-blurple-300
+                </span>
+                <span className="bg-blurple rounded-md px-3 py-1 text-xs text-white">
+                  bg-blurple
+                </span>
+                <span className="bg-blurple-700 rounded-md px-3 py-1 text-xs text-white">
+                  bg-blurple-700
+                </span>
+                <span className="bg-blurple-800 rounded-md px-3 py-1 text-xs text-white">
+                  bg-blurple-800
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <Tag>Navy ramp (text-navy / -500 / -700 + bg-navy / -700)</Tag>
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="text-navy text-sm">text-navy</span>
+                <span className="text-navy-700 text-sm">text-navy-700</span>
+                <span className="text-navy-500 text-sm">text-navy-500</span>
+                <span className="bg-navy rounded-md px-3 py-1 text-xs text-white">
+                  bg-navy
+                </span>
+                <span className="bg-navy-700 rounded-md px-3 py-1 text-xs text-white">
+                  bg-navy-700
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <Tag>Orange accents (bg-orange-warm / -medium / -hot)</Tag>
+              <div className="flex flex-wrap gap-2">
+                <span className="bg-orange-warm text-navy rounded-md px-3 py-1 text-xs">
+                  bg-orange-warm
+                </span>
+                <span className="bg-orange-medium rounded-md px-3 py-1 text-xs text-white">
+                  bg-orange-medium
+                </span>
+                <span className="bg-orange-hot rounded-md px-3 py-1 text-xs text-white">
+                  bg-orange-hot
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <Tag>
+                Shadow utilities (shadow-brand-xs / -sm / -md / -lg / -focus)
+              </Tag>
+              <div className="flex flex-wrap items-end gap-5">
+                <div className="shadow-brand-xs rounded-lg bg-white p-3 text-xs">
+                  shadow-brand-xs
+                </div>
+                <div className="shadow-brand-sm rounded-lg bg-white p-3 text-xs">
+                  shadow-brand-sm
+                </div>
+                <div className="shadow-brand-md rounded-lg bg-white p-3 text-xs">
+                  shadow-brand-md
+                </div>
+                <div className="shadow-brand-lg rounded-lg bg-white p-3 text-xs">
+                  shadow-brand-lg
+                </div>
+                <div className="shadow-brand-focus border-brand rounded-lg border bg-white p-3 text-xs">
+                  shadow-brand-focus (focus ring)
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Tag>
+                Neutral Gray consumed via raw CSS var (bg-[var(--sh-gray-200)])
+              </Tag>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="rounded-md px-3 py-1 text-xs"
+                  style={{ background: "var(--sh-gray)", color: "var(--sh-navy)" }}
+                >
+                  --sh-gray
+                </span>
+                <span
+                  className="rounded-md px-3 py-1 text-xs"
+                  style={{ background: "var(--sh-gray-200)", color: "var(--sh-navy)" }}
+                >
+                  --sh-gray-200
+                </span>
+                <span
+                  className="rounded-md px-3 py-1 text-xs"
+                  style={{ background: "var(--sh-gray-400)", color: "var(--sh-white)" }}
+                >
+                  --sh-gray-400
+                </span>
+                <span
+                  className="rounded-md px-3 py-1 text-xs"
+                  style={{ background: "var(--sh-gray-600)", color: "var(--sh-white)" }}
+                >
+                  --sh-gray-600
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <footer
           style={{
             borderTop: "1px solid var(--sh-gray-200)",

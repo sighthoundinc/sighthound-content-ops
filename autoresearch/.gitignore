@@ -1,14 +1,22 @@
-# research.env contains local paths and baseline values — never commit
-research.env
+# deft-autoresearch ignore rules
+#
+# research.env and program.md ARE tracked (reproducible baselines).
+# Session runtime output is gitignored because it is noisy and per-machine.
+# Only the ratcheted git commits and session.env are durable history.
 
-# Experiment logs and session state — all gitignored
-# Only validated improvements get committed via git ratchet
-results/autoresearch.tsv
-results/last_experiment.log
-results/session.env
-results/
+# runtime session noise
+sessions/*/autoresearch.tsv
+sessions/*/last_experiment.log
+sessions/*/last_metric
+sessions/*/run.log
 
-# Python
+# keep session.env tracked for reproducible resumes
+!sessions/*/session.env
+
+# active-session pointer (purely local)
+.current-session
+
+# Python scratch (if any test harness lands here)
 __pycache__/
 *.pyc
 .venv/

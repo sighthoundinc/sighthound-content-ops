@@ -57,6 +57,7 @@ When user input matches a trigger keyword, read the corresponding skill:
 - "sync" / "good morning" / "update deft" / "update vbrief" / "sync frameworks" → `skills/deft-sync/SKILL.md`
 - "pre-pr" / "quality loop" / "rwldl" / "self-review" → `skills/deft-pre-pr/SKILL.md`
 - "interview loop" / "q&a loop" / "run interview loop" → `skills/deft-interview/SKILL.md`
+- "autoresearch" / "optimize metric" / "optimise metric" / "overnight experiments" / "run the loop" / "metric-driven refactor" → `skills/deft-autoresearch/SKILL.md` — chains to `deft-pre-pr` before PR
 
 ## Development Process (always follow)
 

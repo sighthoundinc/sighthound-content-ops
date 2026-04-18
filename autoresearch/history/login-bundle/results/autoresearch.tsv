@@ -1,0 +1,6 @@
+commit	metric	status	description
+baseline	4.450	keep	baseline
+b830145	N/A	crash	metric extraction failed
+ad938dc	4.510	keep	 1 file changed, 2 insertions(+), 4 deletions(-)
+ad938dc	4.510	discard	 1 file changed, 2 insertions(+), 4 deletions(-)
+ad938dc	4.450	discard	 3 files changed, 45 insertions(+), 104 deletions(-)

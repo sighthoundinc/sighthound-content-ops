@@ -67,13 +67,6 @@ const ColumnEditor = dynamic(
   () => import("@/components/column-editor").then((m) => m.ColumnEditor),
   { ssr: false, loading: () => null }
 );
-// Hero card does its own API fetch + internal skeleton; lazy-loading adds a
-// tiny network hop but does not worsen perceived UX because the card shows
-// a skeleton while fetching anyway.
-const NeedsYouHero = dynamic(
-  () => import("@/components/dashboard/needs-you-hero").then((m) => m.NeedsYouHero),
-  { ssr: false, loading: () => null }
-);
 import { DashboardTable } from "@/components/dashboard-table";
 import { DetailDrawerField } from "@/components/detail-drawer";
 import { Tooltip } from "@/components/tooltip";

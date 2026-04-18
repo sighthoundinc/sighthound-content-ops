@@ -1,0 +1,87 @@
+   ▲ Next.js 15.3.8
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 1000ms
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/50) ...
+   Generating static pages (12/50) 
+   Generating static pages (24/50) 
+   Generating static pages (37/50) 
+ ✓ Generating static pages (50/50)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    3.84 kB         173 kB
+├ ○ /_not-found                            982 B         102 kB
+├ ƒ /api/activity-feed                     246 B         102 kB
+├ ƒ /api/admin/access-logs                 246 B         102 kB
+├ ƒ /api/admin/activity-history            246 B         102 kB
+├ ƒ /api/admin/ai-health                   246 B         102 kB
+├ ƒ /api/admin/cleanup-orphaned-auth       246 B         102 kB
+├ ƒ /api/admin/permissions                 246 B         102 kB
+├ ƒ /api/admin/quick-view                  246 B         102 kB
+├ ƒ /api/admin/reassign-assignments        246 B         102 kB
+├ ƒ /api/admin/users                       246 B         102 kB
+├ ƒ /api/admin/users/[userId]/password     246 B         102 kB
+├ ƒ /api/admin/users/inactive              246 B         102 kB
+├ ƒ /api/admin/wipe-app-clean              246 B         102 kB
+├ ƒ /api/ai/assistant                      246 B         102 kB
+├ ƒ /api/ai/feedback                       246 B         102 kB
+├ ƒ /api/blogs                             246 B         102 kB
+├ ƒ /api/blogs/[id]/comments               246 B         102 kB
+├ ƒ /api/blogs/[id]/transition             246 B         102 kB
+├ ƒ /api/blogs/import                      246 B         102 kB
+├ ƒ /api/blogs/overdue-checks              246 B         102 kB
+├ ƒ /api/dashboard/overview-metrics        246 B         102 kB
+├ ƒ /api/dashboard/summary                 246 B         102 kB
+├ ƒ /api/dashboard/tasks-snapshot          246 B         102 kB
+├ ƒ /api/events/record-activity            246 B         102 kB
+├ ƒ /api/ideas/[id]                        246 B         102 kB
+├ ƒ /api/ideas/[id]/delete                 246 B         102 kB
+├ ƒ /api/internal/metrics                  246 B         102 kB
+├ ƒ /api/search                            246 B         102 kB
+├ ƒ /api/social-posts                      246 B         102 kB
+├ ƒ /api/social-posts/[id]                 246 B         102 kB
+├ ƒ /api/social-posts/[id]/comments        246 B         102 kB
+├ ƒ /api/social-posts/[id]/reopen-brief    246 B         102 kB
+├ ƒ /api/social-posts/[id]/transition      246 B         102 kB
+├ ƒ /api/social-posts/overdue-checks       246 B         102 kB
+├ ƒ /api/social-posts/reminders            246 B         102 kB
+├ ƒ /api/tasks/queue                       246 B         102 kB
+├ ƒ /api/users/integrations                246 B         102 kB
+├ ƒ /api/users/notification-preferences    246 B         102 kB
+├ ƒ /api/users/profile                     246 B         102 kB
+├ ƒ /api/users/resolve-names               246 B         102 kB
+├ ○ /blogs                               10.3 kB         351 kB
+├ ƒ /blogs/[id]                          9.46 kB         216 kB
+├ ○ /blogs/cardboard                     7.74 kB         203 kB
+├ ○ /blogs/new                           3.69 kB         195 kB
+├ ○ /calendar                            14.9 kB         229 kB
+├ ○ /dashboard                           29.2 kB         383 kB
+├ ○ /ideas                               4.64 kB         202 kB
+├ ○ /inbox                               4.16 kB         202 kB
+├ ○ /login                               4.51 kB         171 kB
+├ ○ /resources                           6.76 kB         198 kB
+├ ○ /settings                            14.7 kB         206 kB
+├ ○ /settings/access-logs                5.56 kB         197 kB
+├ ○ /settings/permissions                3.11 kB         195 kB
+├ ○ /social-posts                        19.7 kB         241 kB
+├ ƒ /social-posts/[id]                   17.2 kB         224 kB
+├ ○ /tasks                               14.2 kB         215 kB
+└ ○ /updates                             3.83 kB         195 kB
++ First Load JS shared by all             101 kB
+  ├ chunks/1684-8f3a23f7acef44ec.js      46.1 kB
+  ├ chunks/4bd1b696-bd6c9e9757beddee.js  53.2 kB
+  └ other shared chunks (total)          1.95 kB
+
+
+ƒ Middleware                             81.3 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+ ⚠ Linting is disabled.

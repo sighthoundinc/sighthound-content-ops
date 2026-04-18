@@ -1,0 +1,4 @@
+upstream: github.com/sighthoundinc/sh-autoresearch
+pinned:   unreleased (vendored 2026-04-18 from README reference implementation)
+synced:   2026-04-18
+deft-skill-version: 0.1.0

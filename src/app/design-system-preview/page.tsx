@@ -12,6 +12,7 @@ import Image from "next/image";
 import type { CSSProperties } from "react";
 
 import { Button } from "@/components/button";
+import { Tooltip } from "@/components/tooltip";
 
 export const metadata = {
   title: "Design System Preview · Sighthound Content Relay",
@@ -489,6 +490,62 @@ export default function DesignSystemPreviewPage() {
                 <Button variant="destructive" disabled>
                   Destructive disabled
                 </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---- Phase 3.3: tooltip primitives ---- */}
+        <section className="mb-14">
+          <SectionTitle>
+            Phase 3.3 — tooltip primitives
+          </SectionTitle>
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--sh-navy-500)",
+              marginBottom: 12,
+              maxWidth: 640,
+            }}
+          >
+            Two tooltip surfaces are used across the app. Both migrated to
+            Sighthound navy ink + white text + <code>shadow-brand-md</code>
+            (navy-tinted). The CSS-only pattern is for simple inline hints;
+            the <code>&lt;Tooltip&gt;</code> portal component is for anywhere
+            overflow/clip would swallow a plain hover bubble.
+          </p>
+          <div className="grid gap-6">
+            <div>
+              <Tag>CSS-only (.tooltip-container / .tooltip-bubble)</Tag>
+              <div className="flex flex-wrap items-center gap-6">
+                <span className="tooltip-container cursor-help text-sm text-ink underline decoration-dotted underline-offset-4">
+                  Hover me (CSS tooltip)
+                  <span className="tooltip-bubble">Turning sight into insight.</span>
+                </span>
+                <span className="tooltip-container cursor-help text-sm text-ink underline decoration-dotted underline-offset-4">
+                  Vehicle detection
+                  <span className="tooltip-bubble">Make, model, colour, generation.</span>
+                </span>
+              </div>
+            </div>
+            <div>
+              <Tag>Portal &lt;Tooltip&gt; component</Tag>
+              <div className="flex flex-wrap items-center gap-3">
+                <Tooltip content="Edit brief">
+                  <Button variant="secondary" size="sm">
+                    Hover / focus me
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Reopen brief for editing (admin only)">
+                  <Button variant="icon" size="icon" aria-label="More">
+                    ⋯
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Submit for editorial review">
+                  <Button variant="primary" size="sm">
+                    Submit
+                  </Button>
+                </Tooltip>
               </div>
             </div>
           </div>

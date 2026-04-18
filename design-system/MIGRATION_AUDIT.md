@@ -420,3 +420,37 @@ The base `.focus-field` rule (transition properties) is unchanged — only the `
 **Preview smoke test**: `/design-system-preview` → new “Phase 3.2 — input focus (.focus-field)” section with text / email / textarea / select / disabled inputs. Tab through them to verify the Blurple focus treatment.
 
 **Caller compatibility**: no API surface changed; no code-level migration required. `npx tsc --noEmit` → exit 0.
+
+### Phase 3 sequence — revised based on what this codebase actually ships
+
+The original sequence (Button → Input → Card → Badge → Nav → Modal) was aspirational. Concrete findings:
+
+- **Card**: no shared `<Card>` component or `.card` CSS utility exists. Cards are bespoke per caller (`ai-blocker-card.tsx`, `ai-quality-card.tsx`, `ai-next-steps-card.tsx`, `associated-blog-context-card.tsx`, detail-drawer body wrappers). **Skipped** — creating a new primitive is Phase 4 territory.
+- **Badge**: no shared `<Badge>` component. The only “badge-shaped” primitive is the contract-locked status chip palette in `src/lib/status.ts`. **Skipped** — out-of-scope per §11.5 (Global Vocabulary Contract locks slate/blue/violet/rose/emerald/sky/amber).
+
+Revised Phase 3 sequence (real shared primitives only):
+**Button → Input (`.focus-field`) → Tooltip → Skeleton → Detail Drawer → Modal / ConfirmationModal.** Card and Badge are explicitly deferred to a later phase when a new primitive is introduced (not mid-migration).
+
+### Phase 3.3 — Tooltip primitives
+
+Two tooltip surfaces exist and both were migrated together to avoid a split visual state:
+
+1. **CSS-only pattern** (`.tooltip-container` + `.tooltip-bubble` in `src/app/globals.css`) — used for simple inline hints via `className` composition.
+2. **Portal `<Tooltip>` component** (`src/components/tooltip.tsx`) — used anywhere overflow/clip would swallow a plain hover bubble.
+
+**Token migration**
+| Surface | Property | Before | After |
+|---|---|---|---|
+| `.tooltip-bubble` | `background` | `#0f172a` (slate-900) | `var(--color-ink)` (Sighthound navy `#1a1d38`) |
+| `.tooltip-bubble` | `border` | `1px solid #1e293b` (slate-800) | `1px solid var(--sh-navy-700)` (`#2a2e56`) |
+| `.tooltip-bubble` | `color` | `#f8fafc` (slate-50) | `var(--sh-white)` |
+| `<Tooltip>` portal div | bg | `bg-slate-900` | `bg-ink` |
+| `<Tooltip>` portal div | text | `text-white` | `text-surface` |
+| `<Tooltip>` portal div | shadow | `shadow-lg` (Tailwind default) | `shadow-brand-md` (Phase 2 navy-tinted) |
+| `<Tooltip>` portal div | radius | `rounded-md` | **unchanged** (6px is fine for compact tooltip; DS doesn't specify a tooltip radius) |
+
+**Cross-app visual impact**: every existing `<Tooltip>` (used on shortcut hints, icon-only buttons, sidebar collapsed nav, table actions, etc.) and every inline `.tooltip-container/.tooltip-bubble` rendering now uses the Sighthound ink colour on a navy-tinted shadow instead of the slate pair. Single CSS rule + single className change affect the entire app.
+
+**Preview smoke test**: `/design-system-preview` → new “Phase 3.3 — tooltip primitives” section with both the CSS-only pattern and the portal component across three `<Button>` triggers.
+
+**Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.

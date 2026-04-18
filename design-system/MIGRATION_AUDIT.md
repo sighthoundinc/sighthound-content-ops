@@ -801,3 +801,51 @@ Largest single migration sweep of the project. Touches ten page routes spread ac
 - Bespoke cards (`ai-blocker-card`, `ai-quality-card`, `ai-next-steps-card`, `associated-blog-context-card`) — Phase 4.6.
 - Non-page shared components (`src/components/*.tsx`) that individual pages import — not touched in Phase 4.4; will pick up Content Relay through their own migration pass (many already done in Phase 3 primitives).
 - `.interactive-link:hover` (still `#0f172a`) and `.table-row-focus` (still `#f8fafc / #cbd5e1`) — queued for the final CSS-primitive cleanup.
+
+### Phase 4.5 — AI chrome (`276340f`, 8 files)
+
+Migrates the Ask AI surface chrome — the chat panel, floating trigger, message styling, quick-prompts, grounding panel, feedback rail, links row, and “unstick this” CTA. Preserves status-chip-adjacent tones used for confidence/intent where they live elsewhere. The three bespoke AI cards (`ai-blocker-card`, `ai-quality-card`, `ai-next-steps-card`) are held for Phase 4.6.
+
+**Files touched (8)**
+- `src/components/ai/ai-chat-panel.tsx` (primary floating chat panel — header / message list / composer / empty state)
+- `src/components/ai/ai-message.tsx` (per-message chrome: bubble surface, timestamps, action row)
+- `src/components/ai/ai-quick-prompts.tsx` (suggestion pills under the chat input)
+- `src/components/ai/based-on-panel.tsx` (RAG grounding panel)
+- `src/components/ai/ai-feedback.tsx` (thumbs up/down row)
+- `src/components/ai/ai-floating-button.tsx` (the brand-accented trigger pill)
+- `src/components/ai/ai-floating-assistant.tsx` (placement wrapper around the floating button/panel)
+- `src/components/ai/ai-links-row.tsx` (safe-link chip strip)
+- `src/components/ai/unstick-this-button.tsx` (stuck-state escalation CTA)
+
+**Approach**: same perl sweep as Phase 4.4 (~70 boundary-aware substitutions), then a second pass to clean up AI-specific stragglers the general sweep didn't anticipate — gradient stops, extra focus-ring variants, and light-indigo-on-dark accents used for AI branding.
+
+**Stragglers caught by the second sweep**
+| Pattern | Mapping |
+|---|---|
+| `from-/via-/to-slate-50` (gradient stops) | `from-/via-/to-[color:var(--sh-gray)]` |
+| `from-/via-/to-slate-100` | `from-/via-/to-blurple-50` |
+| `from-/to-slate-900` | `from-/to-ink` |
+| `from-/to-slate-800/700` | `from-/to-ink` / `from-/to-navy-700` |
+| `ring-slate-400` (focus ring) | `ring-brand` |
+| `ring-slate-300` | `ring-[color:var(--sh-gray-400)]` |
+| `ring-indigo-300` | `ring-blurple-300` |
+| `text-indigo-50/100/200` (light ink-on-dark accents) | `text-blurple-50/100` |
+
+Notable result of the two sweeps: AI avatar bubbles (header + empty-state hero), previously `bg-gradient-to-br from-slate-900 to-slate-700 text-indigo-200`, now render as `from-ink to-navy-700 text-blurple-100` — the pulsing Blurple ring on the header avatar stays, plus the “ping” animation ring is now `ring-blurple-300/70` instead of `ring-indigo-300/70`. The AI chrome reads distinctly on-brand without losing the “AI-ness” (light tint on dark navy).
+
+**Deliberately unchanged**
+- **`ai-blocker-card.tsx`, `ai-quality-card.tsx`, `ai-next-steps-card.tsx`** — bespoke cards reserved for Phase 4.6 per original user scope. Each has its own signal-color story (severity / confidence / action) that deserves a focused review, not a mechanical sweep.
+- **Confidence-meter / intent-badge colour tokens** — where they exist on violet/rose/amber/emerald/sky, untouched (semantic signal palette).
+- **`ai-types.tsx`, `index.tsx`** — type-only / re-export files, no UI classes to migrate.
+- **`bg-white`** — default surface; same output as `bg-surface`.
+- **`shadow-sm` / `shadow-md` on app-density surfaces** — kept per Phase 4 policy (only primitives + marketing get `shadow-brand-*`).
+
+**Cross-app visual impact**: the Ask AI floating trigger, open chat panel, quick-prompt suggestions, message bubbles, grounding panel, feedback row, safe-link chip strip, and unstick CTA all render in Sighthound navy ink + Blurple accents + `--sh-gray-200` borders + Blurple-50 hovers. Focus rings across the whole Ask AI flow are Blurple. AI avatar dark-navy-to-navy-700 gradient with Blurple-100 face-glyph is the new on-brand look. Previously-indigo “brand” accents (trigger pill, avatar light, ping ring) are now Blurple.
+
+**Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0.
+
+**Not in this PR** (queued for Phase 4.6)
+- `src/components/ai/ai-blocker-card.tsx`
+- `src/components/ai/ai-quality-card.tsx`
+- `src/components/ai/ai-next-steps-card.tsx`
+- `src/components/associated-blog-context-card.tsx` (bespoke card outside `ai/` namespace but part of the same “context card” story)

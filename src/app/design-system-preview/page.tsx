@@ -11,6 +11,8 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
+import { Button } from "@/components/button";
+
 export const metadata = {
   title: "Design System Preview · Sighthound Content Relay",
   description: "Phase 1 smoke test for Sighthound Content Relay tokens",
@@ -426,6 +428,69 @@ export default function DesignSystemPreviewPage() {
             {SHADOWS.map((sh) => (
               <ShadowCard key={sh.cssVar} name={sh.name} value={sh.value} />
             ))}
+          </div>
+        </section>
+
+        {/* ---- Phase 3: shared <Button> primitive ---- */}
+        <section className="mb-14">
+          <SectionTitle>
+            Phase 3 — shared <code>&lt;Button&gt;</code> primitive
+          </SectionTitle>
+          <div className="grid gap-6">
+            <div>
+              <Tag>size="cta" · rounded-button-cta (20px) · Lexend Light 16</Tag>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="primary" size="cta">Talk to our team</Button>
+                <Button variant="secondary" size="cta">Watch demo</Button>
+                <Button variant="destructive" size="cta">Delete account</Button>
+                <Button variant="ghost" size="cta">Learn more</Button>
+              </div>
+            </div>
+            <div>
+              <Tag>size="md" · rounded-button-compact (8px)</Tag>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="primary" size="md">Save</Button>
+                <Button variant="secondary" size="md">Cancel</Button>
+                <Button variant="destructive" size="md">Delete</Button>
+                <Button variant="ghost" size="md">Skip</Button>
+              </div>
+            </div>
+            <div>
+              <Tag>size="sm" (default) · rounded-button-compact (8px)</Tag>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="primary">Apply</Button>
+                <Button variant="secondary">Reset</Button>
+                <Button variant="ghost">Dismiss</Button>
+              </div>
+            </div>
+            <div>
+              <Tag>size="xs" + icon size · rounded-button-compact (8px)</Tag>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="primary" size="xs">
+                  xs primary
+                </Button>
+                <Button variant="secondary" size="xs">
+                  xs secondary
+                </Button>
+                <Button variant="icon" size="icon" aria-label="More options">
+                  ⋯
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Tag>disabled state (any variant)</Tag>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="primary" disabled>
+                  Primary disabled
+                </Button>
+                <Button variant="secondary" disabled>
+                  Secondary disabled
+                </Button>
+                <Button variant="destructive" disabled>
+                  Destructive disabled
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
 

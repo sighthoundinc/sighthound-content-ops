@@ -330,3 +330,69 @@ Phase 2 scope: make the brand palette accessible as Tailwind utilities via `@the
 - `src/lib/typography.ts` (slate-based typography constants remain until Phase 3/4).
 - Any existing CSS utility class in `globals.css` (`.page-title`, `.body-text`, `.focus-field`, etc.).
 - All other routes (`/dashboard`, `/social-posts`, `/blogs`, `/tasks`, `/calendar`, `/settings`, `/login`, …).
+
+---
+
+## 13. Pre-Phase-3: Blurple strategy + hex sweep
+
+### Blurple strategy (B) — manual sweep, no Tailwind palette override
+
+- Do **not** alias the Tailwind `blue-*` palette via `@theme inline`.
+- When migrating a primitive, rewrite every `blue-600` / `bg-blue-*` / `text-blue-*` / `ring-blue-*` reference to the semantic `brand` equivalent (`bg-brand` / `text-brand` / `ring-brand`).
+- Keep the change scoped to the primitive being migrated; no “drive-by” edits elsewhere.
+
+### Hex cleanup (commit `5b51cab`)
+
+**Finding**: all hex literals in `src/app/dashboard/page.tsx`, `src/app/blogs/page.tsx`, and `src/app/tasks/page.tsx` sit inside a `<style>` block that is written into a **print-preview popup** via `popup.document.write(...)`. That popup is an isolated document and **cannot** read our `--sh-*` / `--color-*` CSS vars. Using `var(--color-ink)` there would produce an unstyled output.
+
+**Action**: inlined Sighthound hex equivalents directly in each popup CSS block, with a comment above each `popup.document.write` explaining the constraint.
+
+Mappings applied:
+- `#0f172a` (Tailwind slate-900) → `#1a1d38` (`--sh-navy`)
+- `#475569` (slate-600) → `#4b4f73` (`--sh-navy-500`)
+- `#cbd5e1` (slate-300) → `#d9dfe6` (`--sh-gray-200`)
+- `#f8fafc` (slate-50) → `#eff3f7` (`--sh-gray`)
+
+**`src/components/app-shell.tsx:602`**: `bg-[#fcfcfe]` (arbitrary Tailwind value) → `bg-surface` (true Content Relay utility). Imperceptible visual shift; replaces a non-token literal with a token.
+
+All three print popups now carry Content Relay palette. No `TODO(design-system): no token mapping` comments were needed because every hex here had a clean Sighthound equivalent.
+
+---
+
+## 14. Phase 3 — leaf primitives (begins with Button)
+
+Phase 3 migrates UI primitives one-at-a-time to Content Relay tokens. **One PR per primitive** per the user guardrail.
+
+### Phase 3.1 — Button (shared <Button> primitive)
+
+File: `src/components/button.tsx`.
+
+**Variant colour story**
+| Variant | Before (slate-based) | After (Content Relay) |
+|---|---|---|
+| `primary` | `bg-slate-900` / `hover:bg-slate-700` | `bg-brand` / `hover:bg-blurple-700`, transparent border |
+| `secondary` | `border-slate-300` / `bg-white` / `text-slate-700` / `hover:bg-slate-100` | `border-[color:var(--sh-gray-200)]` / `bg-surface` / `text-ink` / `hover:bg-blurple-50` / `hover:border-[color:var(--sh-gray-400)]` |
+| `destructive` | `border-rose-600` / `bg-rose-600` / `hover:bg-rose-500` | **unchanged** (semantic danger) |
+| `ghost` | `text-slate-600` / `hover:bg-slate-100` | `text-navy-500` / `hover:bg-blurple-50` / `hover:text-ink` |
+| `icon` | `border-slate-300` / `text-slate-600` / `hover:bg-slate-100` | `border-[color:var(--sh-gray-200)]` / `text-navy-500` / `hover:bg-blurple-50` / `hover:text-ink` |
+
+**Sizes split per §11.4**
+| Size | Radius token | Padding | Typography |
+|---|---|---|---|
+| `cta` (new) | `rounded-button-cta` (20px) | `px-[29px] py-[14px]` (DS spec 14/29) | `text-base font-light` (Lexend Light 16) |
+| `md` | `rounded-button-compact` (8px) | `px-3 py-2` | `text-sm font-semibold` |
+| `sm` (default) | `rounded-button-compact` | `px-3 py-1.5` | `text-sm font-medium` |
+| `xs` | `rounded-button-compact` | `px-2 py-1` | `text-xs font-medium` |
+| `icon` | `rounded-button-compact` | `h-7 w-7` | `text-xs` |
+
+**Focus ring**: base class now carries `focus-visible:outline-none focus-visible:shadow-brand-focus`, which uses the Phase-2 `--shadow-brand-focus` token (3px Blurple ring at 35% alpha — matches DS spec).
+
+**Caller compatibility**: the existing `ButtonSize` enum values (`xs` / `sm` / `md` / `icon`) are preserved. Only `cta` is net-new. No caller refactor required. `npx tsc --noEmit` → exit 0.
+
+**Cross-app visual impact**: every `<Button variant="primary">` or `buttonClass({ variant: "primary" })` caller (e.g. “New Blog”, “New Social Post” CTAs on list pages, dashboard toolbar actions) now renders in Blurple instead of slate-900. This is the intended Content Relay shift.
+
+**Preview smoke test**: `/design-system-preview` → new “Phase 3 — shared `<Button>` primitive” section renders every variant × size combination, including the new `cta` size and the disabled state.
+
+### Phase 3 sequence (ahead of next reviews)
+
+Order: **Button → Input → Card → Badge → Nav → Modal**. Each is a separate PR. No batching.

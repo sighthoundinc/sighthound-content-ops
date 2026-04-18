@@ -242,41 +242,41 @@ export default function PermissionsSettingsPage() {
         <div className="space-y-6">
           <nav
             aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
           >
-            <Link href="/dashboard" className="hover:text-slate-700">
+            <Link href="/dashboard" className="hover:text-navy-500">
               Dashboard
             </Link>
             <span>/</span>
-            <Link href="/settings" className="hover:text-slate-700">
+            <Link href="/settings" className="hover:text-navy-500">
               Settings
             </Link>
             <span>/</span>
-            <span className="text-slate-700">Permissions</span>
+            <span className="text-navy-500">Permissions</span>
           </nav>
           <header className="space-y-2">
-            <h2 className="text-xl font-semibold text-slate-900">Permissions</h2>
-            <p className="text-sm text-slate-600">
+            <h2 className="text-xl font-semibold text-ink">Permissions</h2>
+            <p className="text-sm text-navy-500">
               Define what each role can access across core workflows.
             </p>
           </header>
 
           {isSimulationActive ? (
-            <p className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
+            <p className="rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-3 py-2 text-sm text-blurple-700">
               Previewing as <span className="font-semibold">{simulatedRole}</span>. Editing is paused while preview mode is active.
             </p>
           ) : null}
 
-          <section className="rounded-lg border border-slate-200 p-4">
+          <section className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-navy-500">
                 <span className="font-medium">Role:</span>
                 <select
                   value={selectedRole}
                   onChange={(event) => {
                     setSelectedRole(event.target.value as AppRole);
                   }}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   {MANAGED_PERMISSION_ROLES.map((role) => (
                     <option key={role} value={role}>
@@ -285,14 +285,14 @@ export default function PermissionsSettingsPage() {
                   ))}
                 </select>
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-navy-500">
                 <span className="font-medium">Preview as role:</span>
                 <select
                   value={simulatedRole}
                   onChange={(event) => {
                     setSimulatedRole(event.target.value as AppRole | "off");
                   }}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   <option value="off">Off</option>
                   <option value="writer">Writer</option>
@@ -303,7 +303,7 @@ export default function PermissionsSettingsPage() {
               <button
                 type="button"
                 disabled={isResetting || isLoading || isSimulationActive}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => {
                   void resetRolePermissions();
                 }}
@@ -315,7 +315,7 @@ export default function PermissionsSettingsPage() {
             {isLoading ? (
               <div className="mt-4 space-y-4">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={`skeleton-group-${i}`} className="space-y-2 rounded-md border border-slate-200 p-4">
+                  <div key={`skeleton-group-${i}`} className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] p-4">
                     <div className="skeleton h-4 w-32" />
                     {Array.from({ length: 4 }).map((_, j) => (
                       <div key={`skeleton-row-${i}-${j}`} className="skeleton h-10 w-full" />
@@ -326,25 +326,25 @@ export default function PermissionsSettingsPage() {
             ) : (
               <div className="mt-4 space-y-4">
                 {Object.entries(groupedDefinitions).map(([group, definitions]) => (
-                  <section key={group} className="rounded-md border border-slate-200">
-                    <header className="border-b border-slate-200 bg-slate-50 px-3 py-2">
-                      <h3 className="text-sm font-semibold text-slate-700">
+                  <section key={group} className="rounded-md border border-[color:var(--sh-gray-200)]">
+                    <header className="border-b border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
+                      <h3 className="text-sm font-semibold text-navy-500">
                         {PERMISSION_GROUP_LABELS[group as keyof typeof PERMISSION_GROUP_LABELS]}
                       </h3>
                     </header>
-                    <ul className="divide-y divide-slate-100">
+                    <ul className="divide-y divide-[color:var(--sh-gray)]">
                       {definitions.map((definition) => (
                         <li
                           key={`${selectedRole}-${definition.key}`}
                           className="flex items-start justify-between gap-3 px-3 py-2"
                         >
                           <div>
-                            <p className="text-sm font-medium text-slate-900">
+                            <p className="text-sm font-medium text-ink">
                               {getTaskLabel(definition.key, definition.label)}
                             </p>
-                            <p className="text-xs text-slate-500">{definition.description}</p>
+                            <p className="text-xs text-navy-500">{definition.description}</p>
                             {PERMISSION_UI_IMPACTS[definition.key]?.length ? (
-                              <p className="mt-1 text-xs text-slate-600">
+                              <p className="mt-1 text-xs text-navy-500">
                                 Enables: {PERMISSION_UI_IMPACTS[definition.key]?.join(" • ")}
                               </p>
                             ) : null}
@@ -375,17 +375,17 @@ export default function PermissionsSettingsPage() {
             )}
           </section>
 
-          <section className="rounded-lg border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <section className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
               Recent Permission Changes
             </h3>
             {auditRows.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">No permission updates yet.</p>
+              <p className="mt-3 text-sm text-navy-500">No permission updates yet.</p>
             ) : (
               <ul className="mt-3 space-y-2">
                 {auditRows.map((audit) => (
-                  <li key={audit.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                    <p className="text-sm text-slate-800">
+                  <li key={audit.id} className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
+                    <p className="text-sm text-ink">
                       <span className="font-medium">{audit.actor_name ?? audit.changed_by ?? "Unknown actor"}</span>{" "}
                       changed{" "}
                       <span className="font-medium">
@@ -394,7 +394,7 @@ export default function PermissionsSettingsPage() {
                       from <span className="font-medium">{String(audit.old_value)}</span> to{" "}
                       <span className="font-medium">{String(audit.new_value)}</span>.
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-navy-500">
                       {new Date(audit.changed_at).toLocaleString()}
                     </p>
                   </li>

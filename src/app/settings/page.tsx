@@ -1063,8 +1063,8 @@ function SettingsPageContent() {
       <AppShell>
         <div className="space-y-7">
           <header className="space-y-2">
-            <h2 className="text-xl font-semibold text-slate-900">Settings</h2>
-            <p className="text-sm text-slate-600">
+            <h2 className="text-xl font-semibold text-ink">Settings</h2>
+            <p className="text-sm text-navy-500">
               Manage your profile, workspace preferences, and admin controls in one place.
             </p>
           </header>
@@ -1079,18 +1079,18 @@ function SettingsPageContent() {
           ) : (
             <>
               {profile ? (
-                <section className="rounded-lg border border-slate-200 p-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <section className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                     My Profile
                   </h3>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className="mt-1 text-sm text-navy-500">
                     Keep your personal details and daily working preferences up to date.
                   </p>
-                    <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <div className="mt-3 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-navy-500">
                         Roles
                       </p>
-                      <p className="mt-1 text-sm text-slate-700">
+                      <p className="mt-1 text-sm text-navy-500">
                         {myRoles.length > 0
                           ? myRoles.join(", ")
                           : "No explicit role assigned"}
@@ -1098,7 +1098,7 @@ function SettingsPageContent() {
                     </div>
                     <div className="mt-4 grid gap-3 md:grid-cols-3">
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           First Name
                         </span>
                         <input
@@ -1121,11 +1121,11 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Last Name
                         </span>
                         <input
@@ -1148,11 +1148,11 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Display Name
                         </span>
                         <input
@@ -1175,13 +1175,13 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                     </div>
                     <div className="mt-3 max-w-sm">
                       <label className="block md:col-span-3">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Timezone
                         </span>
                         <select
@@ -1204,7 +1204,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {TIMEZONE_OPTIONS.map((timezone) => (
                             <option key={timezone} value={timezone}>
@@ -1216,7 +1216,7 @@ function SettingsPageContent() {
                     </div>
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Week Starts On
                         </span>
                         <select
@@ -1224,7 +1224,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             updateEditableUser(profile.id, { weekStart: Number(event.target.value) });
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {WEEK_DAYS.map((day) => (
                             <option key={day.value} value={day.value}>
@@ -1234,7 +1234,7 @@ function SettingsPageContent() {
                         </select>
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Drafts need attention after
                         </span>
                         <div className="flex items-center gap-2">
@@ -1248,24 +1248,24 @@ function SettingsPageContent() {
                                 staleDraftDays: Number(event.target.value) || 10,
                               });
                             }}
-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
-                          <span className="text-sm text-slate-600 whitespace-nowrap">days</span>
+                          <span className="text-sm text-navy-500 whitespace-nowrap">days</span>
                         </div>
                       </label>
                     </div>
                     <div className="mt-3">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                      <span className="mb-1 block text-sm font-medium text-navy-500">
                         Display density
                       </span>
-                      <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs">
+                      <div className="inline-flex rounded-md border border-[color:var(--sh-gray-200)] bg-white p-0.5 text-xs">
                         <button
                           type="button"
                           onClick={() => setDensity("compact")}
                           className={`rounded px-3 py-1 font-medium transition ${
                             density === "compact"
-                              ? "bg-slate-900 text-white"
-                              : "text-slate-600 hover:text-slate-900"
+                              ? "bg-ink text-white"
+                              : "text-navy-500 hover:text-ink"
                           }`}
                           aria-pressed={density === "compact"}
                         >
@@ -1276,22 +1276,22 @@ function SettingsPageContent() {
                           onClick={() => setDensity("comfortable")}
                           className={`rounded px-3 py-1 font-medium transition ${
                             density === "comfortable"
-                              ? "bg-slate-900 text-white"
-                              : "text-slate-600 hover:text-slate-900"
+                              ? "bg-ink text-white"
+                              : "text-navy-500 hover:text-ink"
                           }`}
                           aria-pressed={density === "comfortable"}
                         >
                           Comfortable
                         </button>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-navy-500">
                         Controls row height on tables. Stored locally in your browser.
                       </p>
                     </div>
                     <div className="mt-4">
                       <button
                         type="button"
-                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700"
                         onClick={() => {
                           void saveProfileEdits(profile.id);
                         }}
@@ -1319,7 +1319,7 @@ function SettingsPageContent() {
                     Keep Activity History focused by clearing test data or low-value noise.
                   </p>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
+                    <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-navy-500">
                       <input
                         type="radio"
                         name="activity-history-delete-scope"
@@ -1330,13 +1330,13 @@ function SettingsPageContent() {
                         }}
                       />
                       <span>
-                        <span className="font-medium text-slate-900">Clear all activity history</span>
-                        <span className="mt-0.5 block text-xs text-slate-500">
+                        <span className="font-medium text-ink">Clear all activity history</span>
+                        <span className="mt-0.5 block text-xs text-navy-500">
                           Remove activity records for everyone.
                         </span>
                       </span>
                     </label>
-                    <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
+                    <label className="flex items-start gap-2 rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-navy-500">
                       <input
                         type="radio"
                         name="activity-history-delete-scope"
@@ -1347,10 +1347,10 @@ function SettingsPageContent() {
                         }}
                       />
                       <span>
-                        <span className="font-medium text-slate-900">
+                        <span className="font-medium text-ink">
                           Clear selected team members
                         </span>
-                        <span className="mt-0.5 block text-xs text-slate-500">
+                        <span className="mt-0.5 block text-xs text-navy-500">
                           Remove activity records for specific team members.
                         </span>
                       </span>
@@ -1369,7 +1369,7 @@ function SettingsPageContent() {
                   <p className="mt-3 text-xs text-rose-700/90">
                     This removes activity from blogs, social posts, and permissions. This action cannot be undone.
                   </p>
-                  <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-700">
+                  <label className="mt-3 inline-flex items-center gap-2 text-sm text-navy-500">
                     <input
                       type="checkbox"
                       checked={activityCleanupIncludeComments}
@@ -1424,25 +1424,25 @@ function SettingsPageContent() {
                 </section>
               ) : null}
               {isAdminUser || isQuickViewActive ? (
-                <section className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-4">
-                  <h3 className="text-base font-semibold text-indigo-900">
+                <section className="rounded-lg border border-[color:var(--sh-blurple-100)] bg-blurple-50/40 p-4">
+                  <h3 className="text-base font-semibold text-blurple-800">
                     Administration
                   </h3>
-                  <p className="mt-1 text-sm text-indigo-900/80">
+                  <p className="mt-1 text-sm text-blurple-800/80">
                     Manage access controls and safely preview the workspace as another user.
                   </p>
                   {canManagePermissions ? (
                     <div className="mt-3">
                       <Link
                         href="/settings/permissions"
-                        className="inline-flex rounded-md border border-indigo-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+                        className="inline-flex rounded-md border border-blurple-300 bg-white px-3 py-2 text-sm font-medium text-blurple-700 hover:bg-blurple-100"
                       >
                         Open Permissions
                       </Link>
                     </div>
                   ) : null}
                   {isQuickViewActive && quickViewSnapshot ? (
-                    <div className="mt-2 rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-700">
+                    <div className="mt-2 rounded-md border border-[color:var(--sh-blurple-100)] bg-white px-3 py-2 text-sm text-navy-500">
                       <p>
                         Quick view is active: you are currently viewing as{" "}
                         <span className="font-semibold">
@@ -1454,7 +1454,7 @@ function SettingsPageContent() {
                         <button
                           type="button"
                           disabled={isRestoringAdminFromQuickView}
-                          className="rounded-md border border-indigo-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md border border-blurple-300 bg-white px-3 py-2 text-sm font-medium text-blurple-700 hover:bg-blurple-100 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => {
                             void restoreAdminFromQuickView();
                           }}
@@ -1469,11 +1469,11 @@ function SettingsPageContent() {
                   {isAdminUser ? (
                     <form className="mt-3 grid gap-3 md:grid-cols-3" onSubmit={startQuickViewAsUser}>
                       <label className="block md:col-span-2">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Quick view as team member
                         </span>
                         <select
-                          className="w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-blurple-100)] bg-white px-3 py-2 text-sm"
                           value={quickViewTargetUserId}
                           onChange={(event) => {
                             setQuickViewTargetUserId(event.target.value);
@@ -1492,7 +1492,7 @@ function SettingsPageContent() {
                         <button
                           type="submit"
                           disabled={isSwitchingQuickViewUser}
-                          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isSwitchingQuickViewUser ? "Switching..." : "Start Quick View"}
                         </button>
@@ -1505,16 +1505,16 @@ function SettingsPageContent() {
               {canManageUserDirectory || canReassignAssignments ? (
                 <>
                   {canManageUsers && canManageRoles ? (
-                    <section className="rounded-lg border border-slate-200 p-4">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    <section className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                         Create User Account
                       </h3>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-navy-500">
                         Invite and set up a new team member account.
                       </p>
                       <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={createUser}>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Full Name
                         </span>
                         <input
@@ -1523,11 +1523,11 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewFullName(event.target.value);
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">Email</span>
+                        <span className="mb-1 block text-sm font-medium text-navy-500">Email</span>
                         <input
                           required
                           type="email"
@@ -1535,11 +1535,11 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewEmail(event.target.value);
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Password
                         </span>
                         <input
@@ -1550,11 +1550,11 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewPassword(event.target.value);
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Primary Role
                         </span>
                         <select
@@ -1562,7 +1562,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewRole(event.target.value as AppRole);
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {ALL_ROLES.map((role) => (
                             <option key={role} value={role}>
@@ -1575,7 +1575,7 @@ function SettingsPageContent() {
                         <button
                           type="submit"
                           disabled={isCreatingUser}
-                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isCreatingUser ? "Creating..." : "Create User"}
                         </button>
@@ -1585,20 +1585,20 @@ function SettingsPageContent() {
                   ) : null}
 
                   {canReassignAssignments ? (
-                    <section className="rounded-lg border border-slate-200 p-4">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    <section className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                         Reassign User Work
                       </h3>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-navy-500">
                         Move active writing and publishing ownership from one teammate to another.
                       </p>
                       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={reassignEverythingFromUser}>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           From
                         </span>
                         <select
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           value={reassignFromUserId}
                           onChange={(event) => {
                             setReassignFromUserId(event.target.value);
@@ -1614,11 +1614,11 @@ function SettingsPageContent() {
                         </select>
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           To
                         </span>
                         <select
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           value={reassignToUserId}
                           onChange={(event) => {
                             setReassignToUserId(event.target.value);
@@ -1636,7 +1636,7 @@ function SettingsPageContent() {
                         </select>
                       </label>
                       <div className="md:col-span-2 flex flex-wrap items-center gap-4">
-                        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <label className="inline-flex items-center gap-2 text-sm text-navy-500">
                           <input
                             type="checkbox"
                             disabled={!canReassignWriterAssignments}
@@ -1647,7 +1647,7 @@ function SettingsPageContent() {
                           />
                           Transfer writer assignments
                         </label>
-                        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <label className="inline-flex items-center gap-2 text-sm text-navy-500">
                           <input
                             type="checkbox"
                             disabled={!canReassignPublisherAssignments}
@@ -1663,7 +1663,7 @@ function SettingsPageContent() {
                         <button
                           type="submit"
                           disabled={isReassigningAssignments}
-                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isReassigningAssignments ? "Reassigning..." : "Reassign Assignments"}
                         </button>
@@ -1673,20 +1673,20 @@ function SettingsPageContent() {
                   ) : null}
 
                   {canManageUserDirectory ? (
-                    <section className="rounded-lg border border-slate-200 p-4">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    <section className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                         User Directory
                       </h3>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-navy-500">
                         View team members, update details, and manage account status.
                       </p>
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
                         <label className="block">
-                          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-navy-500">
                             Role Filter
                           </span>
                           <select
-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                             value={userRoleFilter}
                             onChange={(event) => {
                               setUserRoleFilter(event.target.value as AppRole | "all");
@@ -1701,11 +1701,11 @@ function SettingsPageContent() {
                           </select>
                         </label>
                         <label className="block">
-                          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-navy-500">
                             Status Filter
                           </span>
                           <select
-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                             value={userActiveFilter}
                             onChange={(event) => {
                               setUserActiveFilter(
@@ -1739,7 +1739,7 @@ function SettingsPageContent() {
                         </button>
                       </div>
                     ) : null}
-                    <div className="mt-3 overflow-auto rounded-lg border border-slate-200">
+                    <div className="mt-3 overflow-auto rounded-lg border border-[color:var(--sh-gray-200)]">
                       <table className={TABLE_BASE_CLASS}>
                         <thead className={TABLE_HEAD_CLASS}>
                           <tr>
@@ -1752,7 +1752,7 @@ function SettingsPageContent() {
                           {sortedUsers.length === 0 ? (
                             <tr>
                               <td
-                                className="h-12 px-3 py-2 align-middle text-center text-slate-500"
+                                className="h-12 px-3 py-2 align-middle text-center text-navy-500"
                                 colSpan={3}
                               >
                                 No users found with current filters.
@@ -1766,7 +1766,7 @@ function SettingsPageContent() {
                               }
                               return (
                                 <tr key={nextUser.id}>
-                                  <td className="h-12 max-w-[16rem] px-3 py-2 align-middle text-slate-600 overflow-hidden">
+                                  <td className="h-12 max-w-[16rem] px-3 py-2 align-middle text-navy-500 overflow-hidden">
                                     <span
                                       className={TABLE_TEXT_TRUNCATE_CLASS}
                                       title={nextUser.email}
@@ -1790,7 +1790,7 @@ function SettingsPageContent() {
                                       {canEditUsersInDirectory ? (
                                         <button
                                           type="button"
-                                          className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                          className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50"
                                           onClick={() => {
                                             openEditUserModal(nextUser.id);
                                           }}
@@ -1820,7 +1820,7 @@ function SettingsPageContent() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
                       <TableResultsSummary
                         totalRows={sortedUsers.length}
                         currentPage={currentPage}
@@ -1850,16 +1850,16 @@ function SettingsPageContent() {
                   <button
                     type="button"
                     aria-label="Close edit user modal"
-                    className="absolute inset-0 bg-slate-900/30"
+                    className="absolute inset-0 bg-ink/30"
                     onClick={closeEditUserModal}
                   />
-                  <div className="relative z-10 w-full max-w-xl rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+                  <div className="relative z-10 w-full max-w-xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="text-base font-semibold text-slate-900">Edit User</h3>
-                        <p className="mt-1 text-sm text-slate-600">
+                        <h3 className="text-base font-semibold text-ink">Edit User</h3>
+                        <p className="mt-1 text-sm text-navy-500">
                           Update username, name fields, and roles for{" "}
-                          <span className="font-medium text-slate-900">
+                          <span className="font-medium text-ink">
                             {editTargetUser.email}
                           </span>
                           .
@@ -1868,7 +1868,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isSavingEditedUser}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={closeEditUserModal}
                       >
                         Close
@@ -1876,7 +1876,7 @@ function SettingsPageContent() {
                     </div>
                     <div className="mt-4 space-y-4">
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           Username
                         </span>
                         <input
@@ -1886,12 +1886,12 @@ function SettingsPageContent() {
                               displayName: event.target.value,
                             });
                           }}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <div className="grid gap-3 md:grid-cols-2">
                         <label className="block">
-                          <span className="mb-1 block text-sm font-medium text-slate-700">
+                          <span className="mb-1 block text-sm font-medium text-navy-500">
                             First Name
                           </span>
                           <input
@@ -1901,11 +1901,11 @@ function SettingsPageContent() {
                                 firstName: event.target.value,
                               });
                             }}
-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
                         </label>
                         <label className="block">
-                          <span className="mb-1 block text-sm font-medium text-slate-700">
+                          <span className="mb-1 block text-sm font-medium text-navy-500">
                             Last Name
                           </span>
                           <input
@@ -1915,7 +1915,7 @@ function SettingsPageContent() {
                                 lastName: event.target.value,
                               });
                             }}
-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
                         </label>
                       </div>
@@ -1944,10 +1944,10 @@ function SettingsPageContent() {
                           />
                         ) : (
                           <label className="block">
-                            <span className="mb-1 block text-sm font-medium text-slate-700">
+                            <span className="mb-1 block text-sm font-medium text-navy-500">
                               Roles
                             </span>
-                            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                            <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-sm text-navy-500">
                               {editTargetUserDraft.userRoles.join(", ")}
                             </p>
                           </label>
@@ -1955,12 +1955,12 @@ function SettingsPageContent() {
                       </div>
                     </div>
                     {canManageUsers ? (
-                      <div className="mt-6 border-t border-slate-200 pt-4">
-                        <p className="mb-3 text-sm font-medium text-slate-900">Reset Password (Test Only)</p>
+                      <div className="mt-6 border-t border-[color:var(--sh-gray-200)] pt-4">
+                        <p className="mb-3 text-sm font-medium text-ink">Reset Password (Test Only)</p>
                         <button
                           type="button"
                           disabled={isSavingEditedUser}
-                          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1.5 text-xs font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => {
                             setResetPasswordError(null);
                             setResetPasswordInput("");
@@ -1975,7 +1975,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isSavingEditedUser}
-                        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={closeEditUserModal}
                       >
                         Cancel
@@ -1983,7 +1983,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isSavingEditedUser}
-                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={() => {
                           void saveEditedUserFromModal();
                         }}
@@ -1999,7 +1999,7 @@ function SettingsPageContent() {
                   <button
                     type="button"
                     aria-label="Close reset password modal"
-                    className="absolute inset-0 bg-slate-900/30"
+                    className="absolute inset-0 bg-ink/30"
                     onClick={() => {
                       if (!isResettingPassword) {
                         setIsResetPasswordModalOpen(false);
@@ -2008,15 +2008,15 @@ function SettingsPageContent() {
                       }
                     }}
                   />
-                  <div className="relative z-10 w-full max-w-sm rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
-                    <h3 className="text-base font-semibold text-slate-900">Set New Password</h3>
-                    <p className="mt-1 text-sm text-slate-600">
+                  <div className="relative z-10 w-full max-w-sm rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+                    <h3 className="text-base font-semibold text-ink">Set New Password</h3>
+                    <p className="mt-1 text-sm text-navy-500">
                       Set a new password for{" "}
-                      <span className="font-medium text-slate-900">{editTargetUser.email}</span>
+                      <span className="font-medium text-ink">{editTargetUser.email}</span>
                     </p>
                     <div className="mt-4">
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">
+                        <span className="mb-1 block text-sm font-medium text-navy-500">
                           New Password (min 8 characters)
                         </span>
                         <input
@@ -2028,7 +2028,7 @@ function SettingsPageContent() {
                           }}
                           disabled={isResettingPassword}
                           placeholder="Enter new password"
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       {resetPasswordError ? (
@@ -2041,7 +2041,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isResettingPassword}
-                        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={() => {
                           setIsResetPasswordModalOpen(false);
                           setResetPasswordInput("");
@@ -2053,7 +2053,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isResettingPassword || !resetPasswordInput || resetPasswordInput.length < 8}
-                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={() => {
                           void resetUserPassword();
                         }}
@@ -2069,7 +2069,7 @@ function SettingsPageContent() {
                   <button
                     type="button"
                     aria-label="Close delete inactive users modal"
-                    className="absolute inset-0 bg-slate-900/30"
+                    className="absolute inset-0 bg-ink/30"
                     onClick={() => {
                       if (!isDeletingInactiveUsers) {
                         setIsDeleteInactiveUsersModalOpen(false);
@@ -2078,24 +2078,24 @@ function SettingsPageContent() {
                     }}
                   />
                   <div className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl">
-                    <h3 className="text-base font-semibold text-slate-900">
+                    <h3 className="text-base font-semibold text-ink">
                       Delete all inactive users?
                     </h3>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-navy-500">
                       This permanently deletes{" "}
-                      <span className="font-semibold text-slate-900">
+                      <span className="font-semibold text-ink">
                         {inactiveUsers.length}
                       </span>{" "}
                       inactive user account(s) from authentication and app data. This action
                       cannot be undone.
                     </p>
-                    <div className="mt-3 max-h-36 overflow-auto rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="mt-3 max-h-36 overflow-auto rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
                       {inactiveUsers.length === 0 ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-navy-500">
                           No inactive users found.
                         </p>
                       ) : (
-                        <ul className="space-y-1 text-xs text-slate-700">
+                        <ul className="space-y-1 text-xs text-navy-500">
                           {inactiveUsers.map((nextUser) => (
                             <li key={nextUser.id}>
                               {nextUser.full_name} ({nextUser.email})
@@ -2105,7 +2105,7 @@ function SettingsPageContent() {
                       )}
                     </div>
                     <label className="mt-4 block">
-                      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-600">
+                      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-navy-500">
                         Type {INACTIVE_USERS_PURGE_CONFIRMATION_TEXT}
                       </span>
                       <input
@@ -2121,7 +2121,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isDeletingInactiveUsers}
-                        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={() => {
                           setIsDeleteInactiveUsersModalOpen(false);
                           setInactiveUsersConfirmationText("");
@@ -2206,7 +2206,7 @@ function SettingsPageContent() {
                   <button
                     type="button"
                     aria-label="Close wipe app clean modal"
-                    className="absolute inset-0 bg-slate-900/30"
+                    className="absolute inset-0 bg-ink/30"
                     onClick={() => {
                       if (!isWipingAppClean) {
                         setIsWipeAppCleanModalOpen(false);
@@ -2214,10 +2214,10 @@ function SettingsPageContent() {
                     }}
                   />
                   <div className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl">
-                    <h3 className="text-base font-semibold text-slate-900">
+                    <h3 className="text-base font-semibold text-ink">
                       WIPE APP CLEAN?
                     </h3>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-navy-500">
                       This permanently deletes all app data and all other user accounts,
                       including other admins. Your currently signed-in admin account is
                       always preserved.
@@ -2229,7 +2229,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isWipingAppClean}
-                        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={() => {
                           setIsWipeAppCleanModalOpen(false);
                         }}

@@ -331,8 +331,8 @@ export default function IdeasPage() {
         <div className="space-y-6">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">Blog Ideas</h2>
-              <p className="text-sm text-slate-600">
+              <h2 className="text-xl font-semibold text-ink">Blog Ideas</h2>
+              <p className="text-sm text-navy-500">
                 Capture ideas quickly, then convert them into scheduled blog assignments.
               </p>
             </div>
@@ -341,7 +341,7 @@ export default function IdeasPage() {
               onClick={() => {
                 setIsCreateModalOpen(true);
               }}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+              className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700"
             >
               New Idea
             </button>
@@ -349,9 +349,9 @@ export default function IdeasPage() {
 
           <form
             onSubmit={handleQuickIdeaSubmit}
-            className="rounded-md border border-slate-200 bg-slate-50 p-3"
+            className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3"
           >
-            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-navy-500">
               Quick capture
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -361,12 +361,12 @@ export default function IdeasPage() {
                   setQuickIdeaTitle(event.target.value);
                 }}
                 placeholder="Add idea..."
-                className="min-w-60 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="min-w-60 flex-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm"
               />
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Save
               </button>
@@ -375,49 +375,49 @@ export default function IdeasPage() {
 
 
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
               Active Ideas
             </h3>
 
             {isLoading ? (
-              <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+              <div className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] p-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div key={`skeleton-idea-${i}`} className="skeleton h-20 w-full" />
                 ))}
               </div>
             ) : activeIdeas.length === 0 ? (
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
+              <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-4 text-sm text-navy-500">
                 No ideas yet. Add one in under 5 seconds.
               </p>
             ) : (
               <ul className="space-y-3">
                 {activeIdeas.map((idea) => (
-                  <li key={idea.id} className="rounded-md border border-slate-200 p-4">
-                    <h4 className="text-base font-semibold text-slate-900">{idea.title}</h4>
-                    <p className="mt-1 text-sm text-slate-600">Site: {idea.site}</p>
-                    <p className="mt-2 text-xs text-slate-500">
+                  <li key={idea.id} className="rounded-md border border-[color:var(--sh-gray-200)] p-4">
+                    <h4 className="text-base font-semibold text-ink">{idea.title}</h4>
+                    <p className="mt-1 text-sm text-navy-500">Site: {idea.site}</p>
+                    <p className="mt-2 text-xs text-navy-500">
                       Added {formatDateTime(idea.created_at, profile?.timezone)}
                     </p>
 
                     {/* Comments & References Section */}
-                    <div className="mt-3 border-t border-slate-200 pt-3">
-                      <p className="text-sm font-medium text-slate-700">
+                    <div className="mt-3 border-t border-[color:var(--sh-gray-200)] pt-3">
+                      <p className="text-sm font-medium text-navy-500">
                         Comments & References ({visibleCommentsByIdea[idea.id]?.length || 0})
                       </p>
                       {visibleCommentsByIdea[idea.id] &&
                       visibleCommentsByIdea[idea.id].length > 0 ? (
-                        <ul className="mt-2 space-y-2 rounded-md bg-slate-50 p-3">
+                        <ul className="mt-2 space-y-2 rounded-md bg-[color:var(--sh-gray)] p-3">
                           {visibleCommentsByIdea[idea.id].map((comment) => (
-                            <li key={comment.id} className="border-l-2 border-slate-300 pl-3 text-sm">
-                              <p className="text-slate-700">{comment.comment}</p>
-                              <p className="mt-1 text-xs text-slate-500">
+                            <li key={comment.id} className="border-l-2 border-[color:var(--sh-gray-200)] pl-3 text-sm">
+                              <p className="text-navy-500">{comment.comment}</p>
+                              <p className="mt-1 text-xs text-navy-500">
                                 {formatDateTime(comment.created_at, profile?.timezone)}
                               </p>
                             </li>
                           ))}
                         </ul>
                       ) : (
-                        <p className="mt-2 text-xs text-slate-500">No comments yet.</p>
+                        <p className="mt-2 text-xs text-navy-500">No comments yet.</p>
                       )}
                     </div>
 
@@ -437,7 +437,7 @@ export default function IdeasPage() {
                       ) : null}
                       <button
                         type="button"
-                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                         onClick={() => {
                           openEditModal(idea);
                         }}
@@ -447,7 +447,7 @@ export default function IdeasPage() {
                       {canCreateBlog ? (
                         <button
                           type="button"
-                          className="rounded-md border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                          className="rounded-md border border-ink bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink"
                           onClick={() => {
                             router.push(`/blogs/new?ideaId=${idea.id}`);
                           }}
@@ -457,7 +457,7 @@ export default function IdeasPage() {
                       ) : null}
                       <button
                         type="button"
-                        className="rounded-md border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                        className="rounded-md border border-ink bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink"
                         onClick={() => {
                           const search = new URLSearchParams({
                             create: "1",
@@ -482,24 +482,24 @@ export default function IdeasPage() {
             <button
               type="button"
               aria-label="Close add idea modal"
-              className="absolute inset-0 bg-slate-900/30"
+              className="absolute inset-0 bg-ink/30"
               onClick={() => {
                 if (!isSubmitting) {
                   setIsCreateModalOpen(false);
                 }
               }}
             />
-            <div className="relative z-10 w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+            <div className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">New Idea</h3>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">New Idea</h3>
+                  <p className="mt-1 text-sm text-navy-500">
                     Keep it lightweight: title, site, and optional comments or references.
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-sm text-navy-500 hover:bg-blurple-50"
                   onClick={() => {
                     if (!isSubmitting) {
                       setIsCreateModalOpen(false);
@@ -512,25 +512,25 @@ export default function IdeasPage() {
 
               <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
+                  <span className="mb-1 block text-sm font-medium text-navy-500">Title</span>
                   <input
                     required
                     value={title}
                     onChange={(event) => {
                       setTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">Website</span>
+                  <span className="mb-1 block text-sm font-medium text-navy-500">Website</span>
                   <select
                     value={site}
                     onChange={(event) => {
                       setSite(event.target.value as BlogSite);
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                   >
                     {SITES.map((nextSite) => (
                       <option key={nextSite} value={nextSite}>
@@ -540,7 +540,7 @@ export default function IdeasPage() {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Comments & References (optional)
                   </span>
                   <textarea
@@ -548,7 +548,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setDescription(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={2000}
                     placeholder="Optional comments or reference links..."
                   />
@@ -557,13 +557,13 @@ export default function IdeasPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmitting ? "Creating..." : "Create Idea"}
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                     onClick={() => {
                       if (!isSubmitting) {
                         setIsCreateModalOpen(false);
@@ -583,24 +583,24 @@ export default function IdeasPage() {
             <button
               type="button"
               aria-label="Close edit idea modal"
-              className="absolute inset-0 bg-slate-900/30"
+              className="absolute inset-0 bg-ink/30"
               onClick={() => {
                 if (!isSubmitting) {
                   closeEditModal();
                 }
               }}
             />
-            <div className="relative z-10 w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+            <div className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">Edit Idea</h3>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <h3 className="text-base font-semibold text-ink">Edit Idea</h3>
+                  <p className="mt-1 text-sm text-navy-500">
                     Update the title, site, or comments and references before converting.
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="rounded-md border border-slate-300 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-sm text-navy-500 hover:bg-blurple-50"
                   onClick={() => {
                     if (!isSubmitting) {
                       closeEditModal();
@@ -613,25 +613,25 @@ export default function IdeasPage() {
 
               <form className="mt-4 space-y-4" onSubmit={handleEditSubmit}>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
+                  <span className="mb-1 block text-sm font-medium text-navy-500">Title</span>
                   <input
                     required
                     value={editTitle}
                     onChange={(event) => {
                       setEditTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">Website</span>
+                  <span className="mb-1 block text-sm font-medium text-navy-500">Website</span>
                   <select
                     value={editSite}
                     onChange={(event) => {
                       setEditSite(event.target.value as BlogSite);
                     }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                   >
                     {SITES.map((nextSite) => (
                       <option key={nextSite} value={nextSite}>
@@ -641,7 +641,7 @@ export default function IdeasPage() {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-slate-700">
+                  <span className="mb-1 block text-sm font-medium text-navy-500">
                     Comments & References (optional)
                   </span>
                   <textarea
@@ -649,7 +649,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setEditDescription(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={2000}
                     placeholder="Optional comments or reference links..."
                   />
@@ -658,13 +658,13 @@ export default function IdeasPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmitting ? "Saving..." : "Save Changes"}
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                     onClick={() => {
                       if (!isSubmitting) {
                         closeEditModal();

@@ -169,13 +169,13 @@ export default function UpdatesPage() {
         <div className={DATA_PAGE_STACK_CLASS}>
           <nav
             aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
           >
-            <Link href="/dashboard" className="hover:text-slate-700">
+            <Link href="/dashboard" className="hover:text-navy-500">
               Dashboard
             </Link>
             <span>/</span>
-            <span className="text-slate-700">Activity History</span>
+            <span className="text-navy-500">Activity History</span>
           </nav>
           <DataPageHeader
             title="Activity History"
@@ -201,9 +201,9 @@ export default function UpdatesPage() {
             </p>
           ) : null}
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <section className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                 Required by me ({requiredTaskShortcuts.length})
               </h2>
             </div>
@@ -218,10 +218,10 @@ export default function UpdatesPage() {
                   <li key={task.id}>
                     <Link
                       href={task.href}
-                      className="block rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-slate-800 hover:bg-emerald-100"
+                      className="block rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-ink hover:bg-emerald-100"
                     >
                       <p className="font-medium">{task.title}</p>
-                      <p className="mt-0.5 text-xs text-slate-600">
+                      <p className="mt-0.5 text-xs text-navy-500">
                         {task.kind === "blog" ? "Blog" : "Social"} • {task.statusLabel}
                       </p>
                     </Link>
@@ -231,9 +231,9 @@ export default function UpdatesPage() {
             )}
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <section className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                 Inbox updates ({notifications.length})
               </h2>
             </div>
@@ -249,17 +249,17 @@ export default function UpdatesPage() {
                     <div
                       className={`rounded-md border px-3 py-2 ${
                         notification.read
-                          ? "border-slate-200 bg-white"
-                          : "border-indigo-200 bg-indigo-50"
+                          ? "border-[color:var(--sh-gray-200)] bg-white"
+                          : "border-[color:var(--sh-blurple-100)] bg-blurple-50"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-900">
+                          <p className="truncate text-sm font-medium text-ink">
                             {notification.title}
                           </p>
-                          <p className="mt-0.5 text-sm text-slate-700">{notification.message}</p>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-0.5 text-sm text-navy-500">{notification.message}</p>
+                          <p className="mt-1 text-xs text-navy-500">
                             {formatRelativeTime(notification.createdAt)}
                           </p>
                         </div>
@@ -282,7 +282,7 @@ export default function UpdatesPage() {
                         {notification.href ? (
                           <Link
                             href={notification.href}
-                            className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                            className="inline-flex items-center gap-1 rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs text-navy-500 hover:bg-blurple-50"
                           >
                             Open
                             <ChevronRightIcon boxClassName="h-3 w-3" size={11} />
@@ -306,9 +306,9 @@ export default function UpdatesPage() {
             )}
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <section className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                 Cleared inbox updates ({clearedNotifications.length})
               </h2>
               <div className="flex items-center gap-2">
@@ -330,16 +330,16 @@ export default function UpdatesPage() {
               </div>
             </div>
             {!showCleared ? (
-              <p className="text-sm text-slate-500">Cleared updates are hidden.</p>
+              <p className="text-sm text-navy-500">Cleared updates are hidden.</p>
             ) : clearedNotifications.length === 0 ? (
-              <p className="text-sm text-slate-500">No cleared updates.</p>
+              <p className="text-sm text-navy-500">No cleared updates.</p>
             ) : (
               <ul className="space-y-2">
                 {clearedNotifications.map((notification) => (
                   <li key={notification.id}>
-                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                      <p className="text-sm font-medium text-slate-900">{notification.title}</p>
-                      <p className="mt-0.5 text-sm text-slate-700">{notification.message}</p>
+                    <div className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
+                      <p className="text-sm font-medium text-ink">{notification.title}</p>
+                      <p className="mt-0.5 text-sm text-navy-500">{notification.message}</p>
                       <div className="mt-2">
                         <Button
                           type="button"
@@ -359,12 +359,12 @@ export default function UpdatesPage() {
             )}
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">
+          <section className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-navy-500">
               Recent activity (50 max)
             </h2>
             {isLoading ? (
-              <p className="text-sm text-slate-500">Loading updates...</p>
+              <p className="text-sm text-navy-500">Loading updates...</p>
             ) : recentActivityItems.length === 0 ? (
               <DataPageEmptyState
                 title="No recent activity."
@@ -380,13 +380,13 @@ export default function UpdatesPage() {
                           ? `/blogs/${activity.content_id}`
                           : `/social-posts/${activity.content_id}`
                       }
-                      className="block rounded-md border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
+                      className="block rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 hover:bg-blurple-50"
                     >
-                      <p className="text-sm font-medium text-slate-900">{activity.event_title}</p>
+                      <p className="text-sm font-medium text-ink">{activity.event_title}</p>
                       {activity.event_summary ? (
-                        <p className="mt-0.5 text-sm text-slate-700">{activity.event_summary}</p>
+                        <p className="mt-0.5 text-sm text-navy-500">{activity.event_summary}</p>
                       ) : null}
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-navy-500">
                         {activity.content_title}
                         {activity.changed_by_name ? ` • ${activity.changed_by_name}` : ""}
                         {" • "}

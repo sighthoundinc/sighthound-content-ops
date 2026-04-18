@@ -17,10 +17,10 @@ function Section({
   return (
     <section
       id={id}
-      className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-4 md:p-5"
+      className="space-y-3 rounded-xl border border-[color:var(--sh-gray-200)] bg-white p-3 sm:p-4 md:p-5"
     >
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      <div className="space-y-3 text-sm text-slate-700">{children}</div>
+      <h3 className="text-base font-semibold text-ink">{title}</h3>
+      <div className="space-y-3 text-sm text-navy-500">{children}</div>
     </section>
   );
 }
@@ -98,14 +98,14 @@ export default function ResourcesPage() {
             <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
               <table className="min-w-[640px] border-collapse text-left text-sm sm:min-w-full">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-900">
+                  <tr className="border-b border-[color:var(--sh-gray-200)] text-ink">
                     <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Track</th>
                     <th className="py-2 pr-3 font-semibold sm:pr-4">What it manages</th>
                     <th className="py-2 font-semibold">End state</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Blogs</td>
                     <td className="py-2 pr-3 sm:pr-4">Editorial writing and publishing flow</td>
                     <td className="py-2">Published blog</td>
@@ -132,23 +132,23 @@ export default function ResourcesPage() {
             </p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                <span className="font-medium text-slate-900">Stage:</span> where a piece of content
+                <span className="font-medium text-ink">Stage:</span> where a piece of content
                 currently sits in its workflow.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Gate:</span> the small set of things
+                <span className="font-medium text-ink">Gate:</span> the small set of things
                 that must be true before the work can move to the next stage.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Handoff:</span> the moment ownership
+                <span className="font-medium text-ink">Handoff:</span> the moment ownership
                 passes from one person to the next.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Terminal stage:</span> the work is done
+                <span className="font-medium text-ink">Terminal stage:</span> the work is done
                 — nothing else is expected.
               </li>
             </ul>
-            <p className="font-medium text-slate-900">Who acts when</p>
+            <p className="font-medium text-ink">Who acts when</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>If it’s a work stage, the person assigned to do the work acts next.</li>
               <li>If it’s a review stage, the reviewer acts next.</li>
@@ -165,39 +165,39 @@ export default function ResourcesPage() {
             <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
               <table className="min-w-[760px] border-collapse text-left text-sm sm:min-w-full">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-900">
+                  <tr className="border-b border-[color:var(--sh-gray-200)] text-ink">
                     <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Status</th>
                     <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Owner</th>
                     <th className="py-2 font-semibold">Required action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Draft</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned to</td>
                     <td className="py-2">Complete essentials and submit for review</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">In Review</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer</td>
                     <td className="py-2">Approve or request changes</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Changes Requested</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned to</td>
                     <td className="py-2">Apply changes and resubmit</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Creative Approved</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer</td>
                     <td className="py-2">Confirm handoff to execution</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Ready to Publish</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned to</td>
                     <td className="py-2">Publish the post</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Live Link</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Assigned to</td>
                     <td className="py-2">Submit at least one public live link</td>
@@ -210,7 +210,7 @@ export default function ResourcesPage() {
                 </tbody>
               </table>
             </div>
-            <p className="font-medium text-slate-900">What each transition expects</p>
+            <p className="font-medium text-ink">What each transition expects</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
                 Submitting a draft for review needs Product, Type, and a Canva URL.
@@ -228,7 +228,7 @@ export default function ResourcesPage() {
                 next owner knows what to change.
               </li>
             </ul>
-            <p className="font-medium text-slate-900">The happy path</p>
+            <p className="font-medium text-ink">The happy path</p>
             <p>
               Draft → In Review → (Changes Requested ↔ In Review) → Creative Approved → Ready to
               Publish → Awaiting Live Link → Published.
@@ -249,39 +249,39 @@ export default function ResourcesPage() {
             <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
               <table className="min-w-[760px] border-collapse text-left text-sm sm:min-w-full">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-900">
+                  <tr className="border-b border-[color:var(--sh-gray-200)] text-ink">
                     <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Stage</th>
                     <th className="whitespace-nowrap py-2 pr-3 font-semibold sm:pr-4">Owner</th>
                     <th className="py-2 font-semibold">Required action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writing in Progress</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writer</td>
                     <td className="py-2">Draft and refine content</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Writing Review</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer</td>
                     <td className="py-2">Approve or send back for revision</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Writing Approved</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Handoff</td>
                     <td className="py-2">Transfer execution to publishing flow</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publishing in Progress</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publisher</td>
                     <td className="py-2">Prepare and execute publish steps</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Awaiting Publishing Review</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Reviewer</td>
                     <td className="py-2">Validate readiness before final completion</td>
                   </tr>
-                  <tr className="border-b border-slate-100">
+                  <tr className="border-b border-[color:var(--sh-gray)]">
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Approved for Publishing</td>
                     <td className="whitespace-nowrap py-2 pr-3 sm:pr-4">Publisher</td>
                     <td className="py-2">Complete final publication action</td>
@@ -382,7 +382,7 @@ export default function ResourcesPage() {
           </Section>
 
           <Section id="sop-card" title="8) SOP card">
-            <p className="font-medium text-slate-900">Your one-screen daily routine</p>
+            <p className="font-medium text-ink">Your one-screen daily routine</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
                 Open <InternalPageLink href="/tasks">My Tasks</InternalPageLink>.
@@ -395,32 +395,32 @@ export default function ResourcesPage() {
           </Section>
 
           <Section id="associated-content" title="9) Associated Content navigation">
-            <p className="font-medium text-slate-900">Jumping between linked blogs and social posts</p>
+            <p className="font-medium text-ink">Jumping between linked blogs and social posts</p>
             <p>
               A lot of social posts are promoting a specific blog. These shortcuts make moving
               between the two feel natural.
             </p>
             <ul className="list-disc space-y-2 pl-5">
               <li>
-                <span className="font-medium text-slate-900">Dashboard:</span> Click the &quot;Associated Content&quot; badge
+                <span className="font-medium text-ink">Dashboard:</span> Click the &quot;Associated Content&quot; badge
                 on any row to navigate between blogs and their linked social posts. Blog rows show a count badge;
                 social rows show the associated blog title.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Blog detail drawer:</span> Open the &quot;Associated Social Posts&quot;
+                <span className="font-medium text-ink">Blog detail drawer:</span> Open the &quot;Associated Social Posts&quot;
                 section to see all social posts linked to that blog. Click any post title to open its full editor.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Social post editor:</span> View the &quot;Associated Blog&quot;
+                <span className="font-medium text-ink">Social post editor:</span> View the &quot;Associated Blog&quot;
                 context card (before Comments) to see the linked blog&apos;s workflow status, scheduled dates, and quick
                 links to draft doc and live blog.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Social posts list filter:</span> Use the &quot;Associated Blog&quot;
+                <span className="font-medium text-ink">Social posts list filter:</span> Use the &quot;Associated Blog&quot;
                 dropdown to filter social posts by linked blog. Combine with Status filter for precise triage.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Deep linking:</span> URL params are preserved:
+                <span className="font-medium text-ink">Deep linking:</span> URL params are preserved:
                 `?associated_blog=&#123;blogId&#125;` for filtered social posts, `?filter=&#123;blogId&#125;` for filtered blogs.
               </li>
             </ul>
@@ -434,15 +434,15 @@ export default function ResourcesPage() {
             </p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                <span className="font-medium text-slate-900">Required</span> — work where you’re the
+                <span className="font-medium text-ink">Required</span> — work where you’re the
                 current owner and an action is expected from you.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Waiting</span> — items where someone
+                <span className="font-medium text-ink">Waiting</span> — items where someone
                 else owns the next action; use this tab when you’re chasing a handoff.
               </li>
               <li>
-                <span className="font-medium text-slate-900">Activity</span> — the most recent
+                <span className="font-medium text-ink">Activity</span> — the most recent
                 status and assignment changes across blogs and social posts.
               </li>
             </ul>
@@ -454,28 +454,28 @@ export default function ResourcesPage() {
           </Section>
 
           <Section id="workspace-upgrades" title="11) Workspace upgrades">
-            <p className="font-medium text-slate-900">First-run walkthrough</p>
+            <p className="font-medium text-ink">First-run walkthrough</p>
             <p>
               New users see a small getting-started panel in the lower-right corner the first time
               they open the app. It covers capturing an idea, writing and submitting, and
               scheduling to publish. Skip or complete it — it won’t come back in this browser.
             </p>
 
-            <p className="font-medium text-slate-900">Display density</p>
+            <p className="font-medium text-ink">Display density</p>
             <p>
               Pick Compact (default) or Comfortable in{" "}
               <InternalPageLink href="/settings">Settings</InternalPageLink> → My Profile. All
               tables across the app honour your choice and remember it in this browser.
             </p>
 
-            <p className="font-medium text-slate-900">Smart copy feedback</p>
+            <p className="font-medium text-ink">Smart copy feedback</p>
             <p>
               The Copy button next to Google Doc, Live URL, and similar links now shows a specific
               confirmation toast like <em>Copied Google Doc URL</em>, so you always know what
               landed on the clipboard.
             </p>
 
-            <p className="font-medium text-slate-900">Ask AI &ldquo;Based on&rdquo; panel</p>
+            <p className="font-medium text-ink">Ask AI &ldquo;Based on&rdquo; panel</p>
             <p>
               When Ask AI returns an answer with supporting links, expand the <em>Based on</em>
               section to see the curated links it referenced and the response source
@@ -483,7 +483,7 @@ export default function ResourcesPage() {
               came from your record rather than a guess.
             </p>
 
-            <p className="font-medium text-slate-900">Next Action column on My Tasks</p>
+            <p className="font-medium text-ink">Next Action column on My Tasks</p>
             <p>
               <InternalPageLink href="/tasks">My Tasks</InternalPageLink> shows a verb-first Next
               Action column. When it’s your turn you see a direct action like <em>Submit Draft</em>{" "}
@@ -491,14 +491,14 @@ export default function ResourcesPage() {
               <em>Waiting on &lt;name&gt;</em>.
             </p>
 
-            <p className="font-medium text-slate-900">Shareable record links</p>
+            <p className="font-medium text-ink">Shareable record links</p>
             <p>
               Adding <code>?record=blog:&lt;id&gt;</code> or <code>?record=social:&lt;id&gt;</code>
               to a list URL opens the matching detail page. Useful for sharing a specific record
               without pre-filtering the list.
             </p>
 
-            <p className="font-medium text-slate-900">Responsive sidebar</p>
+            <p className="font-medium text-ink">Responsive sidebar</p>
             <p>
               Below roughly 1400px the sidebar starts collapsed so list views breathe. Your manual
               toggle is remembered afterwards and wins over the auto behaviour.

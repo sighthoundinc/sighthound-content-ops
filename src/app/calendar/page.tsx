@@ -198,7 +198,7 @@ function truncateWithEllipsis(value: string, maxLength: number) {
 }
 
 function getBlogBarClass(site: BlogSite) {
-  return site === "sighthound.com" ? "bg-blue-500" : "bg-purple-500";
+  return site === "sighthound.com" ? "bg-brand" : "bg-purple-500";
 }
 function getSocialSite(post: SocialCalendarPost): BlogSite {
   return post.associated_blog?.site === "redactor.com"
@@ -207,13 +207,13 @@ function getSocialSite(post: SocialCalendarPost): BlogSite {
 }
 
 function getSocialBarClass(site: BlogSite) {
-  return site === "redactor.com" ? "bg-purple-500" : "bg-blue-500";
+  return site === "redactor.com" ? "bg-purple-500" : "bg-brand";
 }
 
 function getSocialBulletClass(site: BlogSite) {
   return site === "redactor.com"
     ? "border-2 border-purple-500 bg-white"
-    : "border-2 border-blue-500 bg-white";
+    : "border-2 border-brand bg-white";
 }
 
 type CalendarOverviewStatusKey =
@@ -230,11 +230,11 @@ const CALENDAR_OVERVIEW_STATUS_META: Record<
 > = {
   in_progress: {
     label: "In Progress",
-    className: "bg-blue-100 text-blue-700 border border-blue-200",
+    className: "bg-blurple-100 text-blurple-700 border border-[color:var(--sh-blurple-100)]",
   },
   in_review: {
     label: "In Review",
-    className: "bg-indigo-100 text-indigo-700 border border-indigo-200",
+    className: "bg-blurple-100 text-blurple-700 border border-[color:var(--sh-blurple-100)]",
   },
   changes_requested: {
     label: "Changes Requested",
@@ -301,12 +301,12 @@ function getBlogStageDotClass({
     return "bg-emerald-500";
   }
   if (stage === "publishing") {
-    return "bg-blue-500";
+    return "bg-brand";
   }
   if (stage === "ready") {
-    return "bg-indigo-500";
+    return "bg-brand";
   }
-  return "bg-slate-400";
+  return "bg-[color:var(--sh-gray-400)]";
 }
 
 function getNoPublishReason(blog: BlogRecord) {
@@ -334,7 +334,7 @@ function DroppableDayCell({
   return (
     <div
       ref={setNodeRef}
-      className={`${className} ${isOver ? "ring-2 ring-indigo-300 ring-offset-1" : ""}`}
+      className={`${className} ${isOver ? "ring-2 ring-blurple-300 ring-offset-1" : ""}`}
       {...containerProps}
     >
       {children}
@@ -378,9 +378,9 @@ function CalendarBlogEventCard({
       style={dragStyle}
       type="button"
       onClick={onOpen}
-      className={`relative flex w-full items-start gap-2 rounded-lg border border-slate-200/90 bg-white/95 px-2 py-1.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none ${
+      className={`relative flex w-full items-start gap-2 rounded-lg border border-[color:var(--sh-gray-200)]/90 bg-white/95 px-2 py-1.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none ${
         canDrag
-          ? "cursor-grab hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)] active:cursor-grabbing"
+          ? "cursor-grab hover:border-[color:var(--sh-gray-200)] hover:bg-white hover:shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)] active:cursor-grabbing"
           : "cursor-default"
       } ${isDragging ? "opacity-55 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.7)]" : ""}`}
       title={`${blog.title}\nWriter · ${blog.writer?.full_name ?? "Unassigned"}\nPublisher · ${
@@ -391,13 +391,13 @@ function CalendarBlogEventCard({
     >
       <span className={`self-stretch w-1 rounded-full ${getBlogBarClass(blog.site)}`} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1 text-[11px] text-slate-600">
+        <div className="flex items-center gap-1 text-[11px] text-navy-500">
           <WritingIcon boxClassName="h-4 w-4"
             size={12}
-            className="text-slate-500" />
+            className="text-navy-500" />
           <span className="font-semibold">{getSiteShortLabel(blog.site)} Blog</span>
         </div>
-        <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
+        <p className="mt-0.5 truncate text-[13px] font-medium text-ink">
           {truncateWithEllipsis(blog.title, maxTitleLength)}
         </p>
       </div>
@@ -426,18 +426,18 @@ function CalendarSocialEventCard({
     <button
       type="button"
       onClick={onOpen}
-      className="relative flex w-full items-start gap-2 rounded-lg border border-slate-200/90 bg-white/95 px-2 py-1.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)]"
+      className="relative flex w-full items-start gap-2 rounded-lg border border-[color:var(--sh-gray-200)]/90 bg-white/95 px-2 py-1.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none hover:border-[color:var(--sh-gray-200)] hover:bg-white hover:shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)]"
       title={`${post.title}\nSite · ${getSiteLabel(socialSite)}\nType · ${SOCIAL_POST_TYPE_LABELS[post.type]}\nStatus · ${SOCIAL_POST_STATUS_LABELS[post.status]}\nScheduled · ${post.scheduled_date ?? "Unscheduled"}`}
     >
       <span className={`self-stretch w-1 rounded-full ${getSocialBarClass(socialSite)}`} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1 text-[11px] text-slate-600">
+        <div className="flex items-center gap-1 text-[11px] text-navy-500">
           <MegaphoneIcon boxClassName="h-4 w-4"
             size={12}
-            className="text-slate-500" />
+            className="text-navy-500" />
           <span className="font-semibold">{getSiteShortLabel(socialSite)} Social</span>
         </div>
-        <p className="mt-0.5 truncate text-[13px] font-medium text-slate-900">
+        <p className="mt-0.5 truncate text-[13px] font-medium text-ink">
           {SOCIAL_POST_TYPE_LABELS[post.type]}: {truncateWithEllipsis(post.title, maxTitleLength)}
         </p>
       </div>
@@ -1494,21 +1494,21 @@ export default function CalendarPage() {
                 type="button"
                 onClick={handleExportICS}
                 disabled={exportItems.length === 0}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 transition-colors hover:bg-blurple-50 active:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                 title="Export calendar to iCalendar format for Outlook, Apple Calendar, or Google Calendar"
               >
                 <DownloadIcon boxClassName="h-4 w-4"
                   size={14}
-                  className="text-slate-600" />
+                  className="text-navy-500" />
                 <span>Export to Calendar</span>
               </button>
             }
           />
-          <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+          <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/70 p-3">
             {/* Row 1: Month Navigation + Today Chip + Mode Toggle */}
             <div className="flex items-center justify-between gap-4 rounded-md bg-white/85 p-3">
               {/* Month label (left) */}
-              <div className="text-sm font-semibold text-slate-900">
+              <div className="text-sm font-semibold text-ink">
                 {mode === "month" ? format(cursorDate, "MMMM yyyy") : ""}
               </div>
 
@@ -1519,7 +1519,7 @@ export default function CalendarPage() {
                   onClick={() => {
                     setCursorDate((prev) => (mode === "month" ? subMonths(prev, 1) : subWeeks(prev, 1)));
                   }}
-                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2.5 py-1.5 text-sm font-medium text-navy-500 transition-colors hover:bg-blurple-50 active:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                   title="Previous"
                 >
                   <ChevronLeftIcon boxClassName="h-4 w-4" size={14} />
@@ -1536,7 +1536,7 @@ export default function CalendarPage() {
                       });
                     }
                   }}
-                  className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 active:bg-indigo-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                  className="rounded-md border border-blurple-300 bg-blurple-50 px-3 py-1.5 text-sm font-medium text-blurple-700 transition-colors hover:bg-blurple-100 active:bg-[color:var(--sh-blurple-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                 >
                   Today
                 </button>
@@ -1545,7 +1545,7 @@ export default function CalendarPage() {
                   onClick={() => {
                     setCursorDate((prev) => (mode === "month" ? addMonths(prev, 1) : addWeeks(prev, 1)));
                   }}
-                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                  className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2.5 py-1.5 text-sm font-medium text-navy-500 transition-colors hover:bg-blurple-50 active:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                   title="Next"
                 >
                   <ChevronRightIcon boxClassName="h-4 w-4" size={14} />
@@ -1553,7 +1553,7 @@ export default function CalendarPage() {
               </div>
 
               {/* Today date chip (center-right) */}
-              <div className="text-xs font-medium text-slate-600">
+              <div className="text-xs font-medium text-navy-500">
                 Today · {todayChipLabel}
               </div>
 
@@ -1618,7 +1618,7 @@ export default function CalendarPage() {
                   </span>
                 </button>
               </div>
-              <label className="flex min-w-[15rem] flex-1 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+              <label className="flex min-w-[15rem] flex-1 items-center gap-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500">
                 <span className="font-medium">Assigned to</span>
                 <select
                   aria-label="Assigned to"
@@ -1641,7 +1641,7 @@ export default function CalendarPage() {
                 onClick={() => {
                   setShowAdvancedFilters((previous) => !previous);
                 }}
-                className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                className="inline-flex items-center rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 transition-colors hover:bg-blurple-50"
               >
                 {showAdvancedFilters
                   ? "Hide advanced filters"
@@ -1652,7 +1652,7 @@ export default function CalendarPage() {
             </div>
             {showAdvancedFilters ? (
               <div className="space-y-3 rounded-md bg-white/85 p-3">
-                <label className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                <label className="inline-flex items-center gap-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500">
                   <span className="font-medium">View</span>
                   <select
                     value={viewScope}
@@ -1665,12 +1665,12 @@ export default function CalendarPage() {
                     <option value="all">All tasks</option>
                   </select>
                 </label>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-navy-500">
                   {[
                     {
                       id: "sh_blog" as CalendarLegendFilter,
                       label: "SH Blog",
-                      markerClassName: "h-2 w-2 rounded-full bg-blue-500",
+                      markerClassName: "h-2 w-2 rounded-full bg-brand",
                       isVisible: hasShBlogsVisible,
                     },
                     {
@@ -1682,7 +1682,7 @@ export default function CalendarPage() {
                     {
                       id: "sh_social_post" as CalendarLegendFilter,
                       label: "SH Social Post",
-                      markerClassName: "h-2 w-2 rounded-full border-2 border-blue-500 bg-white",
+                      markerClassName: "h-2 w-2 rounded-full border-2 border-brand bg-white",
                       isVisible: hasShSocialPostsVisible,
                     },
                     {
@@ -1700,10 +1700,10 @@ export default function CalendarPage() {
                       onClick={() => {
                         toggleLegendFilter(legendItem.id);
                       }}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
                         legendItem.isVisible
-                          ? "border-slate-200/90 bg-white/90 text-slate-700 hover:border-slate-300 hover:bg-white"
-                          : "border-slate-200 bg-slate-100 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+                          ? "border-[color:var(--sh-gray-200)]/90 bg-white/90 text-navy-500 hover:border-[color:var(--sh-gray-200)] hover:bg-white"
+                          : "border-[color:var(--sh-gray-200)] bg-blurple-50 text-navy-500/60 hover:border-[color:var(--sh-gray-200)] hover:text-navy-500"
                       }`}
                     >
                       <span className={legendItem.markerClassName} />
@@ -1719,7 +1719,7 @@ export default function CalendarPage() {
           </section>
 
           {isLoading ? (
-            <section className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+            <section className="space-y-3 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
               <div className="skeleton h-4 w-40" />
               <div className="grid grid-cols-7 gap-2">
                 {Array.from({ length: 14 }).map((_, cellIndex) => (
@@ -1731,7 +1731,7 @@ export default function CalendarPage() {
             <>
               <section className="space-y-3">
                 {dragPreviewMessage ? (
-                  <p className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
+                  <p className="rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-3 py-2 text-xs font-medium text-blurple-700">
                     {dragPreviewMessage}
                   </p>
                 ) : null}
@@ -1740,12 +1740,12 @@ export default function CalendarPage() {
                   todayColumnIndex={todayWeekdayColumnIndex}
                 />
                 {/* Legend filters and filter pills below weekday header */}
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-navy-500">
                   {[
                     {
                       id: "sh_blog" as CalendarLegendFilter,
                       label: "SH Blog",
-                      markerClassName: "h-2 w-2 rounded-full bg-blue-500",
+                      markerClassName: "h-2 w-2 rounded-full bg-brand",
                       isVisible: hasShBlogsVisible,
                     },
                     {
@@ -1757,7 +1757,7 @@ export default function CalendarPage() {
                     {
                       id: "sh_social_post" as CalendarLegendFilter,
                       label: "SH Social Post",
-                      markerClassName: "h-2 w-2 rounded-full border-2 border-blue-500 bg-white",
+                      markerClassName: "h-2 w-2 rounded-full border-2 border-brand bg-white",
                       isVisible: hasShSocialPostsVisible,
                     },
                     {
@@ -1775,10 +1775,10 @@ export default function CalendarPage() {
                       onClick={() => {
                         toggleLegendFilter(legendItem.id);
                       }}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
                         legendItem.isVisible
-                          ? "border-slate-200/90 bg-white/90 text-slate-700 hover:border-slate-300 hover:bg-white"
-                          : "border-slate-200 bg-slate-100 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+                          ? "border-[color:var(--sh-gray-200)]/90 bg-white/90 text-navy-500 hover:border-[color:var(--sh-gray-200)] hover:bg-white"
+                          : "border-[color:var(--sh-gray-200)] bg-blurple-50 text-navy-500/60 hover:border-[color:var(--sh-gray-200)] hover:text-navy-500"
                       }`}
                     >
                       <span className={legendItem.markerClassName} />
@@ -1795,12 +1795,12 @@ export default function CalendarPage() {
                   </div>
                 ) : null}
                 {!hasBlogsEnabled && !hasSocialPostsEnabled ? (
-                  <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                  <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-3 text-sm text-navy-500">
                     Enable <span className="font-semibold">Blogs</span> or{" "}
                     <span className="font-semibold">Social Posts</span> to populate the calendar.
                   </p>
                 ) : !hasAnyVisibleCategory ? (
-                  <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                  <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-3 text-sm text-navy-500">
                     Enable at least one legend category to populate the calendar.
                   </p>
                 ) : (
@@ -1854,18 +1854,18 @@ export default function CalendarPage() {
                                 hasEvents={false}
                                 isFocused={focusedDateKey === key}
                                 className={`${compact ? "" : "min-h-[18rem]"}${
-                                  isCurrentWeekBand && !isToday ? " bg-indigo-50/30" : ""
+                                  isCurrentWeekBand && !isToday ? " bg-blurple-50/30" : ""
                                 }${
-                                  isWeekend && !isToday ? " bg-slate-50/70" : ""
+                                  isWeekend && !isToday ? " bg-[color:var(--sh-gray)]/70" : ""
                                 }`}
-                                headerClassName={isWeekend && !isToday ? "bg-slate-100/60" : undefined}
-                                todayContainerClassName="border-indigo-400 bg-indigo-50/85 shadow-[0_0_0_1px_rgba(79,70,229,0.24),0_14px_24px_-16px_rgba(79,70,229,0.55)]"
+                                headerClassName={isWeekend && !isToday ? "bg-blurple-50/60" : undefined}
+                                todayContainerClassName="border-brand bg-blurple-50/85 shadow-[0_0_0_1px_rgba(79,96,220,0.24),0_14px_24px_-16px_rgba(79,96,220,0.55)]"
                                 bodyScrollable={!compact}
                                 headerAction={
                                   <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
-                                      className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                                      className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] text-navy-500 shadow-sm transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         setExpandedMoreDateKey(null);
@@ -1881,10 +1881,10 @@ export default function CalendarPage() {
                                 bodyClassName={compact ? "space-y-1 overflow-visible" : "space-y-1"}
                               >
                                 {quickCreateDateKey === key ? (
-                                  <div className="absolute right-2 top-8 z-20 w-40 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
+                                  <div className="absolute right-2 top-8 z-20 w-40 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-lg">
                                     <Link
                                       href={`/blogs/new?scheduled_publish_date=${key}`}
-                                      className="block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                                      className="block rounded px-2 py-1 text-xs text-navy-500 hover:bg-blurple-50"
                                       onClick={() => {
                                         setQuickCreateDateKey(null);
                                       }}
@@ -1893,7 +1893,7 @@ export default function CalendarPage() {
                                     </Link>
                                     <Link
                                       href={`/social-posts?view=calendar&create=1&scheduled_date=${key}`}
-                                      className="mt-1 block rounded px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                                      className="mt-1 block rounded px-2 py-1 text-xs text-navy-500 hover:bg-blurple-50"
                                       onClick={() => {
                                         setQuickCreateDateKey(null);
                                       }}
@@ -1934,7 +1934,7 @@ export default function CalendarPage() {
                                     <>
                                       <button
                                         type="button"
-                                        className="w-full rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                                        className="w-full rounded-md border border-dashed border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1 text-[11px] font-medium text-navy-500 transition-colors hover:border-[color:var(--sh-gray-400)] hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                                         onClick={(event) => {
                                           event.stopPropagation();
                                           if (event.shiftKey) {
@@ -1956,9 +1956,9 @@ export default function CalendarPage() {
                                       {isMorePopoverOpen ? (
                                         <div
                                           ref={morePopoverRef}
-                                          className="absolute left-2 right-2 top-full z-20 mt-1 rounded-md border border-slate-200 bg-white p-2 shadow-lg"
+                                          className="absolute left-2 right-2 top-full z-20 mt-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-lg"
                                         >
-                                          <p className="text-[11px] font-medium text-slate-600">
+                                          <p className="text-[11px] font-medium text-navy-500">
                                             Hidden on {format(day, "MMM d")}
                                           </p>
                                           <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto pr-1">
@@ -1975,7 +1975,7 @@ export default function CalendarPage() {
                                                 <li key={`${item.key}-popover`}>
                                                   <button
                                                     type="button"
-                                                    className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                                                    className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                                                     onClick={() => {
                                                       setExpandedMoreDateKey(null);
                                                       if (item.type === "blog") {
@@ -2001,7 +2001,7 @@ export default function CalendarPage() {
                                           <div className="mt-2 flex justify-end">
                                             <button
                                               type="button"
-                                              className="rounded border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                                              className="rounded border border-[color:var(--sh-gray-200)] px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                                               onClick={() => {
                                                 setMode("week");
                                                 setCursorDate(day);
@@ -2030,7 +2030,7 @@ export default function CalendarPage() {
               {overviewItems.length > 0 ? (
                 <section className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                       Overview
                     </h3>
                     <div className="ml-auto flex items-center justify-end gap-2">
@@ -2038,17 +2038,17 @@ export default function CalendarPage() {
                         type="button"
                         onClick={handleExportCSV}
                         disabled={exportItems.length === 0}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1.5 text-xs font-medium text-navy-500 transition-colors hover:bg-blurple-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                         title="Export this month's overview as CSV"
                       >
                         <DownloadIcon boxClassName="h-3.5 w-3.5"
                           size={12}
-                          className="text-slate-600" />
+                          className="text-navy-500" />
                         <span>Export CSV</span>
                       </button>
                     </div>
                   </div>
-                  <div className="rounded-md border border-slate-200/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-md border border-[color:var(--sh-gray-200)]/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
                     <table className="w-full table-fixed">
                       <colgroup>
                         <col className="w-20 sm:w-24" />
@@ -2058,15 +2058,15 @@ export default function CalendarPage() {
                         <col className="w-28 sm:w-36" />
                       </colgroup>
                       <thead>
-                        <tr className="border-b border-slate-200/90 bg-slate-50/80">
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Date</th>
-                          <th className="px-2 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide w-12">Day</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Type</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide flex-1 min-w-0">Title</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Status</th>
+                        <tr className="border-b border-[color:var(--sh-gray-200)]/90 bg-[color:var(--sh-gray)]/80">
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-navy-500 uppercase tracking-wide">Date</th>
+                          <th className="px-2 py-2 text-center text-xs font-semibold text-navy-500 uppercase tracking-wide w-12">Day</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-navy-500 uppercase tracking-wide">Type</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-navy-500 uppercase tracking-wide flex-1 min-w-0">Title</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-navy-500 uppercase tracking-wide">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200/90">
+                      <tbody className="divide-y divide-[color:var(--sh-gray-200)]/90">
                         {overviewItems.map((item) => {
                           const dateObj = parseDateOnlyLocal(item.date);
                           const formattedDate = formatDateOnly(item.date);
@@ -2082,22 +2082,22 @@ export default function CalendarPage() {
                             return (
                               <tr
                                 key={item.key}
-                                className="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                                className="hover:bg-blurple-50/60 transition-colors cursor-pointer"
                                 onClick={() => {
                                   setActiveBlogId(item.blog.id);
                                   setActiveSocialPostId(null);
                                 }}
                               >
-                                <td className="px-3 py-2.5 text-sm font-semibold text-slate-800">{shortDate}</td>
-                                <td className="px-2 py-2.5 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
+                                <td className="px-3 py-2.5 text-sm font-semibold text-ink">{shortDate}</td>
+                                <td className="px-2 py-2.5 text-xs text-center text-navy-500">{item.dayOfWeek}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex items-center gap-1.5 text-xs">
                                     <span className={`h-2 w-2 shrink-0 rounded-full ${getBlogBarClass(item.blog.site)}`} />
-                                    <span className="font-medium text-slate-700">{getSiteShortLabel(item.blog.site)} Blog</span>
+                                    <span className="font-medium text-navy-500">{getSiteShortLabel(item.blog.site)} Blog</span>
                                   </div>
                                 </td>
                                 <td className="px-3 py-2.5">
-                                  <p className="truncate text-sm font-medium text-slate-900" title={item.blog.title}>
+                                  <p className="truncate text-sm font-medium text-ink" title={item.blog.title}>
                                     {item.blog.title}
                                   </p>
                                 </td>
@@ -2119,26 +2119,26 @@ export default function CalendarPage() {
                             return (
                               <tr
                                 key={item.key}
-                                className="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                                className="hover:bg-blurple-50/60 transition-colors cursor-pointer"
                                 onClick={() => {
                                   setActiveSocialPostId(item.social.id);
                                   setActiveBlogId(null);
                                 }}
                               >
-                                <td className="px-3 py-2.5 text-sm font-semibold text-slate-800">{shortDate}</td>
-                                <td className="px-2 py-2.5 text-xs text-center text-slate-600">{item.dayOfWeek}</td>
+                                <td className="px-3 py-2.5 text-sm font-semibold text-ink">{shortDate}</td>
+                                <td className="px-2 py-2.5 text-xs text-center text-navy-500">{item.dayOfWeek}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex items-center gap-1.5 text-xs">
                                     <span className={`h-2 w-2 shrink-0 rounded-full ${getSocialBulletClass(socialSite)}`} />
-                                    <span className="font-medium text-slate-700">{getSiteShortLabel(socialSite)} Social</span>
+                                    <span className="font-medium text-navy-500">{getSiteShortLabel(socialSite)} Social</span>
                                   </div>
                                 </td>
                                 <td className="px-3 py-2.5">
                                   <p
-                                    className="truncate text-sm font-medium text-slate-900"
+                                    className="truncate text-sm font-medium text-ink"
                                     title={`${SOCIAL_POST_TYPE_LABELS[item.social.type]}: ${item.social.title}`}
                                   >
-                                    <span className="text-slate-500 font-medium">{SOCIAL_POST_TYPE_LABELS[item.social.type]}:</span>{" "}
+                                    <span className="text-navy-500 font-medium">{SOCIAL_POST_TYPE_LABELS[item.social.type]}:</span>{" "}
                                     {item.social.title}
                                   </p>
                                 </td>
@@ -2160,12 +2160,12 @@ export default function CalendarPage() {
               ) : null}
 
               <section className="space-y-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Unscheduled Content
                 </h3>
                 <div className="grid gap-3 xl:grid-cols-2">
                   {hasBlogsEnabled && (hasShBlogsVisible || hasRedBlogsVisible) ? (
-                    <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+                    <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
                       {noPublishDateBlogs.length > 0 ? (
                         <>
                           <button
@@ -2174,14 +2174,14 @@ export default function CalendarPage() {
                             onClick={() => {
                               setIsUnscheduledBlogsExpanded((previous) => !previous);
                             }}
-                            className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                            className="flex w-full items-center justify-between rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-left transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                           >
-                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                               Unscheduled Blogs ({noPublishDateBlogs.length})
                             </span>
                             <ChevronRightIcon boxClassName="h-4 w-4"
                               size={14}
-                              className={`text-slate-500 transition-transform ${
+                              className={`text-navy-500 transition-transform ${
                                 isUnscheduledBlogsExpanded ? "rotate-90" : ""
                               }`} />
                           </button>
@@ -2191,15 +2191,15 @@ export default function CalendarPage() {
                                 {pagedNoPublishDateBlogs.map((blog) => (
                                   <li
                                     key={blog.id}
-                                    className="rounded-md border border-slate-200 px-3 py-2"
+                                    className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2"
                                   >
                                     <Link
                                       href={`/blogs/${blog.id}`}
-                                      className="interactive-link font-medium text-slate-800"
+                                      className="interactive-link font-medium text-ink"
                                     >
                                       {blog.title}
                                     </Link>
-                                    <p className="mt-1 text-xs text-slate-600">{getNoPublishReason(blog)}</p>
+                                    <p className="mt-1 text-xs text-navy-500">{getNoPublishReason(blog)}</p>
                                     <div className="mt-1">
                                       <WorkflowStageBadge
                                         stage={getWorkflowStage({
@@ -2211,7 +2211,7 @@ export default function CalendarPage() {
                                   </li>
                                 ))}
                               </ul>
-                              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
                                 <TableRowLimitSelect
                                   value={noDateRowLimit}
                                   onChange={(value) => {
@@ -2226,13 +2226,13 @@ export default function CalendarPage() {
                               </div>
                             </>
                           ) : (
-                            <p className="rounded-md border border-dashed border-slate-200 bg-white px-3 py-3 text-sm text-slate-500">
+                            <p className="rounded-md border border-dashed border-[color:var(--sh-gray-200)] bg-white px-3 py-3 text-sm text-navy-500">
                               Expand to review unscheduled blogs.
                             </p>
                           )}
                         </>
                       ) : (
-                        <p className="px-1 py-1 text-sm text-slate-500">
+                        <p className="px-1 py-1 text-sm text-navy-500">
                           No unscheduled blogs.
                         </p>
                       )}
@@ -2240,7 +2240,7 @@ export default function CalendarPage() {
                   ) : null}
                   {hasSocialPostsEnabled &&
                   (hasShSocialPostsVisible || hasRedSocialPostsVisible) ? (
-                    <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+                    <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
                       {unscheduledSocialPosts.length > 0 ? (
                         <>
                           <button
@@ -2249,14 +2249,14 @@ export default function CalendarPage() {
                             onClick={() => {
                               setIsUnscheduledSocialPostsExpanded((previous) => !previous);
                             }}
-                            className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                            className="flex w-full items-center justify-between rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-left transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                           >
-                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                               Unscheduled Social Posts ({unscheduledSocialPosts.length})
                             </span>
                             <ChevronRightIcon boxClassName="h-4 w-4"
                               size={14}
-                              className={`text-slate-500 transition-transform ${
+                              className={`text-navy-500 transition-transform ${
                                 isUnscheduledSocialPostsExpanded ? "rotate-90" : ""
                               }`} />
                           </button>
@@ -2265,7 +2265,7 @@ export default function CalendarPage() {
                               {unscheduledSocialPosts.map((post) => (
                                 <li
                                   key={post.id}
-                                  className="rounded-md border border-slate-200 px-3 py-2"
+                                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2"
                                 >
                                   <button
                                     type="button"
@@ -2275,8 +2275,8 @@ export default function CalendarPage() {
                                       setActiveSocialPostId(post.id);
                                     }}
                                   >
-                                    <p className="font-medium text-slate-800">{post.title}</p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="font-medium text-ink">{post.title}</p>
+                                    <p className="text-xs text-navy-500">
                                       {SOCIAL_POST_TYPE_LABELS[post.type]} ·{" "}
                                       {SOCIAL_POST_STATUS_LABELS[post.status]}
                                     </p>
@@ -2285,13 +2285,13 @@ export default function CalendarPage() {
                               ))}
                             </ul>
                           ) : (
-                            <p className="rounded-md border border-dashed border-slate-200 bg-white px-3 py-3 text-sm text-slate-500">
+                            <p className="rounded-md border border-dashed border-[color:var(--sh-gray-200)] bg-white px-3 py-3 text-sm text-navy-500">
                               Expand to review unscheduled social posts.
                             </p>
                           )}
                         </>
                       ) : (
-                        <p className="px-1 py-1 text-sm text-slate-500">
+                        <p className="px-1 py-1 text-sm text-navy-500">
                           No unscheduled social posts.
                         </p>
                       )}
@@ -2306,20 +2306,20 @@ export default function CalendarPage() {
               <button
                 type="button"
                 aria-label="Close calendar blog panel"
-                className="fixed inset-0 z-30 bg-slate-900/25"
+                className="fixed inset-0 z-30 bg-ink/25"
                 onClick={() => {
                   setActiveBlogId(null);
                 }}
               />
-              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl">
+              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900">{activeBlog.title}</h3>
-                    <p className="text-sm text-slate-600">{activeBlog.site}</p>
+                    <h3 className="text-lg font-semibold text-ink">{activeBlog.title}</h3>
+                    <p className="text-sm text-navy-500">{activeBlog.site}</p>
                   </div>
                   <button
                     type="button"
-                    className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="pressable rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm text-navy-500 hover:bg-blurple-50"
                     onClick={() => {
                       setActiveBlogId(null);
                     }}
@@ -2327,7 +2327,7 @@ export default function CalendarPage() {
                     Close
                   </button>
                 </div>
-                <div className="mt-4 space-y-3 text-sm text-slate-700">
+                <div className="mt-4 space-y-3 text-sm text-navy-500">
                   <p>
                     Writer ·{" "}
                     <span className="font-medium">{activeBlog.writer?.full_name ?? "Unassigned"}</span>
@@ -2365,7 +2365,7 @@ export default function CalendarPage() {
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/blogs/${activeBlog.id}`}
-                    className="pressable inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="pressable inline-flex rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                   >
                     Edit
                   </Link>
@@ -2375,20 +2375,20 @@ export default function CalendarPage() {
                     onChange={(event) => {
                       setPanelRescheduleDate(event.target.value);
                     }}
-                    className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="pressable rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm text-navy-500 hover:bg-blurple-50"
                   />
                   <button
                     type="button"
                     onClick={() => {
                       void handlePanelReschedule();
                     }}
-                    className="pressable inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="pressable inline-flex rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                   >
                     Reschedule
                   </button>
                   <Link
                     href={`/blogs/${activeBlog.id}`}
-                    className="pressable inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="pressable inline-flex rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                   >
                     Open blog
                   </Link>
@@ -2401,25 +2401,25 @@ export default function CalendarPage() {
               <button
                 type="button"
                 aria-label="Close calendar social panel"
-                className="fixed inset-0 z-30 bg-slate-900/25"
+                className="fixed inset-0 z-30 bg-ink/25"
                 onClick={() => {
                   setActiveSocialPostId(null);
                 }}
               />
-              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl">
+              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900">
+                    <h3 className="text-lg font-semibold text-ink">
                       {activeSocialPost.title}
                     </h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-navy-500">
                       {SOCIAL_POST_TYPE_LABELS[activeSocialPost.type]} ·{" "}
                       {SOCIAL_POST_STATUS_LABELS[activeSocialPost.status]}
                     </p>
                   </div>
                   <button
                     type="button"
-                    className="pressable rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="pressable rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm text-navy-500 hover:bg-blurple-50"
                     onClick={() => {
                       setActiveSocialPostId(null);
                     }}
@@ -2427,7 +2427,7 @@ export default function CalendarPage() {
                     Close
                   </button>
                 </div>
-                <div className="mt-4 space-y-3 text-sm text-slate-700">
+                <div className="mt-4 space-y-3 text-sm text-navy-500">
                   <p>
                     Assigned to ·{" "}
                     <span className="font-medium">
@@ -2450,7 +2450,7 @@ export default function CalendarPage() {
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/social-posts/${activeSocialPost.id}`}
-                    className="pressable inline-flex rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="pressable inline-flex rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                   >
                     Open social post
                   </Link>

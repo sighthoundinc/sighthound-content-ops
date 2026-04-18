@@ -148,21 +148,21 @@ function InboxView() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Inbox</h1>
-          <p className="meta-text mt-1 text-slate-600">
+          <p className="meta-text mt-1 text-navy-500">
             Everything you need to act on, in one place.
           </p>
         </div>
         <div className="flex items-center gap-1">
           <Link
             href="/tasks"
-            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1.5 text-xs font-medium text-navy-500 hover:bg-blurple-50"
           >
             <TaskIcon boxClassName="h-4 w-4" size={14} />
             Open tasks
           </Link>
         </div>
       </header>
-      <nav className="flex items-center gap-1 border-b border-slate-200">
+      <nav className="flex items-center gap-1 border-b border-[color:var(--sh-gray-200)]">
         <TabButton
           label="Required"
           count={counts.required}
@@ -204,23 +204,23 @@ function InboxView() {
             <li key={item.id}>
               <Link
                 href={item.href}
-                className="flex items-start gap-3 rounded-lg border border-transparent px-3 py-2 transition hover:border-slate-200 hover:bg-white"
+                className="flex items-start gap-3 rounded-lg border border-transparent px-3 py-2 transition hover:border-[color:var(--sh-gray-200)] hover:bg-white"
               >
                 <AppIcon
                   name={item.kind === "blog" ? "blog" : "social"}
-                  boxClassName="h-8 w-8 rounded-md bg-slate-50"
+                  boxClassName="h-8 w-8 rounded-md bg-[color:var(--sh-gray)]"
                   size={16}
-                  className="text-slate-600"
+                  className="text-navy-500"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-900">
+                  <p className="truncate text-sm font-medium text-ink">
                     {item.title}
                   </p>
-                  <p className="truncate text-xs text-slate-600">
+                  <p className="truncate text-xs text-navy-500">
                     {item.action} · {item.actor}
                   </p>
                 </div>
-                <time className="shrink-0 text-[11px] text-slate-500">
+                <time className="shrink-0 text-[11px] text-navy-500">
                   {formatDateInTimezone(item.createdAt, timezone, "MMM d")}
                 </time>
               </Link>
@@ -233,25 +233,25 @@ function InboxView() {
             <li key={item.id}>
               <Link
                 href={item.href}
-                className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 transition hover:border-slate-300"
+                className="flex items-center gap-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 transition hover:border-[color:var(--sh-gray-200)]"
               >
                 <AppIcon
                   name={item.kind === "blog" ? "blog" : "social"}
-                  boxClassName="h-8 w-8 rounded-md bg-slate-50"
+                  boxClassName="h-8 w-8 rounded-md bg-[color:var(--sh-gray)]"
                   size={16}
-                  className="text-slate-600"
+                  className="text-navy-500"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-900">
+                  <p className="truncate text-sm font-medium text-ink">
                     {item.title}
                   </p>
-                  <p className="truncate text-xs text-slate-600">
+                  <p className="truncate text-xs text-navy-500">
                     {item.statusLabel}
                   </p>
                 </div>
                 <ArrowRightIcon boxClassName="h-4 w-4"
                   size={12}
-                  className="text-slate-400" />
+                  className="text-navy-500/60" />
               </Link>
             </li>
           ))}
@@ -279,8 +279,8 @@ function TabButton({
       className={cn(
         "relative inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition",
         isActive
-          ? "border-slate-900 text-slate-900"
-          : "border-transparent text-slate-600 hover:text-slate-900"
+          ? "border-ink text-ink"
+          : "border-transparent text-navy-500 hover:text-ink"
       )}
     >
       {label}
@@ -288,8 +288,8 @@ function TabButton({
         className={cn(
           "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
           isActive
-            ? "bg-slate-900 text-white"
-            : "bg-slate-100 text-slate-600"
+            ? "bg-ink text-white"
+            : "bg-blurple-50 text-navy-500"
         )}
       >
         {count}

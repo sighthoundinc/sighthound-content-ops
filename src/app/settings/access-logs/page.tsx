@@ -303,17 +303,17 @@ export default function AccessLogsPage() {
         <div className={DATA_PAGE_STACK_CLASS}>
           <nav
             aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-slate-500"
+            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
           >
-            <Link href="/dashboard" className="hover:text-slate-700">
+            <Link href="/dashboard" className="hover:text-navy-500">
               Dashboard
             </Link>
             <span>/</span>
-            <Link href="/settings" className="hover:text-slate-700">
+            <Link href="/settings" className="hover:text-navy-500">
               Settings
             </Link>
             <span>/</span>
-            <span className="text-slate-700">Activity History</span>
+            <span className="text-navy-500">Activity History</span>
           </nav>
           <DataPageHeader
             title="Activity History"
@@ -350,7 +350,7 @@ export default function AccessLogsPage() {
                             return next;
                           });
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-left text-sm text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-left text-sm text-gray-700 hover:border-gray-400 focus:outline-none focus:border-brand"
                       >
                         <span className="block truncate">
                           {pendingActivityTypes.length === 0
@@ -403,7 +403,7 @@ export default function AccessLogsPage() {
                             return next;
                           });
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-left text-sm text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-left text-sm text-gray-700 hover:border-gray-400 focus:outline-none focus:border-brand"
                       >
                         <span className="block truncate">
                           {pendingUserIds.length === 0
@@ -457,7 +457,7 @@ export default function AccessLogsPage() {
                     setIsSaving(false);
                   }}
                   disabled={isSaving || (JSON.stringify(pendingActivityTypes) === JSON.stringify(selectedActivityTypes) && JSON.stringify(pendingUserIds) === JSON.stringify(selectedUserIds))}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
+                  className="px-4 py-2 bg-brand text-white rounded-md hover:bg-blurple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
                 >
                   {isSaving ? "Saving..." : "Apply"}
                 </button>
@@ -531,7 +531,7 @@ export default function AccessLogsPage() {
           )}
 
           {isLoading && (
-            <div className="space-y-3 rounded-lg border border-slate-200 p-4 sm:p-5">
+            <div className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] p-4 sm:p-5">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
               ))}

@@ -6,11 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon } from "@/lib/icons";
 import { useAlerts } from "@/providers/alerts-provider";
+import { useAuth } from "@/providers/auth-provider";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showError } = useAlerts();
+  const { session } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +27,19 @@ export function LoginForm() {
     }
     showError(error);
   }, [error, showError]);
+
+  // Session-watching redirect. Covers paths where the session is established
+  // client-side AFTER the page is already rendered — primarily the OAuth
+  // return chain (Supabase callback -> middleware bounce to /login ->
+  // client-side hash / code exchange sets cookies -> session becomes
+  // non-null). Password sign-ins already navigate directly inside
+  // handlePasswordSignIn; this effect is the safety net for everything else.
+  useEffect(() => {
+    if (!session) return;
+    const destination = reconnectService ? "/settings" : "/";
+    router.replace(destination);
+    router.refresh();
+  }, [router, session, reconnectService]);
 
   const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

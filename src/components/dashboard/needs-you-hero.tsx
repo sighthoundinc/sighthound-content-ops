@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppIcon, type AppIconName } from "@/lib/icons";
 import { UI_VOCAB } from "@/lib/ui-vocab";
 import { cn } from "@/lib/utils";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 /**
  * <NeedsYouHero /> — top-of-dashboard triage card answering
@@ -53,8 +54,26 @@ export function NeedsYouHero({
     let cancelled = false;
     async function load() {
       try {
+        const supabase = getSupabaseBrowserClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          if (!cancelled) {
+            // No session — user is signed out. Render the empty state
+            // silently rather than a red error card.
+            setItems([]);
+            setWaitingCount(0);
+          }
+          return;
+        }
+
         const response = await fetch("/api/dashboard/tasks-snapshot", {
           cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
         if (!response.ok) {
           throw new Error(`snapshot ${response.status}`);

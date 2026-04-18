@@ -243,7 +243,7 @@ If all else is blocked, the minimum viable Phase 1 is:
 
 Answers to §8 that unblock Phase 1. All are deliberate and must be referenced in future work.
 
-1. **Lexend delivery**: via `next/font/google` in `src/app/layout.tsx` (weights 300/400/500/600/700). The DS `@import url(fonts.googleapis.com/…Lexend)` in `colors_and_type.css` is a static-HTML convenience only — not brought into the app. Next/font is preload-able and zero-CLS.
+1. **Lexend delivery — DEFERRED (revised decision)**: Inter stays. Do NOT add a Lexend loader. `src/app/layout.tsx` continues to use `next/font/google` → Inter, variable `--font-inter-sans`. `@theme inline` keeps `--font-sans: var(--font-inter-sans)`. The Lexend swap is revisited in a later phase. The DS `@import url(fonts.googleapis.com/…Lexend)` in `colors_and_type.css` remains a static-HTML convenience only and is not brought into the app.
 2. **Body size — intentional deviation from DS**: app body remains **14px** (Tailwind `text-sm`). The DS 16px spec applies to marketing / docs surfaces. Rationale: 16px would visibly re-paginate every table, list, and form; density is a feature of the app.
 3. **Body weight — intentional deviation from DS**: app body remains **400 (Normal)**. DS Light 300 at 14px is a legibility gamble on non-retina displays. Use 300 only for large display type (H1/H2 at 32px+).
 4. **Button radius — split**: encode **two** tokens.
@@ -261,23 +261,28 @@ Answers to §8 that unblock Phase 1. All are deliberate and must be referenced i
 
 ### Corrections applied to the phase plan
 
-- **Phase 1 font step**: swap `Inter → Lexend` inside `next/font/google` in `src/app/layout.tsx`. Export as `--font-lexend-sans`; keep `--font-inter-sans` defined as a CSS alias to the same loader result, removed in Phase 5.
+- **Phase 1 font step**: NO font swap. Inter is retained. `src/app/layout.tsx` is unchanged from pre-flashpoint; `@theme inline --font-sans` continues to point at `var(--font-inter-sans)`.
 - **Phase 2 Tailwind step**: this repo is Tailwind v4 (no `tailwind.config.*`). Token-to-utility glue is added inside `@theme inline { … }` in `src/app/globals.css`.
 - **Phase 4 font names**: canonical sans is **Lexend** only. Any reference to “Untitled Sans / Tiempos Headline” in the original phase plan was boilerplate and should be ignored.
 - **Phase 5 scope**: app-only. There are no transactional email templates in this repo; marketing is not in this repo.
 
 ### Phase 1 execution summary
 
-Implemented (this commit):
-- `src/app/layout.tsx`: Inter → Lexend, weights 300–700, variable `--font-lexend-sans`.
+Implemented (after the Inter revision):
+- `src/app/layout.tsx`: **unchanged** — Inter is retained via `next/font/google`, variable `--font-inter-sans`.
 - `src/app/globals.css`:
   - Added `--sh-*` brand ramps (blurple / navy / gray / orange / gradients) to `:root`.
   - Added semantic layer (`--color-brand`, `--color-ink`, `--color-surface`, `--color-accent-warm`, `--color-accent-hot`).
   - Added split button radii (`--radius-button-cta`, `--radius-button-compact`).
-  - Added transitional alias `--font-inter-sans: var(--font-lexend-sans)`.
-  - Updated `@theme inline` to expose the semantic layer as Tailwind utilities and point `--font-sans` at Lexend.
-  - Updated body `font-family` to reference `--font-lexend-sans` primary.
+  - `@theme inline` exposes the semantic layer as Tailwind utilities; `--font-sans` continues to resolve to `var(--font-inter-sans)`.
+  - Body `font-family` continues to reference `--font-inter-sans`.
 - `public/brand/`: copied `sighthound-logo-horizontal.jpg`, `sighthound-logo-white.png`, `redactor-logo-horizontal.webp` (DS does not ship SVG variants).
-- `src/app/design-system-preview/page.tsx`: smoke-test route rendering type ramp, brand swatches, both button variants, shadow ramp, and logos. No imports from `src/lib/typography.ts`, `src/lib/status.ts`, or shared components.
+- `src/app/design-system-preview/page.tsx`: smoke-test route rendering the Inter type ramp, brand swatches, both button variants, shadow ramp, and logos. No imports from `src/lib/typography.ts`, `src/lib/status.ts`, or shared components. The ramp is labelled “Type ramp — Inter (Lexend deferred §11.1)”.
+
+Reverted from the earlier Phase 1 commit (`ef1a9ce`):
+- Removed the Lexend `next/font/google` loader.
+- Removed the `--font-inter-sans → var(--font-lexend-sans)` transitional alias.
+- Reverted `--font-sans` and body `font-family` back to `--font-inter-sans`.
+- Updated the preview route to reference `--font-inter-sans` and relabel the ramp.
 
 Explicitly **not** touched in Phase 1: `src/lib/status.ts`, `src/lib/typography.ts`, any `src/components/*`, any route other than the new preview.

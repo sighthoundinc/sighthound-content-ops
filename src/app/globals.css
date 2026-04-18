@@ -78,11 +78,6 @@
      20px for CTAs + marketing/auth; 8px for dense app controls. */
   --radius-button-cta: 20px;
   --radius-button-compact: 8px;
-
-  /* Transitional font-var alias. Inter has been replaced by Lexend;
-     --font-inter-sans still resolves for in-flight references and is
-     removed in Phase 5 cleanup. */
-  --font-inter-sans: var(--font-lexend-sans);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -114,7 +109,7 @@
   --color-accent-warm: var(--color-accent-warm);
   --color-accent-hot: var(--color-accent-hot);
 
-  --font-sans: var(--font-lexend-sans);
+  --font-sans: var(--font-inter-sans);
   --font-mono: var(--font-jetbrains-mono);
 
   --radius-button-cta: var(--radius-button-cta);
@@ -174,7 +169,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-lexend-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Verdana, sans-serif;
+  font-family: var(--font-inter-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: -0.01em;
 }
 

@@ -130,7 +130,7 @@ function PreviewButton({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    fontFamily: "var(--font-lexend-sans)",
+    fontFamily: "var(--font-inter-sans)",
     fontWeight: 300,
     fontSize,
     lineHeight: 1,
@@ -188,7 +188,7 @@ export default function DesignSystemPreviewPage() {
       style={{
         background: "var(--sh-white)",
         color: "var(--color-ink)",
-        fontFamily: "var(--font-lexend-sans)",
+        fontFamily: "var(--font-inter-sans)",
         minHeight: "100vh",
       }}
     >
@@ -208,7 +208,7 @@ export default function DesignSystemPreviewPage() {
           </div>
           <h1
             style={{
-              fontFamily: "var(--font-lexend-sans)",
+              fontFamily: "var(--font-inter-sans)",
               fontWeight: 500,
               fontSize: 46,
               lineHeight: 1.2,
@@ -227,9 +227,10 @@ export default function DesignSystemPreviewPage() {
               maxWidth: 640,
             }}
           >
-            Live token-sanity check for Phase 1. Renders the Lexend ramp, the
-            full brand palette from <code>design-system/colors_and_type.css</code>,
-            both button-radius variants, and the navy-tinted shadow ramp.
+            Live token-sanity check for Phase 1. Renders the app type ramp
+            (Inter — Lexend swap deferred per §11.1), the full brand palette
+            from <code>design-system/colors_and_type.css</code>, both
+            button-radius variants, and the navy-tinted shadow ramp.
           </p>
         </header>
 
@@ -274,7 +275,7 @@ export default function DesignSystemPreviewPage() {
 
         {/* ---- Type ramp ---- */}
         <section className="mb-14">
-          <SectionTitle>Type ramp — Lexend</SectionTitle>
+          <SectionTitle>Type ramp — Inter (Lexend deferred §11.1)</SectionTitle>
           <div
             style={{
               border: "1px solid var(--sh-gray-200)",

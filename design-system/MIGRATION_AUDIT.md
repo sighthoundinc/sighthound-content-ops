@@ -742,3 +742,62 @@ Migrates the two “brand showcase” surfaces outside the app shell: the `/logi
 - Page-level app pages (Phase 4.4: dashboard, blogs, social-posts, tasks, ideas, calendar, settings, inbox, updates, resources).
 - AI components (Phase 4.5).
 - Bespoke cards (Phase 4.6).
+
+### Phase 4.4 — Dashboard + list pages (16 files, 2 batches)
+
+Largest single migration sweep of the project. Touches ten page routes spread across 16 files; 1,089 lines migrated (1:1 swap — 676 insertions / 676 deletions in Batch A + 413 / 413 in Batch B). Split into two commits per user guidance.
+
+**Batch A — primary workflow pages (`5f11a85`, 8 files)**
+- `src/app/dashboard/page.tsx`
+- `src/app/blogs/page.tsx`, `src/app/blogs/[id]/page.tsx`, `src/app/blogs/new/page.tsx`, `src/app/blogs/cardboard/page.tsx`
+- `src/app/social-posts/page.tsx`, `src/app/social-posts/[id]/page.tsx`
+- `src/app/tasks/page.tsx`
+
+**Batch B — secondary pages (`45fc58b`, 8 files)**
+- `src/app/ideas/page.tsx`
+- `src/app/calendar/page.tsx`
+- `src/app/settings/page.tsx`, `src/app/settings/access-logs/page.tsx`, `src/app/settings/permissions/page.tsx`
+- `src/app/inbox/page.tsx`
+- `src/app/updates/page.tsx`
+- `src/app/resources/page.tsx`
+
+**Approach**: large `perl -i -pe` sweep with ~55 boundary-aware substitutions per batch, then targeted hand-edits for stragglers the perl patterns didn't anticipate (8 across both batches: 5 in dashboard, 3 in workflow pages, plus 1 hardcoded `rgba(79,70,229,…)` indigo in a calendar today-cell shadow).
+
+**Sweep mapping (54 patterns)**
+| Category | Mapping |
+|---|---|
+| Text slate | `slate-900/800` → `text-ink`; `slate-700/600/500` → `text-navy-500`; `slate-400` → `text-navy-500/60` |
+| Bg slate | `slate-900/800` → `bg-ink`; `slate-700` → `bg-navy-700`; `slate-600/500` → `bg-navy-500`; `slate-400/300` → `bg-[color:var(--sh-gray-400)]`; `slate-200` → `bg-[color:var(--sh-gray-200)]`; `slate-100` → `bg-blurple-50`; `slate-50` → `bg-[color:var(--sh-gray)]`; `hover:` variants to `hover:bg-blurple-50` / `hover:bg-[color:var(--sh-gray-…)]` |
+| Border slate | `slate-900/800` → `border-ink`; `slate-700` → `border-navy-700`; `slate-600/500` → `border-navy-500`; `slate-400/300` → `border-[color:var(--sh-gray-…)]`; `slate-200` → `border-[color:var(--sh-gray-200)]`; `slate-100` → `border-[color:var(--sh-gray)]` |
+| Ring | `ring-indigo-500/300/200` → `ring-brand` / `ring-blurple-300` / `ring-[color:var(--sh-blurple-100)]`; `ring-slate-200` → `ring-[color:var(--sh-gray-200)]`; `ring-blue-200/300` → Blurple equivalents |
+| Blue → Blurple (Strategy B) | `blue-50/100/300` → `blurple-*`; `blue-500/600` → `brand`; `blue-700/800/900` → `blurple-700/800` (applied to text/bg/border/hover variants) |
+| Indigo | `indigo-50/100` → `blurple-*`; `indigo-500/600` → `brand`; `indigo-700` → `blurple-700`; `indigo-200/300/400` (border/ring) → Blurple equivalents; `indigo-700/800/900` (text) → `blurple-700/800` |
+| Divide | `divide-slate-100/200` → `divide-[color:var(--sh-gray)]` / `divide-[color:var(--sh-gray-200)]` |
+
+**Hand-edited stragglers**
+| File | Fix |
+|---|---|
+| `src/app/dashboard/page.tsx` L3958, L4036 | `focus-visible:ring-slate-500` → `focus-visible:ring-brand` |
+| `src/app/dashboard/page.tsx` L3966, L4009, L4013 | Active-state light text `text-slate-200` on ink backgrounds → `text-blurple-100` (readable light blurple tint, on-brand) |
+| `src/app/blogs/cardboard/page.tsx` L766 | Drop-target ring `ring-blue-200` → `ring-[color:var(--sh-blurple-100)]` |
+| `src/app/social-posts/page.tsx` L578 | Drop-target ring `ring-blue-300` → `ring-blurple-300` |
+| `src/app/social-posts/page.tsx` L2761 | `text-blue-900` → `text-blurple-800` |
+| `src/app/calendar/page.tsx` L1862 | Hardcoded `rgba(79,70,229,…)` (indigo-600) in today-cell shadow → `rgba(79,96,220,…)` (Blurple RGB components) |
+
+**Deliberately unchanged**
+- **Status chip palette** (`bg-violet-*`, `bg-rose-*`, `bg-sky-*`, `bg-amber-*`, `bg-emerald-*` used via `STATUS_COLORS`, `WRITER_STATUS_COLORS`, `PUBLISHER_STATUS_COLORS`, `SOCIAL_POST_STATUS_COLORS`, `WORKFLOW_STAGE_COLORS`) — contract-locked per §11.5 + AGENTS.md Global Vocabulary Contract.
+- **Semantic tones** (rose for destructive/danger, amber for warning, emerald for success confirmations) — retained where used as semantic signals, not brand accents.
+- **`bg-white` / `text-white`** — Tailwind defaults that resolve identically to `bg-surface` / `text-surface`. No cosmetic rewrite.
+- **`shadow-sm` / `shadow-md` / `shadow-lg`** on app surfaces — default Tailwind shadows kept; only Phase-3 primitives + Phase-4.3 marketing surfaces use the navy-tinted `shadow-brand-*` ramp. App-density surfaces stay on Tailwind defaults.
+- **Structural classes** (layout, spacing, flex, grid) — all untouched.
+- **AI components and bespoke cards** — explicitly queued for Phase 4.5 and 4.6.
+
+**Cross-app visual impact**: every content-workflow page (dashboard, blogs list + detail + new + cardboard, social-posts list + detail, tasks, ideas, calendar, settings + access-logs + permissions, inbox, updates, resources) now renders in Sighthound navy ink + Blurple accents + `--sh-gray-200` borders + Blurple-50 hovers. Focus rings across forms are Blurple. Drop targets on cardboard and social-post board show Blurple rings. Calendar today-cell glows Blurple. Admin banners / reconnection notes / permission hints render in Blurple-tinted frames instead of indigo/blue.
+
+**Caller compatibility**: no API surface changed. `npx tsc --noEmit` → exit 0 on both batches.
+
+**Not in this PR** (still queued)
+- AI components (`src/components/ai/*`) — Phase 4.5.
+- Bespoke cards (`ai-blocker-card`, `ai-quality-card`, `ai-next-steps-card`, `associated-blog-context-card`) — Phase 4.6.
+- Non-page shared components (`src/components/*.tsx`) that individual pages import — not touched in Phase 4.4; will pick up Content Relay through their own migration pass (many already done in Phase 3 primitives).
+- `.interactive-link:hover` (still `#0f172a`) and `.table-row-focus` (still `#f8fafc / #cbd5e1`) — queued for the final CSS-primitive cleanup.

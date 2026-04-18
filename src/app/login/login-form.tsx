@@ -1,13 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AppIcon } from "@/lib/icons";
 import { useAlerts } from "@/providers/alerts-provider";
 
 export function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { showError } = useAlerts();
 
@@ -60,10 +61,16 @@ export function LoginForm() {
       return;
     }
 
-    // Redirect is handled by the session effect in the parent once the auth
-    // state change lands. We still clear the submitting flag to keep the
-    // button responsive if navigation is slow.
-    setIsSubmitting(false);
+    // Navigate client-side after a successful sign-in. The server component
+    // at /login also enforces this redirect, but only catches you on an
+    // initial page load; interactive sign-ins resolve in place, so we must
+    // push the navigation ourselves. router.refresh() ensures the new
+    // session cookie is observed by the destination's server components.
+    const destination = reconnectService ? "/settings" : "/";
+    router.replace(destination);
+    router.refresh();
+    // Leave isSubmitting true while navigation is in flight so the form
+    // button stays disabled and the spinner stays visible.
   };
 
   const handleGoogleSignIn = async () => {

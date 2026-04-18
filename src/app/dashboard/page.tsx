@@ -2,17 +2,35 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
 import { AssociatedSocialPostsSection } from "@/components/associated-social-posts-section";
-import { BlogDetailsDrawer } from "@/components/blog-details-drawer";
 import { MarkdownComment } from "@/components/markdown-comment";
-import { BlogImportModal } from "@/components/blog-import-modal";
-import { BulkActionPreviewModal } from "@/components/bulk-action-preview-modal";
 import { Button } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
-import { ColumnEditor } from "@/components/column-editor";
+
+// Interaction-gated heavy components: the drawer opens on row click, the
+// modals/editor render on explicit user action. Deferring their JS off the
+// initial /dashboard bundle via next/dynamic + ssr:false saves measurable
+// First Load JS; none of them need to render on first paint.
+const BlogDetailsDrawer = dynamic(
+  () => import("@/components/blog-details-drawer").then((m) => m.BlogDetailsDrawer),
+  { ssr: false, loading: () => null }
+);
+const BlogImportModal = dynamic(
+  () => import("@/components/blog-import-modal").then((m) => m.BlogImportModal),
+  { ssr: false, loading: () => null }
+);
+const BulkActionPreviewModal = dynamic(
+  () => import("@/components/bulk-action-preview-modal").then((m) => m.BulkActionPreviewModal),
+  { ssr: false, loading: () => null }
+);
+const ColumnEditor = dynamic(
+  () => import("@/components/column-editor").then((m) => m.ColumnEditor),
+  { ssr: false, loading: () => null }
+);
 import { DashboardTable } from "@/components/dashboard-table";
 import { NeedsYouHero } from "@/components/dashboard/needs-you-hero";
 import { DetailDrawerField } from "@/components/detail-drawer";

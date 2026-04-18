@@ -1,0 +1,241 @@
+/* =========================================================
+   Sighthound Design System — colors_and_type.css
+   Source: Sighthound Brand Guidelines (April 2022)
+   ========================================================= */
+
+/* Lexend — primary brand typeface (Google Fonts, open source) */
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ---------- COLOR — Primary ---------- */
+  --sh-blurple:          #4f60dc; /* combination of blue & purple; primary brand hue (60% of design) */
+  --sh-blurple-700:      #3d4bc2;
+  --sh-blurple-800:      #2e3ba4;
+  --sh-blurple-300:      #8792e8;
+  --sh-blurple-100:      #dee2f8;
+  --sh-blurple-50:       #eef1fc;
+
+  --sh-white:            #ffffff;
+
+  /* ---------- COLOR — Secondary (30% of design) ---------- */
+  --sh-navy:             #1a1d38; /* text color on light; brand dark */
+  --sh-navy-700:         #2a2e56;
+  --sh-navy-500:         #4b4f73;
+  --sh-gray:             #eff3f7; /* neutral gray surface */
+  --sh-gray-200:         #d9dfe6;
+  --sh-gray-400:         #9aa3b2;
+  --sh-gray-600:         #64708a;
+
+  /* ---------- COLOR — Accents (10% — pops of color) ---------- */
+  --sh-orange-light:     #f99f25;
+  --sh-orange-medium:    #f05d22;
+  --sh-orange-red:       #f62470;
+
+  /* ---------- COLOR — Gradients (~10% usage) ---------- */
+  --sh-gradient-brand:   linear-gradient(135deg, #4f60dc 0%, #f62470 100%);
+  --sh-gradient-warm:    linear-gradient(135deg, #f99f25 0%, #f05d22 50%, #f62470 100%);
+  --sh-gradient-cool:    linear-gradient(135deg, #1a1d38 0%, #4f60dc 100%);
+  --sh-gradient-surface: linear-gradient(180deg, #eff3f7 0%, #ffffff 100%);
+
+  /* ---------- SEMANTIC — Foreground ---------- */
+  --fg-1:                var(--sh-navy);       /* primary text */
+  --fg-2:                var(--sh-navy-500);   /* secondary text */
+  --fg-3:                var(--sh-gray-600);   /* tertiary / meta */
+  --fg-inverse:          var(--sh-white);
+  --fg-accent:           var(--sh-blurple);
+  --fg-link:             var(--sh-blurple);
+
+  /* ---------- SEMANTIC — Background ---------- */
+  --bg-canvas:           var(--sh-white);
+  --bg-surface:          var(--sh-gray);
+  --bg-raised:           #ffffff;
+  --bg-inverse:          var(--sh-navy);
+  --bg-brand:            var(--sh-blurple);
+
+  /* ---------- SEMANTIC — Border ---------- */
+  --border-subtle:       #e4e8ef;
+  --border-default:      var(--sh-gray-200);
+  --border-strong:       var(--sh-navy-500);
+  --border-focus:        var(--sh-blurple);
+
+  /* ---------- SEMANTIC — Status ---------- */
+  --status-success:      #1f9d55;
+  --status-warning:      var(--sh-orange-light);
+  --status-danger:       var(--sh-orange-red);
+  --status-info:         var(--sh-blurple);
+
+  /* ---------- TYPE — Families ---------- */
+  --font-sans:           'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', Verdana, sans-serif;
+  --font-fallback:       Verdana, Geneva, sans-serif; /* brand-approved fallback for email/software */
+  --font-mono:           'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
+  /* NOTE: the logo wordmark uses Robofan, a proprietary type; NEVER recreate the wordmark — use the logo files in assets/ */
+
+  /* ---------- TYPE — Weights (Lexend) ---------- */
+  --fw-light:            300;
+  --fw-regular:          400;
+  --fw-medium:           500;
+  --fw-semibold:         600;
+  --fw-bold:             700;
+
+  /* ---------- TYPE — Scale (digital hierarchy, from brand guide) ---------- */
+  --fs-h1:               46px;  /* Lexend Medium, line-height 1.2 */
+  --fs-h2:               32px;  /* Lexend Light,  line-height 1.33, Title Case */
+  --fs-h3:               16px;  /* Lexend Light,  line-height 1.5 */
+  --fs-h4:               16px;  /* Lexend Semibold, ALL CAPS, line-height 1.5 */
+  --fs-h5:               18px;  /* Lexend Light,  line-height 1.5 */
+  --fs-body:             16px;  /* Lexend Light,  line-height 1.5 */
+  --fs-button:           16px;  /* Lexend Light */
+  --fs-caption:          13px;
+  --fs-overline:         12px;  /* Lexend Semibold, ALL CAPS, tracking 0.08em */
+
+  /* ---------- SPACING ---------- */
+  --space-1:             4px;
+  --space-2:             8px;
+  --space-3:             12px;
+  --space-4:             16px;
+  --space-5:             20px;
+  --space-6:             24px;
+  --space-8:             32px;
+  --space-10:            40px;
+  --space-12:            48px;
+  --space-16:            64px;
+  --space-20:            80px;
+  --space-24:            96px;
+
+  /* ---------- RADII ---------- */
+  --radius-sm:           4px;
+  --radius-md:           8px;
+  --radius-lg:           12px;
+  --radius-button:       20px;   /* buttons are rounded 20px per brand spec */
+  --radius-pill:         999px;
+
+  /* ---------- SHADOWS ---------- */
+  --shadow-xs:           0 1px 2px rgba(26, 29, 56, 0.06);
+  --shadow-sm:           0 2px 6px rgba(26, 29, 56, 0.08);
+  --shadow-md:           0 8px 20px rgba(26, 29, 56, 0.10);
+  --shadow-lg:           0 20px 40px rgba(26, 29, 56, 0.14);
+  --shadow-focus:        0 0 0 3px rgba(79, 96, 220, 0.35);
+
+  /* ---------- MOTION ---------- */
+  --ease-standard:       cubic-bezier(0.2, 0.0, 0.2, 1);
+  --ease-out:            cubic-bezier(0.0, 0.0, 0.2, 1);
+  --dur-fast:            120ms;
+  --dur-base:            200ms;
+  --dur-slow:            320ms;
+}
+
+/* =========================================================
+   Semantic element styles
+   ========================================================= */
+
+html, body {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-light);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--fg-1);
+  background: var(--bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, .h1 {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-h1);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--fg-1);
+  margin: 0 0 var(--space-6);
+}
+
+h2, .h2 {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-light);
+  font-size: var(--fs-h2);
+  line-height: 1.33;
+  color: var(--fg-1);
+  margin: 0 0 var(--space-5);
+}
+
+h3, .h3 {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-light);
+  font-size: var(--fs-h3);
+  line-height: 1.5;
+  margin: 0 0 var(--space-3);
+}
+
+h4, .h4 {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-h4);
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-3);
+}
+
+h5, .h5 {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-light);
+  font-size: var(--fs-h5);
+  line-height: 1.5;
+  margin: 0 0 var(--space-3);
+}
+
+p, .p {
+  font-weight: var(--fw-light);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  margin: 0 0 var(--space-4);
+  text-wrap: pretty;
+}
+
+.overline {
+  font-size: var(--fs-overline);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-2);
+}
+
+.caption { font-size: var(--fs-caption); color: var(--fg-3); }
+
+a, .link {
+  color: var(--fg-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+a:hover { color: var(--sh-blurple-700); }
+
+code, pre, .mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* ---------- Button base ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-light);
+  font-size: var(--fs-button);
+  line-height: 1;
+  padding: 14px 29px;                 /* per brand spec */
+  border-radius: var(--radius-button); /* 20px */
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease-standard);
+  white-space: nowrap;
+}
+.btn-primary { background: var(--sh-blurple); color: var(--sh-white); }
+.btn-primary:hover { background: var(--sh-blurple-700); }
+.btn-secondary { background: var(--sh-white); color: var(--sh-navy); border-color: var(--sh-navy); }
+.btn-secondary:hover { background: var(--sh-navy); color: var(--sh-white); }
+.btn-tertiary { background: transparent; color: var(--sh-blurple); padding: 14px 12px; }
+.btn-tertiary:hover { color: var(--sh-blurple-800); text-decoration: underline; }

@@ -1,0 +1,11 @@
+@import url('../colors_and_type.css');
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #fff; color: var(--fg-1); font-family: var(--font-sans); }
+.card { padding: 20px 24px; width: 700px; min-height: 120px; }
+.row { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+.sw { flex: 1; min-width: 0; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: flex-end; min-height: 92px; font-size: 12px; font-weight: 500; }
+.sw small { font-weight: 400; opacity: 0.75; display: block; font-size: 11px; margin-top: 2px; }
+.sw.light { color: var(--sh-navy); }
+.sw.dark { color: #fff; }
+.sw.bordered { border: 1px solid var(--border-subtle); }
+.hdr { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-2); margin: 0 0 10px; }

@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Root surface + ink aliases — Content Relay equivalents of slate-50 / slate-900.
+     These feed `body { background: var(--background); color: var(--foreground); }`
+     and the @theme inline `bg-background` / `text-foreground` utilities. */
+  --background: #eff3f7; /* matches --sh-gray */
+  --foreground: #1a1d38; /* matches --sh-navy (ink) */
 
   /* Spacing rhythm — 4px base. Use alongside Tailwind utilities when
      custom values are needed (e.g. CSS-in-JS, inline style). */
@@ -70,7 +73,7 @@
   /* Semantic Content Relay layer (what components / Tailwind utilities use) */
   --color-brand: var(--sh-blurple);
   --color-ink: var(--sh-navy);
-  --color-surface: #ffffff;
+  --color-surface: var(--sh-white);
   --color-accent-warm: var(--sh-orange-light);
   --color-accent-hot: var(--sh-orange-red);
 
@@ -235,7 +238,7 @@ body {
 
 .interactive-link:hover,
 .interactive-link:focus-visible {
-  color: #0f172a;
+  color: var(--color-ink);
   text-decoration-color: currentColor;
 }
 
@@ -328,7 +331,7 @@ body {
 
 .table-row-focus:hover,
 .table-row-focus:focus-within {
-  background-color: #f8fafc;
+  background-color: var(--sh-gray);
 }
 
 .table-row-focus td:first-child {
@@ -337,7 +340,7 @@ body {
 
 .table-row-focus:hover td:first-child,
 .table-row-focus:focus-within td:first-child {
-  box-shadow: inset 2px 0 0 #cbd5e1;
+  box-shadow: inset 2px 0 0 var(--sh-gray-400);
 }
 
 @keyframes skeleton-shimmer {

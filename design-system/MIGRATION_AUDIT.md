@@ -396,3 +396,27 @@ File: `src/components/button.tsx`.
 ### Phase 3 sequence (ahead of next reviews)
 
 Order: **Button → Input → Card → Badge → Nav → Modal**. Each is a separate PR. No batching.
+
+### Phase 3.2 — Input focus primitive (`.focus-field`)
+
+This codebase does not ship a shared `<Input>` component. Inputs are styled inline at call sites with Tailwind utilities. The single shared primitive is the `.focus-field` utility class in `src/app/globals.css`, used by ~40 files to apply the global focus-visible treatment. That class is Phase 3.2's migration target; creating a new `<Input>` component would be scope-creep into Phase 4.
+
+**Token migration (`.focus-field:focus-visible`)**
+| Property | Before | After |
+|---|---|---|
+| `border-color` | `#60a5fa` (Tailwind blue-400) | `var(--color-brand)` (Blurple `#4f60dc`) |
+| `background-color` | `#f8fbff` (light-blue tint) | `var(--sh-blurple-50)` (`#eef1fc`) |
+| `box-shadow` | `0 0 0 3px rgba(59, 130, 246, 0.18)` (blue 18%) | `var(--shadow-brand-focus)` (`0 0 0 3px rgba(79, 96, 220, 0.35)` — DS spec) |
+
+The base `.focus-field` rule (transition properties) is unchanged — only the `:focus-visible` branch was touched.
+
+**Cross-app visual impact**: every input/textarea/select/button that carries `className="focus-field"` now renders Blurple ring + Blurple-50 tint on keyboard focus instead of Tailwind-blue. Single CSS rule change affecting ~40 files by reference.
+
+**Not in scope**
+- Default (resting) input border / background / radius remain caller-applied (Tailwind classes at each site).
+- No new `<Input>` component created.
+- `.interactive-link:hover` still uses `#0f172a` (slate-900); migration deferred until it comes up in a primitive pass.
+
+**Preview smoke test**: `/design-system-preview` → new “Phase 3.2 — input focus (.focus-field)” section with text / email / textarea / select / disabled inputs. Tab through them to verify the Blurple focus treatment.
+
+**Caller compatibility**: no API surface changed; no code-level migration required. `npx tsc --noEmit` → exit 0.

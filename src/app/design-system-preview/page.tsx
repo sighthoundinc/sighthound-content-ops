@@ -494,6 +494,85 @@ export default function DesignSystemPreviewPage() {
           </div>
         </section>
 
+        {/* ---- Phase 3.2: input / .focus-field primitive ---- */}
+        <section className="mb-14">
+          <SectionTitle>
+            Phase 3.2 — input focus (<code>.focus-field</code>)
+          </SectionTitle>
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--sh-navy-500)",
+              marginBottom: 12,
+              maxWidth: 640,
+            }}
+          >
+            Inputs across the app are styled with Tailwind utilities at the call
+            site and share the global <code>.focus-field</code> utility for
+            focus-visible state. The focus border + ring + subtle background
+            tint now use <code>--color-brand</code> and
+            <code>--shadow-brand-focus</code>. Tab through the inputs below
+            to verify the Blurple focus treatment.
+          </p>
+          <div className="grid max-w-2xl gap-4">
+            <label className="grid gap-1">
+              <span className="text-xs font-medium text-navy-500 uppercase tracking-wide">
+                Text input
+              </span>
+              <input
+                type="text"
+                placeholder="Talk to our team"
+                className="focus-field rounded-button-compact border border-[color:var(--sh-gray-200)] bg-surface px-3 py-2 text-sm text-ink placeholder:text-navy-500"
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs font-medium text-navy-500 uppercase tracking-wide">
+                Email input
+              </span>
+              <input
+                type="email"
+                placeholder="name@sighthound.com"
+                className="focus-field rounded-button-compact border border-[color:var(--sh-gray-200)] bg-surface px-3 py-2 text-sm text-ink placeholder:text-navy-500"
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs font-medium text-navy-500 uppercase tracking-wide">
+                Textarea
+              </span>
+              <textarea
+                rows={3}
+                placeholder="Redactor gives you full control over what stays visible…"
+                className="focus-field rounded-button-compact border border-[color:var(--sh-gray-200)] bg-surface px-3 py-2 text-sm text-ink placeholder:text-navy-500"
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs font-medium text-navy-500 uppercase tracking-wide">
+                Select
+              </span>
+              <select
+                className="focus-field rounded-button-compact border border-[color:var(--sh-gray-200)] bg-surface px-3 py-2 text-sm text-ink"
+                defaultValue="alpr_plus"
+              >
+                <option value="alpr_plus">ALPR+</option>
+                <option value="redactor">Redactor</option>
+                <option value="hardware">Hardware</option>
+                <option value="general">General / Company</option>
+              </select>
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs font-medium text-navy-500 uppercase tracking-wide">
+                Disabled input
+              </span>
+              <input
+                type="text"
+                placeholder="Locked at ready_to_publish"
+                disabled
+                className="focus-field rounded-button-compact border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-sm text-navy-500 placeholder:text-navy-500 opacity-60"
+              />
+            </label>
+          </div>
+        </section>
+
         {/* ---- Phase 2: Tailwind utility smoke test ---- */}
         <section className="mb-14">
           <SectionTitle>

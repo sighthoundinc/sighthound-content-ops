@@ -905,3 +905,112 @@ Plus hotfix `abc73f4` (drop `"use client"` from `button.tsx` so server component
 - `docs/TYPOGRAPHY_SYSTEM.md` may still carry legacy slate guidance; Phase 5 checks alignment with `design-system/README.md`.
 - Git LFS decision for `design-system/uploads/*.pdf` (10 MB) — unrelated to visual migration.
 - Any remaining untouched shared components in `src/components/` that happened to slip past Phase 3 primitives + Phase 4 pages. Phase 5 is expected to be a final grep-sweep to confirm zero slate-*/indigo-*/blue-* references across `src/`.
+
+---
+
+## 18. Phase 5 — Cleanup (COMPLETE)
+
+Final cleanup pass. Four sub-phases, one commit each.
+
+### Phase 5.1 — CSS primitive stragglers (`336caed`)
+
+Migrated the last literal-hex references in `src/app/globals.css`:
+
+| Rule | Before | After |
+|---|---|---|
+| `:root --background` | `#f8fafc` (slate-50) | `#eff3f7` (matches `--sh-gray`) |
+| `:root --foreground` | `#0f172a` (slate-900) | `#1a1d38` (matches `--sh-navy` / ink) |
+| `:root --color-surface` | `#ffffff` (literal) | `var(--sh-white)` (chain via brand token) |
+| `.interactive-link:hover` `color` | `#0f172a` | `var(--color-ink)` |
+| `.table-row-focus:hover` `background-color` | `#f8fafc` | `var(--sh-gray)` |
+| `.table-row-focus` inset stripe | `#cbd5e1` (slate-300) | `var(--sh-gray-400)` |
+
+Stripe choice: `--sh-gray-400` preserves the visibility of the old slate-300 indicator on-brand. Easy to dial back to `--sh-gray-200` if it reads loud in practice.
+
+### Phase 5.2 — Inter alias removal (`07f6c28`)
+
+- `--font-inter-sans: var(--font-lexend-sans)` transitional alias removed from `:root` in `globals.css`.
+- Stale comment block in `src/app/layout.tsx` cleaned up (no longer mentions the alias).
+- `grep -rn font-inter-sans src/` → zero matches.
+
+### Phase 5.3 — Zombie file deletion (`46500e0`)
+
+- **Deleted** `src/app/font-variants.tsx` (orphaned — no importers; referenced only by `reports/ts-prune.txt` dead-code report).
+- **Rewrote** `docs/TYPOGRAPHY_SYSTEM.md` as a thin pointer to `design-system/README.md` + `design-system/colors_and_type.css`, plus an explicit list of the app's intentional deviations (14px body, 400 weight, split button radii, contract-locked status chips, gray ramp not exposed as Tailwind utilities). Existing links from `AGENTS.md` and `docs/DESIGN_TOKENS.md` continue to resolve.
+
+### Phase 5.4 — Shared-component sweep (`33b1451`)
+
+The grep verification at the top of Phase 5.4 surfaced a large residue that Phase 4 didn't touch: 287 slate/indigo lines across 37 shared-component files that pages imported but weren't themselves migrated. Phase 5.4 therefore evolved from a “verification PR” into the actual close-out sweep.
+
+**Approach**: single `xargs perl -i` pass across the residue set with ~85 boundary-aware substitutions (the full mapping from Phase 4.4/4.5/4.6 expanded with `text-slate-300`, `stroke-slate-*`, extra `ring-slate-*` variants, and additional `bg-blue-200`). Followed by 3 hand-edits for SVG stroke classes + a text-slate-300 straggler the regex missed.
+
+**Excluded from the sweep** (contract-locked, untouched per §11.5):
+- `src/lib/status.ts` — `STATUS_COLORS` / `WRITER_STATUS_COLORS` / `PUBLISHER_STATUS_COLORS` / `SOCIAL_POST_STATUS_COLORS` / `WORKFLOW_STAGE_COLORS` maps.
+- `src/lib/status.contract.test.ts` — the assertions that lock the contract.
+- `src/lib/table-row-tones.ts` — the Workflow Row Tone mappings (published=emerald, awaiting-live-link=amber, review=violet, in_progress=blue, needs_revision=rose). Contract-adjacent per AGENTS.md Global Table Consistency Contract; remapping requires explicit reopening of §11.5.
+
+**Files touched** (35 in the sweep commit)
+- Components (31): `associated-social-posts-section`, `blog-import-modal`, `bulk-action-preview-modal`, `bulk/selection-cart`, `calendar-control-bar`, `calendar-shell`, `calendar-tile`, `checkbox-multi-select`, `column-editor`, `command-palette`, `connected-services-form`, `dashboard-table`, `data-page`, `data-table`, `empty-state`, `filter-bar`, `filter-chip`, `global-quick-create`, `kbd-shortcut`, `link-quick-actions`, `markdown-comment`, `name-resolution-modal`, `next-action/next-action-cell`, `next-action/next-action-pill`, `next-action/next-action-ring`, `notification-preferences-form`, `onboarding-tour`, `presence-bubbles`, `protected-page`, `social-post-status-info`, `table-controls`.
+- Libs (3): `src/lib/segmented-control.ts`, `src/lib/site.ts`, `src/lib/table.ts`.
+- Provider (1): `src/providers/alerts-provider.tsx`.
+
+**Hand-edits after the sweep** (3 stragglers the regex couldn't anticipate)
+| File | Fix |
+|---|---|
+| `src/components/column-editor.tsx` L77 | Inactive column indicator `text-slate-300` → `text-[color:var(--sh-gray-400)]` (medium neutral gray on brand) |
+| `src/components/next-action/next-action-ring.tsx` L35 | SVG `stroke-slate-300` → `stroke-[color:var(--sh-gray-400)]` (progress-ring stroke) |
+| `src/components/next-action/next-action-ring.tsx` L60 | SVG `stroke-slate-200` → `stroke-[color:var(--sh-gray-200)]` (background ring) |
+
+### Final grep verification
+
+```text path=null start=null
+grep -rE '(slate|indigo)-[0-9]{2,3}|(bg|text|border|ring)-blue-[0-9]{2,3}' src/
+→ matches ONLY in:
+  - src/lib/status.ts           (contract palette)
+  - src/lib/status.contract.test.ts (contract assertions)
+  - src/lib/table-row-tones.ts  (contract-adjacent workflow tones)
+  - globals.css L4              (historical comment)
+  - next-action-cell.tsx L12-13 (historical comment)
+  - button.tsx L16              (historical comment)
+```
+
+**Zero live code-level slate/indigo/blue references outside the contract-locked files.** All remaining matches are either the contract itself or historical comments that describe the pre-Content-Relay state. `npx tsc --noEmit` → exit 0 across all 4 Phase 5 commits.
+
+---
+
+## 19. Migration complete
+
+| Phase | Commit(s) | Description |
+|---|---|---|
+| 0 | §1–9 | Audit only — no code changes |
+| 1 | `ef1a9ce` → `6a9c28f` | Content Relay tokens + Lexend + preview route |
+| 2 | `1f20d7e` | Brand palette exposed as Tailwind utilities |
+| 3.1 | `8965c81` | `<Button>` + `buttonClass()` (split radii, brand Blurple primary, shadow-brand-focus) |
+| 3.2 | `6f8d6a3` | `.focus-field` input primitive |
+| 3.3 | `f4b9ca2` | Tooltip primitives (CSS + portal) |
+| 3.4 | `fceb590` | Skeleton primitive + shimmer |
+| 3.5 | `9dae2c7` | DetailDrawer family |
+| 3.6 | `6081201` | ConfirmationModal primitive |
+| 4.1 | `e78d8fe` | Typography system (20 TYPOGRAPHY constants + 8 utility classes) |
+| 4.2 | `ca92dda` | Global chrome (app-shell, sidebars, nav/header) |
+| 4.3 | `76de154` | Login / landing brand-showcase surfaces |
+| 4.4 | `5f11a85`, `45fc58b`, `b5f9089` | Dashboard + 15 other page files (2 batches) |
+| 4.5 | `276340f`, `bd48277` | AI chrome (8 files) |
+| 4.6 | `f7af80f` | Bespoke cards (4 files) |
+| 5.1 | `336caed` | CSS primitive stragglers |
+| 5.2 | `07f6c28` | Inter font-var alias removal |
+| 5.3 | `46500e0` | Zombie file deletion + typography doc rewrite |
+| 5.4 | `33b1451` | Shared-component sweep (35 files) |
+
+**What “done” means**
+- Every `src/` `.tsx` / `.ts` / `.css` slate/indigo/blue reference has been migrated, except those inside contract-locked files or inside explanatory comments.
+- Every brand token (color, type scale, font, radii, shadow, motion) originates in `design-system/colors_and_type.css`, flows through `src/app/globals.css`, is exposed via `@theme inline` to Tailwind utilities, and is consumed by components without re-declaring literal hex values.
+- Every UI primitive (Button, `.focus-field`, Tooltip, Skeleton, DetailDrawer, ConfirmationModal) carries the Sighthound Content Relay palette.
+- Every app page route plus `/login` and `/` landing reads in Sighthound navy ink + Blurple accents + `--sh-gray-200` borders + Blurple-50 hovers.
+- Every hand-picked deviation from the DS spec (14px body, 400 weight, split radii, status contract, gray-ramp non-exposure) is documented in this audit + `docs/TYPOGRAPHY_SYSTEM.md` + `AGENTS.md`.
+- Dead code removed; font alias removed; transitional comments updated.
+
+**Out of Phase 5 scope (noted for future work)**
+- **`design-system/uploads/*.pdf` Git LFS** — separate decision. The 10 MB blob sits in `main` history. Two paths exist: (a) do nothing until repo size becomes a real concern; (b) `git lfs migrate import` + force-push. Neither blocks the migration. Open as its own ticket when relevant.
+- **Reopening the status-chip contract** — currently locked (`src/lib/status.ts`, `status.contract.test.ts`, `table-row-tones.ts`). If a product review decides the contract should move to Blurple tones, that’s a follow-up with explicit contract test + AGENTS.md amendments. NOT a migration task.
+- **Shared `<Card>` + `<Badge>` primitives** — worth introducing now that every consumer is visible. The four bespoke cards from Phase 4.6 (`ai-blocker-card`, `ai-quality-card`, `ai-next-steps-card`, `associated-blog-context-card`) all share structural patterns (surface / border / title / body / optional severity badge) that a shared primitive could absorb. Separate post-migration refactor PR — no scope creep into the Content Relay close-out.

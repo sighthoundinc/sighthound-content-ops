@@ -453,7 +453,7 @@ export default function DesignSystemPreviewPage() {
           </SectionTitle>
           <div className="grid gap-6">
             <div>
-              <Tag>size="cta" · rounded-button-cta (20px) · Lexend Light 16</Tag>
+              <Tag>size=&quot;cta&quot; · rounded-button-cta (20px) · Lexend Light 16</Tag>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="primary" size="cta">Talk to our team</Button>
                 <Button variant="secondary" size="cta">Watch demo</Button>
@@ -462,7 +462,7 @@ export default function DesignSystemPreviewPage() {
               </div>
             </div>
             <div>
-              <Tag>size="md" · rounded-button-compact (8px)</Tag>
+              <Tag>size=&quot;md&quot; · rounded-button-compact (8px)</Tag>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="primary" size="md">Save</Button>
                 <Button variant="secondary" size="md">Cancel</Button>
@@ -471,7 +471,7 @@ export default function DesignSystemPreviewPage() {
               </div>
             </div>
             <div>
-              <Tag>size="sm" (default) · rounded-button-compact (8px)</Tag>
+              <Tag>size=&quot;sm&quot; (default) · rounded-button-compact (8px)</Tag>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="primary">Apply</Button>
                 <Button variant="secondary">Reset</Button>
@@ -479,7 +479,7 @@ export default function DesignSystemPreviewPage() {
               </div>
             </div>
             <div>
-              <Tag>size="xs" + icon size · rounded-button-compact (8px)</Tag>
+              <Tag>size=&quot;xs&quot; + icon size · rounded-button-compact (8px)</Tag>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="primary" size="xs">
                   xs primary

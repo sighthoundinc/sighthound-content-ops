@@ -34,6 +34,55 @@
   --motion-easing-out: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-easing-in: cubic-bezier(0.64, 0, 0.78, 0);
   --motion-easing-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---------------------------------------------------------------
+     Sighthound Content Relay — brand tokens (Phase 1, additive).
+     Mirror of design-system/colors_and_type.css — raw brand ramps.
+     Google Fonts @import is intentionally omitted: Lexend is loaded
+     via next/font/google in src/app/layout.tsx for zero-CLS.
+     --------------------------------------------------------------- */
+  --sh-blurple: #4f60dc;
+  --sh-blurple-700: #3d4bc2;
+  --sh-blurple-800: #2e3ba4;
+  --sh-blurple-300: #8792e8;
+  --sh-blurple-100: #dee2f8;
+  --sh-blurple-50: #eef1fc;
+
+  --sh-white: #ffffff;
+
+  --sh-navy: #1a1d38;
+  --sh-navy-700: #2a2e56;
+  --sh-navy-500: #4b4f73;
+  --sh-gray: #eff3f7;
+  --sh-gray-200: #d9dfe6;
+  --sh-gray-400: #9aa3b2;
+  --sh-gray-600: #64708a;
+
+  --sh-orange-light: #f99f25;
+  --sh-orange-medium: #f05d22;
+  --sh-orange-red: #f62470;
+
+  --sh-gradient-brand: linear-gradient(135deg, #4f60dc 0%, #f62470 100%);
+  --sh-gradient-warm: linear-gradient(135deg, #f99f25 0%, #f05d22 50%, #f62470 100%);
+  --sh-gradient-cool: linear-gradient(135deg, #1a1d38 0%, #4f60dc 100%);
+  --sh-gradient-surface: linear-gradient(180deg, #eff3f7 0%, #ffffff 100%);
+
+  /* Semantic Content Relay layer (what components / Tailwind utilities use) */
+  --color-brand: var(--sh-blurple);
+  --color-ink: var(--sh-navy);
+  --color-surface: #ffffff;
+  --color-accent-warm: var(--sh-orange-light);
+  --color-accent-hot: var(--sh-orange-red);
+
+  /* Button radii: split per Phase-1 decision.
+     20px for CTAs + marketing/auth; 8px for dense app controls. */
+  --radius-button-cta: 20px;
+  --radius-button-compact: 8px;
+
+  /* Transitional font-var alias. Inter has been replaced by Lexend;
+     --font-inter-sans still resolves for in-flight references and is
+     removed in Phase 5 cleanup. */
+  --font-inter-sans: var(--font-lexend-sans);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -53,8 +102,23 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter-sans);
+
+  /* Sighthound Content Relay brand utilities (additive, non-breaking).
+     Enables: bg-brand, text-brand, border-brand, ring-brand,
+              bg-ink, text-ink, bg-surface, text-surface,
+              bg-accent-warm, bg-accent-hot,
+              rounded-button-cta, rounded-button-compact. */
+  --color-brand: var(--color-brand);
+  --color-ink: var(--color-ink);
+  --color-surface: var(--color-surface);
+  --color-accent-warm: var(--color-accent-warm);
+  --color-accent-hot: var(--color-accent-hot);
+
+  --font-sans: var(--font-lexend-sans);
   --font-mono: var(--font-jetbrains-mono);
+
+  --radius-button-cta: var(--radius-button-cta);
+  --radius-button-compact: var(--radius-button-compact);
 }
 
 /* Typography Scale - Modern Minimalist */
@@ -110,7 +174,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-lexend-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Verdana, sans-serif;
   letter-spacing: -0.01em;
 }
 

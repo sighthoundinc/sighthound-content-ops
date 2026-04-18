@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Lexend, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/providers/auth-provider";
 import { AlertsProvider } from "@/providers/alerts-provider";
@@ -9,9 +9,13 @@ import { CommandPalette } from "@/components/command-palette";
 import { GlobalQuickCreate } from "@/components/global-quick-create";
 import { AIFloatingAssistant } from "@/components/ai/ai-floating-assistant";
 
-const interSans = Inter({
-  variable: "--font-inter-sans",
+// Sighthound Content Relay primary sans: Lexend (weights 300/400/500/600/700).
+// Exposed as --font-lexend-sans. globals.css aliases --font-inter-sans to the
+// same loader result for a transitional period; the alias is removed in Phase 5.
+const lexendSans = Lexend({
+  variable: "--font-lexend-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -34,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${interSans.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${lexendSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <AlertsProvider>
           <NotificationsProvider>

@@ -9,10 +9,10 @@ import { CommandPalette } from "@/components/command-palette";
 import { GlobalQuickCreate } from "@/components/global-quick-create";
 import { AIFloatingAssistant } from "@/components/ai/ai-floating-assistant";
 
-// Sighthound Content Relay primary sans: Lexend (final decision, Phase 1).
-// Weights 300/400/500/600/700. Exposed as --font-lexend-sans.
-// globals.css aliases --font-inter-sans to the same loader result until
-// Phase 5 cleanup so any in-flight references keep resolving.
+// Sighthound Content Relay primary sans: Lexend (weights 300/400/500/600/700).
+// Exposed as --font-lexend-sans. Tailwind's `font-sans` and body default
+// resolve to this via `@theme inline { --font-sans: var(--font-lexend-sans) }`
+// in globals.css.
 const lexendSans = Lexend({
   variable: "--font-lexend-sans",
   subsets: ["latin"],

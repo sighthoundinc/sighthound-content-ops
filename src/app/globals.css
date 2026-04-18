@@ -90,10 +90,6 @@
   --shadow-brand-lg: 0 20px 40px rgba(26, 29, 56, 0.14);
   --shadow-brand-focus: 0 0 0 3px rgba(79, 96, 220, 0.35);
 
-  /* Transitional font-var alias. Inter has been replaced by Lexend;
-     --font-inter-sans still resolves for in-flight references and is
-     removed in Phase 5 cleanup. */
-  --font-inter-sans: var(--font-lexend-sans);
 }
 
 @media (prefers-reduced-motion: reduce) {

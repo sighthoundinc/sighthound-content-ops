@@ -33,6 +33,12 @@ Playwright downloads browser binaries to `~/Library/Caches/ms-playwright/` on ma
 
 The canonical app pages (`/dashboard`, `/blogs`, `/social-posts`, `/calendar`, `/tasks`) all require a Supabase session. They're intentionally out of scope for v1.
 
+Target surfaces (once the test user lands, pick 3–4 of these):
+- `/dashboard` — table/chrome, filter drawers, writer/publisher filter state. Exercises Phase 4.2 chrome + Phase 3.4 skeleton on first paint.
+- `/blogs/[id]` — blog detail with detail drawer + inline status chips + `<LinkQuickActions>`. Exercises Phase 3.5 drawer, contract-locked status chips, and the `.focus-field` primitive in forms.
+- A content page with **Ask AI panel open** (e.g., `/social-posts/[id]?ai=1` or a test harness) — exercises `<Card>` + `<Badge>` in live severity composition via the blocker / quality / next-steps cards.
+- Optional fourth: `/calendar` or `/social-posts` list — catches drift in calendar tile colours, social post board chrome, and the row-tone mapping from `src/lib/table-row-tones.ts`.
+
 To add them later:
 
 1. Provision a **Supabase test user** in the project's auth.

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/utils";
 import { ExternalLinkIcon } from "@/lib/icons";
+import { Badge } from "@/components/badge";
+import { Card } from "@/components/card";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -67,61 +69,57 @@ export function AssociatedBlogContextCard({
 
   if (!blogId) {
     return (
-      <div className="rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
+      <Card tone="muted" className="p-4">
         <p className="text-sm text-navy-500">No associated blog.</p>
-      </div>
+      </Card>
     );
   }
 
   if (loading || fetchLoading) {
     return (
-      <div className="rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
+      <Card tone="muted" className="p-4">
         <p className="text-sm text-navy-500">Loading blog context...</p>
-      </div>
+      </Card>
     );
   }
 
   if (!blog) {
     return (
-      <div className="rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
+      <Card tone="muted" className="p-4">
         <p className="text-sm text-navy-500">Blog not found.</p>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
+    <Card tone="muted" className="p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <Link href={`/blogs/${blog.id}`} className="block">
-            <h4 className="font-medium text-ink hover:underline truncate">
+            <h4 className="truncate font-medium text-ink hover:underline">
               {blog.title}
             </h4>
           </Link>
-          <p className="text-xs text-navy-500 mt-1">{blog.site}</p>
-          <div className="flex gap-2 mt-2 flex-wrap">
-            <span className="inline-block px-2 py-1 rounded bg-white text-xs text-navy-500 border border-[color:var(--sh-gray-200)]">
-              Writing: {blog.writer_status}
-            </span>
-            <span className="inline-block px-2 py-1 rounded bg-white text-xs text-navy-500 border border-[color:var(--sh-gray-200)]">
-              Publishing: {blog.publisher_status}
-            </span>
+          <p className="mt-1 text-xs text-navy-500">{blog.site}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Badge>Writing: {blog.writer_status}</Badge>
+            <Badge>Publishing: {blog.publisher_status}</Badge>
           </div>
           {blog.scheduled_publish_date && (
-            <p className="text-xs text-navy-500 mt-2">
+            <p className="mt-2 text-xs text-navy-500">
               Scheduled: {formatDateOnly(blog.scheduled_publish_date)}
             </p>
           )}
         </div>
         <Link
           href={`/blogs/${blog.id}`}
-          className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[color:var(--sh-gray-200)] transition-colors"
+          className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded transition-colors hover:bg-[color:var(--sh-gray-200)]"
           title="Open blog"
         >
           <ExternalLinkIcon size={16} />
         </Link>
       </div>
-      <div className="mt-4 pt-4 border-t border-[color:var(--sh-gray-200)]">
+      <div className="mt-4 border-t border-[color:var(--sh-gray-200)] pt-4">
         <div className="flex flex-col gap-3">
           {blog.google_doc_url && (
             <LinkQuickActions
@@ -137,6 +135,6 @@ export function AssociatedBlogContextCard({
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

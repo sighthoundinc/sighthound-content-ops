@@ -1013,4 +1013,69 @@ grep -rE '(slate|indigo)-[0-9]{2,3}|(bg|text|border|ring)-blue-[0-9]{2,3}' src/
 **Out of Phase 5 scope (noted for future work)**
 - **`design-system/uploads/*.pdf` Git LFS** — separate decision. The 10 MB blob sits in `main` history. Two paths exist: (a) do nothing until repo size becomes a real concern; (b) `git lfs migrate import` + force-push. Neither blocks the migration. Open as its own ticket when relevant.
 - **Reopening the status-chip contract** — currently locked (`src/lib/status.ts`, `status.contract.test.ts`, `table-row-tones.ts`). If a product review decides the contract should move to Blurple tones, that’s a follow-up with explicit contract test + AGENTS.md amendments. NOT a migration task.
-- **Shared `<Card>` + `<Badge>` primitives** — worth introducing now that every consumer is visible. The four bespoke cards from Phase 4.6 (`ai-blocker-card`, `ai-quality-card`, `ai-next-steps-card`, `associated-blog-context-card`) all share structural patterns (surface / border / title / body / optional severity badge) that a shared primitive could absorb. Separate post-migration refactor PR — no scope creep into the Content Relay close-out.
+- **Shared `<Card>` + `<Badge>` primitives** — worth introducing now that every consumer is visible. The four bespoke cards from Phase 4.6 (`ai-blocker-card`, `ai-quality-card`, `ai-next-steps-card`, `associated-blog-context-card`) all share structural patterns (surface / border / title / body / optional severity badge) that a shared primitive could absorb. Separate post-migration refactor PR — no scope creep into the Content Relay close-out. **DONE** in the post-migration refactor — see §20 below.
+
+---
+
+## 20. Post-migration refactor — shared <Card> + <Badge>
+
+Extracted two general-purpose primitives now that every consumer is visible. Single PR, no migration work bundled in.
+
+### `src/components/card.tsx`
+
+Shared surface primitive (no `"use client"`; safe in both RSC and client contexts, like `button.tsx`).
+
+**API**
+- `Card({ tone, className, children, ...divProps })` and `cardClass({ tone, className })`.
+- Base classes: `rounded-lg border p-3`.
+- Override padding / hover / shadow etc. via `className`.
+
+**Tones (5)**
+| tone | Surface | Border | Use |
+|---|---|---|---|
+| `default` | `bg-surface` | `--sh-gray-200` | Neutral cards (next-steps items, generic lists) |
+| `muted` | `--sh-gray` | `--sh-gray-200` | Empty / loading / error states + context panels |
+| `info` | `bg-blurple-50` | `--sh-blurple-100` | Brand info (blocker/quality info severity) |
+| `warning` | `bg-amber-50` | `border-amber-200` | Semantic warning |
+| `critical` | `bg-red-50` | `border-red-200` | Semantic danger |
+
+### `src/components/badge.tsx`
+
+Shared pill primitive. Not the contract-locked status palette — general-purpose.
+
+**API**
+- `Badge({ tone, className, children, ...spanProps })` and `badgeClass({ tone, className })`.
+- Base classes: `inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium`.
+
+**Tones (7)**
+| tone | Fill | Text | Border | Use |
+|---|---|---|---|---|
+| `default` | `bg-surface` | `text-ink` | `--sh-gray-200` | Neutral tag |
+| `muted` | `--sh-gray` | `text-navy-500` | `--sh-gray-200` | Muted metadata |
+| `brand` | `bg-blurple-100` | `text-blurple-800` | `--sh-blurple-100` | Brand-pop (role label, featured tag) |
+| `info` | `bg-blurple-50` | `text-blurple-800` | `--sh-blurple-100` | Subtle brand info |
+| `critical` | `bg-red-50` | `text-red-700` | `border-red-200` | Semantic danger |
+| `warning` | `bg-amber-50` | `text-amber-800` | `border-amber-200` | Semantic warning |
+| `success` | `bg-emerald-50` | `text-emerald-700` | `border-emerald-200` | Semantic success |
+
+### Consumer refactors (4 files)
+
+| File | Before | After |
+|---|---|---|
+| `src/components/ai/ai-blocker-card.tsx` | 63 lines, inline `SEVERITY_CONFIG` with `bg/border/text/icon/color` | 45 lines, `<Card tone={severity}>` + severity-coupled icon/text colors |
+| `src/components/ai/ai-quality-card.tsx` | 52 lines, duplicate of blocker | 42 lines, same shape, uses `<Card tone={severity}>` |
+| `src/components/ai/ai-next-steps-card.tsx` | 61 lines, per-step raw div with `rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3` | 57 lines, per-step `<Card>` (default tone) |
+| `src/components/associated-blog-context-card.tsx` | 142 lines, 4 copies of the muted surface classes + inline pills | 136 lines, 4 `<Card tone="muted" className="p-4">` uses, inline pills replaced with `<Badge>` |
+
+**Explicitly NOT absorbed by this refactor**
+- DetailDrawerSection's card-like surface (Phase 3.5 primitive; different API shape with collapsible semantics).
+- Status chip rendering (`STATUS_COLORS`, `WRITER_STATUS_COLORS`, … in `src/lib/status.ts`) — still contract-locked. `Badge` is the *generic* pill primitive; workflow status chips continue to render from `status.ts` tokens.
+- `/page.tsx` landing work-bucket cards + snapshot card, login-form + login-hero cards — still have their own layout / hover / active semantics that diverge from the simple `<Card>` API. Safe to migrate later if they converge.
+
+**Preview smoke test**: `/design-system-preview` → new “Shared `<Card>` + `<Badge>` primitives” section renders all 5 card tones, all 7 badge tones, plus a composition example matching the blocker card.
+
+**Caller compatibility**: public component APIs unchanged (`<AIBlockerCard>`, `<AIQualityCard>`, `<AINextStepsCard>`, `<AssociatedBlogContextCard>` keep their existing prop signatures). `npx tsc --noEmit` → exit 0.
+
+**Why this landed as a post-migration refactor, not inside Phase 4.6**
+- Needed to see every consumer in its final brand-token state before extracting. Phase 4.6 migrated the 4 cards in-place but kept them bespoke; extracting the primitive mid-migration would have risked API churn while other surfaces were still in flight.
+- Matches the user's “don’t bundle with anything else” scope — this is one focused refactor that reduces duplication, not a sweep.

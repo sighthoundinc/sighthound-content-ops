@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+
+import { Card } from '@/components/card';
 import { AppIcon } from '@/lib/icons';
 import { useAlerts } from '@/providers/alerts-provider';
 
@@ -29,12 +31,9 @@ export function AINextStepsCard({ steps }: NextStepsCardProps) {
       </h3>
       <div className="space-y-2">
         {steps.map((item, i) => (
-          <div
-            key={i}
-            className="group rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 transition-shadow hover:shadow-sm"
-          >
+          <Card key={i} className="group transition-shadow hover:shadow-sm">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
                   {item.step}
                 </p>
@@ -42,7 +41,7 @@ export function AINextStepsCard({ steps }: NextStepsCardProps) {
               </div>
               <button
                 onClick={() => handleCopy(item.action, i)}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-navy-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-blurple-50 hover:text-navy-500 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                className="focus-visible:ring-brand inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-navy-500 opacity-0 transition-all hover:bg-blurple-50 hover:text-navy-500 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 group-hover:opacity-100"
                 aria-label="Copy"
               >
                 <AppIcon
@@ -53,7 +52,7 @@ export function AINextStepsCard({ steps }: NextStepsCardProps) {
                 />
               </button>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </section>

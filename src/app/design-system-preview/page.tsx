@@ -11,7 +11,9 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
+import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
+import { Card } from "@/components/card";
 import {
   DetailSkeleton,
   Skeleton,
@@ -500,6 +502,96 @@ export default function DesignSystemPreviewPage() {
                   Destructive disabled
                 </Button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---- Post-migration: Card + Badge primitives ---- */}
+        <section className="mb-14">
+          <SectionTitle>
+            Shared <code>&lt;Card&gt;</code> + <code>&lt;Badge&gt;</code> primitives
+          </SectionTitle>
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--sh-navy-500)",
+              marginBottom: 12,
+              maxWidth: 640,
+            }}
+          >
+            Two post-migration primitives extracted once every consumer was
+            visible. <code>&lt;Card&gt;</code> carries the surface / border /
+            radius / padding story; <code>&lt;Badge&gt;</code> is a general-purpose
+            pill. The 4 Phase 4.6 bespoke cards (blocker / quality /
+            next-steps / associated-blog) have been absorbed into these.
+          </p>
+          <div className="grid gap-6">
+            <div>
+              <Tag>Card tones</Tag>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                  <div className="text-ink text-sm font-medium">default</div>
+                  <div className="text-navy-500 mt-1 text-xs">
+                    Neutral surface (white + gray-200 border).
+                  </div>
+                </Card>
+                <Card tone="muted">
+                  <div className="text-ink text-sm font-medium">muted</div>
+                  <div className="text-navy-500 mt-1 text-xs">
+                    Soft gray surface for empty / loading / context panels.
+                  </div>
+                </Card>
+                <Card tone="info">
+                  <div className="text-blurple-800 text-sm font-medium">info</div>
+                  <div className="text-blurple-800 mt-1 text-xs opacity-80">
+                    Brand info tone (Blurple).
+                  </div>
+                </Card>
+                <Card tone="warning">
+                  <div className="text-sm font-medium text-amber-800">warning</div>
+                  <div className="mt-1 text-xs text-amber-800 opacity-80">
+                    Semantic warning (amber).
+                  </div>
+                </Card>
+                <Card tone="critical">
+                  <div className="text-sm font-medium text-red-800">critical</div>
+                  <div className="mt-1 text-xs text-red-800 opacity-80">
+                    Semantic danger (red).
+                  </div>
+                </Card>
+              </div>
+            </div>
+
+            <div>
+              <Tag>Badge tones</Tag>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge>default</Badge>
+                <Badge tone="muted">muted</Badge>
+                <Badge tone="brand">brand</Badge>
+                <Badge tone="info">info</Badge>
+                <Badge tone="success">success</Badge>
+                <Badge tone="warning">warning</Badge>
+                <Badge tone="critical">critical</Badge>
+              </div>
+            </div>
+
+            <div>
+              <Tag>
+                Composition — Card + Badge (matches Phase 4.6 blocker card)
+              </Tag>
+              <Card tone="critical" className="max-w-md">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-semibold text-red-800">
+                      Missing required field
+                    </h4>
+                    <p className="mt-0.5 text-xs text-red-800 opacity-80">
+                      Canva URL is required before submitting for review.
+                    </p>
+                  </div>
+                  <Badge tone="critical">Blocker</Badge>
+                </div>
+              </Card>
             </div>
           </div>
         </section>

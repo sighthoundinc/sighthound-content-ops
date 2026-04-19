@@ -209,7 +209,7 @@ The DS defines brand primitives but intentionally stops short of app chrome. The
 6. **Sidebar surface**: keep white or adopt the `#1a1d38` navy sidebar shown in the Redactor UI kit?
 7. **Mono font**: keep JetBrains Mono (current, loaded via `next/font`) or adopt the DS system-mono stack (`SF Mono, Menlo, …`)?
 8. **`src/app/font-variants.tsx` + `docs/TYPOGRAPHY_SYSTEM.md`**: delete / rewrite / leave alone during migration?
-9. **Visual regression tooling**: do we stand up Playwright screenshots before Phase 3, or go manual-QA?
+9. **Visual regression tooling**: do we stand up Playwright screenshots before Phase 3, or go manual-QA? — **resolved (post-migration)**. Minimal Playwright suite landed at `tests/visual/` after the migration stabilised; covers `/design-system-preview` + `/login` as public-route baselines. Auth-gated canonical pages stay out of scope until a Supabase test user exists; storage-state pattern sketched in `tests/visual/README.md`.
 10. **History of the 10 MB `design-system/uploads/*.pdf`**: unrelated to visual migration but still open from the previous pass.
 
 ---

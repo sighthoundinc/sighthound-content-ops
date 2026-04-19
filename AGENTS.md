@@ -544,6 +544,14 @@ Before considering a task complete:
 10. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
 5. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
 
+## Visual Regression (SHOULD)
+
+1. A Playwright snapshot suite lives at `tests/visual/` and covers the public brand surfaces (`/design-system-preview`, `/login`) against committed baseline PNGs.
+2. Run `npm run test:visual` locally before shipping changes that touch `src/components/*`, `src/app/globals.css`, `src/lib/typography.ts`, the Card/Badge/Button primitives, or any page in the brand-showcase set. Pass = no unintended visual drift.
+3. When a visual change is intentional, run `npm run test:visual:update` and commit the updated baseline PNGs with a PR-description note describing the delta.
+4. Auth-gated routes (dashboard/blogs/social-posts/calendar/tasks) are not yet covered; see `tests/visual/README.md` for the storage-state pattern to unlock them.
+5. Baselines are machine-keyed; regenerate on the machine that will run the check if the environment differs.
+
 ## Post-Task Validation Confirmation (MUST)
 
 After completing any task, the agent must explicitly ask the user whether to run validation commands (for example lint, typecheck, tests, or build) before running them.

@@ -306,6 +306,18 @@ All user-visible strings are governed by the canonical vocabulary in `src/lib/ui
 - neutral / unknown → slate.
 - Workflow stage badges are soft pastel (never solid `bg-*-500 text-white`).
 
+**Status palette re-ratification (post-Content-Relay, April 2026)**:
+
+After the Sighthound Content Relay migration finished (§19 of `design-system/MIGRATION_AUDIT.md`) we explicitly re-opened the status-chip palette to decide whether to Blurple-ify it for brand consistency. The palette above **stays as-is**. Reasons, in order of weight:
+
+1. **Semantic richness over brand unity.** The 7-tone palette encodes 7 distinct workflow states (`review`, `ready-to-publish`, `awaiting-live-link`, `changes-requested`, `in-progress`, `published`, `neutral`). A single brand hue would collapse them to “some-shade-of-Blurple” and force users to read text to distinguish states. The status chip is an **information indicator**, not a brand moment.
+2. **Industry-convention parity.** `emerald=published`, `amber=waiting`, `rose=changes-requested`, `violet=review`, `sky=ready`, `blue=in-progress` matches GitHub, Linear, Notion, and similar tools. Users already scan these tones correctly on first exposure; rebranding discards learned pattern recognition.
+3. **60/30/10 balance protection.** The Content Relay brand allocates Blurple to ≈60% of a composition and reserves it for brand moments (primary CTAs, links, hover states, focus rings, login/landing accents). Status chips appear in **every row of every list/table view** — floating them to Blurple would push Blurple past the 60% cap and flatten the intended hierarchy.
+4. **Contract + test cost vs. benefit.** Unlocking requires updating `STATUS_COLORS` / `WRITER_STATUS_COLORS` / `PUBLISHER_STATUS_COLORS` / `SOCIAL_POST_STATUS_COLORS` / `WORKFLOW_STAGE_COLORS`, the row tones in `src/lib/table-row-tones.ts`, `src/lib/status.contract.test.ts`, this vocabulary contract, and manual visual QA on every workflow surface. High risk for an arguably-worse outcome.
+5. **Already visually integrated.** The pastel status palette sits on top of Content Relay chrome (ink text, gray-200 borders, `sh-gray` surfaces). In practice the chips read as subtle information overlays on a brand-consistent backdrop, not as a competing palette.
+
+**Therefore**: the status-chip palette is re-locked. The contract tests (`src/lib/status.contract.test.ts`), the row-tone mappings (`src/lib/table-row-tones.ts`), and the enumerated tokens above remain the canonical source of truth. Any future change needs to revisit all five reasons above and produce an explicit product decision — not a drive-by sweep.
+
 **Section names and ordering**:
 - `Comments` always renders above `Links` and `Assignment & Changes`.
 - Record-level history section is always titled `Assignment & Changes` (never `Activity`).

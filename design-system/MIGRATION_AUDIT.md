@@ -1012,7 +1012,7 @@ grep -rE '(slate|indigo)-[0-9]{2,3}|(bg|text|border|ring)-blue-[0-9]{2,3}' src/
 
 **Out of Phase 5 scope (noted for future work)**
 - **`design-system/uploads/*.pdf` Git LFS** — separate decision. The 10 MB blob sits in `main` history. Two paths exist: (a) do nothing until repo size becomes a real concern; (b) `git lfs migrate import` + force-push. Neither blocks the migration. Open as its own ticket when relevant.
-- **Reopening the status-chip contract** — currently locked (`src/lib/status.ts`, `status.contract.test.ts`, `table-row-tones.ts`). If a product review decides the contract should move to Blurple tones, that’s a follow-up with explicit contract test + AGENTS.md amendments. NOT a migration task.
+- **Reopening the status-chip contract** — considered and **re-locked** post-Content-Relay. See `AGENTS.md` “Status palette re-ratification (post-Content-Relay, April 2026)” for the five documented reasons (semantic richness, industry-convention parity, 60/30/10 brand balance protection, contract/test cost vs. benefit, already-integrated visual read). Any future change must revisit all five reasons and land an explicit product decision, not a drive-by sweep.
 - **Shared `<Card>` + `<Badge>` primitives** — worth introducing now that every consumer is visible. The four bespoke cards from Phase 4.6 (`ai-blocker-card`, `ai-quality-card`, `ai-next-steps-card`, `associated-blog-context-card`) all share structural patterns (surface / border / title / body / optional severity badge) that a shared primitive could absorb. Separate post-migration refactor PR — no scope creep into the Content Relay close-out. **DONE** in the post-migration refactor — see §20 below.
 
 ---

@@ -222,6 +222,26 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Form-control font inheritance safety net.
+   Browser user-agent styles set an explicit system UI font on <button>,
+   <input>, <select>, <textarea>, <optgroup>, and ::file-selector-button,
+   which means those elements do NOT inherit the body `font-family` by
+   default. Tailwind v4's preflight attempts to undo this with `font:
+   inherit`, but we pin it explicitly so every interactive control is
+   guaranteed to render in Lexend regardless of preflight ordering or
+   future CSS additions. Keep `font-feature-settings` / `font-variation-
+   settings` inherited so ligature / weight variants track the body. */
+button,
+input,
+select,
+textarea,
+optgroup,
+::file-selector-button {
+  font-family: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+}
+
 .interactive-link {
   cursor: pointer;
   text-decoration: underline;

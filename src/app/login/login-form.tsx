@@ -152,7 +152,7 @@ export function LoginForm() {
   };
 
   const ssoButtonClass =
-    "inline-flex w-full items-center justify-center gap-2.5 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-4 py-3 text-sm font-medium text-ink transition hover:bg-blurple-50 hover:border-[color:var(--sh-gray-400)] focus-visible:outline-none focus-visible:shadow-brand-focus disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex w-full items-center justify-center gap-2.5 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-4 py-3 font-sans text-sm font-medium text-ink transition hover:bg-blurple-50 hover:border-[color:var(--sh-gray-400)] focus-visible:outline-none focus-visible:shadow-brand-focus disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <section
@@ -224,7 +224,7 @@ export function LoginForm() {
         <button
           type="button"
           onClick={() => setShowEmailForm((v) => !v)}
-          className={`group inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg px-2 text-sm text-navy-500 transition-all duration-300 ease-out motion-reduce:transition-none hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus ${
+          className={`group inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg px-2 font-sans text-sm text-navy-500 transition-all duration-300 ease-out motion-reduce:transition-none hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus ${
             showEmailForm
               ? "pointer-events-none max-h-0 py-0 opacity-0"
               : "max-h-12 py-2 opacity-100"

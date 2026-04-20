@@ -61,7 +61,11 @@ export function buttonClass({
   className?: string;
 }) {
   return cn(
-    "pressable inline-flex items-center justify-center transition disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:shadow-brand-focus",
+    // `font-sans` is pinned explicitly so link-as-button surfaces (where
+    // `buttonClass()` is applied to an <a> or <Link>) stay on Lexend too.
+    // Native <button> inheritance is also covered by the global rule in
+    // globals.css; this keeps the primitive self-sufficient.
+    "pressable inline-flex items-center justify-center font-sans transition disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:shadow-brand-focus",
     BUTTON_VARIANT_CLASSES[variant],
     BUTTON_SIZE_CLASSES[size],
     className

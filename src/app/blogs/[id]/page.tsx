@@ -13,7 +13,7 @@ import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
 import { ProtectedPage } from "@/components/protected-page";
-import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { UnstickThisButton } from "@/components/ai/unstick-this-button";
 import {
   buildPresenceChannelKey,
@@ -30,7 +30,7 @@ import {
   canTransitionWriterStatus,
 } from "@/lib/permissions";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
-import { PUBLISHER_STATUSES, SITES, WRITER_STATUSES, getWorkflowStage } from "@/lib/status";
+import { PUBLISHER_STATUSES, SITES, WRITER_STATUSES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
   BlogHistoryRecord,
@@ -390,7 +390,6 @@ export default function BlogDetailPage() {
         { href: "#blog-details", label: "Details" },
         { href: "#blog-workflow", label: "Workflow" },
         { href: "#blog-comments", label: "Comments" },
-        { href: "#blog-links", label: "Links" },
         { href: "#blog-assignment-changes", label: "Assignment & Changes" },
       ] as const,
     []
@@ -1213,17 +1212,25 @@ export default function BlogDetailPage() {
             primaryAction={
               <div className="flex items-center gap-3">
                 <PresenceBubbles users={presenceOthers} />
-                <WorkflowStageBadge
-                  stage={getWorkflowStage({
-                    writerStatus: blog.writer_status,
-                    publisherStatus: blog.publisher_status,
-                  })}
-                />
                 <StatusBadge status={blog.overall_status} />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    router.push("/blogs");
+                  }}
+                >
+                  Back to Blogs
+                </Button>
               </div>
             }
           />
-          <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4 xl:hidden">
+          {/* Next Action panel — rendered once above the section stack (single
+              source of truth; replaces the previous xl:hidden mobile copy +
+              lg:block sidebar copy). Preflight below lists only the required
+              items that still need attention; completed items are hidden so
+              the panel stays focused on what’s left to do. */}
+          <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
@@ -1261,48 +1268,40 @@ export default function BlogDetailPage() {
                 ) : null}
               </div>
             </div>
-            <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
-                Transition Preflight
-              </p>
-              {blogPreflightRequiredFields.length === 0 ? (
-                <p className="text-xs text-emerald-700">No required blockers for the current stage.</p>
-              ) : (
-                <>
-                  <p className="text-xs text-navy-500">
-                    {readyBlogPreflightCount} / {blogPreflightRequiredFields.length} required items
-                    ready for next completion action.
-                  </p>
-                  {missingBlogPreflightFields.length === 0 ? (
-                    <p className="text-xs text-emerald-700">All required items are complete.</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {missingBlogPreflightFields.map((field) => (
-                        <li
-                          key={field}
-                          className="flex items-center justify-between gap-2 text-xs text-navy-500"
+            {blogPreflightRequiredFields.length > 0 ? (
+              <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
+                  Required to move forward
+                </p>
+                {missingBlogPreflightFields.length === 0 ? (
+                  <p className="text-xs text-emerald-700">Ready for next action.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {missingBlogPreflightFields.map((field) => (
+                      <li
+                        key={field}
+                        className="flex items-center justify-between gap-2 text-xs text-navy-500"
+                      >
+                        <span>{BLOG_PREFLIGHT_FIELD_META[field].label}</span>
+                        <button
+                          type="button"
+                          className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
+                          onClick={() => {
+                            jumpToBlogField(field);
+                          }}
                         >
-                          <span>{BLOG_PREFLIGHT_FIELD_META[field].label}</span>
-                          <button
-                            type="button"
-                            className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
-                            onClick={() => {
-                              jumpToBlogField(field);
-                            }}
-                          >
-                            Go to field
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
-            </div>
+                          Go to field
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : null}
           </section>
           <nav
             aria-label="Detail sections"
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 lg:hidden"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2"
           >
             <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
               Jump to
@@ -1318,9 +1317,10 @@ export default function BlogDetailPage() {
             ))}
           </nav>
 
-
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="space-y-6">
+          {/* Previously a 2-col grid with a sticky sidebar that duplicated
+              the Next Action + Jump-to blocks above. Sidebar removed; single
+              column keeps content wider and reading-friendly. */}
+          <div className="space-y-6">
               <section id="blog-details" className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
             <div>
               <h3 className="text-base font-semibold text-ink">Blog Details</h3>
@@ -1518,65 +1518,6 @@ export default function BlogDetailPage() {
                 </label>
               </div>
 
-              <label className="block">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-navy-500">
-                    Actual Published Timestamp
-                  </span>
-                  {blog?.actual_published_at && form.actual_published_at && (
-                    <span className="text-xs text-navy-500">
-                      Auto-captured • Editable by admin
-                    </span>
-                  )}
-                </div>
-                <input
-                  disabled={!canOverrideWorkflow}
-                  type="datetime-local"
-                  value={form.actual_published_at}
-                  onChange={(event) => {
-                    setForm((prev) =>
-                      prev ? { ...prev, actual_published_at: event.target.value } : prev
-                    );
-                  }}
-                  onBlur={() => {
-                    if (!canOverrideWorkflow) {
-                      return;
-                    }
-                    const nextIso = toIsoFromDateTimeLocalInput(form.actual_published_at);
-                    const existingIso = blog.actual_published_at ?? blog.published_at;
-                    if ((existingIso ?? "") === (nextIso ?? "")) {
-                      return;
-                    }
-                    void updateBlog({ actual_published_at: nextIso }, "Saved");
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
-                />
-                {!form.actual_published_at && blog?.publisher_status === "completed" && (
-                  <p className="mt-1 text-xs text-navy-500">
-                    Automatically captured when blog is published. Admins can edit anytime.
-                  </p>
-                )}
-              </label>
-
-              <label className="inline-flex items-center gap-2 text-sm text-navy-500">
-                <input
-                  disabled={!canArchiveBlog}
-                  type="checkbox"
-                  checked={form.is_archived}
-                  onChange={(event) => {
-                    const nextValue = event.target.checked;
-                    setForm((prev) =>
-                      prev ? { ...prev, is_archived: nextValue } : prev
-                    );
-                    if (!canArchiveBlog || nextValue === blog.is_archived) {
-                      return;
-                    }
-                    void updateBlog({ is_archived: nextValue }, "Saved");
-                  }}
-                />
-                Archived
-              </label>
-
               <div className="flex gap-2">
                 <Button
                   type="submit"
@@ -1586,17 +1527,79 @@ export default function BlogDetailPage() {
                 >
                   Save Metadata
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    router.push("/dashboard");
-                  }}
-                >
-                  Back to Dashboard
-                </Button>
               </div>
+
+              {/* Advanced: rarely-touched fields tucked behind a disclosure.
+                  Actual Published Timestamp is admin-only (canOverrideWorkflow
+                  gate), so non-admins never see that row. Archived is visible
+                  to anyone with canArchiveBlog. The disclosure renders only
+                  when at least one of those is available to the user. */}
+              {(canOverrideWorkflow || canArchiveBlog) ? (
+                <details className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/70 px-3 py-2">
+                  <summary className="cursor-pointer text-sm font-semibold text-ink">
+                    Advanced
+                  </summary>
+                  <div className="space-y-4 pt-3">
+                    {canOverrideWorkflow ? (
+                      <label className="block">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-sm font-medium text-navy-500">
+                            Actual Published Timestamp
+                          </span>
+                          {blog?.actual_published_at && form.actual_published_at && (
+                            <span className="text-xs text-navy-500">
+                              Auto-captured • Editable by admin
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="datetime-local"
+                          value={form.actual_published_at}
+                          onChange={(event) => {
+                            setForm((prev) =>
+                              prev ? { ...prev, actual_published_at: event.target.value } : prev
+                            );
+                          }}
+                          onBlur={() => {
+                            const nextIso = toIsoFromDateTimeLocalInput(form.actual_published_at);
+                            const existingIso = blog.actual_published_at ?? blog.published_at;
+                            if ((existingIso ?? "") === (nextIso ?? "")) {
+                              return;
+                            }
+                            void updateBlog({ actual_published_at: nextIso }, "Saved");
+                          }}
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        />
+                        {!form.actual_published_at && blog?.publisher_status === "completed" && (
+                          <p className="mt-1 text-xs text-navy-500">
+                            Automatically captured when blog is published. Admins can edit anytime.
+                          </p>
+                        )}
+                      </label>
+                    ) : null}
+
+                    {canArchiveBlog ? (
+                      <label className="inline-flex items-center gap-2 text-sm text-navy-500">
+                        <input
+                          type="checkbox"
+                          checked={form.is_archived}
+                          onChange={(event) => {
+                            const nextValue = event.target.checked;
+                            setForm((prev) =>
+                              prev ? { ...prev, is_archived: nextValue } : prev
+                            );
+                            if (nextValue === blog.is_archived) {
+                              return;
+                            }
+                            void updateBlog({ is_archived: nextValue }, "Saved");
+                          }}
+                        />
+                        Archived
+                      </label>
+                    ) : null}
+                  </div>
+                </details>
+              ) : null}
             </form>
               </section>
 
@@ -1871,38 +1874,6 @@ export default function BlogDetailPage() {
               </ul>
             )}
           </section>
-          <section id="blog-links" className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
-            <div>
-              <h3 className="text-base font-semibold text-ink">Links</h3>
-              <p className="text-sm text-navy-500">
-                Quick access to the draft doc, live URL, and this blog’s detail page.
-              </p>
-            </div>
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-xs font-medium text-navy-500">Draft</p>
-                <LinkQuickActions href={blog.google_doc_url} label="Draft URL" />
-                {!blog.google_doc_url ? (
-                  <p className="mt-1 text-xs text-navy-500">
-                    Add a Google Doc URL in Writing Workflow to unlock this link.
-                  </p>
-                ) : null}
-              </div>
-              <div>
-                <p className="text-xs font-medium text-navy-500">Live URL</p>
-                <LinkQuickActions href={blog.live_url} label="Live URL" />
-                {!blog.live_url ? (
-                  <p className="mt-1 text-xs text-navy-500">
-                    Add a Live URL in Publishing Workflow when the post is published.
-                  </p>
-                ) : null}
-              </div>
-              <div>
-                <p className="text-xs font-medium text-navy-500">Blog Page</p>
-                <LinkQuickActions href={`/blogs/${blog.id}`} label="Blog page URL" />
-              </div>
-            </div>
-          </section>
           <section id="blog-assignment-changes" className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
             <div>
               <h3 className="text-base font-semibold text-ink">Assignment & Changes</h3>
@@ -1950,104 +1921,6 @@ export default function BlogDetailPage() {
               </div>
             )}
           </section>
-            </div>
-            <aside className="hidden lg:block">
-              <div className="space-y-3 lg:sticky lg:top-20">
-                <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
-                        Next Action
-                      </h3>
-                      <p className="text-sm font-medium text-ink">{blogNextAction.title}</p>
-                      <p className="text-sm text-navy-500">{blogNextAction.helper}</p>
-                      <p
-                        className={`text-xs ${
-                          isDetailDirty ? "text-amber-700" : "text-emerald-700"
-                        }`}
-                      >
-                        {isDetailDirty
-                          ? "Unsaved changes"
-                          : `All changes saved • ${formatDateInTimezone(
-                              blog.updated_at,
-                              profile?.timezone,
-                              "MMM d, h:mm a"
-                            )}`}
-                      </p>
-                    </div>
-                    {blogNextAction.ctaLabel ? (
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        disabled={blogNextAction.disabled}
-                        aria-keyshortcuts="Alt+Shift+Enter"
-                        onClick={runBlogPrimaryAction}
-                      >
-                        {blogNextAction.ctaLabel}
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
-                      Transition Preflight
-                    </p>
-                    {blogPreflightRequiredFields.length === 0 ? (
-                      <p className="text-xs text-emerald-700">
-                        No required blockers for the current stage.
-                      </p>
-                    ) : (
-                      <>
-                        <p className="text-xs text-navy-500">
-                          {readyBlogPreflightCount} / {blogPreflightRequiredFields.length} required
-                          items ready for next completion action.
-                        </p>
-                        {missingBlogPreflightFields.length === 0 ? (
-                          <p className="text-xs text-emerald-700">All required items are complete.</p>
-                        ) : (
-                          <ul className="space-y-1">
-                            {missingBlogPreflightFields.map((field) => (
-                              <li
-                                key={field}
-                                className="flex items-center justify-between gap-2 text-xs text-navy-500"
-                              >
-                                <span>{BLOG_PREFLIGHT_FIELD_META[field].label}</span>
-                                <button
-                                  type="button"
-                                  className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
-                                  onClick={() => {
-                                    jumpToBlogField(field);
-                                  }}
-                                >
-                                  Go to field
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </section>
-                <nav
-                  aria-label="Detail sections"
-                  className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2"
-                >
-                  <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
-                    Jump to
-                  </span>
-                  {blogSectionLinks.map((sectionLink) => (
-                    <a
-                      key={sectionLink.href}
-                      href={sectionLink.href}
-                      className="rounded border border-[color:var(--sh-gray-200)] px-2 py-1 text-xs text-navy-500 hover:bg-blurple-50"
-                    >
-                      {sectionLink.label}
-                    </a>
-                  ))}
-                </nav>
-              </div>
-            </aside>
           </div>
         </div>
         <ConfirmationModal

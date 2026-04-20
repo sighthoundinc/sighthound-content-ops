@@ -67,11 +67,13 @@ export function LoginHero() {
       </p>
 
       <p className="mt-4 max-w-md text-base leading-relaxed text-navy-500">
-        One place to plan, write, and publish across blogs and socials.
+        One place to plan, write and publish
+        <br />
+        across blogs and socials.
       </p>
 
       <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.18em] text-navy-500/70">
-        Turning sight into insight.
+        Turning Sight Into Insight
       </p>
     </section>
   );

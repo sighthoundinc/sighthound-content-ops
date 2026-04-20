@@ -213,109 +213,131 @@ export function LoginForm() {
 
       {/* Email sign-in disclosure. Collapsed by default so the two SSO
           buttons read as the primary action. The trigger is a quiet text
-          button to keep it visually subordinate. */}
-      <div className="mt-5">
-        {!showEmailForm ? (
-          <button
-            type="button"
-            onClick={() => setShowEmailForm(true)}
-            className="group inline-flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm text-navy-500 transition hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus"
-            aria-expanded={false}
-            aria-controls="login-email-form"
-          >
-            <span className="h-px flex-1 bg-[color:var(--sh-gray-200)]" aria-hidden />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">
-              Sign in with email
-            </span>
-            <span className="h-px flex-1 bg-[color:var(--sh-gray-200)]" aria-hidden />
-          </button>
-        ) : (
-          <>
-            <div className="my-4 flex items-center gap-3" aria-hidden>
-              <div className="h-px flex-1 bg-[color:var(--sh-gray-200)]" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-navy-500">
-                or
-              </span>
-              <div className="h-px flex-1 bg-[color:var(--sh-gray-200)]" />
-            </div>
+          button to keep it visually subordinate.
 
-            <form
-              id="login-email-form"
-              className="space-y-4"
-              onSubmit={handlePasswordSignIn}
-            >
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-navy-500">
-                  Email
-                </span>
+          Animation: the expandable panel uses a max-height + opacity
+          transition so opening/closing eases smoothly instead of snapping.
+          The trigger button still renders in the collapsed state and
+          fades out as the panel opens, so focus can traverse naturally.
+          `motion-reduce:transition-none` respects `prefers-reduced-motion`. */}
+      <div className="mt-5">
+        <button
+          type="button"
+          onClick={() => setShowEmailForm((v) => !v)}
+          className={`group inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg px-2 text-sm text-navy-500 transition-all duration-300 ease-out motion-reduce:transition-none hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus ${
+            showEmailForm
+              ? "pointer-events-none max-h-0 py-0 opacity-0"
+              : "max-h-12 py-2 opacity-100"
+          }`}
+          aria-expanded={showEmailForm}
+          aria-controls="login-email-form"
+          aria-hidden={showEmailForm}
+          tabIndex={showEmailForm ? -1 : 0}
+        >
+          <span className="h-px flex-1 bg-[color:var(--sh-gray-200)]" aria-hidden />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">
+            Sign in with email
+          </span>
+          <span className="h-px flex-1 bg-[color:var(--sh-gray-200)]" aria-hidden />
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none ${
+            showEmailForm
+              ? "max-h-[520px] opacity-100"
+              : "max-h-0 opacity-0"
+          }`}
+          aria-hidden={!showEmailForm}
+        >
+          <div className="my-4 flex items-center gap-3" aria-hidden>
+            <div className="h-px flex-1 bg-[color:var(--sh-gray-200)]" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-navy-500">
+              or
+            </span>
+            <div className="h-px flex-1 bg-[color:var(--sh-gray-200)]" />
+          </div>
+
+          <form
+            id="login-email-form"
+            className="space-y-4"
+            onSubmit={handlePasswordSignIn}
+          >
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-navy-500">
+                Email
+              </span>
+              <input
+                required
+                type="email"
+                name="email"
+                autoComplete="username"
+                inputMode="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                }}
+                disabled={!showEmailForm}
+                tabIndex={showEmailForm ? 0 : -1}
+                className="focus-field w-full rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2.5 text-sm text-ink placeholder:text-navy-500/50"
+                placeholder="you@sighthound.com"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-navy-500">
+                Password
+              </span>
+              <div className="relative">
                 <input
                   required
-                  type="email"
-                  name="email"
-                  autoComplete="username"
-                  inputMode="email"
-                  autoFocus
-                  value={email}
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
                   onChange={(event) => {
-                    setEmail(event.target.value);
+                    setPassword(event.target.value);
                   }}
-                  className="focus-field w-full rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2.5 text-sm text-ink placeholder:text-navy-500/50"
-                  placeholder="you@sighthound.com"
+                  disabled={!showEmailForm}
+                  tabIndex={showEmailForm ? 0 : -1}
+                  className="focus-field w-full rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2.5 pr-10 text-sm text-ink"
                 />
-              </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  tabIndex={showEmailForm ? 0 : -1}
+                  className="absolute inset-y-0 right-0 flex items-center rounded-r-lg px-3 text-navy-500 transition hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus"
+                >
+                  {showPassword ? (
+                    <EyeOffIcon boxClassName="h-4 w-4" size={14} />
+                  ) : (
+                    <EyeIcon boxClassName="h-4 w-4" size={14} />
+                  )}
+                </button>
+              </div>
+            </label>
 
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-navy-500">
-                  Password
+            <Button
+              type="submit"
+              variant="primary"
+              size="cta"
+              disabled={ssoDisabled || !showEmailForm}
+              aria-busy={isSubmitting}
+              tabIndex={showEmailForm ? 0 : -1}
+              className="mt-1 w-full"
+            >
+              {isSubmitting ? (
+                <span className="inline-flex items-center gap-2">
+                  Signing in
+                  <InlineDotPulse tone="on-brand" />
                 </span>
-                <div className="relative">
-                  <input
-                    required
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(event) => {
-                      setPassword(event.target.value);
-                    }}
-                    className="focus-field w-full rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2.5 pr-10 text-sm text-ink"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    aria-pressed={showPassword}
-                    className="absolute inset-y-0 right-0 flex items-center rounded-r-lg px-3 text-navy-500 transition hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus"
-                  >
-                    {showPassword ? (
-                      <EyeOffIcon boxClassName="h-4 w-4" size={14} />
-                    ) : (
-                      <EyeIcon boxClassName="h-4 w-4" size={14} />
-                    )}
-                  </button>
-                </div>
-              </label>
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="cta"
-                disabled={ssoDisabled}
-                aria-busy={isSubmitting}
-                className="mt-1 w-full"
-              >
-                {isSubmitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    Signing in
-                    <InlineDotPulse tone="on-brand" />
-                  </span>
-                ) : (
-                  "Continue"
-                )}
-              </Button>
-            </form>
-          </>
-        )}
+              ) : (
+                "Continue"
+              )}
+            </Button>
+          </form>
+        </div>
       </div>
     </section>
   );

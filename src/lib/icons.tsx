@@ -31,6 +31,8 @@ import {
   CircleCheckBig,
   Copy,
   Download,
+  Eye,
+  EyeOff,
   ExternalLink,
   FileText,
   FilterX,
@@ -111,6 +113,8 @@ export function CircleAlertIcon(props: IconProps) { return renderIcon(CircleAler
 export function CircleCheckBigIcon(props: IconProps) { return renderIcon(CircleCheckBig, props); }
 export function CopyIcon(props: IconProps) { return renderIcon(Copy, props); }
 export function DownloadIcon(props: IconProps) { return renderIcon(Download, props); }
+export function EyeIcon(props: IconProps) { return renderIcon(Eye, props); }
+export function EyeOffIcon(props: IconProps) { return renderIcon(EyeOff, props); }
 export function ExternalLinkIcon(props: IconProps) { return renderIcon(ExternalLink, props); }
 export function FileTextIcon(props: IconProps) { return renderIcon(FileText, props); }
 export function FilterXIcon(props: IconProps) { return renderIcon(FilterX, props); }

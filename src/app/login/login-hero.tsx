@@ -1,55 +1,73 @@
-// Server Component (no "use client"). Static marketing hero rendered
-// entirely on the server — no client state, no client JS.
+// Server Component (no "use client"). Static marketing hero for the login
+// page — no client state, no client JS.
 //
-// The previous 3-source logo fallback state machine has been collapsed to
-// a single authoritative source. If the SVG ever fails to load in prod we
-// render the "SH Sighthound" fallback text instead, but without relying on
-// React state (the decision is made at render time, not after a client-side
-// onError fires).
+// Design direction (Content Relay refresh):
+// - No card chrome. The hero floats over the ambient backdrop so the auth
+//   form is the single visual anchor.
+// - The logo IS the hero: larger lockup, generous breathing space, no
+//   competing H1. Product name appears as a quiet "Content Relay" caption
+//   immediately under the logo.
+// - One line of supporting copy, then the brand tagline. No bullet list
+//   (a checklist reads like marketing-site energy, not premium-app energy).
+//
+// Logo reliability contract (unchanged from the previous iteration):
+//   The canonical brand raster at `/brand/sighthound-logo-horizontal.jpg`
+//   is rendered through `next/image` with `priority` so the loader emits a
+//   <link rel="preload"> in <head>. The legacy
+//   `/sighthound-logo-with-text.svg` was 36KB with baked-in white
+//   background paths and unreliable under cold loads.
 
-import { CheckIcon } from "@/lib/icons";
+import Image from "next/image";
 
-const LOGIN_HIGHLIGHTS = [
-  "See upcoming and overdue publishing work in one calendar view",
-  "Keep blog drafts, reviews, and publish dates moving on schedule",
-  "Coordinate social post creation, captioning, scheduling, and live links",
-] as const;
-
-const LOGO_SRC = "/sighthound-logo-with-text.svg";
-const LOGO_WIDTH = 212;
-const LOGO_HEIGHT = 48;
+// Canonical brand logo — same asset used in the design-system preview.
+// Intrinsic aspect ratio is ~240x60; we render at ~52px tall with auto width.
+const LOGO_SRC = "/brand/sighthound-logo-horizontal.jpg";
+const LOGO_INTRINSIC_WIDTH = 240;
+const LOGO_INTRINSIC_HEIGHT = 60;
 const LOGO_ALT = "Sighthound";
 
 export function LoginHero() {
   return (
-    <section className="rounded-2xl border border-[color:var(--sh-gray-200)] bg-white/95 p-8 shadow-brand-sm backdrop-blur-sm sm:p-10">
-      <div className="mb-6 flex min-h-12 items-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+    <section
+      className="relative select-none px-1 opacity-0 motion-safe:animate-[sh-login-fade-in_280ms_ease-out_60ms_forwards] motion-reduce:opacity-100"
+      aria-labelledby="login-hero-title"
+    >
+      {/* Local fade-in keyframe. Single property, reduced-motion-safe.
+          Kept local to the login surface so we don't touch globals.css. */}
+      <style>{`
+        @keyframes sh-login-fade-in {
+          0%   { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      <div className="flex min-h-14 items-center">
+        <Image
           src={LOGO_SRC}
           alt={LOGO_ALT}
-          width={LOGO_WIDTH}
-          height={LOGO_HEIGHT}
-          className="h-12 w-auto"
+          width={LOGO_INTRINSIC_WIDTH}
+          height={LOGO_INTRINSIC_HEIGHT}
+          priority
+          unoptimized
+          sizes="(min-width: 640px) 260px, 220px"
+          className="h-[52px] w-auto"
         />
       </div>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-        Sighthound Content Relay
-      </h1>
-      <p className="mt-3 max-w-xl text-base text-navy-500 sm:text-lg">
-        Manage your content calendar across blogs and social posts from one place,
-        with clear day-to-day publishing priorities.
+
+      <p
+        id="login-hero-title"
+        className="mt-7 text-[32px] font-medium leading-[1.15] tracking-tight text-ink sm:text-[36px]"
+      >
+        Content Relay
       </p>
-      <ul className="mt-6 space-y-3">
-        {LOGIN_HIGHLIGHTS.map((highlight) => (
-          <li key={highlight} className="flex items-start gap-2 text-sm text-navy-500">
-            <CheckIcon boxClassName="mt-0.5 h-4 w-4"
-              size={13}
-              className="text-brand" />
-            <span>{highlight}</span>
-          </li>
-        ))}
-      </ul>
+
+      <p className="mt-4 max-w-md text-base leading-relaxed text-navy-500">
+        One place to plan, write, and publish across blogs and socials.
+      </p>
+
+      <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.18em] text-navy-500/70">
+        Turning sight into insight.
+      </p>
     </section>
   );
 }

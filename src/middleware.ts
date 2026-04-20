@@ -81,5 +81,14 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Matcher explicitly excludes static asset paths (any URL ending in a
+  // common image/font/media extension) so anonymous requests for files
+  // under `public/` (e.g. `/sighthound-logo-with-text.png`) are served
+  // directly by Next's static handler instead of running through the
+  // auth middleware. Without this exclusion, anonymous visitors to
+  // `/login` would have every <img>/@font subresource redirected to
+  // `/login` and rendered as a broken-image icon.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|bmp|woff|woff2|ttf|otf|eot|mp4|webm|ogg|mp3|wav|css|map)$).*)",
+  ],
 };

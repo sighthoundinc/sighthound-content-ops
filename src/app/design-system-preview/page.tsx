@@ -252,7 +252,7 @@ export default function DesignSystemPreviewPage() {
           <SectionTitle>Logos (public/brand)</SectionTitle>
           <div className="flex flex-wrap items-center gap-10">
             <Image
-              src="/brand/sighthound-logo-horizontal.jpg"
+              src="/brand/sighthound-logo-horizontal.webp"
               alt="Sighthound horizontal logo"
               width={240}
               height={60}
@@ -267,7 +267,7 @@ export default function DesignSystemPreviewPage() {
               }}
             >
               <Image
-                src="/brand/sighthound-logo-white.png"
+                src="/brand/sighthound-logo-white.webp"
                 alt="Sighthound white logo on navy"
                 width={220}
                 height={48}

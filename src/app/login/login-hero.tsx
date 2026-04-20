@@ -13,12 +13,15 @@
 // Logo reliability contract:
 //   Previous iterations tried `/sighthound-logo-with-text.svg` (36KB, baked-
 //   in white background paths, unreliable on cold loads) and then
-//   `/brand/sighthound-logo-horizontal.jpg` — BUT that "jpg" is actually a
+//   `/brand/sighthound-logo-horizontal.jpg` — that "jpg" was actually a
 //   WebP with a lying `.jpg` extension (verified via `file(1)`). Browsers
-//   that strictly trust MIME by extension refuse to render it, producing
-//   the "broken 9/10 times" behavior.
+//   that strictly trust MIME by extension refuse to render it. That brand
+//   asset has since been renamed to `/brand/sighthound-logo-horizontal.webp`
+//   so it is self-consistent; see `src/app/design-system-preview/page.tsx`
+//   for a live reference render.
 //
-//   The authoritative raster lives at `/sighthound-logo-with-text.png`:
+//   The authoritative raster on the login surface lives at
+//   `/sighthound-logo-with-text.png`:
 //   a real PNG, 1776×435, 57KB, with a transparent background and no
 //   export surprises. We render it via `next/image` with `priority` so
 //   the loader still emits a <link rel="preload"> in <head> — giving us

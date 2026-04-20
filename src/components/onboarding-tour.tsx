@@ -145,7 +145,7 @@ export function OnboardingTour({ initiallyOpen }: { initiallyOpen?: boolean }) {
           <button
             type="button"
             onClick={finishTour}
-            className="text-xs font-medium text-navy-500 hover:text-navy-500"
+            className="text-xs font-medium text-navy-500 transition hover:text-ink"
           >
             Skip
           </button>
@@ -154,11 +154,16 @@ export function OnboardingTour({ initiallyOpen }: { initiallyOpen?: boolean }) {
               <button
                 type="button"
                 onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
-                className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50"
+                className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-navy-500 transition hover:bg-blurple-50 hover:text-ink"
               >
                 Back
               </button>
             ) : null}
+            {/* Step-specific page action (e.g. "Open Ideas") rendered as a
+                secondary button. It both navigates to the page AND advances
+                the tour so the step marker stays consistent. Always rendered
+                alongside "Next" so users who don't want to jump to the page
+                can still advance or finish the tour. */}
             {step.href && step.actionLabel ? (
               <Link
                 href={step.href}
@@ -169,25 +174,24 @@ export function OnboardingTour({ initiallyOpen }: { initiallyOpen?: boolean }) {
                     setStepIndex((i) => i + 1);
                   }
                 }}
-                className="rounded-md bg-ink px-3 py-1 text-xs font-semibold text-white hover:bg-ink"
+                className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-ink transition hover:bg-blurple-50 hover:border-[color:var(--sh-gray-400)]"
               >
                 {step.actionLabel}
               </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  if (stepIndex === STEPS.length - 1) {
-                    finishTour();
-                  } else {
-                    setStepIndex((i) => i + 1);
-                  }
-                }}
-                className="rounded-md bg-ink px-3 py-1 text-xs font-semibold text-white hover:bg-ink"
-              >
-                {stepIndex === STEPS.length - 1 ? "Done" : "Next"}
-              </button>
-            )}
+            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                if (stepIndex === STEPS.length - 1) {
+                  finishTour();
+                } else {
+                  setStepIndex((i) => i + 1);
+                }
+              }}
+              className="rounded-md bg-brand px-3 py-1 text-xs font-semibold text-white transition hover:bg-blurple-700"
+            >
+              {stepIndex === STEPS.length - 1 ? "Done" : "Next"}
+            </button>
           </div>
         </div>
       </div>

@@ -10,20 +10,25 @@
 // - One line of supporting copy, then the brand tagline. No bullet list
 //   (a checklist reads like marketing-site energy, not premium-app energy).
 //
-// Logo reliability contract (unchanged from the previous iteration):
-//   The canonical brand raster at `/brand/sighthound-logo-horizontal.jpg`
-//   is rendered through `next/image` with `priority` so the loader emits a
-//   <link rel="preload"> in <head>. The legacy
-//   `/sighthound-logo-with-text.svg` was 36KB with baked-in white
-//   background paths and unreliable under cold loads.
+// Logo reliability contract:
+//   Previous iterations tried `/sighthound-logo-with-text.svg` (36KB, baked-
+//   in white background paths, unreliable on cold loads) and then
+//   `/brand/sighthound-logo-horizontal.jpg` — BUT that "jpg" is actually a
+//   WebP with a lying `.jpg` extension (verified via `file(1)`). Browsers
+//   that strictly trust MIME by extension refuse to render it, producing
+//   the "broken 9/10 times" behavior.
+//
+//   The authoritative raster lives at `/sighthound-logo-with-text.png`:
+//   a real PNG, 1776×435, 57KB, with a transparent background and no
+//   export surprises. We render it via `next/image` with `priority` so
+//   the loader still emits a <link rel="preload"> in <head> — giving us
+//   reliability without sacrificing first-paint performance.
 
 import Image from "next/image";
 
-// Canonical brand logo — same asset used in the design-system preview.
-// Intrinsic aspect ratio is ~240x60; we render at ~52px tall with auto width.
-const LOGO_SRC = "/brand/sighthound-logo-horizontal.jpg";
-const LOGO_INTRINSIC_WIDTH = 240;
-const LOGO_INTRINSIC_HEIGHT = 60;
+const LOGO_SRC = "/sighthound-logo-with-text.png";
+const LOGO_INTRINSIC_WIDTH = 1776;
+const LOGO_INTRINSIC_HEIGHT = 435;
 const LOGO_ALT = "Sighthound";
 
 export function LoginHero() {

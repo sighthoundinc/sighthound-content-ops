@@ -44,7 +44,7 @@ export function NextActionPill({
       onClick={onAction}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:bg-[color:var(--sh-gray-400)]",
+        "inline-flex items-center gap-2 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blurple-700 focus-visible:outline-none focus-visible:shadow-brand-focus disabled:cursor-not-allowed disabled:bg-[color:var(--sh-gray-400)]",
         className
       )}
     >

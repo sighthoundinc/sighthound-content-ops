@@ -1259,9 +1259,12 @@ function MyTasksPageContent() {
 <head>
   <meta charset="utf-8" />
   <title>My Tasks Export</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&display=swap" />
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1a1d38; padding: 24px; }
-    h1 { margin: 0 0 12px 0; font-size: 20px; }
+    body { font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Verdana, sans-serif; color: #1a1d38; padding: 24px; letter-spacing: -0.01em; }
+    h1 { margin: 0 0 12px 0; font-size: 20px; font-weight: 600; }
     p { margin: 0 0 18px 0; color: #4b4f73; font-size: 13px; }
     table { border-collapse: collapse; width: 100%; font-size: 12px; }
     th, td { border: 1px solid #d9dfe6; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
@@ -1950,14 +1953,14 @@ function MyTasksPageContent() {
                       {canRunDataImport ? (
                         <Link
                           href="/blogs?import=1"
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-ink bg-ink text-white hover:bg-navy-700`}
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-brand bg-brand text-white hover:bg-blurple-700`}
                         >
                           Import
                         </Link>
                       ) : null}
                       <details className="relative">
                         <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-ink bg-ink text-white hover:bg-navy-700`}
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-brand bg-brand text-white hover:bg-blurple-700`}
                         >
                           Export
                         </summary>

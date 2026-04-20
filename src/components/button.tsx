@@ -80,3 +80,49 @@ export function Button({
 }) {
   return <button type={type} className={buttonClass({ variant, size, className })} {...props} />;
 }
+
+/**
+ * Selectable-card chrome (dashboard metric tiles, lens shortcuts, saved views,
+ * calendar month-picker tiles, etc.).
+ *
+ * Active state is Blurple-forward (light Blurple surface + Blurple border +
+ * navy ink text) rather than an ink-filled invert. Keeps the active tile on
+ * brand and readable without flipping to a dark surface.
+ */
+export function selectableCardClass({
+  isActive,
+  className,
+}: {
+  isActive: boolean;
+  className?: string;
+}) {
+  return cn(
+    "pressable rounded-md border transition-colors focus-visible:outline-none focus-visible:shadow-brand-focus",
+    isActive
+      ? "border-brand bg-blurple-50 text-ink shadow-brand-xs"
+      : "border-[color:var(--sh-gray-200)] bg-surface text-ink hover:bg-blurple-50 hover:border-[color:var(--sh-gray-400)]",
+    className
+  );
+}
+
+/**
+ * Pill / chip active-state chrome (lens shortcut pills, saved-view items,
+ * month-picker grid cells). Shares the selectable-card palette but uses the
+ * compact radius and omits the surface shadow so it sits flat inside dense
+ * groups.
+ */
+export function pillActiveClass({
+  isActive,
+  className,
+}: {
+  isActive: boolean;
+  className?: string;
+}) {
+  return cn(
+    "rounded transition-colors focus-visible:outline-none focus-visible:shadow-brand-focus",
+    isActive
+      ? "bg-blurple-100 text-ink border border-brand"
+      : "text-navy-500 hover:bg-blurple-50 border border-transparent",
+    className
+  );
+}

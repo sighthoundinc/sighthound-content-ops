@@ -3305,9 +3305,12 @@ export default function DashboardPage() {
 <head>
   <meta charset="utf-8" />
   <title>Dashboard Export</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&display=swap" />
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1a1d38; padding: 24px; }
-    h1 { margin: 0 0 12px 0; font-size: 20px; }
+    body { font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Verdana, sans-serif; color: #1a1d38; padding: 24px; letter-spacing: -0.01em; }
+    h1 { margin: 0 0 12px 0; font-size: 20px; font-weight: 600; }
     p { margin: 0 0 18px 0; color: #4b4f73; font-size: 13px; }
     table { border-collapse: collapse; width: 100%; font-size: 12px; }
     th, td { border: 1px solid #d9dfe6; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
@@ -3955,18 +3958,18 @@ export default function DashboardPage() {
     [savedViews]
   );
   const getOverviewMetricCardClass = (isActive: boolean) =>
-    `rounded-lg border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
+    `rounded-lg border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:shadow-brand-focus ${
       isActive
-        ? "border-ink bg-ink text-white shadow-sm"
+        ? "border-brand bg-blurple-50 text-ink shadow-brand-xs"
         : "border-[color:var(--sh-gray-200)] bg-white text-ink hover:border-[color:var(--sh-gray-400)] hover:bg-blurple-50"
     }`;
   const getOverviewMetricTitleClass = (isActive: boolean) =>
-    isActive ? "text-xs font-semibold text-white" : "text-xs font-semibold text-ink";
+    isActive ? "text-xs font-semibold text-brand" : "text-xs font-semibold text-ink";
   const getOverviewMetricBreakdownClass = (isActive: boolean) =>
-    isActive ? "mt-1 text-[11px] text-blurple-100" : "mt-1 text-[11px] text-navy-500";
+    isActive ? "mt-1 text-[11px] text-navy-500" : "mt-1 text-[11px] text-navy-500";
   const getOverviewMetricValueClass = (isActive: boolean) =>
     isActive
-      ? "mt-2 text-2xl font-semibold tabular-nums text-white"
+      ? "mt-2 text-2xl font-semibold tabular-nums text-ink"
       : "mt-2 text-2xl font-semibold tabular-nums text-ink";
   const renderOverviewMetricCard = (metricKey: MetricFilterKey) => {
     const isActive = activeMetricFilter === metricKey;
@@ -4006,11 +4009,11 @@ export default function DashboardPage() {
             <span
               role="img"
               aria-label={`${metricLabel} logic`}
-              className={isActive ? "text-blurple-100" : "text-navy-500"}
+              className={isActive ? "text-brand" : "text-navy-500"}
             >
               <InfoIcon size={14}
                 boxClassName="h-4 w-4"
-                className={isActive ? "text-blurple-100" : "text-navy-500"} />
+                className={isActive ? "text-brand" : "text-navy-500"} />
             </span>
           </Tooltip>
         </div>
@@ -4033,7 +4036,7 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {canCreateBlog || canManageSocialPosts ? (
                   <details className="relative">
-                    <summary className="cursor-pointer list-none rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1">
+                    <summary className="cursor-pointer list-none rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blurple-700 focus-visible:outline-none focus-visible:shadow-brand-focus">
                       Add Content
                     </summary>
                     <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
@@ -4241,10 +4244,10 @@ export default function DashboardPage() {
                             >
                               <button
                                 type="button"
-                                className={`rounded px-2 py-1 text-xs font-medium ${
+                                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
                                   shortcut.lens === lens
-                                    ? "bg-ink text-white"
-                                    : "text-navy-500 hover:bg-blurple-50"
+                                    ? "bg-blurple-100 text-ink border border-brand"
+                                    : "text-navy-500 hover:bg-blurple-50 border border-transparent"
                                 }`}
                                 onClick={() => {
                                   applyLensShortcut(shortcut);
@@ -4575,7 +4578,7 @@ export default function DashboardPage() {
                     {canExportCsv || canExportSelectedCsv ? (
                       <details className="relative">
                         <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-ink bg-ink text-white hover:bg-navy-700`}
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-brand bg-brand text-white hover:bg-blurple-700`}
                         >
                           Export
                         </summary>
@@ -4633,13 +4636,13 @@ export default function DashboardPage() {
                               <p className="px-3 py-2 text-xs text-navy-500">No saved views yet.</p>
                             ) : (
                               sortedSavedViews.map((view) => (
-                                <button
+                              <button
                                   key={view.id}
                                   type="button"
                                   className={`block w-full rounded px-3 py-2 text-left text-sm transition ${
                                     activeSavedViewId === view.id
-                                      ? "bg-ink text-white"
-                                      : "text-navy-500 hover:bg-blurple-50"
+                                      ? "bg-blurple-100 text-ink border border-brand"
+                                      : "text-navy-500 hover:bg-blurple-50 border border-transparent"
                                   }`}
                                   onClick={() => {
                                     closeOpenDashboardMenus();

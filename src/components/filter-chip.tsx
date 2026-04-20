@@ -1,3 +1,4 @@
+import { CloseIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 export interface FilterChipProps {
@@ -44,10 +45,10 @@ export function FilterChip({
         <button
           type="button"
           onClick={onRemove}
-          className="ml-1 inline-flex items-center justify-center rounded-full p-0.5 hover:bg-[color:var(--sh-gray-200)] transition-colors"
+          className="ml-1 inline-flex items-center justify-center rounded-full p-0.5 text-navy-500 hover:bg-[color:var(--sh-gray-200)] hover:text-ink transition-colors focus-visible:outline-none focus-visible:shadow-brand-focus"
           aria-label={`Remove ${label} filter`}
         >
-          <span className="text-navy-500 font-semibold text-sm leading-none">×</span>
+          <CloseIcon size={12} boxClassName="h-3.5 w-3.5" />
         </button>
       )}
     </div>

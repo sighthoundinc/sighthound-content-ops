@@ -77,6 +77,38 @@ For every non-trivial UI or workflow change:
 3. Render icons through `AppIcon` and shared `AppIconName` keys instead of ad-hoc inline glyphs.
 4. Keep icons inside explicit bounding boxes to preserve vertical rhythm and cross-table alignment.
 5. Maintain consistent stroke weight and sizing patterns unless a component has a documented exception.
+6. Do not use Unicode glyph characters (`×`, `↕`, `↑`, `↓`, `▼`, `⋯`) as button content; use `AppIcon` (or a per-icon export from `src/lib/icons.tsx`) instead.
+
+## Button System Authority (MUST)
+
+All buttons consume one source of truth: the shared primitive at `src/components/button.tsx` (`Button`, `buttonClass`, `selectableCardClass`, `pillActiveClass`). New code must use the primitive; existing inline `<button>` / `<summary>` / `<Link>` styling must migrate on touch.
+
+**Palette contract (role → tokens)**:
+- **Primary CTA** (`Button variant="primary"`): `bg-brand` + `text-surface`; hover `bg-blurple-700`; focus `shadow-brand-focus`. Radius 20px (`size="cta"`) for marketing/auth/page-hero primaries or 8px (`size="md"`/`sm`/`xs`) for dense app controls. Rule: at most one primary per horizontal control strip.
+- **Secondary** (`Button variant="secondary"`, the default): `bg-surface` + `text-ink` + `border-[color:var(--sh-gray-200)]`; hover `bg-blurple-50` + border `var(--sh-gray-400)`.
+- **Ghost / tertiary** (`Button variant="ghost"`): transparent + `text-navy-500`; hover `bg-blurple-50` + `text-ink`. Use for in-chrome nav, close actions, dropdown rows.
+- **Destructive** (`Button variant="destructive"`): rose-600 surface + `text-white`. Semantic danger only; never recolor.
+- **Icon-only** (`Button variant="icon" size="icon"`): `text-navy-500` + hover `bg-blurple-50` + `text-ink`.
+- **Selectable card active state** (metric tiles, lens shortcuts, saved views, month-picker tiles): `selectableCardClass({ isActive })` — Blurple-forward (`border-brand bg-blurple-50 text-ink`), NOT ink-filled invert.
+- **Pill / chip active state**: `pillActiveClass({ isActive })` — `bg-blurple-100 text-ink border border-brand`.
+- **Toggle / segmented** uses the shared helpers in `src/lib/segmented-control.ts`; active segment is white-on-Blurple-tint, not ink-filled.
+
+**`bg-ink` scope (chrome only)**: `bg-ink` is reserved for chrome and inverse surfaces (sidebar active rail, tooltip bubble, drawer overlay, dark-on-dark hero moments). `bg-ink` MUST NOT be used as a primary action color — `bg-brand` is the single primary. This resolves the pre-Content-Relay navy-primary fork.
+
+**Layout contract**:
+- Horizontal control strips: at most one primary CTA; siblings are secondary; destructive sits rightmost.
+- Table control-strip action order stays `Copy` → `Customize` → `Import` → `Export` (enforced by shared components).
+- Focus ring is a single source of truth: `focus-visible:shadow-brand-focus`. Remove inline `focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-*` patterns on touch.
+- Disabled state: `opacity-60 cursor-not-allowed`. Do not introduce `opacity-50` variants.
+- Sizes are tokenized: `cta` for marketing/auth/page-hero primaries, `md`/`sm`/`xs` for app density. Avoid ad-hoc `px-*`/`py-*` pairings.
+
+**Link-as-button**: when a `Link` or anchor must visually read as a button, apply `buttonClass({ variant, size })` rather than re-inlining Tailwind. This keeps hover, focus, radius, and disabled semantics identical to button siblings.
+
+**60/30/10 distribution check**:
+- 60% Neutral Gray / White surfaces (tables, cards, backgrounds) — unchanged.
+- 30% Dark Navy (`text-ink`, sidebar chrome, tooltip bubble, drawer overlay) — unchanged.
+- 10% Blurple accents — primary CTAs, active states, focus rings, selected rows. This is where brand recognition lives.
+- Orange accents remain capped at ~10% and never fill buttons.
 
 ## Typography System (MUST)
 

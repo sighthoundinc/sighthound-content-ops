@@ -215,9 +215,9 @@ export function CalendarControlBar({
                       key={monthLabel}
                       type="button"
                       className={cn(
-                        "rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1",
+                        "rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:shadow-brand-focus",
                         isActive
-                          ? "bg-ink text-white"
+                          ? "bg-brand text-white"
                           : "text-navy-500 hover:bg-blurple-50 active:bg-[color:var(--sh-gray-200)]"
                       )}
                       onClick={() => {

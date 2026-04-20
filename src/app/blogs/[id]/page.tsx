@@ -429,8 +429,6 @@ export default function BlogDetailPage() {
       return false;
     });
   }, [blogPreflightRequiredFields, form]);
-  const readyBlogPreflightCount =
-    blogPreflightRequiredFields.length - missingBlogPreflightFields.length;
   const jumpToBlogField = useCallback((field: BlogPreflightFieldKey) => {
     const targetId = BLOG_PREFLIGHT_FIELD_META[field]?.targetId;
     if (!targetId) {

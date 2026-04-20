@@ -51,7 +51,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-4 py-12 sm:px-6 sm:py-16">
       <LoginAmbient />
       <div className="relative mx-auto w-full max-w-5xl">
-        <div className="grid items-center gap-10 lg:grid-cols-[1fr_0.85fr] lg:gap-14">
+        <div className="grid items-center gap-6 lg:grid-cols-[1fr_0.85fr] lg:gap-8">
           <LoginHero />
           <LoginForm />
         </div>

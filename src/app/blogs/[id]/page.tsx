@@ -6,7 +6,9 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
+import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
+import { DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
@@ -1205,24 +1207,22 @@ export default function BlogDetailPage() {
             <span>/</span>
             <span className="text-navy-500">Details</span>
           </nav>
-          <header className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-semibold text-ink">{blog.title}</h2>
-              <p className="text-xs uppercase tracking-wide text-navy-500">
-                {blog.site} • Created {formatDateInTimezone(blog.created_at, profile?.timezone)}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <PresenceBubbles users={presenceOthers} />
-              <WorkflowStageBadge
-                stage={getWorkflowStage({
-                  writerStatus: blog.writer_status,
-                  publisherStatus: blog.publisher_status,
-                })}
-              />
-              <StatusBadge status={blog.overall_status} />
-            </div>
-          </header>
+          <DataPageHeader
+            title={blog.title}
+            description={`${blog.site} \u2022 Created ${formatDateInTimezone(blog.created_at, profile?.timezone)}`}
+            primaryAction={
+              <div className="flex items-center gap-3">
+                <PresenceBubbles users={presenceOthers} />
+                <WorkflowStageBadge
+                  stage={getWorkflowStage({
+                    writerStatus: blog.writer_status,
+                    publisherStatus: blog.publisher_status,
+                  })}
+                />
+                <StatusBadge status={blog.overall_status} />
+              </div>
+            }
+          />
           <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4 xl:hidden">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
@@ -1248,15 +1248,16 @@ export default function BlogDetailPage() {
               <div className="flex items-center gap-2">
                 <UnstickThisButton />
                 {blogNextAction.ctaLabel ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
+                    size="sm"
                     disabled={blogNextAction.disabled}
                     aria-keyshortcuts="Alt+Shift+Enter"
-                    className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={runBlogPrimaryAction}
                   >
                     {blogNextAction.ctaLabel}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             </div>
@@ -1320,12 +1321,15 @@ export default function BlogDetailPage() {
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-6">
-              <section id="blog-details" className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
-              Blog Details
-            </h3>
+              <section id="blog-details" className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
+            <div>
+              <h3 className="text-base font-semibold text-ink">Blog Details</h3>
+              <p className="text-sm text-navy-500">
+                Core metadata, assignments, and publish dates for this blog.
+              </p>
+            </div>
 
-            <form className="mt-4 space-y-4" onSubmit={handleDetailsSave}>
+            <form className="space-y-4" onSubmit={handleDetailsSave}>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-navy-500">
@@ -1346,7 +1350,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ title: nextTitle }, "Saved");
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   />
                 </label>
 
@@ -1368,7 +1372,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ site: form.site }, "Saved");
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     {SITES.map((siteValue) => (
                       <option key={siteValue} value={siteValue}>
@@ -1402,7 +1406,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ writer_id: form.writer_id || null }, "Saved");
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     <option value="">Unassigned</option>
                     {users.map((nextUser) => (
@@ -1435,7 +1439,7 @@ export default function BlogDetailPage() {
                       }
                       void updateBlog({ publisher_id: form.publisher_id || null }, "Saved");
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     <option value="">Unassigned</option>
                     {users.map((nextUser) => (
@@ -1477,7 +1481,7 @@ export default function BlogDetailPage() {
                         "Saved"
                       );
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   />
                 </label>
 
@@ -1509,7 +1513,7 @@ export default function BlogDetailPage() {
                         "Saved"
                       );
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   />
                 </label>
               </div>
@@ -1545,7 +1549,7 @@ export default function BlogDetailPage() {
                     }
                     void updateBlog({ actual_published_at: nextIso }, "Saved");
                   }}
-                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 />
                 {!form.actual_published_at && blog?.publisher_status === "completed" && (
                   <p className="mt-1 text-xs text-navy-500">
@@ -1574,36 +1578,38 @@ export default function BlogDetailPage() {
               </label>
 
               <div className="flex gap-2">
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="sm"
                   disabled={!canSaveDetails || isSaving}
-                  className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Save Metadata
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     router.push("/dashboard");
                   }}
                 >
                   Back to Dashboard
-                </button>
+                </Button>
               </div>
             </form>
               </section>
 
           <section id="blog-workflow" className="grid gap-4 xl:grid-cols-2">
-            <div className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
-                Writer Workflow
-              </h3>
-              <p className="mt-1 text-sm text-navy-500">
-                Assigned writer: {selectedWriter?.full_name ?? "Unassigned"}
-              </p>
+            <div className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
+              <div>
+                <h3 className="text-base font-semibold text-ink">Writer Workflow</h3>
+                <p className="text-sm text-navy-500">
+                  Assigned writer: {selectedWriter?.full_name ?? "Unassigned"}
+                </p>
+              </div>
 
-              <div className="mt-3 space-y-3">
+              <div className="space-y-3">
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-navy-500">
                     Writing Stage
@@ -1622,7 +1628,7 @@ export default function BlogDetailPage() {
                           : prev
                       );
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     {WRITER_STATUSES.map((status) => (
                       <option
@@ -1658,48 +1664,50 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, google_doc_url: event.target.value } : prev
                       );
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                     placeholder="https://docs.google.com/..."
                   />
                 </label>
                 <LinkQuickActions href={form.google_doc_url} label="Google Doc URL" />
 
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     disabled={!canWriterEdit || isSaving}
-                    className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handleWriterSave();
                     }}
                   >
                     Save Writer Updates
-                  </button>
+                  </Button>
                   {form.writer_status !== "completed" ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="primary"
+                      size="sm"
                       disabled={!canWriterEdit || !canMarkWritingComplete || isSaving}
-                      className="rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         setPendingCompletionAction("writer");
                       }}
                     >
                       Mark Writing Complete
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
-                Publisher Workflow
-              </h3>
-              <p className="mt-1 text-sm text-navy-500">
-                Assigned publisher: {selectedPublisher?.full_name ?? "Unassigned"}
-              </p>
+            <div className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
+              <div>
+                <h3 className="text-base font-semibold text-ink">Publisher Workflow</h3>
+                <p className="text-sm text-navy-500">
+                  Assigned publisher: {selectedPublisher?.full_name ?? "Unassigned"}
+                </p>
+              </div>
 
-              <div className="mt-3 space-y-3">
+              <div className="space-y-3">
                 <label className="block">
                   <span className="mb-1 block text-sm font-medium text-navy-500">
                     Publishing Stage
@@ -1717,7 +1725,7 @@ export default function BlogDetailPage() {
                           : prev
                       );
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                   >
                     {PUBLISHER_STATUSES.map((status) => (
                       <option
@@ -1753,34 +1761,36 @@ export default function BlogDetailPage() {
                         prev ? { ...prev, live_url: event.target.value } : prev
                       );
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                     placeholder="https://..."
                   />
                 </label>
                 <LinkQuickActions href={form.live_url} label="Live URL" />
 
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     disabled={!canPublisherEdit || isSaving}
-                    className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       void handlePublisherSave();
                     }}
                   >
                     Save Publisher Updates
-                  </button>
+                  </Button>
                   {form.publisher_status !== "completed" ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="primary"
+                      size="sm"
                       disabled={!canPublisherEdit || !canMarkPublishingComplete || isSaving}
-                      className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => {
                         setPendingCompletionAction("publisher");
                       }}
                     >
                       Mark Publishing Complete
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </div>
@@ -1788,38 +1798,42 @@ export default function BlogDetailPage() {
           </section>
 
 
-          <section id="blog-comments" className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
-              Comments
-            </h3>
+          <section id="blog-comments" className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
+            <div>
+              <h3 className="text-base font-semibold text-ink">Comments</h3>
+              <p className="text-sm text-navy-500">
+                Leave context, handoff notes, or feedback for teammates.
+              </p>
+            </div>
             {commentsUnavailableMessage ? (
-              <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 {commentsUnavailableMessage}
               </p>
             ) : null}
-            <form className="mt-3 space-y-2" onSubmit={handleAddComment}>
+            <form className="space-y-2" onSubmit={handleAddComment}>
               <textarea
                 disabled={Boolean(commentsUnavailableMessage) || !canCreateComments}
                 value={newComment}
                 onChange={(event) => {
                   setNewComment(event.target.value);
                 }}
-                className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                className="focus-field min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 placeholder="Add context or feedback…"
                 maxLength={2000}
               />
               <div className="flex justify-end">
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="sm"
                   disabled={
                     isCommentSaving ||
                     Boolean(commentsUnavailableMessage) ||
                     !canCreateComments
                   }
-                  className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isCommentSaving ? "Adding…" : "Add Comment"}
-                </button>
+                </Button>
               </div>
             </form>
             {!canCreateComments ? (
@@ -1857,11 +1871,14 @@ export default function BlogDetailPage() {
               </ul>
             )}
           </section>
-          <section id="blog-links" className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
-              Links
-            </h3>
-            <div className="mt-2 space-y-3 text-sm">
+          <section id="blog-links" className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
+            <div>
+              <h3 className="text-base font-semibold text-ink">Links</h3>
+              <p className="text-sm text-navy-500">
+                Quick access to the draft doc, live URL, and this blog’s detail page.
+              </p>
+            </div>
+            <div className="space-y-3 text-sm">
               <div>
                 <p className="text-xs font-medium text-navy-500">Draft</p>
                 <LinkQuickActions href={blog.google_doc_url} label="Draft URL" />
@@ -1886,16 +1903,19 @@ export default function BlogDetailPage() {
               </div>
             </div>
           </section>
-          <section id="blog-assignment-changes" className="rounded-lg border border-[color:var(--sh-gray-200)] p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
-              Assignment & Changes
-            </h3>
+          <section id="blog-assignment-changes" className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
+            <div>
+              <h3 className="text-base font-semibold text-ink">Assignment & Changes</h3>
+              <p className="text-sm text-navy-500">
+                Audit trail of assignment, status, and key field changes.
+              </p>
+            </div>
             {groupedHistory.length === 0 ? (
-              <p className="mt-3 text-sm text-navy-500">
+              <p className="text-sm text-navy-500">
                 No assignment or status changes yet. Workflow updates will appear here.
               </p>
             ) : (
-              <div className="mt-3 space-y-3">
+              <div className="space-y-3">
                 {groupedHistory.map((group) => (
                   <section key={group.dayLabel} className="space-y-2">
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-navy-500">
@@ -1956,15 +1976,16 @@ export default function BlogDetailPage() {
                       </p>
                     </div>
                     {blogNextAction.ctaLabel ? (
-                      <button
+                      <Button
                         type="button"
+                        variant="primary"
+                        size="sm"
                         disabled={blogNextAction.disabled}
                         aria-keyshortcuts="Alt+Shift+Enter"
-                        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={runBlogPrimaryAction}
                       >
                         {blogNextAction.ctaLabel}
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                   <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">

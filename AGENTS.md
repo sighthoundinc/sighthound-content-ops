@@ -792,7 +792,7 @@ To keep idea intake predictable and avoid split editing patterns:
 - **Enforcement Point**: `pushNotification()` in `src/providers/notifications-provider.tsx` checks preferences before emitting
 - **Automatic Coverage**: All existing and future notification calls are automatically filtered
 - **Session-Level Caching**: Preferences cached per request via `getUserNotificationPreferencesWithCache()` to avoid N+1 DB queries
-- **Slack Integration**: `notifySlack()` respects preferences and treats Slack as optional delivery channel (failures don't propagate to in-app notifications)
+- **Slack Integration**: `emitWorkflowSlackEvent()` in `src/lib/server-slack-emitter.ts` is the single Slack delivery path for workflow/comment events. It resolves user IDs to display names, normalizes role-label noise to `Team`, and treats Slack as an optional delivery channel so failures never propagate to in-app notifications. Do not reintroduce a parallel client-side Slack helper; all server call sites must route through this emitter.
 
 #### User Preferences
 - **Global Toggle**: `notifications_enabled` (master switch to disable all notifications)

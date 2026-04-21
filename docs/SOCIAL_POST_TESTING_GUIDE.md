@@ -426,11 +426,10 @@ Verify Slack notifications are sent and respect preferences.
 ```typescript
 // src/lib/emit-event.test.ts
 import { emitEvent } from '@/lib/emit-event';
-import { getSupabaseClient } from '@/lib/supabase/server';
-import { notifySlack } from '@/lib/notifications';
+import { emitWorkflowSlackEvent } from '@/lib/server-slack-emitter';
 
 jest.mock('@/lib/supabase/server');
-jest.mock('@/lib/notifications');
+jest.mock('@/lib/server-slack-emitter');
 jest.mock('@/app/api/events/record-activity');
 
 describe('Social Post Event Emission', () => {
@@ -454,14 +453,16 @@ describe('Social Post Event Emission', () => {
 
     await emitEvent(event);
 
-    // Verify Slack notification was attempted
-    expect(notifySlack).toHaveBeenCalledWith({
-      eventType: 'social_submitted_for_review',
-      socialPostId: 'post-123',
-      title: 'Test Social Post',
-      site: 'general_company',
-      actorName: 'Test Editor',
-    });
+    // Verify the canonical server emitter was invoked with normalized payload
+    expect(emitWorkflowSlackEvent).toHaveBeenCalledWith(
+      expect.anything(), // admin client
+      expect.objectContaining({
+        eventType: 'social_submitted_for_review',
+        socialPostId: 'post-123',
+        title: 'Test Social Post',
+        actorName: 'Test Editor',
+      })
+    );
 
     // Verify activity history was recorded
     expect(recordActivity).toHaveBeenCalledWith(
@@ -485,8 +486,8 @@ describe('Social Post Event Emission', () => {
     const event = { /* ... */ };
     await emitEvent(event);
 
-    // Verify Slack notification was NOT called
-    expect(notifySlack).not.toHaveBeenCalled();
+    // Verify Slack emitter was NOT called
+    expect(emitWorkflowSlackEvent).not.toHaveBeenCalled();
   });
 });
 ```
@@ -569,7 +570,7 @@ Before marking Task 4 complete, verify:
 **Fix**:
 1. Check `/settings/notifications-preferences`
 2. Verify event type in `src/lib/unified-events.ts`
-3. Check `userId` parameter in `notifySlack()` call
+3. Check `actorUserId` / `targetUserId` parameters in the `emitWorkflowSlackEvent()` call site
 
 ### Issue: Activity History Not Recording
 

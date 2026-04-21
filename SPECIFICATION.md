@@ -376,3 +376,22 @@ Authentication is enforced at three layers. Each layer is independent and none i
 - `getSupabaseServerClient()` is read-only on cookies; any code that tries to write cookies from a Server Component will throw at runtime. Session refresh is middleware-only.
 - OAuth provider strings are `"google"` and `"slack_oidc"` — do not rename.
 - `redirectTo` in `signInWithOAuth` MUST be an absolute URL (use `NEXT_PUBLIC_APP_URL` with `window.location.origin` fallback).
+## 17) PDF Export Standard
+The app uses one standardized branded export path for printable / PDF-ready table snapshots.
+1. Shared implementation lives in `src/lib/pdf-export.ts`.
+2. The helper set is:
+   - `openBrandedPdfExport()` — client popup + print dialog launcher
+   - `renderBrandedPdfHtml()` — pure HTML renderer used by tests and server routes
+   - `buildExportFilename()` — canonical filename generator
+3. Every export includes:
+   - Sighthound logo (absolute URL resolved from origin)
+   - Blurple→Red-Orange top gradient stripe
+   - Title + generated-at metadata
+   - Context block (actor, timezone, scope, sort, active filters)
+   - Paginated `<table>` with repeating header row (`page-break-inside: avoid`)
+   - Footer with `counter(page) / counter(pages)` page number
+4. Supported tone chips use the `PdfStatusTone` union and mirror the in-app status palette (`src/lib/table-row-tones.ts`).
+5. Filename contract: `content-relay_{surface}_{scope}_{YYYYMMDD-HHmm}_{tzAbbr}.{ext}` (e.g. `content-relay_blogs_selected_20260421-0852_ET.pdf`).
+6. Server endpoint `POST /api/exports/pdf` returns print-ready HTML for future Puppeteer / Playwright conversion workflows. Cell values are sanitized to string / chip shapes only; row cap 5,000.
+7. Covered surfaces: Dashboard, Blogs, My Tasks, Social Posts list.
+8. Contract test: `tests/pdf-export.test.ts` locks brand tokens, logo resolution, gradient stripe, Lexend loading, page counter, chip palette, landscape switch, HTML escaping, and filename pattern.

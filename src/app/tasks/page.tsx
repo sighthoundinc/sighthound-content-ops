@@ -63,7 +63,11 @@ import {
   SEGMENTED_CONTROL_CLASS,
   segmentedControlItemClass,
 } from "@/lib/segmented-control";
-import { PRINT_BRAND_TOKENS } from "@/lib/print-brand-tokens";
+import {
+  buildExportFilename,
+  openBrandedPdfExport,
+  type PdfFilterSummary,
+} from "@/lib/pdf-export";
 import { getSiteBadgeClasses, getSiteShortLabel } from "@/lib/site";
 import { getDashboardFilterIntent } from "@/lib/dashboard-filter-state";
 import {
@@ -1167,13 +1171,6 @@ function MyTasksPageContent() {
   };
 
   const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
-  const escapeHtmlValue = (value: string) =>
-    value
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll("\"", "&quot;")
-      .replaceAll("'", "&#39;");
 
   const exportTaskCsv = useCallback(() => {
     if (!canExportCsv) {
@@ -1233,77 +1230,66 @@ function MyTasksPageContent() {
       return;
     }
 
-    const popup = window.open("", "_blank", "width=1100,height=800");
-    if (!popup) {
+    const filters: PdfFilterSummary[] = [];
+    if (searchQuery.trim().length > 0) {
+      filters.push({ label: "Search", value: searchQuery.trim() });
+    }
+    if (assignmentFilter !== "all") {
+      filters.push({
+        label: "Assignment",
+        value: assignmentFilter === "personal" ? "My Tasks" : "Admin Reviews",
+      });
+    }
+    if (actionFilter !== "all") {
+      filters.push({
+        label: "Action",
+        value: actionFilter === "action_required" ? "Required" : "Waiting on Others",
+      });
+    }
+    if (kindFilter !== "all") {
+      filters.push({
+        label: "Task Type",
+        value: kindFilter === "writer" ? "Writing" : "Publishing",
+      });
+    }
+    if (siteFilter !== "all") {
+      filters.push({
+        label: "Site",
+        value: siteFilter === "sighthound.com" ? "SH" : "RED",
+      });
+    }
+
+    const result = openBrandedPdfExport({
+      title: "My Tasks Export",
+      surface: "tasks",
+      scope: "view",
+      columns: exportableColumns.map((column) => ({
+        key: column,
+        label: TASK_TABLE_COLUMN_LABELS[column],
+      })),
+      rows: combinedTaskRows,
+      getCell: (task, columnKey) =>
+        getTaskExportCellValue(task, columnKey as TaskTableColumnKey),
+      timezone: profile?.timezone ?? null,
+      filters,
+      sort: {
+        columnLabel: TASK_TABLE_COLUMN_LABELS[taskSortField as TaskTableColumnKey] ?? taskSortField,
+        direction: taskSortDirection,
+      },
+      actor: { name: profile?.full_name ?? null, email: profile?.email ?? null },
+    });
+
+    if (result.status === "popup-blocked") {
       showError("Popup blocked. Allow popups to export PDF");
       return;
     }
-    const generatedAt = formatDateInTimezone(new Date().toISOString(), profile?.timezone, "MMM d yyyy, h:mm a");
 
-    const headerMarkup = exportableColumns
-      .map((column) => `<th>${escapeHtmlValue(TASK_TABLE_COLUMN_LABELS[column])}</th>`)
-      .join("");
-    const rowsMarkup = combinedTaskRows
-      .map((task) => {
-        const cellMarkup = exportableColumns
-          .map((column) => `<td>${escapeHtmlValue(getTaskExportCellValue(task, column))}</td>`)
-          .join("");
-        return `<tr>${cellMarkup}</tr>`;
-      })
-      .join("");
-    popup.document.open();
-    // Print popup runs in an isolated document; host CSS custom properties
-    // are not available in the new window. Consume the brand palette via
-    // `PRINT_BRAND_TOKENS` so future token changes flow through a single
-    // source of truth (see `src/lib/print-brand-tokens.ts`).
-    popup.document.write(`<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>My Tasks Export</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&display=swap" />
-  <style>
-    body { font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Verdana, sans-serif; color: ${PRINT_BRAND_TOKENS.ink}; padding: 24px; letter-spacing: -0.01em; }
-    h1 { margin: 0 0 12px 0; font-size: 20px; font-weight: 600; }
-    p { margin: 0 0 18px 0; color: ${PRINT_BRAND_TOKENS.inkSoft}; font-size: 13px; }
-    table { border-collapse: collapse; width: 100%; font-size: 12px; }
-    th, td { border: 1px solid ${PRINT_BRAND_TOKENS.borderDefault}; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
-    th { background: ${PRINT_BRAND_TOKENS.surfaceMuted}; font-weight: 600; }
-  </style>
-</head>
-<body>
-  <h1>My Tasks Export</h1>
-  <p>Generated ${escapeHtmlValue(generatedAt)}</p>
-  <table>
-    <thead>
-      <tr>
-        ${headerMarkup}
-      </tr>
-    </thead>
-    <tbody>${rowsMarkup}</tbody>
-  </table>
-</body>
-</html>`);
-    popup.document.close();
-
-    const triggerPrintWhenReady = () => {
-      if (popup.closed) {
-        return;
-      }
-      const isReady = popup.document.readyState === "complete";
-      const hasBody = Boolean(popup.document.body?.childElementCount);
-      if (!isReady || !hasBody) {
-        window.setTimeout(triggerPrintWhenReady, 120);
-        return;
-      }
-      popup.focus();
-      popup.print();
-    };
-
-    window.setTimeout(triggerPrintWhenReady, 180);
-    showSuccess("PDF prepared.");
+    const filename = buildExportFilename({
+      surface: "tasks",
+      scope: "view",
+      timezone: profile?.timezone ?? null,
+    });
+    showSuccess(`PDF ready · ${filename}`);
   };
   useEffect(() => {
     const handlePaletteAction = (event: Event) => {

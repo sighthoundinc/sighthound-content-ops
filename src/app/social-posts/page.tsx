@@ -115,6 +115,12 @@ import type {
 import { formatDateInput, formatDateOnly, toTitleCase } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
 import {
+  buildExportFilename,
+  openBrandedPdfExport,
+  type PdfFilterSummary,
+  type PdfStatusTone,
+} from "@/lib/pdf-export";
+import {
   formatActivityChangeDescription,
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
@@ -211,6 +217,20 @@ const SOCIAL_POST_LIST_SORT_FIELDS = [
   "published",
   "updated",
 ] as const;
+
+/**
+ * Social-post status ↔ PDF chip tone. Kept aligned with
+ * `src/lib/table-row-tones.ts` so printed chips match in-app row coloring.
+ */
+const SOCIAL_POST_STATUS_TONE: Record<SocialPostStatus, PdfStatusTone> = {
+  draft: "neutral",
+  in_review: "review",
+  changes_requested: "changes-requested",
+  creative_approved: "in-progress",
+  ready_to_publish: "ready-to-publish",
+  awaiting_live_link: "awaiting-live-link",
+  published: "published",
+};
 const DEFAULT_CREATE_DEFAULTS: SocialPostCreateDefaults = {
   product: "general_company",
   type: "image",
@@ -2515,6 +2535,150 @@ function SocialPostsPageContent() {
     [allTableColumns, mandatoryColumnSet]
   );
 
+  /**
+   * Branded PDF export for the social-posts list view.
+   *
+   * Scope:
+   * - `"view"`: the currently visible (post-filter, post-sort) list.
+   * - `"selected"`: only the checked rows (uses `selectedRowIndices`).
+   *
+   * Uses `openBrandedPdfExport` so the header/footer/brand palette stays
+   * consistent with Dashboard, Blogs, and Tasks exports (AGENTS.md §PDF
+   * Export Authority).
+   */
+  const handleExportSocialPostsPdf = useCallback(
+    (scope: "view" | "selected") => {
+      const selectedPosts =
+        selectedRowIndices.size > 0
+          ? sortedListPosts.filter((_, index) => selectedRowIndices.has(index))
+          : [];
+      const rows = scope === "selected" ? selectedPosts : sortedListPosts;
+      if (rows.length === 0) {
+        showError(
+          scope === "selected"
+            ? "Select at least one row before exporting PDF."
+            : "No posts to export."
+        );
+        return;
+      }
+
+      const filters: PdfFilterSummary[] = [];
+      if (search.trim().length > 0) {
+        filters.push({ label: "Search", value: search.trim() });
+      }
+      if (statusFilter !== "all") {
+        filters.push({
+          label: "Status",
+          value: SOCIAL_POST_STATUS_LABELS[statusFilter],
+        });
+      }
+      if (associatedBlogFilter !== "all") {
+        const match = posts.find((post) => post.associated_blog_id === associatedBlogFilter);
+        filters.push({
+          label: "Associated Blog",
+          value: match?.associated_blog?.title ?? "Unknown blog",
+        });
+      }
+
+      const visibleColumnKeys = Array.from(visibleColumns).filter(
+        (key): key is string => key !== "actions"
+      );
+
+      const result = openBrandedPdfExport({
+        title: "Social Posts Export",
+        surface: "social-posts",
+        scope,
+        columns: visibleColumnKeys.map((key) => {
+          const column = allTableColumns.find((col) => col.id === key);
+          return {
+            key,
+            label: column?.label ?? key,
+          };
+        }),
+        rows,
+        getCell: (post, columnKey) => {
+          if (columnKey === "product") {
+            return SOCIAL_POST_PRODUCT_LABELS[post.product];
+          }
+          if (columnKey === "type") {
+            return SOCIAL_POST_TYPE_LABELS[post.type];
+          }
+          if (columnKey === "status") {
+            return {
+              kind: "chip" as const,
+              label: SOCIAL_POST_STATUS_LABELS[post.status],
+              tone: SOCIAL_POST_STATUS_TONE[post.status],
+            };
+          }
+          if (columnKey === "created") {
+            return formatDateOnly(post.created_at);
+          }
+          if (columnKey === "scheduled") {
+            return formatDateOnly(post.scheduled_date) || "—";
+          }
+          if (columnKey === "published") {
+            return post.status === "published"
+              ? formatDateOnly(post.scheduled_date) || "—"
+              : "—";
+          }
+          if (columnKey === "updated") {
+            return formatDateInTimezone(post.updated_at, profile?.timezone);
+          }
+          if (columnKey === "platforms") {
+            return post.platforms.length > 0
+              ? post.platforms.map((p) => SOCIAL_PLATFORM_LABELS[p]).join(", ")
+              : "—";
+          }
+          if (columnKey === "blog") {
+            return post.associated_blog?.title ?? "—";
+          }
+          if (columnKey === "title") {
+            return post.title;
+          }
+          return "";
+        },
+        timezone: profile?.timezone ?? null,
+        filters,
+        sort: {
+          columnLabel:
+            allTableColumns.find((col) => col.id === listSortField)?.label ??
+            listSortField,
+          direction: listSortDirection,
+        },
+        actor: { name: profile?.full_name ?? null, email: profile?.email ?? null },
+      });
+
+      if (result.status === "popup-blocked") {
+        showError("Popup blocked. Allow popups to export PDF.");
+        return;
+      }
+
+      const filename = buildExportFilename({
+        surface: "social-posts",
+        scope,
+        timezone: profile?.timezone ?? null,
+      });
+      showSuccess(`PDF ready · ${filename}`);
+    },
+    [
+      allTableColumns,
+      associatedBlogFilter,
+      listSortDirection,
+      listSortField,
+      posts,
+      profile?.email,
+      profile?.full_name,
+      profile?.timezone,
+      search,
+      selectedRowIndices,
+      showError,
+      showSuccess,
+      sortedListPosts,
+      statusFilter,
+      visibleColumns,
+    ]
+  );
+
   return (
     <ProtectedPage>
       <AppShell>
@@ -2652,6 +2816,28 @@ function SocialPostsPageContent() {
                     noun="social posts"
                   />
                   <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
+                    <details className="relative">
+                      <summary
+                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
+                      >
+                        Export
+                      </summary>
+                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
+                        <button
+                          type="button"
+                          disabled={sortedListPosts.length === 0}
+                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() => {
+                            closeOpenDetailsMenus();
+                            handleExportSocialPostsPdf(
+                              selectedRowIndices.size > 0 ? "selected" : "view"
+                            );
+                          }}
+                        >
+                          As .PDF file
+                        </button>
+                      </div>
+                    </details>
                     <details className="relative">
                       <summary
                         className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}

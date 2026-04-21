@@ -158,7 +158,11 @@ import type {
 } from "@/lib/types";
 import { formatDateInput, formatDateOnly, toTitleCase } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
-import { PRINT_BRAND_TOKENS } from "@/lib/print-brand-tokens";
+import {
+  buildExportFilename,
+  openBrandedPdfExport,
+  type PdfFilterSummary,
+} from "@/lib/pdf-export";
 import {
   formatActivityChangeDescription,
   formatActivityEventTitle,
@@ -346,13 +350,6 @@ const DASHBOARD_COLUMN_HIDDEN_STORAGE_KEY = "dashboard-column-hidden:v1";
 const isDashboardColumnKey = (value: string): value is DashboardColumnKey =>
   value in DASHBOARD_COLUMN_LABELS;
 const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
-const escapeHtmlValue = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#39;");
 
 const normalizeDashboardColumnOrder = (value: unknown): DashboardColumnKey[] => {
   if (!Array.isArray(value)) {
@@ -3277,87 +3274,101 @@ export default function DashboardPage() {
         return;
       }
 
-      const popup = window.open("", "_blank", "width=1100,height=800");
-      if (!popup) {
+      const filters: PdfFilterSummary[] = [];
+      if (search.trim().length > 0) {
+        filters.push({ label: "Search", value: search.trim() });
+      }
+      if (lens !== "all_work") {
+        filters.push({ label: "Lens", value: toTitleCase(lens.replaceAll("_", " ")) });
+      }
+      if (contentTypeFilters.length > 0) {
+        filters.push({
+          label: "Content Type",
+          value: contentTypeFilters
+            .map((value) => MIXED_CONTENT_FILTER_LABELS[value] ?? value)
+            .join(", "),
+        });
+      }
+      if (siteFilters.length > 0) {
+        filters.push({
+          label: "Site",
+          value: siteFilters.map((site) => getSiteShortLabel(site)).join(", "),
+        });
+      }
+      if (writerStatusFilters.length > 0) {
+        filters.push({
+          label: "Writing Status",
+          value: writerStatusFilters
+            .map((status) => WRITER_STATUS_LABELS[status] ?? status)
+            .join(", "),
+        });
+      }
+      if (publisherStatusFilters.length > 0) {
+        filters.push({
+          label: "Publishing Status",
+          value: publisherStatusFilters
+            .map((status) => PUBLISHER_STATUS_LABELS[status] ?? status)
+            .join(", "),
+        });
+      }
+
+      const result = openBrandedPdfExport({
+        title: "Dashboard Export",
+        surface: "dashboard",
+        scope,
+        columns: visibleColumnOrder.map((column) => ({
+          key: column,
+          label: DASHBOARD_COLUMN_LABELS[column],
+        })),
+        rows: rowsToExport,
+        getCell: (row, columnKey) =>
+          getExportCellValue(row, columnKey as DashboardColumnKey),
+        timezone: profile?.timezone ?? null,
+        filters,
+        sort: {
+          columnLabel: DASHBOARD_COLUMN_LABELS[sortField] ?? sortField,
+          direction: sortDirection,
+        },
+        actor: { name: profile?.full_name ?? null, email: profile?.email ?? null },
+        // Dashboard tends to carry many columns; landscape avoids crushed text.
+        orientation: visibleColumnOrder.length > 6 ? "landscape" : "portrait",
+      });
+
+      if (result.status === "popup-blocked") {
         setError("Popup blocked. Allow popups to export PDF.");
         setSuccessMessage(null);
         return;
       }
 
-      const generatedAt = formatDateInTimezone(new Date().toISOString(), profile?.timezone, "MMM d yyyy, h:mm a");
-      const headerMarkup = visibleColumnOrder
-        .map((column) => `<th>${escapeHtmlValue(DASHBOARD_COLUMN_LABELS[column])}</th>`)
-        .join("");
-      const rowsMarkup = rowsToExport
-        .map((row) => {
-          const cells = visibleColumnOrder
-            .map((column) => `<td>${escapeHtmlValue(getExportCellValue(row, column))}</td>`)
-            .join("");
-          return `<tr>${cells}</tr>`;
-        })
-        .join("");
+      const filename = buildExportFilename({
+        surface: "dashboard",
+        scope,
+        timezone: profile?.timezone ?? null,
+      });
 
-      popup.document.open();
-      // Print popup runs in an isolated document; host CSS custom properties
-      // are not available in the new window. Consume the brand palette via
-      // `PRINT_BRAND_TOKENS` so future token changes flow through a single
-      // source of truth (see `src/lib/print-brand-tokens.ts`).
-      popup.document.write(`<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Dashboard Export</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&display=swap" />
-  <style>
-    body { font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Verdana, sans-serif; color: ${PRINT_BRAND_TOKENS.ink}; padding: 24px; letter-spacing: -0.01em; }
-    h1 { margin: 0 0 12px 0; font-size: 20px; font-weight: 600; }
-    p { margin: 0 0 18px 0; color: ${PRINT_BRAND_TOKENS.inkSoft}; font-size: 13px; }
-    table { border-collapse: collapse; width: 100%; font-size: 12px; }
-    th, td { border: 1px solid ${PRINT_BRAND_TOKENS.borderDefault}; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
-    th { background: ${PRINT_BRAND_TOKENS.surfaceMuted}; font-weight: 600; }
-  </style>
-</head>
-<body>
-  <h1>Dashboard Export</h1>
-  <p>Generated ${escapeHtmlValue(generatedAt)}</p>
-  <table>
-    <thead><tr>${headerMarkup}</tr></thead>
-    <tbody>${rowsMarkup}</tbody>
-  </table>
-</body>
-</html>`);
-      popup.document.close();
-
-      const triggerPrintWhenReady = () => {
-        if (popup.closed) {
-          return;
-        }
-        const isReady = popup.document.readyState === "complete";
-        const hasBody = Boolean(popup.document.body?.childElementCount);
-        if (!isReady || !hasBody) {
-          window.setTimeout(triggerPrintWhenReady, 120);
-          return;
-        }
-        popup.focus();
-        popup.print();
-      };
-
-      window.setTimeout(triggerPrintWhenReady, 180);
       setError(null);
       setSuccessMessage(
-        `PDF ready for ${rowsToExport.length} row(s). Use the print dialog to save.`
+        `PDF ready · ${filename} (${rowsToExport.length} row${rowsToExport.length === 1 ? "" : "s"})`
       );
     },
     [
       canExportCsv,
       canExportSelectedCsv,
+      contentTypeFilters,
       getExportCellValue,
+      lens,
+      profile?.email,
+      profile?.full_name,
       profile?.timezone,
+      publisherStatusFilters,
+      search,
       selectedExportRows,
+      siteFilters,
+      sortDirection,
+      sortField,
       sortedRows,
       visibleColumnOrder,
+      writerStatusFilters,
     ]
   );
   useEffect(() => {

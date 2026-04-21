@@ -68,7 +68,11 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { PRINT_BRAND_TOKENS } from "@/lib/print-brand-tokens";
+import {
+  buildExportFilename,
+  openBrandedPdfExport,
+  type PdfFilterSummary,
+} from "@/lib/pdf-export";
 import { cn, formatDateOnly } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
@@ -215,13 +219,6 @@ const SORTABLE_LIBRARY_COLUMNS: Partial<Record<LibraryColumnKey, LibrarySortFiel
 
 
 const escapeCsvValue = (value: string) => `"${value.replaceAll("\"", "\"\"")}"`;
-const escapeHtmlValue = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#39;");
 
 function getPublishedDateKey(blog: BlogRecord) {
   return blog.display_published_date ?? getBlogPublishDate(blog);
@@ -1176,82 +1173,78 @@ function BlogLibraryPageContent() {
       return;
     }
 
-    const popup = window.open("", "_blank", "width=1100,height=800");
-    if (!popup) {
+    const filters: PdfFilterSummary[] = [];
+    if (searchQuery.trim().length > 0) {
+      filters.push({ label: "Search", value: searchQuery.trim() });
+    }
+    if (statusFilter !== "published") {
+      const label =
+        STATUS_FILTER_OPTIONS.find((option) => option.value === statusFilter)?.label ??
+        statusFilter;
+      filters.push({ label: "Status", value: label });
+    }
+    if (siteFilter !== "all") {
+      const label =
+        SITE_FILTER_OPTIONS.find((option) => option.value === siteFilter)?.label ?? siteFilter;
+      filters.push({ label: "Site", value: label });
+    }
+    if (writerStatusFilter !== "all") {
+      const label =
+        WRITER_STATUS_FILTER_OPTIONS.find((option) => option.value === writerStatusFilter)
+          ?.label ?? writerStatusFilter;
+      filters.push({ label: "Writer Status", value: label });
+    }
+    if (publisherStatusFilter !== "all") {
+      const label =
+        PUBLISHER_STATUS_FILTER_OPTIONS.find(
+          (option) => option.value === publisherStatusFilter
+        )?.label ?? publisherStatusFilter;
+      filters.push({ label: "Publisher Status", value: label });
+    }
+
+    const result = openBrandedPdfExport({
+      title: "Blog Library Export",
+      surface: "blogs",
+      scope,
+      columns: visibleColumnOrder.map((column) => ({
+        key: column,
+        label: LIBRARY_COLUMN_LABELS[column],
+      })),
+      rows,
+      getCell: (blog, columnKey) =>
+        getExportCellValue(blog, columnKey as LibraryColumnKey),
+      timezone: profile?.timezone ?? null,
+      filters,
+      sort:
+        sortField === "none"
+          ? null
+          : {
+              columnLabel: LIBRARY_COLUMN_LABELS[sortField as LibraryColumnKey] ?? sortField,
+              direction: sortDirection,
+            },
+      actor: { name: profile?.full_name ?? null, email: profile?.email ?? null },
+    });
+
+    if (result.status === "popup-blocked") {
       updateStatus(statusId, {
         type: "error",
         message: "Popup blocked. Allow popups to export PDF.",
       });
       return;
     }
-    const generatedAt = formatDateInTimezone(new Date().toISOString(), profile?.timezone, "MMM d yyyy, h:mm a");
 
-    const headerMarkup = visibleColumnOrder
-      .map((column) => `<th>${escapeHtmlValue(LIBRARY_COLUMN_LABELS[column])}</th>`)
-      .join("");
-    const rowsMarkup = rows
-      .map((blog) => {
-        const cellMarkup = visibleColumnOrder
-          .map((column) => `<td>${escapeHtmlValue(getExportCellValue(blog, column))}</td>`)
-          .join("");
-        return `<tr>${cellMarkup}</tr>`;
-      })
-      .join("");
-    popup.document.open();
-    // Print popup runs in an isolated document; host CSS custom properties
-    // are not available in the new window. Consume the brand palette via
-    // `PRINT_BRAND_TOKENS` so future token changes flow through a single
-    // source of truth (see `src/lib/print-brand-tokens.ts`).
-    popup.document.write(`<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Blog Library Export</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: ${PRINT_BRAND_TOKENS.ink}; padding: 24px; }
-    h1 { margin: 0 0 12px 0; font-size: 20px; }
-    p { margin: 0 0 18px 0; color: ${PRINT_BRAND_TOKENS.inkSoft}; font-size: 13px; }
-    table { border-collapse: collapse; width: 100%; font-size: 12px; }
-    th, td { border: 1px solid ${PRINT_BRAND_TOKENS.borderDefault}; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
-    th { background: ${PRINT_BRAND_TOKENS.surfaceMuted}; font-weight: 600; }
-  </style>
-</head>
-<body>
-  <h1>Blog Library Export (${scope === "view" ? "View" : "Selected"})</h1>
-  <p>Generated ${escapeHtmlValue(generatedAt)}</p>
-  <table>
-    <thead>
-      <tr>
-        ${headerMarkup}
-      </tr>
-    </thead>
-    <tbody>${rowsMarkup}</tbody>
-  </table>
-</body>
-</html>`);
-    popup.document.close();
+    const filename = buildExportFilename({
+      surface: "blogs",
+      scope,
+      timezone: profile?.timezone ?? null,
+    });
 
-    const triggerPrintWhenReady = () => {
-      if (popup.closed) {
-        return;
-      }
-      const isReady = popup.document.readyState === "complete";
-      const hasBody = Boolean(popup.document.body?.childElementCount);
-      if (!isReady || !hasBody) {
-        window.setTimeout(triggerPrintWhenReady, 120);
-        return;
-      }
-      popup.focus();
-      popup.print();
-    };
-
-    window.setTimeout(triggerPrintWhenReady, 180);
     updateStatus(statusId, {
       type: "success",
       message: "Export complete.",
       notification: {
         icon: "download",
-        message: `Export ready (${scope === "view" ? "view" : "selected"} PDF)`,
+        message: `PDF ready · ${filename}`,
         href: "/blogs",
       },
     });

@@ -41,7 +41,7 @@ type PdfExportRequestBody = {
   title: string;
   surface: string;
   scope: PdfExportScope;
-  columns: PdfColumnDef<PdfExportRow>[];
+  columns: PdfColumnDef[];
   rows: PdfExportRow[];
   timezone?: string | null;
   filters?: PdfFilterSummary[];

@@ -18,7 +18,7 @@ import { PRINT_BRAND_TOKENS } from "@/lib/print-brand-tokens";
 
 type Fixture = { id: string; title: string; status: string };
 
-const columns: PdfColumnDef<Fixture>[] = [
+const columns: PdfColumnDef[] = [
   { key: "id", label: "ID", width: "12%" },
   { key: "title", label: "Title" },
   { key: "status", label: "Status" },

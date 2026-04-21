@@ -43,7 +43,7 @@ export type PdfStatusTone =
   | "published"
   | "neutral";
 
-export type PdfColumnDef<Row> = {
+export type PdfColumnDef = {
   /** Stable column key used by `getCell`. */
   key: string;
   /** Header text displayed in the table. */
@@ -101,7 +101,7 @@ export type PdfExportOptions<Row> = {
    */
   scope: PdfExportScope;
   /** Columns (header labels + optional width hints). */
-  columns: PdfColumnDef<Row>[];
+  columns: PdfColumnDef[];
   /** Row data. */
   rows: Row[];
   /**

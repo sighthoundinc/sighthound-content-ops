@@ -5,6 +5,9 @@
  * text must render in natural, title-cased language without leaking enum keys.
  */
 
+import { formatDateInTimezone } from "@/lib/format-date";
+import { formatDateOnly } from "@/lib/utils";
+
 const STATUS_LABELS: Record<string, string> = {
   // Unified blog stages (see src/lib/status.ts#getWorkflowStage)
   writing: "Writing",
@@ -83,53 +86,42 @@ export function humanizeFieldList(values: string[]): string {
 }
 
 const DEFAULT_TZ = "America/New_York";
+const HUMANIZE_DATE_PATTERN = "MMM d, yyyy";
 
 /**
  * Humanize an ISO timestamp or date-only string into a friendly
  * month-day-year label.
  *
- * - Pure date-only strings (`YYYY-MM-DD`) are rendered as-is without any
- *   timezone conversion to avoid day-shift bugs.
- * - Full ISO timestamps are rendered in the supplied timezone
- *   (`profiles.timezone`), falling back to `America/New_York`.
- * - Invalid values are returned unchanged only as a last resort and a safer
- *   fallback string is used when parsing completely fails.
+ * Routes through the centralized date formatters per AGENTS.md §4/§8:
+ * - Pure `YYYY-MM-DD` strings use `formatDateOnly` (no timezone conversion
+ *   to avoid day-shift bugs in behind-UTC timezones).
+ * - Full ISO timestamps use `formatDateInTimezone`, which renders in the
+ *   caller-provided timezone (from `ExtractedContext.userTimezone` ->
+ *   `profiles.timezone`) and falls back to `America/New_York` when missing
+ *   or invalid.
  */
 export function humanizeDateOnly(
   value?: string | null,
   timezone?: string | null
 ): string {
   if (!value) return "an unknown date";
-  const pureDateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  const pureDateOnlyMatch = /^\d{4}-\d{2}-\d{2}$/.test(value);
   if (pureDateOnlyMatch) {
-    const [, y, m, d] = pureDateOnlyMatch;
-    const parsed = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
-    return parsed.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      timeZone: "UTC",
-    });
+    const label = formatDateOnly(value);
+    return label || "an unknown date";
   }
+
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return "an unknown date";
   }
-  try {
-    return parsed.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      timeZone: timezone || DEFAULT_TZ,
-    });
-  } catch {
-    return parsed.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      timeZone: DEFAULT_TZ,
-    });
-  }
+
+  const effectiveTz = timezone && timezone.trim().length > 0 ? timezone : DEFAULT_TZ;
+  const label =
+    formatDateInTimezone(value, effectiveTz, HUMANIZE_DATE_PATTERN) ||
+    formatDateInTimezone(value, DEFAULT_TZ, HUMANIZE_DATE_PATTERN);
+  return label || "an unknown date";
 }
 
 /**

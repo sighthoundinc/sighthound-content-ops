@@ -1,6 +1,6 @@
 # PROJECT.md
 
-Sighthound Content Ops — project-specific Deft configuration.
+Sighthound Content Relay — project-specific Deft configuration.
 
 This repository keeps its canonical project documentation at the repo root, not inside `deft/`. Use the root docs as the authoritative sources for product scope, rules, and workflows.
 

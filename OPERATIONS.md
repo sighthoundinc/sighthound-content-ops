@@ -41,6 +41,7 @@ npm run check:full
   - `ready_to_publish`
   - `awaiting_live_link`
   - `published`
+- List view `Published Date` column reads `scheduled_date` (the agreed-upon publish day). `updated_at` is NOT used for this column because it drifts on later edits (for example saving a live link after publication). Schema follow-up: when `social_posts.published_at` lands, switch the column to that canonical timestamp.
 - Draft create gate remains: Product, Type, Assigned to, Reviewer.
 - Optional draft-create fields remain non-blocking: Title, Platforms, Scheduled date, Associated blog.
 - Empty create title should auto-normalize to `Untitled social post` instead of failing create.
@@ -139,6 +140,7 @@ npm run check:full
 
 ### Slack delivery details
 - Edge function: `supabase/functions/slack-notify/index.ts`.
+- Canonical server emitter: `emitWorkflowSlackEvent()` in `src/lib/server-slack-emitter.ts`. All workflow/comment Slack events must route through this helper; the legacy client-side `notifySlack` helper has been retired.
 - Centralized comment emitters:
   - `POST /api/blogs/[id]/comments`
   - `POST /api/social-posts/[id]/comments`
@@ -196,6 +198,15 @@ Dashboard filtering operating model:
 - Primitives shipped under `src/lib`, `src/components`, and `src/hooks` are canonical. Adoption is tracked in `docs/UX_UPGRADE_PLAN.md`.
 - Do not describe a primitive as “shipped to users” on a given surface until that surface imports it. Current user-visible effects limited to: `/inbox` page, `/api/search` endpoint, sidebar auto-collapse under 1400px.
 - Performance budget targets live in `docs/PERFORMANCE_BUDGET.md` and are enforced at development time via `console.warn` when marks exceed budget.
+
+### Print / detached popup brand tokens
+- Detached print popups (`window.open(...)`) do not inherit host CSS custom properties, so brand hex values must be inlined.
+- Single source of truth for those hex fallbacks: `src/lib/print-brand-tokens.ts` (`PRINT_BRAND_TOKENS`).
+- Any brand token change in `design-system/colors_and_type.css` MUST also update `PRINT_BRAND_TOKENS`. Currently consumed by the blog library PDF export in `src/app/blogs/page.tsx`.
+
+### Modal z-index alignment
+- All Modal-tier overlays render at `z-[120]`, consistent with the Tooltip < Drawer < Modal < Toast contract.
+- Covered: `ConfirmationModal`, `CommandPalette`, `GlobalQuickCreate`, `NameResolutionModal`, `BulkActionPreviewModal`, and the Quick Create / Shortcuts modals in `app-shell.tsx`.
 
 ### Sidebar auto-collapse
 - `useSidebarState` (in `src/hooks/useSidebarState.ts`) auto-collapses the sidebar on first paint when the viewport is below 1400px AND the user has not previously saved a preference.

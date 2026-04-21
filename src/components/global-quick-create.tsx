@@ -5,6 +5,7 @@ import { useGlobalQuickCreate } from "@/hooks/use-global-quick-create";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { KbdShortcut } from "@/components/kbd-shortcut";
+import { Button } from "@/components/button";
 import { MAIN_CREATE_SHORTCUTS, QUICK_CREATE_SHORTCUT_KEY } from "@/lib/shortcuts";
 import { AppIcon, type AppIconName } from "@/lib/icons";
 type QuickCreateAction = {
@@ -132,7 +133,7 @@ export function GlobalQuickCreate() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[120]">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50"
@@ -143,23 +144,27 @@ export function GlobalQuickCreate() {
       {/* Modal */}
       <div className="absolute inset-x-0 top-1/3 flex justify-center">
         <div
-          className="w-full max-w-md bg-white rounded-lg shadow-lg overflow-hidden"
+          className="w-full max-w-md bg-surface rounded-lg shadow-lg overflow-hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="quick-create-title"
         >
           {/* Header */}
-          <div className="border-b border-gray-200 px-6 py-4">
+          <div className="border-b border-[color:var(--sh-gray-200)] px-6 py-4">
             <h2
               id="quick-create-title"
-              className="text-lg font-semibold text-gray-900"
+              className="text-lg font-semibold text-ink"
             >
               Create New
             </h2>
           </div>
 
           {/* Actions */}
-          <div className="divide-y divide-gray-100" role="listbox" aria-label="Quick create actions">
+          <div
+            className="divide-y divide-[color:var(--sh-gray-200)]"
+            role="listbox"
+            aria-label="Quick create actions"
+          >
             {actions.map((action, index) => (
               <button
                 key={action.id}
@@ -183,10 +188,10 @@ export function GlobalQuickCreate() {
                 }
                 aria-keyshortcuts={action.isDirectShortcut ? action.shortcut : undefined}
                 className={cn(
-                  "w-full px-6 py-4 text-left transition-colors",
+                  "w-full px-6 py-4 text-left transition-colors focus-visible:outline-none focus-visible:shadow-brand-focus",
                   index === activeIndex
                     ? "bg-blurple-50 ring-2 ring-inset ring-[color:var(--sh-blurple-100)]"
-                    : "hover:bg-gray-50"
+                    : "hover:bg-blurple-50"
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -197,11 +202,11 @@ export function GlobalQuickCreate() {
                     className="text-navy-500"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3 font-medium text-gray-900">
+                    <div className="flex items-center justify-between gap-3 font-medium text-ink">
                       <span>{action.label}</span>
                       <KbdShortcut>{action.shortcut}</KbdShortcut>
                     </div>
-                    <div className="text-sm text-gray-500">{action.description}</div>
+                    <div className="text-sm text-navy-500">{action.description}</div>
                   </div>
                 </div>
               </button>
@@ -209,17 +214,17 @@ export function GlobalQuickCreate() {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-gray-200 px-6 py-3 bg-gray-50 text-xs text-gray-500">
-            <button
-              type="button"
-              className="font-medium text-gray-700 underline-offset-2 hover:underline"
+          <div className="border-t border-[color:var(--sh-gray-200)] px-6 py-3 bg-[color:var(--sh-gray)] text-xs text-navy-500">
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={() => {
                 close();
                 window.dispatchEvent(new CustomEvent("open-shortcuts-modal"));
               }}
             >
               Shortcuts
-            </button>
+            </Button>
           </div>
         </div>
       </div>

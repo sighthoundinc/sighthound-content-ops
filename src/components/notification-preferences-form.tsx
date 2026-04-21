@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
+import { Button } from "@/components/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { UserNotificationPreferences } from "@/lib/notification-helpers";
 import {
@@ -360,13 +361,14 @@ export function NotificationPreferencesForm({
 
       {/* Save button */}
       <div className="mt-6 flex justify-end">
-        <button
+        <Button
+          variant="primary"
+          size="md"
           onClick={handleSave}
           disabled={!hasChanges || isSaving}
-          className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-navy-700 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
         >
           {isSaving ? "Saving..." : "Save Preferences"}
-        </button>
+        </Button>
       </div>
     </section>
   );

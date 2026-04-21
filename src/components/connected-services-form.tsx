@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 import { AppIcon } from "@/lib/icons";
+import { Button } from "@/components/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { formatDateInTimezone } from "@/lib/format-date";
 import {
   getApiErrorMessage,
   isApiFailure,
@@ -40,7 +42,7 @@ const SERVICES = [
 ];
 
 export function ConnectedServicesForm() {
-  const { user, session } = useAuth();
+  const { profile, user, session } = useAuth();
   const { showSuccess, showError } = useAlerts();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -166,16 +168,15 @@ export function ConnectedServicesForm() {
 
   const formatConnectedDate = (dateString: string | null) => {
     if (!dateString) return null;
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    } catch {
-      return null;
-    }
+    // Render in the user's configured timezone per the global Timezone
+    // and Date Display contract; falls back to America/New_York inside
+    // `formatDateInTimezone` when profile.timezone is missing.
+    const formatted = formatDateInTimezone(
+      dateString,
+      profile?.timezone ?? undefined,
+      "MMM d, yyyy"
+    );
+    return formatted || null;
   };
 
   if (isLoading) {
@@ -230,8 +231,8 @@ export function ConnectedServicesForm() {
                       {service.purpose}
                     </span>
                     {isConnected ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         Connected
                       </span>
                     ) : (
@@ -253,23 +254,25 @@ export function ConnectedServicesForm() {
               </div>
 
               {isConnected ? (
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  className="ml-4"
                   disabled={disconnectingService === service.key}
-                  className="ml-4 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1.5 text-xs font-medium text-navy-500 transition hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => handleDisconnect(service.key)}
                 >
                   {disconnectingService === service.key ? "Disconnecting…" : "Disconnect"}
-                </button>
+                </Button>
               ) : (
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
+                  size="xs"
+                  className="ml-4"
                   disabled={connectingService === service.key}
-                  className="ml-4 rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => handleConnect(service.key)}
                 >
                   {connectingService === service.key ? "Connecting…" : "Connect"}
-                </button>
+                </Button>
               )}
             </div>
           );

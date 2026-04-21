@@ -145,12 +145,17 @@ function getRequiredFieldsForStage(context: ExtractedContext, stage: string): st
 /**
  * Formats response for human-readable output.
  * Used as fallback when Gemini is unavailable.
+ *
+ * Plain-text only: no emoji / Unicode glyphs per the Iconography Standard
+ * (AGENTS.md). Section labels and severity prefixes carry the semantics
+ * instead of icons.
  */
 export function formatResponseAsText(result: DeterministicResult): string {
   const lines: string[] = [];
 
   // Title
-  lines.push("=== Workflow Guidance ===\n");
+  lines.push("Workflow Guidance");
+  lines.push("-----------------\n");
 
   // Current state
   lines.push(`Current Status: ${result.currentState.status}`);
@@ -160,19 +165,19 @@ export function formatResponseAsText(result: DeterministicResult): string {
 
   // Blockers
   if (result.blockers.length > 0) {
-    lines.push("⚠ Issues Found:");
+    lines.push("Issues Found:");
     result.blockers.forEach((blocker) => {
-      const icon = blocker.severity === "critical" ? "❌" : "⚠";
-      lines.push(`  ${icon} ${blocker.message || blocker.type}`);
+      const prefix = blocker.severity === "critical" ? "[Critical]" : "[Warning]";
+      lines.push(`  - ${prefix} ${blocker.message || blocker.type}`);
     });
     lines.push("");
   } else {
-    lines.push("✓ No blocking issues\n");
+    lines.push("No blocking issues.\n");
   }
 
   // Next steps
   if (result.nextSteps.length > 0) {
-    lines.push("📋 Next Steps:");
+    lines.push("Next Steps:");
     result.nextSteps.forEach((step, i) => {
       lines.push(`  ${i + 1}. ${step}`);
     });
@@ -181,15 +186,19 @@ export function formatResponseAsText(result: DeterministicResult): string {
 
   // Quality feedback
   if (result.qualityIssues.length > 0) {
-    lines.push("💡 Quality Feedback:");
+    lines.push("Quality Feedback:");
     result.qualityIssues.forEach((issue) => {
-      lines.push(`  • ${issue.message}`);
+      lines.push(`  - ${issue.message}`);
     });
     lines.push("");
   }
 
   // Summary
-  lines.push(result.canProceed ? "✓ Ready to proceed to next stage" : "⏸ Cannot proceed due to blockers");
+  lines.push(
+    result.canProceed
+      ? "Ready to proceed to next stage."
+      : "Cannot proceed due to blockers."
+  );
 
   return lines.join("\n");
 }

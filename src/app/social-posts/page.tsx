@@ -92,6 +92,7 @@ import {
   SEGMENTED_CONTROL_CLASS,
   segmentedControlItemClass,
 } from "@/lib/segmented-control";
+import { MoreIcon } from "@/lib/icons";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   DEFAULT_TABLE_ROW_LIMIT,
@@ -512,10 +513,10 @@ function SocialPostCard({
             event.stopPropagation();
             setIsMenuOpen(!isMenuOpen);
           }}
-          className="rounded px-2 py-1 text-navy-500/60 hover:bg-blurple-50 hover:text-navy-500"
+          className="inline-flex items-center justify-center rounded px-2 py-1 text-navy-500/70 transition-colors hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus"
           aria-label="Open row actions"
         >
-          <span className="text-lg leading-none">⋯</span>
+          <MoreIcon boxClassName="h-5 w-5" size={16} />
         </button>
         {isMenuOpen ? (
           <div
@@ -2408,7 +2409,15 @@ function SocialPostsPageContent() {
         id: "published",
         label: "Published Date",
         sortable: true,
-        render: (post) => post.status === "published" ? formatDateOnly(post.updated_at) : "—",
+        // Use `scheduled_date` as the authoritative published date for
+        // published posts. `updated_at` drifts on any subsequent edit
+        // (e.g. saving a live link), which would silently change the
+        // "Published Date" column after publication. `scheduled_date`
+        // reflects the agreed-upon publish day and remains stable.
+        render: (post) =>
+          post.status === "published"
+            ? formatDateOnly(post.scheduled_date) || "—"
+            : "—",
       },
       {
         id: "updated",
@@ -2456,10 +2465,10 @@ function SocialPostsPageContent() {
                   event.stopPropagation();
                   setOpenRowMenuId(isOpen ? null : post.id);
                 }}
-                className="rounded px-2 py-1 text-navy-500 hover:bg-blurple-50 hover:text-navy-500"
+                className="inline-flex items-center justify-center rounded px-2 py-1 text-navy-500 transition-colors hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus"
                 aria-label="Open row actions"
               >
-                <span className="text-lg leading-none">⋯</span>
+                <MoreIcon boxClassName="h-5 w-5" size={16} />
               </button>
               {isOpen ? (
                 <div

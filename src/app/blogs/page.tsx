@@ -68,6 +68,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
+import { PRINT_BRAND_TOKENS } from "@/lib/print-brand-tokens";
 import { cn, formatDateOnly } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
@@ -394,9 +395,11 @@ function BlogLibraryPageContent() {
       .order("updated_at", { ascending: false });
 
     if (blogsError) {
-      setError(
-        `Couldn't load blogs. ${blogsError.message ? "Error: " + blogsError.message : "Try refreshing the page."}`
-      );
+      // Never surface raw Supabase error messages to the user
+      // (rule mL8dnnr6on7pTv5PFzcayY). Preserve the detail in the console
+      // for debugging and show a safe fallback instead.
+      console.error("Failed to load blogs:", blogsError);
+      setError("Couldn't load blogs. Please try again.");
       setIsLoading(false);
       return;
     }
@@ -1132,7 +1135,7 @@ function BlogLibraryPageContent() {
       message: "Export complete",
       notification: {
         icon: "download",
-        message: `CSV ready (${scope === "view" ? "view" : "selected"})}`,
+        message: `CSV ready (${scope === "view" ? "view" : "selected"})`,
         href: "/blogs",
       },
     });
@@ -1195,21 +1198,22 @@ function BlogLibraryPageContent() {
       })
       .join("");
     popup.document.open();
-    // Print popup runs in an isolated document; Sighthound design tokens are
-    // inlined as hex because --sh-* / --color-* CSS vars are not available
-    // in the new window. Values below mirror the brand palette.
+    // Print popup runs in an isolated document; host CSS custom properties
+    // are not available in the new window. Consume the brand palette via
+    // `PRINT_BRAND_TOKENS` so future token changes flow through a single
+    // source of truth (see `src/lib/print-brand-tokens.ts`).
     popup.document.write(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
   <title>Blog Library Export</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1a1d38; padding: 24px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: ${PRINT_BRAND_TOKENS.ink}; padding: 24px; }
     h1 { margin: 0 0 12px 0; font-size: 20px; }
-    p { margin: 0 0 18px 0; color: #4b4f73; font-size: 13px; }
+    p { margin: 0 0 18px 0; color: ${PRINT_BRAND_TOKENS.inkSoft}; font-size: 13px; }
     table { border-collapse: collapse; width: 100%; font-size: 12px; }
-    th, td { border: 1px solid #d9dfe6; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
-    th { background: #eff3f7; font-weight: 600; }
+    th, td { border: 1px solid ${PRINT_BRAND_TOKENS.borderDefault}; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
+    th { background: ${PRINT_BRAND_TOKENS.surfaceMuted}; font-weight: 600; }
   </style>
 </head>
 <body>

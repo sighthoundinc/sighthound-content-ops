@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { NameResolutionResult, UserCandidate } from "@/lib/user-matching";
-import { Button } from "@/components/button";
-import { SuccessIcon } from "@/lib/icons";
+import { Button, selectableCardClass } from "@/components/button";
+import { SparkleIcon, SuccessIcon } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 
 export type NameResolution = {
   action: "use_existing" | "create_new";
@@ -106,22 +107,22 @@ export function NameResolutionModal({
   const totalCount = resolutions.length;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
-      <div className="w-full max-h-[90vh] bg-white rounded-lg shadow-lg flex flex-col max-w-2xl">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50">
+      <div className="w-full max-h-[90vh] bg-surface rounded-lg shadow-lg flex flex-col max-w-2xl">
         {/* Header */}
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold">Resolve Writer & Publisher Names</h2>
-          <p className="text-sm text-gray-600 mt-1">
+        <div className="px-6 py-4 border-b border-[color:var(--sh-gray-200)]">
+          <h2 className="text-lg font-semibold text-ink">Resolve Writer & Publisher Names</h2>
+          <p className="text-sm text-navy-500 mt-1">
             Match imported names with existing users to avoid creating duplicates
           </p>
         </div>
 
         {/* Progress */}
         <div className="px-6 pt-4">
-          <div className="text-sm text-gray-700 font-medium">
+          <div className="text-sm text-ink font-medium">
             {resolvedCount} of {totalCount} names resolved
           </div>
-          <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="mt-2 h-2 bg-[color:var(--sh-gray-200)] rounded-full overflow-hidden">
             <div
               className="h-full bg-brand transition-all duration-300"
               style={{ width: `${totalCount > 0 ? (resolvedCount / totalCount) * 100 : 0}%` }}
@@ -130,7 +131,7 @@ export function NameResolutionModal({
         </div>
 
         {/* Bulk Actions */}
-        <div className="px-6 py-4 border-b flex gap-2 flex-wrap">
+        <div className="px-6 py-4 border-b border-[color:var(--sh-gray-200)] flex gap-2 flex-wrap">
           <Button
             size="sm"
             variant="secondary"
@@ -161,8 +162,8 @@ export function NameResolutionModal({
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="inline-block mr-2 w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-              <span className="text-sm text-gray-600">Searching for matching users...</span>
+              <div className="inline-block mr-2 w-4 h-4 border-2 border-[color:var(--sh-gray-200)] border-t-brand rounded-full animate-spin" />
+              <span className="text-sm text-navy-500">Searching for matching users...</span>
             </div>
           ) : (
             <div className="space-y-6">
@@ -185,12 +186,16 @@ export function NameResolutionModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t flex gap-3 justify-end">
+        <div className="px-6 py-4 border-t border-[color:var(--sh-gray-200)] flex gap-3 justify-end">
           <Button variant="secondary" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!allResolved || isLoading}>
-            {isLoading ? "Loading..." : "Continue to Preview"}
+          <Button
+            variant="primary"
+            onClick={handleConfirm}
+            disabled={!allResolved || isLoading}
+          >
+            Continue to Preview
           </Button>
         </div>
       </div>
@@ -215,18 +220,18 @@ function NameResolutionItem({
   const isCreateNewSelected = currentSelection?.action === "create_new";
 
   return (
-    <div className="border rounded-lg p-4">
+    <div className="border border-[color:var(--sh-gray-200)] rounded-lg p-4">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="font-semibold text-gray-900">{inputName}</p>
+          <p className="font-semibold text-ink">{inputName}</p>
           {bestMatch && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-navy-500 mt-1">
               Best match:{" "}
-              <span className="font-medium text-gray-700">{bestMatch.full_name}</span>
+              <span className="font-medium text-ink">{bestMatch.full_name}</span>
             </p>
           )}
         </div>
-        <span className="text-xs font-medium bg-gray-100 text-gray-700 px-2 py-1 rounded">
+        <span className="text-xs font-medium bg-[color:var(--sh-gray)] text-navy-500 px-2 py-1 rounded">
           {candidates.length} match{candidates.length !== 1 ? "es" : ""}
         </span>
       </div>
@@ -249,12 +254,12 @@ function NameResolutionItem({
       ) : null}
 
       <button
+        type="button"
         onClick={onCreateNew}
-        className={`w-full px-3 py-2 text-sm rounded border transition-colors ${
-          isCreateNewSelected
-            ? "bg-blurple-50 border-blurple-300 text-blurple-800"
-            : "border-gray-300 text-gray-700 hover:border-gray-400"
-        }`}
+        className={selectableCardClass({
+          isActive: isCreateNewSelected,
+          className: "w-full px-3 py-2 text-sm text-left",
+        })}
       >
         {isCreateNewSelected && (
           <span className="mr-2 inline-flex">
@@ -299,30 +304,36 @@ function CandidateButton({
 
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`w-full px-3 py-2 text-left rounded border transition-colors ${
-        isSelected
-          ? "bg-blurple-50 border-blurple-300"
-          : isBestMatch
-            ? "bg-green-50 border-green-200"
-            : "border-gray-300 hover:border-gray-400"
-      }`}
+      className={selectableCardClass({
+        isActive: isSelected,
+        className: cn(
+          "w-full px-3 py-2 text-left",
+          !isSelected && isBestMatch && "ring-1 ring-inset ring-[color:var(--sh-blurple-100)]"
+        ),
+      })}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900">{candidate.full_name}</span>
-            {isBestMatch && <span className="text-xs font-semibold text-green-700">★ Recommended</span>}
+            <span className="font-medium text-ink">{candidate.full_name}</span>
+            {isBestMatch && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand">
+                <SparkleIcon boxClassName="h-4 w-4" size={13} />
+                Recommended
+              </span>
+            )}
             {isSelected && (
-              <span className="inline-flex text-blurple-700">
+              <span className="inline-flex text-brand">
                 <SuccessIcon boxClassName="h-4 w-4" size={13} />
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-600 mt-1">{candidate.email}</p>
+          <p className="text-xs text-navy-500 mt-1">{candidate.email}</p>
           <div className="flex gap-3 mt-1">
-            <span className="text-xs text-gray-500">{matchTypeLabel[candidate.matchType]}</span>
-            <span className="text-xs text-gray-400 font-medium">{candidate.confidence}% match</span>
+            <span className="text-xs text-navy-500">{matchTypeLabel[candidate.matchType]}</span>
+            <span className="text-xs text-navy-500/70 font-medium">{candidate.confidence}% match</span>
           </div>
         </div>
       </div>

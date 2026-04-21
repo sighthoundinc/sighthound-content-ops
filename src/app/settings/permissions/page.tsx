@@ -17,6 +17,7 @@ import {
   isApiFailure,
   parseApiResponseJson,
 } from "@/lib/api-response";
+import { formatDateInTimezone } from "@/lib/format-date";
 import type { AppRole, CanonicalAppPermissionKey } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
@@ -77,7 +78,7 @@ function getTaskLabel(permissionKey: CanonicalAppPermissionKey, fallbackLabel: s
 }
 
 export default function PermissionsSettingsPage() {
-  const { refreshPermissions, session } = useAuth();
+  const { profile, refreshPermissions, session } = useAuth();
   const { showError, showSuccess } = useAlerts();
   const [selectedRole, setSelectedRole] = useState<AppRole>("writer");
   const [simulatedRole, setSimulatedRole] = useState<AppRole | "off">("off");
@@ -395,7 +396,11 @@ export default function PermissionsSettingsPage() {
                       <span className="font-medium">{String(audit.new_value)}</span>.
                     </p>
                     <p className="text-xs text-navy-500">
-                      {new Date(audit.changed_at).toLocaleString()}
+                      {formatDateInTimezone(
+                        audit.changed_at,
+                        profile?.timezone ?? undefined,
+                        "MMM d, yyyy h:mm a"
+                      )}
                     </p>
                   </li>
                 ))}

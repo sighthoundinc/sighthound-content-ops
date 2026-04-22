@@ -84,13 +84,6 @@ const ROW_META: Record<
   },
 };
 
-function truncateWithEllipsis(value: string, maxLength: number) {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return `${value.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`;
-}
-
 function getBlogRowKind(site: BlogRecord["site"]): RowKind {
   return site === "redactor.com" ? "red_blog" : "sh_blog";
 }
@@ -225,16 +218,14 @@ export function CalendarStreamView({
       {/* Sticky weekday header — relies on page scroll; parent must NOT be overflow-hidden */}
       <div
         className="sticky top-0 z-10 grid rounded-t-xl border-b border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/95 backdrop-blur-sm"
-        style={{ gridTemplateColumns: "88px repeat(7, minmax(0, 1fr))" }}
+        style={{ gridTemplateColumns: "72px repeat(7, minmax(0, 1fr))" }}
       >
-        <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-navy-500/70">
-          Week
-        </div>
+        <div aria-hidden className="px-2 py-1" />
         {weekdayLabels.map((label, index) => (
           <div
             key={`${label}-${index}`}
             className={cn(
-              "px-2 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-navy-500/70",
+              "px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-navy-500/70",
               todayColumnIndex === index ? "text-blurple-700" : null
             )}
           >
@@ -243,11 +234,11 @@ export function CalendarStreamView({
         ))}
       </div>
 
-      <div className="flex justify-center border-b border-[color:var(--sh-gray-200)]/80 bg-[color:var(--sh-gray)]/50 px-3 py-2">
+      <div className="flex justify-center border-b border-[color:var(--sh-gray-200)]/70 bg-[color:var(--sh-gray)]/40 px-3 py-0.5">
         <button
           type="button"
           onClick={handleLoadEarlier}
-          className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
+          className="rounded-md px-2 py-0.5 text-[11px] font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
         >
           Load earlier weeks
         </button>
@@ -256,7 +247,6 @@ export function CalendarStreamView({
       <div>
         {weeks.map((week) => {
           const weekStartKey = format(week.start, "yyyy-MM-dd");
-          const monthTintOdd = week.start.getMonth() % 2 === 1;
           const isTodayWeek = week.days.some(
             (day) => format(day, "yyyy-MM-dd") === todayDateKey
           );
@@ -289,22 +279,27 @@ export function CalendarStreamView({
             }
           }
 
+          // P0: hide empty site rows per week. A row renders only if its legend flag is
+          // enabled AND the week contains at least one item of that kind.
+          const activeRowKinds = visibleRowKinds.filter(
+            (kind) => Object.keys(bucketsByKindAndDay[kind]).length > 0
+          );
+
           return (
             <div
               key={weekStartKey}
               ref={isTodayWeek ? todayWeekRef : undefined}
               className={cn(
-                "border-b border-[color:var(--sh-gray-200)]/70",
-                monthTintOdd ? "bg-[color:var(--sh-gray)]/40" : "bg-white",
+                "border-b border-[color:var(--sh-gray-200)]/70 bg-white",
                 isTodayWeek ? "ring-1 ring-inset ring-brand/20" : null
               )}
             >
-              {/* Day-number row */}
+              {/* Day-number row (compact strip) */}
               <div
-                className="grid items-stretch border-b border-[color:var(--sh-gray-200)]/60"
-                style={{ gridTemplateColumns: "88px repeat(7, minmax(0, 1fr))" }}
+                className="grid items-stretch"
+                style={{ gridTemplateColumns: "72px repeat(7, minmax(0, 1fr))" }}
               >
-                <div className="flex items-center px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+                <div className="flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
                   {showMonthLabel ? format(monthLabelDay, "MMM yyyy") : ""}
                 </div>
                 {week.days.map((day, index) => {
@@ -314,8 +309,8 @@ export function CalendarStreamView({
                     <div
                       key={dayKey}
                       className={cn(
-                        "flex items-center justify-end px-2 py-1 text-[11px] font-medium tabular-nums text-navy-500",
-                        index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/60" : null,
+                        "flex items-center justify-end px-2 py-0.5 text-[10px] font-medium tabular-nums text-navy-500/80",
+                        index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
                         isToday ? "bg-blurple-50 text-blurple-700" : null
                       )}
                     >
@@ -325,21 +320,17 @@ export function CalendarStreamView({
                 })}
               </div>
 
-              {/* Content rows per visible site */}
-              {visibleRowKinds.map((kind, rowIndex) => {
+              {/* Content rows per visible + non-empty site */}
+              {activeRowKinds.map((kind) => {
                 const rowMeta = ROW_META[kind];
-                const isLastRow = rowIndex === visibleRowKinds.length - 1;
                 return (
                   <div
                     key={`${weekStartKey}-${kind}`}
-                    className={cn(
-                      "grid items-stretch",
-                      isLastRow ? null : "border-b border-[color:var(--sh-gray-200)]/60"
-                    )}
-                    style={{ gridTemplateColumns: "88px repeat(7, minmax(0, 1fr))" }}
+                    className="grid items-stretch"
+                    style={{ gridTemplateColumns: "72px repeat(7, minmax(0, 1fr))" }}
                   >
-                    <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
-                      <span className={cn("h-2 w-2 rounded-full", rowMeta.dotClassName)} />
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
+                      <span className={cn("h-1.5 w-1.5 rounded-full", rowMeta.dotClassName)} />
                       <span>{rowMeta.label}</span>
                     </div>
                     {week.days.map((day, index) => {
@@ -350,14 +341,12 @@ export function CalendarStreamView({
                         <div
                           key={`${dayKey}-${kind}`}
                           className={cn(
-                            "min-h-[28px] px-1.5 py-1 text-[12px] leading-tight",
-                            index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/60" : null,
+                            "min-h-[22px] px-1.5 py-0.5 text-[12px] leading-tight",
+                            index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
                             isToday ? "bg-blurple-50/40" : null
                           )}
                         >
-                          {cellItems.length === 0 ? (
-                            <span className="sr-only">No content</span>
-                          ) : (
+                          {cellItems.length === 0 ? null : (
                             <div className="space-y-0.5">
                               {cellItems.map((item) => {
                                 if (item.type === "blog") {
@@ -368,9 +357,9 @@ export function CalendarStreamView({
                                       type="button"
                                       onClick={() => onOpenBlog(item.blog.id)}
                                       title={fullTitle}
-                                      className="block w-full truncate rounded px-1 py-0.5 text-left text-[12px] font-medium text-blurple-700 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-blurple-400 focus-visible:outline-none focus-visible:shadow-brand-focus"
+                                      className="block w-full truncate rounded px-1 py-0 text-left text-[12px] font-medium text-blurple-700 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-blurple-400 focus-visible:outline-none focus-visible:shadow-brand-focus"
                                     >
-                                      {truncateWithEllipsis(fullTitle, 80)}
+                                      {fullTitle}
                                     </button>
                                   );
                                 }
@@ -382,9 +371,9 @@ export function CalendarStreamView({
                                     type="button"
                                     onClick={() => onOpenSocial(social.id)}
                                     title={fullTitle}
-                                    className="block w-full truncate rounded px-1 py-0.5 text-left text-[12px] font-medium text-navy-500 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-navy-500/40 focus-visible:outline-none focus-visible:shadow-brand-focus"
+                                    className="block w-full truncate rounded px-1 py-0 text-left text-[12px] font-medium text-navy-500 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-navy-500/40 focus-visible:outline-none focus-visible:shadow-brand-focus"
                                   >
-                                    {truncateWithEllipsis(social.title, 80)}
+                                    {social.title}
                                   </button>
                                 );
                               })}
@@ -401,11 +390,11 @@ export function CalendarStreamView({
         })}
       </div>
 
-      <div className="flex justify-center rounded-b-xl border-t border-[color:var(--sh-gray-200)]/80 bg-[color:var(--sh-gray)]/50 px-3 py-2">
+      <div className="flex justify-center rounded-b-xl border-t border-[color:var(--sh-gray-200)]/70 bg-[color:var(--sh-gray)]/40 px-3 py-0.5">
         <button
           type="button"
           onClick={handleLoadLater}
-          className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
+          className="rounded-md px-2 py-0.5 text-[11px] font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
         >
           Load later weeks
         </button>

@@ -1671,6 +1671,60 @@ export default function CalendarPage() {
                     : "More filters"}
               </button>
             </div>
+            {/* Row 3: Legend toggles + active filter pills (always visible, compact) */}
+            <div className="flex flex-wrap items-center gap-2 rounded-md bg-white/85 px-3 py-1.5">
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-navy-500">
+                {[
+                  {
+                    id: "sh_blog" as CalendarLegendFilter,
+                    label: "SH Blog",
+                    markerClassName: "h-2 w-2 rounded-full bg-brand",
+                    isVisible: hasShBlogsVisible,
+                  },
+                  {
+                    id: "red_blog" as CalendarLegendFilter,
+                    label: "RED Blog",
+                    markerClassName: "h-2 w-2 rounded-full bg-purple-500",
+                    isVisible: hasRedBlogsVisible,
+                  },
+                  {
+                    id: "sh_social_post" as CalendarLegendFilter,
+                    label: "SH Social",
+                    markerClassName: "h-2 w-2 rounded-full border-2 border-brand bg-white",
+                    isVisible: hasShSocialPostsVisible,
+                  },
+                  {
+                    id: "red_social_post" as CalendarLegendFilter,
+                    label: "RED Social",
+                    markerClassName: "h-2 w-2 rounded-full border-2 border-purple-500 bg-white",
+                    isVisible: hasRedSocialPostsVisible,
+                  },
+                ].map((legendItem) => (
+                  <button
+                    key={legendItem.id}
+                    type="button"
+                    aria-pressed={legendItem.isVisible}
+                    aria-label={`${legendItem.isVisible ? "Hide" : "Show"} ${legendItem.label}`}
+                    onClick={() => {
+                      toggleLegendFilter(legendItem.id);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
+                      legendItem.isVisible
+                        ? "border-[color:var(--sh-gray-200)]/90 bg-white text-navy-500 hover:border-[color:var(--sh-gray-200)]"
+                        : "border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/60 text-navy-500/60 hover:text-navy-500"
+                    }`}
+                  >
+                    <span className={legendItem.markerClassName} />
+                    {legendItem.label}
+                  </button>
+                ))}
+              </div>
+              {activeFilterPills.length > 0 ? (
+                <div className="ml-auto">
+                  <DataPageFilterPills pills={activeFilterPills} />
+                </div>
+              ) : null}
+            </div>
             {showAdvancedFilters ? (
               <div className="space-y-3 rounded-md bg-white/85 p-3">
                 <label className="inline-flex items-center gap-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500">
@@ -1686,52 +1740,6 @@ export default function CalendarPage() {
                     <option value="all">All tasks</option>
                   </select>
                 </label>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-navy-500">
-                  {[
-                    {
-                      id: "sh_blog" as CalendarLegendFilter,
-                      label: "SH Blog",
-                      markerClassName: "h-2 w-2 rounded-full bg-brand",
-                      isVisible: hasShBlogsVisible,
-                    },
-                    {
-                      id: "red_blog" as CalendarLegendFilter,
-                      label: "RED Blog",
-                      markerClassName: "h-2 w-2 rounded-full bg-purple-500",
-                      isVisible: hasRedBlogsVisible,
-                    },
-                    {
-                      id: "sh_social_post" as CalendarLegendFilter,
-                      label: "SH Social Post",
-                      markerClassName: "h-2 w-2 rounded-full border-2 border-brand bg-white",
-                      isVisible: hasShSocialPostsVisible,
-                    },
-                    {
-                      id: "red_social_post" as CalendarLegendFilter,
-                      label: "RED Social Post",
-                      markerClassName: "h-2 w-2 rounded-full border-2 border-purple-500 bg-white",
-                      isVisible: hasRedSocialPostsVisible,
-                    },
-                  ].map((legendItem) => (
-                    <button
-                      key={legendItem.id}
-                      type="button"
-                      aria-pressed={legendItem.isVisible}
-                      aria-label={`${legendItem.isVisible ? "Hide" : "Show"} ${legendItem.label}`}
-                      onClick={() => {
-                        toggleLegendFilter(legendItem.id);
-                      }}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
-                        legendItem.isVisible
-                          ? "border-[color:var(--sh-gray-200)]/90 bg-white/90 text-navy-500 hover:border-[color:var(--sh-gray-200)] hover:bg-white"
-                          : "border-[color:var(--sh-gray-200)] bg-blurple-50 text-navy-500/60 hover:border-[color:var(--sh-gray-200)] hover:text-navy-500"
-                      }`}
-                    >
-                      <span className={legendItem.markerClassName} />
-                      {legendItem.label}
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : null}
             <p className="sr-only" role="status" aria-live="polite">
@@ -1761,61 +1769,6 @@ export default function CalendarPage() {
                     labels={weekdayLabels}
                     todayColumnIndex={todayWeekdayColumnIndex}
                   />
-                ) : null}
-                {/* Legend filters and filter pills below weekday header */}
-                <div className="flex flex-wrap items-center gap-3 text-xs text-navy-500">
-                  {[
-                    {
-                      id: "sh_blog" as CalendarLegendFilter,
-                      label: "SH Blog",
-                      markerClassName: "h-2 w-2 rounded-full bg-brand",
-                      isVisible: hasShBlogsVisible,
-                    },
-                    {
-                      id: "red_blog" as CalendarLegendFilter,
-                      label: "RED Blog",
-                      markerClassName: "h-2 w-2 rounded-full bg-purple-500",
-                      isVisible: hasRedBlogsVisible,
-                    },
-                    {
-                      id: "sh_social_post" as CalendarLegendFilter,
-                      label: "SH Social Post",
-                      markerClassName: "h-2 w-2 rounded-full border-2 border-brand bg-white",
-                      isVisible: hasShSocialPostsVisible,
-                    },
-                    {
-                      id: "red_social_post" as CalendarLegendFilter,
-                      label: "RED Social Post",
-                      markerClassName: "h-2 w-2 rounded-full border-2 border-purple-500 bg-white",
-                      isVisible: hasRedSocialPostsVisible,
-                    },
-                  ].map((legendItem) => (
-                    <button
-                      key={legendItem.id}
-                      type="button"
-                      aria-pressed={legendItem.isVisible}
-                      aria-label={`${legendItem.isVisible ? "Hide" : "Show"} ${legendItem.label}`}
-                      onClick={() => {
-                        toggleLegendFilter(legendItem.id);
-                      }}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
-                        legendItem.isVisible
-                          ? "border-[color:var(--sh-gray-200)]/90 bg-white/90 text-navy-500 hover:border-[color:var(--sh-gray-200)] hover:bg-white"
-                          : "border-[color:var(--sh-gray-200)] bg-blurple-50 text-navy-500/60 hover:border-[color:var(--sh-gray-200)] hover:text-navy-500"
-                      }`}
-                    >
-                      <span className={legendItem.markerClassName} />
-                      {legendItem.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="sr-only" role="status" aria-live="polite">
-                  {liveLegendSummary}
-                </p>
-                {activeFilterPills.length > 0 ? (
-                  <div className="px-1">
-                    <DataPageFilterPills pills={activeFilterPills} />
-                  </div>
                 ) : null}
                 {!hasBlogsEnabled && !hasSocialPostsEnabled ? (
                   <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-3 text-sm text-navy-500">

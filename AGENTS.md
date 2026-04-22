@@ -15,6 +15,11 @@ Authoritative project documentation lives at the repo root:
 - `AGENTS.md` (this file — rules/invariants)
 - `README.md`, `HOW_TO_USE_APP.md`, `OPERATIONS.md`
 
+Content authoring authority lives under `docs/`:
+- `docs/content-style-guide.md` — dual-domain content style guide for `www.sighthound.com` and `www.redactor.com` (owned by Content Relay, Slack `#content-ops-alerts`). Any public blog post, landing page, case study, or gated asset across either domain MUST follow it.
+- `docs/content-relay/exceptions.md` — per-post logged exceptions to the style guide.
+- `docs/CHANGELOG.md` — documentation changelog.
+
 ## Rule Conflict Resolution (MUST)
 
 If instructions appear to conflict, resolve in this order:

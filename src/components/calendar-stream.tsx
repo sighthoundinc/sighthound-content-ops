@@ -9,6 +9,7 @@ import {
   subWeeks,
 } from "date-fns";
 import {
+  Fragment,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -245,27 +246,22 @@ export function CalendarStreamView({
       </div>
 
       <div>
-        {weeks.map((week) => {
+        {weeks.map((week, weekIndex) => {
           const weekStartKey = format(week.start, "yyyy-MM-dd");
           const isTodayWeek = week.days.some(
             (day) => format(day, "yyyy-MM-dd") === todayDateKey
           );
-          // Show month label on the first week containing the 1st of a month, OR on
-          // the very first rendered week so users always see an anchor month.
-          const dayContainingFirst = week.days.find((day) => day.getDate() === 1);
-          const isFirstRenderedWeek = week.start.getTime() === weeks[0]?.start.getTime();
-          const showMonthLabel = Boolean(dayContainingFirst) || isFirstRenderedWeek;
-          const monthLabelDay = dayContainingFirst ?? week.days[0];
 
-          // 3-tone month band cycle for scannable month boundaries (Sheets-style).
-          // Uses the month of the week's anchor day so weeks that straddle months get
-          // the tint of their dominant month (the one holding the first weekday).
-          const monthBandClass =
-            week.start.getMonth() % 3 === 0
-              ? "bg-white"
-              : week.start.getMonth() % 3 === 1
-                ? "bg-[color:var(--sh-gray)]/40"
-                : "bg-blurple-50/30";
+          // Emit a full-width month banner once per calendar month. The "dominant"
+          // month of a straddle week is the month of its first day (Monday when
+          // weekStart=1). This matches the rule the user locked in.
+          const previousWeek = weeks[weekIndex - 1];
+          const showMonthBanner =
+            weekIndex === 0 ||
+            (previousWeek
+              ? previousWeek.start.getMonth() !== week.start.getMonth() ||
+                previousWeek.start.getFullYear() !== week.start.getFullYear()
+              : true);
 
           // Bucket items per day × row-kind
           const bucketsByKindAndDay: Record<RowKind, Record<string, CalendarStreamItem[]>> = {
@@ -289,114 +285,123 @@ export function CalendarStreamView({
             }
           }
 
-          // Always render all legend-enabled site rows per week to preserve a
-          // constant row count and height rhythm across the stream.
-          return (
-            <div
-              key={weekStartKey}
-              ref={isTodayWeek ? todayWeekRef : undefined}
-              className={cn(
-                "border-b border-[color:var(--sh-gray-200)]/70",
-                monthBandClass,
-                isTodayWeek ? "ring-1 ring-inset ring-brand/25" : null
-              )}
-            >
-              {/* Day-number row — fixed height for consistent rhythm */}
-              <div
-                className="grid h-[22px] items-stretch border-b border-[color:var(--sh-gray-200)]/50"
-                style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
-              >
-                <div className="flex items-center px-2 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
-                  {showMonthLabel ? format(monthLabelDay, "MMM yyyy") : ""}
-                </div>
-                {week.days.map((day, index) => {
-                  const dayKey = format(day, "yyyy-MM-dd");
-                  const isToday = dayKey === todayDateKey;
-                  return (
-                    <div
-                      key={dayKey}
-                      className={cn(
-                        "flex items-center justify-end px-2 text-[10px] font-medium tabular-nums text-navy-500/80",
-                        index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
-                        isToday ? "bg-blurple-50 text-blurple-700" : null
-                      )}
-                    >
-                      {format(day, "d")}
-                    </div>
-                  );
-                })}
-              </div>
+          // Only render a site row when the legend flag is on AND that site has
+          // items this week. Empty site rows would be visual noise now that the
+          // content-slot wrapper guarantees the week rhythm.
+          const activeRowKinds = visibleRowKinds.filter(
+            (kind) => Object.keys(bucketsByKindAndDay[kind]).length > 0
+          );
 
-              {/* Content rows — always render every legend-enabled site row, fixed height */}
-              {visibleRowKinds.map((kind, rowIndex) => {
-                const rowMeta = ROW_META[kind];
-                const isLastRow = rowIndex === visibleRowKinds.length - 1;
-                return (
-                  <div
-                    key={`${weekStartKey}-${kind}`}
-                    className={cn(
-                      "grid h-[28px] items-stretch",
-                      isLastRow ? null : "border-b border-[color:var(--sh-gray-200)]/40"
-                    )}
-                    style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
-                  >
-                    <div className="flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
-                      <span className={cn("h-1.5 w-1.5 rounded-full", rowMeta.dotClassName)} />
-                      <span>{rowMeta.label}</span>
-                    </div>
-                    {week.days.map((day, index) => {
-                      const dayKey = format(day, "yyyy-MM-dd");
-                      const isToday = dayKey === todayDateKey;
-                      const cellItems = bucketsByKindAndDay[kind][dayKey] ?? [];
-                      return (
-                        <div
-                          key={`${dayKey}-${kind}`}
-                          className={cn(
-                            "flex items-center px-1.5 text-[12px] leading-tight",
-                            index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
-                            isToday ? "bg-blurple-50/40" : null
-                          )}
-                        >
-                          {cellItems.length === 0 ? null : (
-                            <div className="w-full">
-                              {cellItems.map((item) => {
-                                if (item.type === "blog") {
-                                  const fullTitle = item.blog.title;
-                                  return (
-                                    <button
-                                      key={item.key}
-                                      type="button"
-                                      onClick={() => onOpenBlog(item.blog.id)}
-                                      title={fullTitle}
-                                      className="block w-full truncate rounded px-1 text-left text-[12px] font-medium text-blurple-700 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-blurple-400 focus-visible:outline-none focus-visible:shadow-brand-focus"
-                                    >
-                                      {fullTitle}
-                                    </button>
-                                  );
-                                }
-                                const social = item.social;
-                                const fullTitle = `${getSocialTypeLabel(social.type)}: ${social.title} (${getSocialStatusLabel(social.status)})`;
-                                return (
-                                  <button
-                                    key={item.key}
-                                    type="button"
-                                    onClick={() => onOpenSocial(social.id)}
-                                    title={fullTitle}
-                                    className="block w-full truncate rounded px-1 text-left text-[12px] font-medium text-navy-500 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-navy-500/40 focus-visible:outline-none focus-visible:shadow-brand-focus"
-                                  >
-                                    {social.title}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+          return (
+            <Fragment key={weekStartKey}>
+              {showMonthBanner ? (
+                <div className="border-y border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/80 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-ink">
+                  {format(week.start, "MMMM yyyy")}
+                </div>
+              ) : null}
+              <div
+                ref={isTodayWeek ? todayWeekRef : undefined}
+                className={cn(
+                  "border-b border-[color:var(--sh-gray-200)]/70 bg-white",
+                  isTodayWeek ? "ring-1 ring-inset ring-brand/25" : null
+                )}
+              >
+                {/* Date row — always renders, fixed height. Gutter is intentionally
+                    empty; the month banner above carries the month anchor. */}
+                <div
+                  className="grid h-[22px] items-stretch border-b border-[color:var(--sh-gray-200)]/40"
+                  style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
+                >
+                  <div aria-hidden />
+                  {week.days.map((day, index) => {
+                    const dayKey = format(day, "yyyy-MM-dd");
+                    const isToday = dayKey === todayDateKey;
+                    return (
+                      <div
+                        key={dayKey}
+                        className={cn(
+                          "flex items-center justify-end px-2 text-[10px] font-medium tabular-nums text-navy-500/80",
+                          index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
+                          isToday ? "bg-blurple-50 text-blurple-700" : null
+                        )}
+                      >
+                        {format(day, "d")}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Content slot — min-height equals one content-row-worth of space
+                    so empty weeks still reserve the vertical rhythm. When sites
+                    have items, their rows render inside and the slot grows. */}
+                <div className="min-h-[28px]">
+                  {activeRowKinds.map((kind) => {
+                    const rowMeta = ROW_META[kind];
+                    return (
+                      <div
+                        key={`${weekStartKey}-${kind}`}
+                        className="grid h-[28px] items-stretch"
+                        style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
+                      >
+                        <div className="flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
+                          <span className={cn("h-1.5 w-1.5 rounded-full", rowMeta.dotClassName)} />
+                          <span>{rowMeta.label}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
+                        {week.days.map((day, index) => {
+                          const dayKey = format(day, "yyyy-MM-dd");
+                          const isToday = dayKey === todayDateKey;
+                          const cellItems = bucketsByKindAndDay[kind][dayKey] ?? [];
+                          return (
+                            <div
+                              key={`${dayKey}-${kind}`}
+                              className={cn(
+                                "flex items-center px-1.5 text-[12px] leading-tight",
+                                index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
+                                isToday ? "bg-blurple-50/40" : null
+                              )}
+                            >
+                              {cellItems.length === 0 ? null : (
+                                <div className="w-full">
+                                  {cellItems.map((item) => {
+                                    if (item.type === "blog") {
+                                      const fullTitle = item.blog.title;
+                                      return (
+                                        <button
+                                          key={item.key}
+                                          type="button"
+                                          onClick={() => onOpenBlog(item.blog.id)}
+                                          title={fullTitle}
+                                          className="block w-full truncate rounded px-1 text-left text-[12px] font-medium text-blurple-700 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-blurple-400 focus-visible:outline-none focus-visible:shadow-brand-focus"
+                                        >
+                                          {fullTitle}
+                                        </button>
+                                      );
+                                    }
+                                    const social = item.social;
+                                    const fullTitle = `${getSocialTypeLabel(social.type)}: ${social.title} (${getSocialStatusLabel(social.status)})`;
+                                    return (
+                                      <button
+                                        key={item.key}
+                                        type="button"
+                                        onClick={() => onOpenSocial(social.id)}
+                                        title={fullTitle}
+                                        className="block w-full truncate rounded px-1 text-left text-[12px] font-medium text-navy-500 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-navy-500/40 focus-visible:outline-none focus-visible:shadow-brand-focus"
+                                      >
+                                        {social.title}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </Fragment>
           );
         })}
       </div>

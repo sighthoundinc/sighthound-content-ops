@@ -127,6 +127,10 @@ Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revis
 
 ### Calendar
 - Date-based schedule view for planning and rescheduling.
+- Three view modes are available: `Month` (tile grid), `Week` (expanded tiles), and `Stream` (spreadsheet-style infinite weeks). The `Stream` toggle sits next to Month/Week in the local mode control.
+- Stream view (`src/components/calendar-stream.tsx`) renders each week as a compact block: one day-number row + one row per visible site (`SH`, `RED`, optional `SH SOC`, `RED SOC`). Titles render inline in their scheduled day column, click opens the existing detail drawer, and drag-to-reschedule is intentionally disabled in stream.
+- Stream view initial range is ±26 weeks around the cursor with `Load earlier` / `Load later` chunks of 13 weeks; past-week prepends preserve the user’s reading position via a distance-from-bottom anchor.
+- Keyboard shortcut `S` switches to stream mode; grid arrow/`J`/`K`/`Enter` handling is short-circuited while in stream mode.
 - Top section hierarchy contract (two-row design):
   - **Row 1 (Navigation)**: Month label (left) | Navigation cluster with `← Prev`, `Today` (highlighted primary button), `Next →` (center) | `Today · <date>` chip (center-right) | `Month/Week` toggle (right)
   - `Today` button uses distinct indigo styling; `Prev/Next` use lighter neutral styling with directional chevron icons.

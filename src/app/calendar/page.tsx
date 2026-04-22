@@ -30,6 +30,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
+import { CalendarStreamView } from "@/components/calendar-stream";
 import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import {
@@ -81,7 +82,7 @@ import { exportToICS, exportToCSV, type CalendarExportItem } from "@/lib/calenda
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
-type CalendarMode = "month" | "week";
+type CalendarMode = "month" | "week" | "stream";
 type CalendarViewScope = "mine" | "all";
 type ContentTypeFilter = "blogs" | "social_posts";
 type CalendarLegendFilter =
@@ -998,6 +999,14 @@ export default function CalendarPage() {
         setMode("week");
         return;
       }
+      if (event.key === "s" || event.key === "S") {
+        setMode("stream");
+        return;
+      }
+      if (mode === "stream") {
+        // Stream view owns its own scroll; skip grid-coord keyboard handling.
+        return;
+      }
       if (event.key === "t" || event.key === "T") {
         const todayDate = new Date(`${todayDateKey}T00:00:00`);
         setFocusedDateKey(todayDateKey);
@@ -1509,7 +1518,11 @@ export default function CalendarPage() {
             <div className="flex items-center justify-between gap-4 rounded-md bg-white/85 p-3">
               {/* Month label (left) */}
               <div className="text-sm font-semibold text-ink">
-                {mode === "month" ? format(cursorDate, "MMMM yyyy") : ""}
+                {mode === "month"
+                  ? format(cursorDate, "MMMM yyyy")
+                  : mode === "stream"
+                    ? "Stream · centered on today"
+                    : ""}
               </div>
 
               {/* Navigation cluster (center) */}
@@ -1572,6 +1585,14 @@ export default function CalendarPage() {
                   onClick={() => setMode("week")}
                 >
                   Week
+                </button>
+                <button
+                  type="button"
+                  className={segmentedControlItemClass({ isActive: mode === "stream" })}
+                  onClick={() => setMode("stream")}
+                  title="Spreadsheet-style infinite weeks"
+                >
+                  Stream
                 </button>
               </div>
             </div>
@@ -1735,10 +1756,12 @@ export default function CalendarPage() {
                     {dragPreviewMessage}
                   </p>
                 ) : null}
-                <CalendarWeekdayHeaderRow
-                  labels={weekdayLabels}
-                  todayColumnIndex={todayWeekdayColumnIndex}
-                />
+                {mode !== "stream" ? (
+                  <CalendarWeekdayHeaderRow
+                    labels={weekdayLabels}
+                    todayColumnIndex={todayWeekdayColumnIndex}
+                  />
+                ) : null}
                 {/* Legend filters and filter pills below weekday header */}
                 <div className="flex flex-wrap items-center gap-3 text-xs text-navy-500">
                   {[
@@ -1803,6 +1826,27 @@ export default function CalendarPage() {
                   <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-3 text-sm text-navy-500">
                     Enable at least one legend category to populate the calendar.
                   </p>
+                ) : mode === "stream" ? (
+                  <CalendarStreamView
+                    itemsByDate={calendarItemsByDate}
+                    weekStart={normalizedWeekStart}
+                    todayDateKey={todayDateKey}
+                    cursorDate={cursorDate}
+                    legend={{
+                      shBlog: hasBlogsEnabled && hasShBlogsVisible,
+                      redBlog: hasBlogsEnabled && hasRedBlogsVisible,
+                      shSocial: hasSocialPostsEnabled && hasShSocialPostsVisible,
+                      redSocial: hasSocialPostsEnabled && hasRedSocialPostsVisible,
+                    }}
+                    onOpenBlog={(blogId) => {
+                      setActiveSocialPostId(null);
+                      setActiveBlogId(blogId);
+                    }}
+                    onOpenSocial={(postId) => {
+                      setActiveBlogId(null);
+                      setActiveSocialPostId(postId);
+                    }}
+                  />
                 ) : (
                   <DndContext
                     sensors={sensors}

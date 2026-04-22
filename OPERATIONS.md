@@ -115,6 +115,14 @@ npm run check:full
 - Comments, timelines, and record-level assignment/history timestamps must also render in the user’s selected timezone.
 - Calendar timezone selection must use `profiles.timezone` first, with `America/New_York` fallback only.
 - Admin Activity History in Settings is the single allowed UTC-rendered exception.
+- Calendar view modes QA checks:
+  - verify Month/Week/Stream toggle renders and switches between modes without layout jump.
+  - verify Stream mode shows SH + RED blog rows per week, with optional `SH SOC` / `RED SOC` rows gated by legend toggles.
+  - verify Stream mode sticky weekday header stays pinned as the user scrolls.
+  - verify clicking `Load earlier weeks` does not jump the user back to today (scroll position is preserved).
+  - verify `Today` button in the nav cluster scrolls the current week into view while in Stream mode.
+  - verify drag-to-reschedule is disabled in Stream mode; clicking a title opens the detail drawer.
+  - verify `S` keyboard shortcut switches to Stream mode.
 - Calendar month overview QA checks:
   - verify overview rows cover previous/current/next-month scheduled items.
   - verify mixed blog/social status pills use normalized labels and consistent color semantics.

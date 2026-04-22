@@ -105,6 +105,9 @@ Inbox page basics:
 - Archive/snooze are not available yet; dismiss an item by acting on it or waiting for its state to change.
 
 Calendar overview and top navigation:
+- Three view modes are available via the mode toggle: `Month` (default tile grid), `Week` (expanded tile grid), and `Stream` (spreadsheet-style infinite weeks).
+- `Stream` mode shows each week as compact rows: day numbers on top, then one row per site (`SH`, `RED`) with blog titles placed in their scheduled-day column. Legend toggles add `SH SOC` / `RED SOC` rows for social posts.
+- Use `Load earlier weeks` / `Load later weeks` at the top/bottom to extend the visible range; your scroll position is preserved when loading earlier. Click a title to open the detail drawer. Press `S` to switch to Stream mode.
 - `Overview` includes scheduled items from previous month, current month, and next month.
 - Status pills use one normalized language/color system for mixed blog/social rows (`In Progress`, `In Review`, `Ready`, `Awaiting Live Link`, `Published`, `Changes Requested`).
 - Overview row titles are single-line truncated with full-title tooltip on hover.

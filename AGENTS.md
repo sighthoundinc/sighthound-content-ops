@@ -1108,6 +1108,13 @@ See `docs/SIDEBAR_PATTERN.md` for complete specification including:
 7. `/social-posts` calendar mode must follow the same compact-month overflow contract as `/calendar` (max 3 visible cards per tile, `+N more` to focused week view).
 8. Calendar weekday ordering and “today” highlighting must use user preference inputs (`profiles.week_start`, `profiles.timezone`) with `America/New_York` fallback.
 9. `/social-posts` calendar mode must maintain keyboard parity with `/calendar` (`Arrow` keys or `J/K` day movement, `Enter` open first item, `Escape` close panel).
+10. `/calendar` exposes a third mode `stream` (spreadsheet-style infinite weeks) alongside `month` and `week`. Stream view lives in `src/components/calendar-stream.tsx` and:
+    - Renders one day-number row plus one row per visible site (`SH`, `RED`, optional `SH SOC`, `RED SOC`) per week across 7 day-columns.
+    - Respects the same legend toggles (`sh_blog`, `red_blog`, `sh_social_post`, `red_social_post`) and `Assigned to` filter as month/week.
+    - Must not use `overflow-hidden` on its outer container (breaks the sticky weekday header); rounded corners apply to the sticky header (`rounded-t-xl`) and the footer bar (`rounded-b-xl`).
+    - Preserves scroll position when prepending past weeks (Load earlier) using a distance-from-bottom anchor; scroll-to-today only fires on mount and on explicit cursor→today transitions.
+    - Clicking a title opens the existing blog/social drawer; drag-to-reschedule is not supported in stream mode.
+    - Keyboard `S` toggles stream mode; grid-coord keyboard handling (arrows / `J` / `K` / `Enter`) is short-circuited while in stream mode.
 
 ## Social Post Ownership & Transition Enforcement (MUST)
 

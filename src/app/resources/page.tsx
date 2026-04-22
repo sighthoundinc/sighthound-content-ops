@@ -362,7 +362,14 @@ export default function ResourcesPage() {
               </li>
               <li>
                 <InternalPageLink href="/calendar">Calendar</InternalPageLink> — the place to plan
-                timing and spot scheduling conflicts.
+                timing and spot scheduling conflicts. Toggle between{" "}
+                <span className="font-medium">Month</span>,{" "}
+                <span className="font-medium">Week</span>, and{" "}
+                <span className="font-medium">Stream</span> views. Stream is a compact
+                spreadsheet-style view that scrolls weeks infinitely, with one row per site
+                (SH, RED) per week and blog titles placed in their scheduled day column.
+                Click a title to open the detail drawer; press <span className="font-medium">S</span>
+                {" "}to switch into Stream mode.
               </li>
               <li>
                 <InternalPageLink href="/settings">Settings</InternalPageLink> — your profile,

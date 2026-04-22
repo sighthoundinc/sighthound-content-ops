@@ -51,7 +51,8 @@ Social posts must include at least one valid public live link before they can mo
   - list bulk delete runs selected requests concurrently and returns one aggregated deleted/skipped/failed summary
 - `Ideas`: intake and conversion to blogs/social posts
 - `Calendar`: schedule planning and conflict visibility
-  - top controls follow one hierarchy: sticky grouped `Prev/Today/Next` + month picker popover + `Month/Week`, then a compact secondary strip
+  - three view modes via the mode toggle: `Month` (tile grid), `Week` (expanded tiles), and `Stream` (spreadsheet-style infinite weeks with one row per site per week; keyboard shortcut `S`)
+  - top controls follow one hierarchy: sticky grouped `Prev/Today/Next` + month picker popover + `Month/Week/Stream`, then a compact secondary strip
   - a compact `Today · <date>` chip appears next to month selection for orientation
   - secondary strip uses neutral labels (`View`, content toggles, `Assigned to`) and avoids role-heavy wording
   - top controls use one outer container with lighter internal separation (lower border density)

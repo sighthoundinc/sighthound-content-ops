@@ -218,14 +218,14 @@ export function CalendarStreamView({
       {/* Sticky weekday header — relies on page scroll; parent must NOT be overflow-hidden */}
       <div
         className="sticky top-0 z-10 grid rounded-t-xl border-b border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/95 backdrop-blur-sm"
-        style={{ gridTemplateColumns: "72px repeat(7, minmax(0, 1fr))" }}
+        style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
       >
-        <div aria-hidden className="px-2 py-1" />
+        <div aria-hidden className="px-2 py-1.5" />
         {weekdayLabels.map((label, index) => (
           <div
             key={`${label}-${index}`}
             className={cn(
-              "px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-navy-500/70",
+              "px-2 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-navy-500/70",
               todayColumnIndex === index ? "text-blurple-700" : null
             )}
           >
@@ -257,6 +257,16 @@ export function CalendarStreamView({
           const showMonthLabel = Boolean(dayContainingFirst) || isFirstRenderedWeek;
           const monthLabelDay = dayContainingFirst ?? week.days[0];
 
+          // 3-tone month band cycle for scannable month boundaries (Sheets-style).
+          // Uses the month of the week's anchor day so weeks that straddle months get
+          // the tint of their dominant month (the one holding the first weekday).
+          const monthBandClass =
+            week.start.getMonth() % 3 === 0
+              ? "bg-white"
+              : week.start.getMonth() % 3 === 1
+                ? "bg-[color:var(--sh-gray)]/40"
+                : "bg-blurple-50/30";
+
           // Bucket items per day × row-kind
           const bucketsByKindAndDay: Record<RowKind, Record<string, CalendarStreamItem[]>> = {
             sh_blog: {},
@@ -279,27 +289,24 @@ export function CalendarStreamView({
             }
           }
 
-          // P0: hide empty site rows per week. A row renders only if its legend flag is
-          // enabled AND the week contains at least one item of that kind.
-          const activeRowKinds = visibleRowKinds.filter(
-            (kind) => Object.keys(bucketsByKindAndDay[kind]).length > 0
-          );
-
+          // Always render all legend-enabled site rows per week to preserve a
+          // constant row count and height rhythm across the stream.
           return (
             <div
               key={weekStartKey}
               ref={isTodayWeek ? todayWeekRef : undefined}
               className={cn(
-                "border-b border-[color:var(--sh-gray-200)]/70 bg-white",
-                isTodayWeek ? "ring-1 ring-inset ring-brand/20" : null
+                "border-b border-[color:var(--sh-gray-200)]/70",
+                monthBandClass,
+                isTodayWeek ? "ring-1 ring-inset ring-brand/25" : null
               )}
             >
-              {/* Day-number row (compact strip) */}
+              {/* Day-number row — fixed height for consistent rhythm */}
               <div
-                className="grid items-stretch"
-                style={{ gridTemplateColumns: "72px repeat(7, minmax(0, 1fr))" }}
+                className="grid h-[22px] items-stretch border-b border-[color:var(--sh-gray-200)]/50"
+                style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
               >
-                <div className="flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
+                <div className="flex items-center px-2 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
                   {showMonthLabel ? format(monthLabelDay, "MMM yyyy") : ""}
                 </div>
                 {week.days.map((day, index) => {
@@ -309,7 +316,7 @@ export function CalendarStreamView({
                     <div
                       key={dayKey}
                       className={cn(
-                        "flex items-center justify-end px-2 py-0.5 text-[10px] font-medium tabular-nums text-navy-500/80",
+                        "flex items-center justify-end px-2 text-[10px] font-medium tabular-nums text-navy-500/80",
                         index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
                         isToday ? "bg-blurple-50 text-blurple-700" : null
                       )}
@@ -320,16 +327,20 @@ export function CalendarStreamView({
                 })}
               </div>
 
-              {/* Content rows per visible + non-empty site */}
-              {activeRowKinds.map((kind) => {
+              {/* Content rows — always render every legend-enabled site row, fixed height */}
+              {visibleRowKinds.map((kind, rowIndex) => {
                 const rowMeta = ROW_META[kind];
+                const isLastRow = rowIndex === visibleRowKinds.length - 1;
                 return (
                   <div
                     key={`${weekStartKey}-${kind}`}
-                    className="grid items-stretch"
-                    style={{ gridTemplateColumns: "72px repeat(7, minmax(0, 1fr))" }}
+                    className={cn(
+                      "grid h-[28px] items-stretch",
+                      isLastRow ? null : "border-b border-[color:var(--sh-gray-200)]/40"
+                    )}
+                    style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
                   >
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
+                    <div className="flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
                       <span className={cn("h-1.5 w-1.5 rounded-full", rowMeta.dotClassName)} />
                       <span>{rowMeta.label}</span>
                     </div>
@@ -341,13 +352,13 @@ export function CalendarStreamView({
                         <div
                           key={`${dayKey}-${kind}`}
                           className={cn(
-                            "min-h-[22px] px-1.5 py-0.5 text-[12px] leading-tight",
+                            "flex items-center px-1.5 text-[12px] leading-tight",
                             index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
                             isToday ? "bg-blurple-50/40" : null
                           )}
                         >
                           {cellItems.length === 0 ? null : (
-                            <div className="space-y-0.5">
+                            <div className="w-full">
                               {cellItems.map((item) => {
                                 if (item.type === "blog") {
                                   const fullTitle = item.blog.title;
@@ -357,7 +368,7 @@ export function CalendarStreamView({
                                       type="button"
                                       onClick={() => onOpenBlog(item.blog.id)}
                                       title={fullTitle}
-                                      className="block w-full truncate rounded px-1 py-0 text-left text-[12px] font-medium text-blurple-700 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-blurple-400 focus-visible:outline-none focus-visible:shadow-brand-focus"
+                                      className="block w-full truncate rounded px-1 text-left text-[12px] font-medium text-blurple-700 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-blurple-400 focus-visible:outline-none focus-visible:shadow-brand-focus"
                                     >
                                       {fullTitle}
                                     </button>
@@ -371,7 +382,7 @@ export function CalendarStreamView({
                                     type="button"
                                     onClick={() => onOpenSocial(social.id)}
                                     title={fullTitle}
-                                    className="block w-full truncate rounded px-1 py-0 text-left text-[12px] font-medium text-navy-500 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-navy-500/40 focus-visible:outline-none focus-visible:shadow-brand-focus"
+                                    className="block w-full truncate rounded px-1 text-left text-[12px] font-medium text-navy-500 underline decoration-transparent underline-offset-2 transition-colors hover:bg-blurple-50 hover:decoration-navy-500/40 focus-visible:outline-none focus-visible:shadow-brand-focus"
                                   >
                                     {social.title}
                                   </button>

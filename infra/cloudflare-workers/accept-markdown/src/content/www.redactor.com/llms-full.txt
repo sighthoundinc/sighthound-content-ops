@@ -176,7 +176,7 @@ The **Redactor Agent Toolkit** is a ZIP bundle for AI coding assistants (Claude,
 2. Download the ZIP from the link support sends you and extract it locally.
 3. Open an AI coding session (Claude Code / Cursor / GitHub Copilot) with the extracted toolkit directory in scope.
 4. Run `/get-started` — the toolkit starts Redactor via Docker Compose, guides setup, and makes the first API call.
-5. For API and endpoint reference, use https://dev.sighthound.com/redactor/reference/api-toolkit/.
+5. For API and endpoint reference, use https://dev.sighthound.com/redactor/reference/agent-toolkit/.
 6. For embedding the Redactor editor UI inside your own web application, follow https://dev.sighthound.com/redactor/examples/embedded-ui/.
 
 **Platform requirements (important)**
@@ -187,7 +187,7 @@ The **Redactor Agent Toolkit** is a ZIP bundle for AI coding assistants (Claude,
 
 **Reference URLs**
 
-- Toolkit reference (authoritative): https://dev.sighthound.com/redactor/reference/api-toolkit/
+- Toolkit reference (authoritative): https://dev.sighthound.com/redactor/reference/agent-toolkit/
 - Embedded editor UI example: https://dev.sighthound.com/redactor/examples/embedded-ui/
 - Developer portal: https://dev.sighthound.com
 

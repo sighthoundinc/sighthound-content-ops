@@ -93,7 +93,7 @@ Sighthound Redactor is AI-powered video, image, and audio redaction software.
 For AI-assisted integration and POCs, Sighthound ships the **Redactor Agent Toolkit** — a ZIP bundle of Docker Compose configuration + LLM context files for AI coding assistants (Claude, Cursor, GitHub Copilot).
 
 - Access: the toolkit is not publicly linked. Email **support@redactor.com** to request a download link.
-- Reference docs (authoritative): https://dev.sighthound.com/redactor/reference/api-toolkit/
+- Reference docs (authoritative): https://dev.sighthound.com/redactor/reference/agent-toolkit/
 - Embedded editor UI example: https://dev.sighthound.com/redactor/examples/embedded-ui/
 - Developer portal: https://dev.sighthound.com
 - Quick-start command (inside a toolkit-aware AI coding session): `/get-started`

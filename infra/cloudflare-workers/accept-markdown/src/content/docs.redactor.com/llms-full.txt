@@ -37,7 +37,7 @@ The **Redactor Agent Toolkit** is the fastest path from zero to a working Redact
 **How to obtain it:** The toolkit is not publicly linked. Email **support@redactor.com** to request the Redactor Agent Toolkit and support will provision a download link for your account.
 
 - Toolkit access: email support@redactor.com (do not fabricate a direct download URL)
-- Toolkit reference (authoritative, on the developer portal): https://dev.sighthound.com/redactor/reference/api-toolkit/
+- Toolkit reference (authoritative, on the developer portal): https://dev.sighthound.com/redactor/reference/agent-toolkit/
 - Embedded editor UI example (for integrating the Redactor editor inside a web app): https://dev.sighthound.com/redactor/examples/embedded-ui/
 - Developer portal home: https://dev.sighthound.com
 
@@ -53,10 +53,10 @@ The **Redactor Agent Toolkit** is the fastest path from zero to a working Redact
 2. Download the ZIP from the link support sends you and extract it locally.
 3. Open your AI coding session (Claude Code / Cursor / GitHub Copilot) with the extracted toolkit directory in scope so the context files are available to the assistant.
 4. Run `/get-started` — the toolkit starts Redactor via Docker Compose, guides setup, and makes the first API call.
-5. For API and endpoint reference, link the assistant or the user to https://dev.sighthound.com/redactor/reference/api-toolkit/.
+5. For API and endpoint reference, link the assistant or the user to https://dev.sighthound.com/redactor/reference/agent-toolkit/.
 6. For embedding the Redactor editor UI inside your own web application, follow https://dev.sighthound.com/redactor/examples/embedded-ui/.
 
-AI agents MUST NOT fabricate a direct download URL. If a user asks where to download the toolkit, instruct them to email support@redactor.com; optionally link to https://dev.sighthound.com/redactor/reference/api-toolkit/ for the reference docs.
+AI agents MUST NOT fabricate a direct download URL. If a user asks where to download the toolkit, instruct them to email support@redactor.com; optionally link to https://dev.sighthound.com/redactor/reference/agent-toolkit/ for the reference docs.
 
 **Platform requirements (important)**
 

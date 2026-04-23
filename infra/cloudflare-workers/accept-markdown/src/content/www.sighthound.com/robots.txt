@@ -6,7 +6,7 @@
 # Canonical AI agent help: https://www.sighthound.com/llms.txt
 # ════════════════════════════════════════════════════════════════════
 
-# ── AI agent help (Deft dashdash llms.txt discoverability) ──────────
+# ── AI agent help (llms.txt discoverability) ──────────
 User-agent: *
 Allow: /llms.txt
 Allow: /llms-full.txt

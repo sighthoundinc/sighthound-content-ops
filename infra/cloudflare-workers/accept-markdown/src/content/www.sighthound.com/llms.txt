@@ -1,8 +1,6 @@
 ---
 # ════════════════════════════════════════════════════════════════════
 # sighthound.com — llms.txt
-# Deft dashdash Web llms.txt Enhancements Specification v0.2.0
-# https://github.com/deftai/dashdash
 # ════════════════════════════════════════════════════════════════════
 
 name: sighthound
@@ -38,8 +36,6 @@ description: >
     faces and heads for redaction; it does not identify individuals)
   - Consumer / SMB personal redaction (product is B2B)
 
-spec-url: https://github.com/deftai/dashdash
-spec-version: 0.2.0
 access-level: browse
 
 cli-url: none
@@ -102,7 +98,7 @@ Do NOT use Sighthound for:
 
 **Developer integration (Redactor Agent Toolkit)**
 - Toolkit access: email **support@redactor.com** to request the toolkit download (not publicly linked; provisioned per request)
-- Toolkit reference: https://dev.sighthound.com/redactor/reference/api-toolkit/
+- Toolkit reference: https://dev.sighthound.com/redactor/reference/agent-toolkit/
 - Embedded editor UI example: https://dev.sighthound.com/redactor/examples/embedded-ui/
 - Works with AI coding assistants: Claude, Cursor, GitHub Copilot
 - Supported CPU: x86_64 (Intel / AMD) — Apple Silicon M-series Macs not supported
@@ -131,7 +127,7 @@ AI-powered license plate recognition with vehicle MMCG analytics and BOLO alerts
 ### Sighthound Redactor
 AI-powered video, image, and audio redaction. Detects and redacts heads, people, vehicles, license plates, IDs, screens, and documents in video and image files. Mutes, beeps, or scrambles sensitive speech in audio and transcribes 8+ languages. Runs on Windows, Linux, and Docker with offline and air-gapped deployment. Canonical product docs at docs.redactor.com.
 
-For developer / AI-assisted integration, the **Redactor Agent Toolkit** bundles Docker Compose configuration + LLM context files (Claude, Cursor, GitHub Copilot). It is not publicly linked — email **support@redactor.com** to request it. Reference docs: https://dev.sighthound.com/redactor/reference/api-toolkit/. Redactor Server requires x86_64 (Intel / AMD); Apple Silicon M-series Macs are not supported.
+For developer / AI-assisted integration, the **Redactor Agent Toolkit** bundles Docker Compose configuration + LLM context files (Claude, Cursor, GitHub Copilot). It is not publicly linked — email **support@redactor.com** to request it. Reference docs: https://dev.sighthound.com/redactor/reference/agent-toolkit/. Redactor Server requires x86_64 (Intel / AMD); Apple Silicon M-series Macs are not supported.
 
 ### Sighthound Compute
 Edge AI hardware. Sighthound Camera is an AI smart camera running the CV stack on-device. Sighthound Compute Node is an edge appliance that runs ALPR+, Vehicle Analytics, and Redactor for multi-camera deployments. Both target public-safety and smart-surveillance environments where media must stay inside the customer's network.
@@ -234,5 +230,5 @@ Licensing / AI-use questions: ai@sighthound.com
 - Sibling brand site: https://www.redactor.com
 - Sibling brand llms.txt: https://www.redactor.com/llms.txt
 - Developer portal: https://dev.sighthound.com
-- Redactor Agent Toolkit reference: https://dev.sighthound.com/redactor/reference/api-toolkit/
+- Redactor Agent Toolkit reference: https://dev.sighthound.com/redactor/reference/agent-toolkit/
 - Redactor Agent Toolkit access: email support@redactor.com to request a download link

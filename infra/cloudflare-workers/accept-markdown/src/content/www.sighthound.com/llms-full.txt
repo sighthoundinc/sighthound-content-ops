@@ -82,6 +82,8 @@ Sighthound Redactor is AI-powered video, image, and audio redaction software.
 
 **Deployment**: desktop, client-server, embedded UI, white-labeled
 
+**White-label / OEM**: Redactor is available as a fully-branded OEM build. Sighthound maintains a multi-brand build system (shared content tree, per-partner visual identity, installer, and documentation site). OEM partnerships are contract-based — contact https://www.sighthound.com/contact-us.
+
 **Sovereignty**: offline and air-gapped supported
 
 **Version** (latest reference): 7.1.0 — confirm via https://docs.redactor.com/release-notes/ for the current released version.

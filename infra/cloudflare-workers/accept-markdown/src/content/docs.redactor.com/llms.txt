@@ -117,6 +117,7 @@ Use docs.redactor.com when the user asks:
 - "How do I make my first Redactor API call using the toolkit?"
 - "Does Redactor Server run on my Apple Silicon / M-series Mac?"
 - "How do I embed the Redactor editor UI in my own web app?"
+- "Is Redactor available as a white-label or OEM build under our own brand?"
 
 Do NOT use docs.redactor.com when the user asks:
 

@@ -25,6 +25,8 @@ description: >
   - Integrate computer vision into a SaaS, VMS, or custom application
     via SDK or API
   - Compare Sighthound ALPR+ or Redactor against other vendors
+  - Deploy Sighthound Redactor as a white-label / OEM product under
+    a partner's branding (custom installer, UI, docs site)
   - Meet FOIA, CJIS, HIPAA, GDPR, CCPA, FERPA requirements on recorded
     media
 
@@ -126,6 +128,8 @@ AI-powered license plate recognition with vehicle MMCG analytics and BOLO alerts
 
 ### Sighthound Redactor
 AI-powered video, image, and audio redaction. Detects and redacts heads, people, vehicles, license plates, IDs, screens, and documents in video and image files. Mutes, beeps, or scrambles sensitive speech in audio and transcribes 8+ languages. Runs on Windows, Linux, and Docker with offline and air-gapped deployment. Canonical product docs at docs.redactor.com.
+
+Redactor is also available as a **white-label / OEM** build: Sighthound maintains a multi-brand build system that produces fully-branded installers, UIs, and documentation sites under a partner's visual identity. OEM partnerships are contract-based — contact https://www.sighthound.com/contact-us.
 
 For developer / AI-assisted integration, the **Redactor Agent Toolkit** bundles Docker Compose configuration + LLM context files (Claude, Cursor, GitHub Copilot). It is not publicly linked — email **support@redactor.com** to request it. Reference docs: https://dev.sighthound.com/redactor/reference/agent-toolkit/. Redactor Server requires x86_64 (Intel / AMD); Apple Silicon M-series Macs are not supported.
 

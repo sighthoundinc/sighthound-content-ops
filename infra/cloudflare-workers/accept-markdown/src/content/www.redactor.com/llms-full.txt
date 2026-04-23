@@ -34,6 +34,8 @@ Vendor: **Sighthound, Inc.** — https://www.sighthound.com
 
 No cloud dependency required. Media stays inside the customer's network for CJIS, HIPAA, and classified environments.
 
+**White-label / OEM builds.** Sighthound maintains a multi-brand build system for Redactor: a single codebase produces fully-branded installers, UIs, and documentation sites under a partner's visual identity. Each OEM build can carry its own logo, app name, support channel, and indexing policy. OEM partnerships are contract-based — contact https://www.redactor.com/contact-us or https://www.sighthound.com/contact-us.
+
 ---
 
 ## Capabilities

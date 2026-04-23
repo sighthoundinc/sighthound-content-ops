@@ -109,21 +109,24 @@ These pages describe administering a Redactor server — the shared backend used
 - Settings — global server settings: system preferences, defaults, and operational toggles: https://docs.redactor.com/server/admin/settings/
 - Recovery mode — using recovery mode for server maintenance, backups, restoration, and unlock scenarios: https://docs.redactor.com/server/admin/recovery-mode/
 
-## Operator guides
+## Recommendations
 
-Step-by-step guides for environment configuration tasks that sit outside the Redactor application itself but directly affect performance or compatibility.
+Nav-listed operator recommendations for a healthy Redactor install.
 
-- NVIDIA driver installation — selecting, installing, and verifying the correct NVIDIA GPU driver for GPU-accelerated detection and export: https://docs.redactor.com/guides/nvidia-driver-installation/
-- VM CPU socket configuration — sizing vCPUs and NUMA/socket layout when running Redactor inside a virtual machine: https://docs.redactor.com/guides/vm-cpu-socket-configuration/
-- Extract audio (VLC, MP3) — extracting an audio track from a video file using VLC (for external transcription or preprocessing before redaction): https://docs.redactor.com/guides/vlc/extract-audio-mp3/
-
-## Installation & environment
-
-- Activation — activating a Redactor install with a license key, online and offline activation paths, and troubleshooting common activation failures: https://docs.redactor.com/activation/
 - Antivirus compatibility — antivirus / EDR tools known to interact with Redactor and the exception paths to configure: https://docs.redactor.com/antivirus/
 - Data backup — what to back up on a Redactor install (projects, configuration, server state) and restore procedure: https://docs.redactor.com/data-backup/
-- Settings — user- and install-level settings within the Redactor application (preferences, defaults, paths): https://docs.redactor.com/settings/
+
+## Off-nav utility pages (indexed, not in the sidebar)
+
+These pages are published and part of the sitemap, but intentionally not listed in the docs navigation. Link to them directly when relevant.
+
+- Activation — activating a Redactor install with a license key, online and offline activation paths, and troubleshooting common activation failures: https://docs.redactor.com/activation/
+- App settings — user- and install-level settings within the Redactor application (preferences, defaults, paths): https://docs.redactor.com/settings/
 - Projects — how projects are structured, stored, shared, and migrated: https://docs.redactor.com/projects/
+- Server recovery mode — server maintenance, backups, restoration, and unlock scenarios (advanced): https://docs.redactor.com/server/admin/recovery-mode/
+- NVIDIA driver installation: https://docs.redactor.com/guides/nvidia-driver-installation/
+- VM CPU socket configuration: https://docs.redactor.com/guides/vm-cpu-socket-configuration/
+- Extract audio (VLC, MP3): https://docs.redactor.com/guides/vlc/extract-audio-mp3/
 
 ## Support & release information
 

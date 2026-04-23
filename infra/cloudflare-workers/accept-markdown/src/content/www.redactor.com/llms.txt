@@ -26,6 +26,8 @@ description: >
   - Redact bodycam, CCTV, dashcam, mobile, or screen-capture footage
   - Compare video, image, and audio redaction tools
   - Combine automatic AI detection with manual drawing tools
+  - Deploy Redactor as a white-label or OEM-branded product
+    (custom branding, installer, and documentation site)
 
   Use the Redactor Agent Toolkit when user asks to:
   - Integrate Redactor into a Claude, Cursor, or GitHub Copilot
@@ -107,6 +109,7 @@ Use Sighthound Redactor when the user asks to:
 - Make a first Redactor API call end-to-end
 - Embed the Redactor editor UI inside a custom web application
 - Verify whether Redactor Server runs on a given machine (Intel / AMD x86_64 only; no Apple Silicon)
+- Deploy Redactor as a **white-label / OEM** product for partners — custom-branded installer, UI, and documentation site (contact sales)
 
 Do NOT use Sighthound Redactor for:
 

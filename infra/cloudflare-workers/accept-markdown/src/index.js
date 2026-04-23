@@ -59,6 +59,20 @@ export default {
     }
 
     const accept = request.headers.get('Accept') || '';
+
+    // If the client sent an Accept header that excludes every type we can produce
+    // (text/html, text/markdown), return 406 per RFC 9110 / acceptmarkdown.com spec.
+    // We only 406 when Accept is explicit AND incompatible — absent or */* is fine.
+    if (accept && !canProduceForAccept(accept)) {
+      return new Response('Not Acceptable: server can produce text/html or text/markdown', {
+        status: 406,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Vary': 'Accept',
+        },
+      });
+    }
+
     const prefersMd = prefersMarkdownOverHtml(accept);
 
     // Fetch origin with Accept: text/html to force an HTML response (in case origin
@@ -147,6 +161,21 @@ function shouldSkip(pathname) {
   if (skipExt.test(pathname)) return true;
   const skipPaths = ['/sitemap', '/robots.txt', '/llms.txt', '/llms-full.txt', '/wp-admin', '/api/', '/favicon'];
   return skipPaths.some((p) => pathname.startsWith(p));
+}
+
+// Returns true when the Accept header advertises at least one type we can serve.
+// We can produce text/html (pass-through) and text/markdown (converted). Wildcards
+// (*/*, text/*) are acceptable. Explicit-but-incompatible headers trigger 406.
+function canProduceForAccept(accept) {
+  if (!accept) return true; // absent header → server picks default
+  const types = accept
+    .split(',')
+    .map((s) => s.trim().split(';')[0].trim().toLowerCase())
+    .filter(Boolean);
+  if (types.length === 0) return true;
+  return types.some(
+    (t) => t === '*/*' || t === 'text/*' || t === 'text/html' || t === 'text/markdown',
+  );
 }
 
 function prefersMarkdownOverHtml(accept) {

@@ -8,7 +8,8 @@
 // 3. Otherwise pass through HTML with Vary: Accept and add LLM discoverability headers
 //    (X-LLMs-Txt and Link: rel="llms-help").
 //
-// Routes: www.sighthound.com/*, www.redactor.com/*, docs.redactor.com/* (see wrangler.toml)
+// Routes: www.sighthound.com/*, www.redactor.com/*, docs.redactor.com/*
+// and dev.sighthound.com/* (pending DNS cutover; see wrangler.toml).
 
 import shLlms from './content/www.sighthound.com/llms.txt';
 import shLlmsFull from './content/www.sighthound.com/llms-full.txt';
@@ -19,6 +20,9 @@ import redRobots from './content/www.redactor.com/robots.txt';
 import redDocsLlms from './content/docs.redactor.com/llms.txt';
 import redDocsLlmsFull from './content/docs.redactor.com/llms-full.txt';
 import redDocsRobots from './content/docs.redactor.com/robots.txt';
+import shDevLlms from './content/dev.sighthound.com/llms.txt';
+import shDevLlmsFull from './content/dev.sighthound.com/llms-full.txt';
+import shDevRobots from './content/dev.sighthound.com/robots.txt';
 
 const HOSTED_FILES = {
   'www.sighthound.com': {
@@ -35,6 +39,14 @@ const HOSTED_FILES = {
     '/llms.txt':      { body: redDocsLlms,     contentType: 'text/markdown; charset=utf-8' },
     '/llms-full.txt': { body: redDocsLlmsFull, contentType: 'text/markdown; charset=utf-8' },
     '/robots.txt':    { body: redDocsRobots,   contentType: 'text/plain; charset=utf-8' },
+  },
+  // Content for dev.sighthound.com is bundled and ready to serve the
+  // moment the route in wrangler.toml is uncommented (pending DNS
+  // cutover from AmazonS3/CloudFront to Cloudflare-proxied).
+  'dev.sighthound.com': {
+    '/llms.txt':      { body: shDevLlms,     contentType: 'text/markdown; charset=utf-8' },
+    '/llms-full.txt': { body: shDevLlmsFull, contentType: 'text/markdown; charset=utf-8' },
+    '/robots.txt':    { body: shDevRobots,   contentType: 'text/plain; charset=utf-8' },
   },
 };
 

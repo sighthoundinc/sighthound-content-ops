@@ -26,6 +26,16 @@ zone_name = "redactor.com"
 pattern = "docs.redactor.com/*"
 zone_name = "redactor.com"
 
+# ── dev.sighthound.com ────────────────────────────────────────────
+# MkDocs Material developer portal (Redactor API, Vehicle Analytics,
+# SIO). Currently served by AmazonS3 / CloudFront — NOT yet on
+# Cloudflare. Content files under src/content/dev.sighthound.com/ are
+# bundled and ready; uncomment this route the moment DNS is flipped
+# to Cloudflare-proxied. Zone is "sighthound.com".
+# [[routes]]
+# pattern = "dev.sighthound.com/*"
+# zone_name = "sighthound.com"
+
 # Observability
 [observability]
 enabled = true

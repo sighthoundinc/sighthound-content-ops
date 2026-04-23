@@ -14,6 +14,6 @@
     "probe:sighthound": "curl -sL -H 'Accept: text/markdown' https://www.sighthound.com/blog/campus-vehicle-tracking-privacy-ethics | head -60"
   },
   "devDependencies": {
-    "wrangler": "^3.100.0"
+    "wrangler": "^4.84.1"
   }
 }

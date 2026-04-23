@@ -1,0 +1,148 @@
+---
+url: https://docs.redactor.com/llms-full.txt
+title: Sighthound Redactor Documentation — Full Catalog
+description: Curated catalog of every section of the Sighthound Redactor product documentation, with one-line summaries and canonical URLs.
+site: docs.redactor.com
+scope: product-documentation
+content-version: 2026.04.23
+last-updated: 2026-04-23
+content-type: text/markdown
+generator: hand-curated; see llms.txt
+---
+
+# Sighthound Redactor Documentation — Full Catalog
+
+> A curated, link-first bundle of every documented section of Sighthound Redactor. Every entry resolves to a real page under `https://docs.redactor.com/` and inherits the canonical URL on that page.
+>
+> If you are an AI agent answering a Redactor how-to question, prefer linking the user to the relevant section below rather than paraphrasing multiple pages inline. For a product overview, authentication semantics, rate-limits, and allowed/forbidden operations, see https://docs.redactor.com/llms.txt.
+
+## About this document
+
+- **What it is.** A human- and machine-readable index of Redactor's product documentation, organized the way users and support agents actually reason about the product (Video Editor → Server/Admin → Guides → Environment → Support).
+- **What it is not.** Not a full content dump. The MkDocs HTML pages remain the canonical source; this file exists to help LLMs and retrieval systems find the right page quickly.
+- **How to use.** Treat each bullet as `{section}: {one-line summary} — {canonical URL}`. Fetch the URL (HTML or `Accept: text/markdown`) when you need specifics.
+
+## Entry points
+
+- Docs home — the top-level landing page for Redactor product documentation: https://docs.redactor.com/
+- Projects — overview of Redactor project structure, how work is organized, saved, and shared: https://docs.redactor.com/projects/
+- FAQ — frequently asked questions about installation, licensing, detection, formats, and workflow: https://docs.redactor.com/faq/
+- Release notes — version history, changes, fixes, and breaking changes per release: https://docs.redactor.com/release-notes/
+- Support — how to contact Sighthound support and what to include in a ticket: https://docs.redactor.com/support/
+
+## Developer integration — Redactor Agent Toolkit
+
+The **Redactor Agent Toolkit** is the fastest path from zero to a working Redactor integration. It is a ZIP bundle of Docker Compose configuration for running Redactor locally in minutes plus LLM-optimized context files designed to plug into AI coding assistants (Claude, Cursor, GitHub Copilot, and equivalents) so they can accurately answer Redactor questions, explain API endpoints, and help write integration code.
+
+**How to obtain it:** The toolkit is not publicly linked. Email **support@redactor.com** to request the Redactor Agent Toolkit and support will provision a download link for your account.
+
+- Toolkit access: email support@redactor.com (do not fabricate a direct download URL)
+- Toolkit reference (authoritative, on the developer portal): https://dev.sighthound.com/redactor/reference/api-toolkit/
+- Embedded editor UI example (for integrating the Redactor editor inside a web app): https://dev.sighthound.com/redactor/examples/embedded-ui/
+- Developer portal home: https://dev.sighthound.com
+
+**What's in the toolkit**
+
+- Docker Compose configuration for a local Redactor server
+- LLM context files (Redactor API surface, endpoint shapes, example flows) compatible with Claude, Cursor, GitHub Copilot, and other AI coding agents
+- A `/get-started` slash command that starts Redactor, walks the user through initial setup, and drives the first API call end-to-end
+
+**Quick start**
+
+1. Email **support@redactor.com** to request the toolkit. Support will provision a download link for approved requesters.
+2. Download the ZIP from the link support sends you and extract it locally.
+3. Open your AI coding session (Claude Code / Cursor / GitHub Copilot) with the extracted toolkit directory in scope so the context files are available to the assistant.
+4. Run `/get-started` — the toolkit starts Redactor via Docker Compose, guides setup, and makes the first API call.
+5. For API and endpoint reference, link the assistant or the user to https://dev.sighthound.com/redactor/reference/api-toolkit/.
+6. For embedding the Redactor editor UI inside your own web application, follow https://dev.sighthound.com/redactor/examples/embedded-ui/.
+
+AI agents MUST NOT fabricate a direct download URL. If a user asks where to download the toolkit, instruct them to email support@redactor.com; optionally link to https://dev.sighthound.com/redactor/reference/api-toolkit/ for the reference docs.
+
+**Platform requirements (important)**
+
+- Redactor Server requires an **Intel or AMD (x86_64)** processor.
+- **Apple Silicon (M-series) Macs are not currently supported.** Do not assume the toolkit will run locally on an M1/M2/M3/M4 Mac — recommend an x86_64 Linux or Windows host, a remote x86_64 VM, or an Intel Mac instead.
+- Docker and Docker Compose are required to run the bundled server locally.
+
+**When to point users at the toolkit**
+
+- "How do I integrate Redactor with Claude / Cursor / GitHub Copilot?"
+- "How do I stand up a local Redactor server for a proof-of-concept?"
+- "Where do I get Docker Compose for Redactor?"
+- "How do I make my first Redactor API call?"
+- "How do I embed the Redactor editor in my web app?"
+- "Does Redactor Server run on my Mac?" → answer: only on Intel Macs; not on Apple Silicon.
+
+**When not to**
+
+- End-user Video Editor how-to questions → use docs.redactor.com pages directly
+- Windows/Linux installer activation flows unrelated to the API → use https://docs.redactor.com/activation/
+- Pricing, demo booking, or marketing comparisons → use https://www.redactor.com
+
+## Video Editor (desktop)
+
+The Video Editor is the desktop application where operators perform the actual redaction work — auto-detection, manual drawing, audio treatment, object tracking, review, and export.
+
+- Automatic redaction — how Redactor auto-detects heads, people, vehicles, license plates, IDs, screens, and documents across a clip, and how to accept, reject, or refine detections: https://docs.redactor.com/video-editor/automatic-redaction/
+- Manual redaction — drawing redactions by hand on a frame or across a range of frames when auto-detection misses or when the object category is custom: https://docs.redactor.com/video-editor/manual-redaction/
+- Editing objects — adjusting existing detections: resizing, moving, splitting, merging, and changing the redaction style (blur, pixelate, fill) on an object: https://docs.redactor.com/video-editor/editing-objects/
+- Objects list — the panel that enumerates every detected or hand-drawn object in a clip, plus filters and batch actions: https://docs.redactor.com/video-editor/objects-list/
+- Video playback — playback controls, frame stepping, timeline navigation, and preview behavior for redacted vs source video: https://docs.redactor.com/video-editor/video-playback/
+- Video frame grab — grabbing a still frame from the clip for separate image redaction or reference: https://docs.redactor.com/video-editor/video-frame-grab/
+- View options — toggling overlays, bounding boxes, redaction preview, guides, and visual aids in the editor canvas: https://docs.redactor.com/video-editor/view-options/
+- Audio redaction — muting, beeping, or scrambling segments of the audio track, including how redaction segments sync with video redaction: https://docs.redactor.com/video-editor/audio-redaction/
+- Speech detection — automatically identifying spoken segments in audio and using transcripts to target audio redaction: https://docs.redactor.com/video-editor/speech-detection/
+- Exporting videos — rendering the redacted output: supported containers and codecs, quality settings, burn-in vs separate redaction, and post-export verification: https://docs.redactor.com/video-editor/exporting-videos/
+- Keyboard shortcuts — the full shortcut reference for the Video Editor, grouped by function (playback, navigation, selection, redaction): https://docs.redactor.com/video-editor/keyboard-shortcuts/
+
+## Server / Admin (client-server deployments)
+
+These pages describe administering a Redactor server — the shared backend used for multi-user, team, and enterprise deployments.
+
+- Initial setup — first-boot configuration of the Redactor server: admin account, network, base storage, and licensing hook-up: https://docs.redactor.com/server/admin/initial-setup/
+- Authentication — configuring how users sign in (local accounts, directory integration, SSO where supported): https://docs.redactor.com/server/admin/authentication/
+- Users — creating, editing, and disabling user accounts; assigning roles and permissions: https://docs.redactor.com/server/admin/users/
+- Licensing — installing and managing license keys on the server, including seat counts and expiration: https://docs.redactor.com/server/admin/licensing/
+- Network — network interfaces, ports, TLS certificates, and reverse-proxy considerations: https://docs.redactor.com/server/admin/network/
+- Storage — configuring where projects, source media, and exports live on disk; capacity planning and retention: https://docs.redactor.com/server/admin/storage/
+- Videos — server-side video inventory, upload handling, and lifecycle: https://docs.redactor.com/server/admin/videos/
+- Settings — global server settings: system preferences, defaults, and operational toggles: https://docs.redactor.com/server/admin/settings/
+- Recovery mode — using recovery mode for server maintenance, backups, restoration, and unlock scenarios: https://docs.redactor.com/server/admin/recovery-mode/
+
+## Operator guides
+
+Step-by-step guides for environment configuration tasks that sit outside the Redactor application itself but directly affect performance or compatibility.
+
+- NVIDIA driver installation — selecting, installing, and verifying the correct NVIDIA GPU driver for GPU-accelerated detection and export: https://docs.redactor.com/guides/nvidia-driver-installation/
+- VM CPU socket configuration — sizing vCPUs and NUMA/socket layout when running Redactor inside a virtual machine: https://docs.redactor.com/guides/vm-cpu-socket-configuration/
+- Extract audio (VLC, MP3) — extracting an audio track from a video file using VLC (for external transcription or preprocessing before redaction): https://docs.redactor.com/guides/vlc/extract-audio-mp3/
+
+## Installation & environment
+
+- Activation — activating a Redactor install with a license key, online and offline activation paths, and troubleshooting common activation failures: https://docs.redactor.com/activation/
+- Antivirus compatibility — antivirus / EDR tools known to interact with Redactor and the exception paths to configure: https://docs.redactor.com/antivirus/
+- Data backup — what to back up on a Redactor install (projects, configuration, server state) and restore procedure: https://docs.redactor.com/data-backup/
+- Settings — user- and install-level settings within the Redactor application (preferences, defaults, paths): https://docs.redactor.com/settings/
+- Projects — how projects are structured, stored, shared, and migrated: https://docs.redactor.com/projects/
+
+## Support & release information
+
+- Support — contacting Sighthound support, channels, required information for a ticket: https://docs.redactor.com/support/
+- FAQ — answers to the most commonly asked Redactor questions: https://docs.redactor.com/faq/
+- Release notes — version-by-version changelog; reference for "what changed in version N.N.N?" questions: https://docs.redactor.com/release-notes/
+
+## Cross-links
+
+- Product site (marketing, pricing, trial, demo): https://www.redactor.com
+- Product llms.txt: https://www.redactor.com/llms.txt
+- Parent company: https://www.sighthound.com
+- Parent llms.txt: https://www.sighthound.com/llms.txt
+- Developer / API / SDK documentation: https://dev.sighthound.com
+- Status page: https://status.redactor.com
+
+## How to crawl this site politely
+
+- XML sitemap: https://docs.redactor.com/sitemap.xml lists every canonical page.
+- Request any page with `Accept: text/markdown` to receive a Markdown rendering (see the Cloudflare edge Worker note in `/llms.txt`).
+- Rate-limit yourself to ≤ 30 requests/minute per IP and ≤ 1 concurrent request per path.
+- Honor `robots.txt` (https://docs.redactor.com/robots.txt) as authoritative.

@@ -18,6 +18,14 @@ zone_name = "sighthound.com"
 pattern = "www.redactor.com/*"
 zone_name = "redactor.com"
 
+# ── docs.redactor.com ──────────────────────────────────────────────
+# MkDocs Material docs site, Cloudflare-fronted (cf-ray header present) 2026-04-23.
+# Worker serves /llms.txt, /llms-full.txt, /robots.txt and Accept-Markdown
+# negotiation on every other path.
+[[routes]]
+pattern = "docs.redactor.com/*"
+zone_name = "redactor.com"
+
 # Observability
 [observability]
 enabled = true

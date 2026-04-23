@@ -8,7 +8,7 @@
 // 3. Otherwise pass through HTML with Vary: Accept and add LLM discoverability headers
 //    (X-LLMs-Txt and Link: rel="llms-help").
 //
-// Routes: www.sighthound.com/*, www.redactor.com/* (see wrangler.toml)
+// Routes: www.sighthound.com/*, www.redactor.com/*, docs.redactor.com/* (see wrangler.toml)
 
 import shLlms from './content/www.sighthound.com/llms.txt';
 import shLlmsFull from './content/www.sighthound.com/llms-full.txt';
@@ -16,6 +16,9 @@ import shRobots from './content/www.sighthound.com/robots.txt';
 import redLlms from './content/www.redactor.com/llms.txt';
 import redLlmsFull from './content/www.redactor.com/llms-full.txt';
 import redRobots from './content/www.redactor.com/robots.txt';
+import redDocsLlms from './content/docs.redactor.com/llms.txt';
+import redDocsLlmsFull from './content/docs.redactor.com/llms-full.txt';
+import redDocsRobots from './content/docs.redactor.com/robots.txt';
 
 const HOSTED_FILES = {
   'www.sighthound.com': {
@@ -27,6 +30,11 @@ const HOSTED_FILES = {
     '/llms.txt':      { body: redLlms,     contentType: 'text/markdown; charset=utf-8' },
     '/llms-full.txt': { body: redLlmsFull, contentType: 'text/markdown; charset=utf-8' },
     '/robots.txt':    { body: redRobots,   contentType: 'text/plain; charset=utf-8' },
+  },
+  'docs.redactor.com': {
+    '/llms.txt':      { body: redDocsLlms,     contentType: 'text/markdown; charset=utf-8' },
+    '/llms-full.txt': { body: redDocsLlmsFull, contentType: 'text/markdown; charset=utf-8' },
+    '/robots.txt':    { body: redDocsRobots,   contentType: 'text/plain; charset=utf-8' },
   },
 };
 

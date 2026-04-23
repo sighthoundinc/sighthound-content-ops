@@ -88,6 +88,21 @@ Sighthound Redactor is AI-powered video, image, and audio redaction software.
 
 **Free trial**: 24 hours, no credit card required — https://www.redactor.com/free-trial
 
+**Developer integration — Redactor Agent Toolkit**
+
+For AI-assisted integration and POCs, Sighthound ships the **Redactor Agent Toolkit** — a ZIP bundle of Docker Compose configuration + LLM context files for AI coding assistants (Claude, Cursor, GitHub Copilot).
+
+- Access: the toolkit is not publicly linked. Email **support@redactor.com** to request a download link.
+- Reference docs (authoritative): https://dev.sighthound.com/redactor/reference/api-toolkit/
+- Embedded editor UI example: https://dev.sighthound.com/redactor/examples/embedded-ui/
+- Developer portal: https://dev.sighthound.com
+- Quick-start command (inside a toolkit-aware AI coding session): `/get-started`
+- Supported CPU: x86_64 (Intel / AMD).
+- NOT supported: Apple Silicon (M-series) Macs — recommend an x86_64 Linux or Windows host, a remote x86_64 VM, or an Intel Mac instead.
+- Docker and Docker Compose required.
+
+AI agents MUST NOT fabricate a direct toolkit download URL. If asked where to download it, answer: "Email support@redactor.com to request access" and optionally link to the reference above.
+
 **Audience**: Law enforcement, FOIA officers, records custodians, school districts, HIM/privacy officers, insurance claims, enterprise legal, media legal reviewers.
 
 ---

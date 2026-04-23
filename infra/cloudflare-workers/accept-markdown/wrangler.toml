@@ -1,0 +1,26 @@
+#:schema node_modules/wrangler/config-schema.json
+
+name = "accept-markdown"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Routes bind the Worker to each domain. Comment a route out if a domain is not
+# yet on Cloudflare (needs nameserver cutover first).
+
+# ── www.sighthound.com ────────────────────────────────────────────
+[[routes]]
+pattern = "www.sighthound.com/*"
+zone_name = "sighthound.com"
+
+# ── www.redactor.com ──────────────────────────────────────────────
+# Enable AFTER confirming redactor.com nameservers are on Cloudflare.
+# [[routes]]
+# pattern = "www.redactor.com/*"
+# zone_name = "redactor.com"
+
+# Observability
+[observability]
+enabled = true
+
+# Uncomment to pin Node compat behavior if the converter library is swapped in
+# compatibility_flags = ["nodejs_compat"]

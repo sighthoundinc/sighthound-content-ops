@@ -1,0 +1,19 @@
+{
+  "name": "accept-markdown-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker implementing acceptmarkdown.com content negotiation for www.sighthound.com and www.redactor.com.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "check:sighthound": "curl -sI -H 'Accept: text/markdown' https://www.sighthound.com/blog/campus-vehicle-tracking-privacy-ethics",
+    "check:redactor": "curl -sI -H 'Accept: text/markdown' https://www.redactor.com/blog/ai-video-redaction-for-enterprises",
+    "probe:sighthound": "curl -sL -H 'Accept: text/markdown' https://www.sighthound.com/blog/campus-vehicle-tracking-privacy-ethics | head -60"
+  },
+  "devDependencies": {
+    "wrangler": "^3.100.0"
+  }
+}

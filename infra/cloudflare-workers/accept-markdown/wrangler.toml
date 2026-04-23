@@ -22,5 +22,12 @@ zone_name = "redactor.com"
 [observability]
 enabled = true
 
+# Import content files (llms.txt, llms-full.txt, robots.txt) as raw strings
+# so the Worker can serve them per hostname without external storage.
+[[rules]]
+type = "Text"
+globs = ["**/*.txt"]
+fallthrough = true
+
 # Uncomment to pin Node compat behavior if the converter library is swapped in
 # compatibility_flags = ["nodejs_compat"]

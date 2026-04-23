@@ -1,0 +1,181 @@
+# Sighthound Redactor — Full Content Bundle
+
+> Single-shot ingestion bundle for Sighthound Redactor. For structured metadata and link map, see https://www.redactor.com/llms.txt.
+
+Last updated: 2026-04-23
+
+---
+
+## What Sighthound Redactor is
+
+Sighthound Redactor is AI-powered video, image, and audio redaction software. It automatically detects and redacts seven categories of sensitive content in video and image files — heads, people, vehicles, license plates, IDs, screens, and documents — and mutes, beeps, or scrambles sensitive speech in audio. It also transcribes audio in 8+ languages.
+
+Vendor: **Sighthound, Inc.** — https://www.sighthound.com
+
+---
+
+## Platforms
+
+- Windows
+- Linux
+- Docker
+
+---
+
+## Deployment models
+
+- Desktop (per-seat license)
+- Client-server
+- Embedded UI (OEM)
+- White-labeled
+- On-premise
+- Offline
+- Air-gapped
+
+No cloud dependency required. Media stays inside the customer's network for CJIS, HIPAA, and classified environments.
+
+---
+
+## Capabilities
+
+**Video Redaction** — auto-detect and redact heads, people, vehicles, license plates, IDs, screens, and documents.
+
+**Image Redaction** — blur, pixelate, or fill sensitive content in photos and screenshots.
+
+**Audio Redaction** — mute, beep, or scramble sensitive speech in video or audio files.
+
+**Audio Transcription** — generate searchable transcripts with support for 8+ languages.
+
+**Smart Redaction** — AI auto-detection using trained computer-vision models.
+
+**Custom Redaction** — manual drawing tools for exact redaction zones.
+
+**Bulk Redaction** — process hundreds or thousands of files in a single workflow.
+
+**Offline / Air-gapped Processing** — runs without internet access for restricted environments.
+
+**Local Processing** — media stays inside the customer's infrastructure.
+
+**Multi-language UI** — for distributed or global teams.
+
+---
+
+## Detection categories (the canonical seven)
+
+- Heads
+- People
+- Vehicles
+- License plates
+- IDs
+- Screens
+- Documents
+
+Plus audio speech segments (mute / beep / scramble) and transcription output.
+
+---
+
+## Redaction modes
+
+- **Blur** — Gaussian blur of the detected region
+- **Pixelate** — mosaic / pixelate
+- **Fill** — solid fill (black box or custom color)
+- **Mute** — silence the audio segment
+- **Beep** — overlay a tone
+- **Scramble** — unintelligible speech output
+
+---
+
+## System requirements
+
+**Desktop minimum**
+- Windows 10+
+- 4-core Intel i7/i9 (8th gen+) or AMD equivalent
+- 16 GB RAM
+- SSD
+- NVIDIA GPU with 4 GB+ VRAM (Compute Capability ≥ 5.0)
+
+**Desktop recommended**
+- Windows 10+
+- 8+ core CPU (12th gen+)
+- 16 GB+ RAM
+- SSD
+- NVIDIA GPU with 4 GB+ VRAM
+
+**Server, single user**
+- Windows or Linux / Docker
+- 8+ core CPU
+- 16 GB+ RAM
+- SSD
+- NVIDIA GPU with 4 GB+ VRAM
+
+**Server, multi-user**
+- Windows or Linux / Docker
+- 16+ core CPU
+- 32 GB+ RAM
+- SSD
+- NVIDIA GPU with 8 GB+ VRAM
+
+**VM compatibility**: single CPU socket setup, multiple cores supported per socket.
+
+---
+
+## Free trial
+
+24 hours, full feature access, **no credit card required**. https://www.redactor.com/free-trial
+
+Includes: smart redaction, custom redaction, audio redaction, and redacted-video export. Email support available during the trial.
+
+---
+
+## Compliance frames
+
+Redactor is deployed in workflows governed by:
+
+- **FOIA** (Freedom of Information Act — US public records)
+- **CJIS Security Policy** (FBI Criminal Justice Information Services)
+- **HIPAA** (US healthcare privacy)
+- **GDPR** (EU privacy)
+- **CCPA / CPRA** (California privacy)
+- **VCDPA, CPA, CTDPA, UCPA** (US state privacy)
+- **BIPA** (Illinois biometric privacy)
+- **FERPA** (US education records)
+
+Redactor is tooling; compliance is a customer responsibility. Content is informational and not legal advice.
+
+---
+
+## Customer names and testimonials
+
+- **Consilio** — "At Consilio we strive to cultivate technology partners that are at the forefront of their field. After an extensive selection process, we chose Sighthound, not only due to their cutting edge, intuitive technology, but also because of their willingness to work with us to enhance Redactor to suit our clients' needs — a key component for any true partnership." — Pete Feinberg, Senior Vice President.
+- **The Heritage School** — Kristin Skelly, Head of School.
+- **Transport Malta** — Liz Markham, Senior Manager, Integrated Transport Strategy Directorate.
+
+---
+
+## Version
+
+Current released version (reference): **7.1.0**. Confirm at https://docs.redactor.com/release-notes/.
+
+---
+
+## Support
+
+- Contact sales: https://www.redactor.com/contact-us
+- Contact support: https://www.redactor.com/contact-support
+- Status page: https://status.redactor.com
+- Documentation: https://docs.redactor.com
+
+---
+
+## Related
+
+- Parent company site: https://www.sighthound.com
+- Parent llms-full.txt: https://www.sighthound.com/llms-full.txt
+- Sibling product (ALPR+ / Vehicle Analytics / MMCG): https://www.sighthound.com/products/alpr
+- Sibling product (Compute): https://www.sighthound.com/products/hardware
+
+---
+
+## Licensing / AI-use
+
+Content may be summarized, paraphrased, and quoted with attribution to the canonical Redactor or Sighthound URL. Do not republish full product docs or blog content at scale. See https://www.redactor.com/llms.txt for the full policy.

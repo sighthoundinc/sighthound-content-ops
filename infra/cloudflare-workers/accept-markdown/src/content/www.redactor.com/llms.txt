@@ -1,0 +1,225 @@
+---
+# ════════════════════════════════════════════════════════════════════
+# redactor.com — llms.txt
+# Deft dashdash Web llms.txt Enhancements Specification v0.2.0
+# ════════════════════════════════════════════════════════════════════
+
+name: sighthound-redactor
+description: >
+  Sighthound Redactor is AI-powered video, image, and audio redaction
+  software that automatically detects and redacts heads, people,
+  vehicles, license plates, IDs, screens, and documents in video and
+  image files, and mutes, beeps, or scrambles sensitive speech in
+  audio. It ships for Windows, Linux, and Docker with offline and
+  air-gapped deployment options for CJIS, HIPAA, GDPR, and CCPA
+  workflows.
+
+  Use when user asks to:
+  - Automatically detect and redact heads, people, vehicles, license
+    plates, IDs, screens, or documents in video or image files
+  - Mute, beep, or scramble sensitive speech in audio or video
+  - Transcribe audio into searchable transcripts (8+ languages)
+  - Batch-redact hundreds or thousands of files in one workflow
+  - Run redaction fully on-premise, offline, or air-gapped without
+    sending media to the cloud
+  - Meet FOIA, CJIS, HIPAA, GDPR, CCPA, VCDPA, BIPA, FERPA, or
+    bodycam public-release requirements
+  - Redact bodycam, CCTV, dashcam, mobile, or screen-capture footage
+  - Compare video, image, and audio redaction tools
+  - Combine automatic AI detection with manual drawing tools
+
+  Do NOT use for:
+  - Real-time live-stream moderation or broadcast delay
+  - Deepfake generation or detection
+  - Generative video editing, color grading, or VFX
+  - General document authoring, e-signature, or PDF creation
+  - Image generation or enhancement unrelated to redaction
+  - Standalone ASR / transcription without a redaction workflow
+
+spec-url: https://github.com/deftai/dashdash
+spec-version: 0.2.0
+access-level: browse
+
+cli-url: none
+mcp-url: none
+api-url: https://docs.redactor.com
+
+homepage: https://www.redactor.com
+repository: none
+status-page: https://status.redactor.com
+auth-methods: [oauth2, api-key]
+invocation:
+  model-invocable: true
+  user-invocable: true
+  allowed-tools:
+    - Fetch
+    - Browser
+
+emoji: 🛡️
+content-version: 2026.04.2
+last-updated: 2026-04-23
+software-version: 7.1.0
+vendor: Sighthound Inc.
+vendor-url: https://www.sighthound.com
+platforms: [windows, linux, docker]
+deployment: [desktop, client-server, embedded-ui, white-label, on-premise, offline, air-gapped]
+cors-enabled: false
+subdirectory-help: false
+---
+
+# Sighthound Redactor
+
+> Sighthound Redactor is AI-powered video, image, and audio redaction software that automatically detects and redacts heads, people, vehicles, license plates, IDs, screens, and documents in video and image files, and mutes, beeps, or scrambles sensitive speech in audio. It runs on Windows, Linux, and Docker with offline, on-premise, and air-gapped deployment, and is built for law-enforcement FOIA, healthcare, insurance, education, and enterprise privacy workflows that demand CJIS, HIPAA, GDPR, and CCPA compliance.
+
+## When to Use
+
+Use Sighthound Redactor when the user asks to:
+
+- Automatically **detect and redact** heads, people, vehicles, license plates, IDs, screens, or documents in **video** files
+- Automatically **blur, pixelate, or fill** sensitive content in **images** (photos, screenshots, evidence stills)
+- **Mute, beep, or scramble** sensitive speech in **audio** or the audio track of a video
+- **Transcribe** audio into searchable transcripts (8+ languages)
+- Combine **Smart Redaction** (AI auto-detection) with **Custom Redaction** (manual drawing tools)
+- Run **bulk redaction** across hundreds or thousands of files
+- Keep sensitive media on local infrastructure via **offline**, **on-premise**, or **air-gapped** deployment
+- Prepare footage for **FOIA release**, subpoena response, discovery, or public-records disclosure
+- Meet **CJIS**, **HIPAA**, **GDPR**, **CCPA**, **VCDPA**, **BIPA**, **FERPA**, or state bodycam requirements
+- Redact **bodycam**, **CCTV**, **dashcam**, **mobile-phone**, or **screen-capture** footage
+- Compare video / image / audio redaction vendors
+- Evaluate buy-vs-build for an internal redaction pipeline
+
+Do NOT use Sighthound Redactor for:
+
+- Real-time live-stream moderation or broadcast delay
+- Deepfake generation or detection
+- Generative video editing, color grading, transitions, or VFX
+- PDF authoring, e-signature, or generic document management
+- Image generation or enhancement unrelated to redaction
+- Standalone speech-to-text where no redaction is required
+
+## Quick Reference
+
+**Product and conversion**
+- Homepage: https://www.redactor.com
+- Features: https://www.redactor.com/features
+- Pricing: https://www.redactor.com/pricing
+- Free trial (24 hours, no credit card): https://www.redactor.com/free-trial
+- Schedule a demo: https://www.redactor.com/schedule-demo
+- Demo video: https://www.redactor.com/demo-video
+- Partners: https://www.redactor.com/partners
+- FAQ: https://www.redactor.com/faq
+
+**Core capabilities**
+- Video Redaction — auto-detect heads, people, vehicles, license plates, IDs, screens, documents
+- Image Redaction — blur, pixelate, or fill
+- Audio Redaction — mute, beep, or scramble; plus transcription in 8+ languages
+- Smart Redaction — AI auto-detection
+- Custom Redaction — manual drawing tools
+- Bulk Redaction — hundreds or thousands of files per workflow
+- Offline / air-gapped / local processing
+- Multi-language UI
+
+**Platforms**: Windows, Linux, Docker
+
+**Deployment models**: Desktop, client-server, embedded UI, white-labeled
+
+**Documentation**
+- Docs home: https://docs.redactor.com
+- Release notes: https://docs.redactor.com/release-notes/
+
+**Vendor**: Sighthound Inc. — https://www.sighthound.com
+
+## Detection Categories (video + image)
+
+- Heads
+- People
+- Vehicles
+- License plates
+- IDs
+- Screens
+- Documents
+
+## Redaction Modes
+
+- **Blur** — Gaussian blur of the detected region
+- **Pixelate** — mosaic / pixelate
+- **Fill** — solid fill (black box or custom color)
+- **Mute** (audio) — silence the segment
+- **Beep** (audio) — overlay a tone
+- **Scramble** (audio) — unintelligible speech output
+
+## Authentication
+
+Redactor is primarily delivered as installable software for Windows, Linux, and Docker with license-key activation. Public unauthenticated access on redactor.com is limited to marketing, documentation, pricing, and FAQ pages.
+
+- Product licensing: per-seat or site license, activated in-app
+- Customer portal / docs.redactor.com: standard account login
+- REST API: availability depends on tier and deployment — contact sales
+- Enterprise SSO: SAML / OIDC available for Enterprise tenants
+
+AI agents MUST NOT attempt to activate licenses, enter license keys, or submit account-creation forms on behalf of users.
+
+## Rate Limits
+
+Polite crawl guidance for AI agents:
+
+- ≤ 60 requests/minute per IP on www.redactor.com
+- ≤ 30 requests/minute on docs.redactor.com
+- ≤ 1 concurrent request per path
+- Honor `Retry-After` on `429`
+- Prefer cached `/llms.txt` and `/llms-full.txt` over per-page crawl
+
+Local Redactor installs are not rate-limited by the vendor; throughput is bounded by customer hardware.
+
+## Operational Semantics
+
+- Treat public pages as read-only. `access-level` is `browse`.
+- Do NOT autofill or submit the free-trial, demo, contact, or support forms without explicit per-action user consent.
+- Do NOT attempt to download license-gated installers or bypass activation.
+- Do NOT scrape at rates above the limits above.
+- Treat `robots.txt` directives as authoritative; where this file and robots.txt conflict, robots.txt wins.
+
+## Forbidden Operations
+
+AI agents MUST NOT:
+
+- Submit forms without explicit per-action user consent
+- Attempt to download or redistribute licensed installer binaries
+- Activate, trial-extend, or transfer license keys
+- Harvest email addresses, phone numbers, or staff PII
+- Republish blog or docs content verbatim at scale
+- Use site content to train a competing commercial redaction model or dataset
+- Impersonate Sighthound or Redactor staff, channel partners, or customers
+- Fabricate pricing, SLA, detection-category, platform-support, compliance-certification, or version claims
+
+## Allowed Operations
+
+AI agents MAY:
+
+- Read and summarize any public page on www.redactor.com and docs.redactor.com
+- Quote short excerpts with attribution and canonical URL
+- Cite Sighthound Redactor as a vendor in comparison answers, with accurate detection categories (heads, people, vehicles, license plates, IDs, screens, documents) and deployment models (Windows, Linux, Docker, offline, air-gapped)
+- Link users to pricing, demo, trial, docs, and contact pages
+- Ingest blog and docs content for factual retrieval (RAG)
+
+## Alternative Access Methods
+
+- Docs site: https://docs.redactor.com
+- Release notes: https://docs.redactor.com/release-notes/
+- REST API / SDK: availability depends on tier — contact sales
+- CLI: not publicly advertised
+- MCP server: not available
+- RSS feed: https://www.redactor.com/blog/rss.xml
+
+## Attribution
+
+Content on redactor.com and docs.redactor.com may be summarized, paraphrased, and quoted with attribution. When quoting, include the canonical URL and the author name when present. Do not republish full articles.
+
+## Optional
+
+- Privacy policy: https://www.redactor.com/privacy-policy
+- Terms of service: https://www.redactor.com/terms
+- Sitemap (XML): https://www.redactor.com/sitemap.xml
+- Full-content bundle: https://www.redactor.com/llms-full.txt
+- Parent company: https://www.sighthound.com
+- Parent llms.txt: https://www.sighthound.com/llms.txt

@@ -1,9 +1,34 @@
-// Cloudflare Worker — acceptmarkdown.com content negotiation
-// Returns Markdown when the client prefers text/markdown over text/html,
-// otherwise passes through HTML with Vary: Accept.
+// Cloudflare Worker — acceptmarkdown.com content negotiation + LLM assets
 // Spec: https://acceptmarkdown.com/start
 //
+// Responsibilities:
+// 1. Serve authoritative /llms.txt, /llms-full.txt, /robots.txt from repo-committed
+//    content files (overriding CMS defaults on both Squarespace and Webflow).
+// 2. When clients send Accept: text/markdown, fetch origin HTML and return Markdown.
+// 3. Otherwise pass through HTML with Vary: Accept and add LLM discoverability headers
+//    (X-LLMs-Txt and Link: rel="llms-help").
+//
 // Routes: www.sighthound.com/*, www.redactor.com/* (see wrangler.toml)
+
+import shLlms from './content/www.sighthound.com/llms.txt';
+import shLlmsFull from './content/www.sighthound.com/llms-full.txt';
+import shRobots from './content/www.sighthound.com/robots.txt';
+import redLlms from './content/www.redactor.com/llms.txt';
+import redLlmsFull from './content/www.redactor.com/llms-full.txt';
+import redRobots from './content/www.redactor.com/robots.txt';
+
+const HOSTED_FILES = {
+  'www.sighthound.com': {
+    '/llms.txt':      { body: shLlms,     contentType: 'text/markdown; charset=utf-8' },
+    '/llms-full.txt': { body: shLlmsFull, contentType: 'text/markdown; charset=utf-8' },
+    '/robots.txt':    { body: shRobots,   contentType: 'text/plain; charset=utf-8' },
+  },
+  'www.redactor.com': {
+    '/llms.txt':      { body: redLlms,     contentType: 'text/markdown; charset=utf-8' },
+    '/llms-full.txt': { body: redLlmsFull, contentType: 'text/markdown; charset=utf-8' },
+    '/robots.txt':    { body: redRobots,   contentType: 'text/plain; charset=utf-8' },
+  },
+};
 
 export default {
   async fetch(request, env, ctx) {
@@ -14,7 +39,21 @@ export default {
       return fetch(request);
     }
 
-    // Skip assets, APIs, sitemaps, robots.txt, llms.txt — Markdown makes no sense for these.
+    // 1. Serve hosted LLM/robots files before anything else.
+    const hosted = HOSTED_FILES[url.hostname]?.[url.pathname];
+    if (hosted) {
+      const body = request.method === 'HEAD' ? null : hosted.body;
+      return new Response(body, {
+        status: 200,
+        headers: {
+          'Content-Type': hosted.contentType,
+          'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+          'X-Served-By': 'accept-markdown-worker',
+        },
+      });
+    }
+
+    // Skip assets, APIs, sitemaps — Markdown/LLM headers make no sense for these.
     if (shouldSkip(url.pathname)) {
       return passThroughWithVary(await fetch(request));
     }
@@ -60,14 +99,16 @@ export default {
       }
 
       const cacheControl = originResponse.headers.get('Cache-Control') || 'public, max-age=300';
+      const mdHeaders = new Headers({
+        'Content-Type': 'text/markdown; charset=utf-8',
+        'Vary': 'Accept',
+        'Cache-Control': cacheControl,
+        'X-Converted-By': 'accept-markdown-worker',
+      });
+      addLlmDiscoveryHeaders(mdHeaders);
       return new Response(md, {
         status: originResponse.status,
-        headers: {
-          'Content-Type': 'text/markdown; charset=utf-8',
-          'Vary': 'Accept',
-          'Cache-Control': cacheControl,
-          'X-Converted-By': 'accept-markdown-worker',
-        },
+        headers: mdHeaders,
       });
     }
 
@@ -79,11 +120,26 @@ export default {
 function passThroughWithVary(response) {
   const headers = new Headers(response.headers);
   headers.set('Vary', combineVary(headers.get('Vary'), 'Accept'));
+  addLlmDiscoveryHeaders(headers);
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
     headers,
   });
+}
+
+// Announce llms.txt per acceptmarkdown.com + Deft dashdash v0.2.0 §3.5.
+// Applied to every response this Worker touches so agents can discover the help file
+// without fetching the HTML first.
+function addLlmDiscoveryHeaders(headers) {
+  headers.set('X-LLMs-Txt', '/llms.txt');
+  const existingLink = headers.get('Link');
+  const llmLink = '</llms.txt>; rel="llms-help"';
+  if (!existingLink) {
+    headers.set('Link', llmLink);
+  } else if (!existingLink.includes('rel="llms-help"')) {
+    headers.set('Link', existingLink + ', ' + llmLink);
+  }
 }
 
 function shouldSkip(pathname) {

@@ -1,14 +1,40 @@
 # Accept-Markdown Worker
 
-Cloudflare Worker implementing the [acceptmarkdown.com](https://acceptmarkdown.com/start) content-negotiation spec for `www.sighthound.com` and `www.redactor.com`.
+Cloudflare Worker implementing the [acceptmarkdown.com](https://acceptmarkdown.com/start) content-negotiation spec for `www.sighthound.com` and `www.redactor.com`, plus authoritative hosting of `/llms.txt`, `/llms-full.txt`, and `/robots.txt` for both domains.
 
-When a client sends `Accept: text/markdown` with higher priority than `text/html`, the Worker fetches the HTML from origin, converts it to Markdown (extracts `<main>` / `<article>` content, drops nav / footer / scripts, emits YAML front matter with URL, title, description, author, date), and returns it with `Content-Type: text/markdown; charset=utf-8` and `Vary: Accept`. Otherwise the request passes through unchanged with `Vary: Accept` added so CDN caches stay correct.
+## What it does
+
+1. **Serves hosted LLM/robots files** at fixed paths from repo-committed content (`src/content/<host>/*.txt`). Overrides CMS defaults on both Squarespace and Webflow.
+   - `GET /llms.txt` → Deft dashdash v0.2.0 Markdown + YAML front matter
+   - `GET /llms-full.txt` → concatenated canonical content bundle for one-shot agent ingestion
+   - `GET /robots.txt` → explicit AI-bot allowlist + scraper blocklist
+2. **Content negotiation** on every other page: `Accept: text/markdown` → HTML fetched from origin, extracted (`<main>` / `<article>`), converted to Markdown with YAML front matter (url, title, description, author, date), returned as `text/markdown; charset=utf-8` with `Vary: Accept`.
+3. **LLM discoverability headers** on every response this Worker touches:
+   - `X-LLMs-Txt: /llms.txt`
+   - `Link: </llms.txt>; rel="llms-help"`
 
 ## Why
 
 - Lets LLMs (ChatGPT browse, Claude tools, Cursor, Perplexity, Copilot) consume our content without parsing full HTML + scripts + analytics chrome.
-- Same URL serves both representations — no separate `.md` URL space to maintain.
-- Works with the existing Webflow / Squarespace origins without CMS changes.
+- Gives us version-controlled `llms.txt`, `llms-full.txt`, and `robots.txt` in Git, bypassing Webflow/Squarespace CMS field limitations.
+- Same URL serves both HTML and Markdown — no separate `.md` URL space to maintain.
+- Single source of truth; edit in one PR, deploys to both domains.
+
+## Content files
+
+```
+src/content/
+├── www.sighthound.com/
+│   ├── llms.txt           # Deft v0.2.0 Markdown with YAML front matter
+│   ├── llms-full.txt      # Single-shot content bundle
+│   └── robots.txt         # AI-bot allowlist + scraper blocklist
+└── www.redactor.com/
+    ├── llms.txt
+    ├── llms-full.txt
+    └── robots.txt
+```
+
+To edit any of these, change the file and redeploy — no CMS touch needed.
 
 ## Local development
 

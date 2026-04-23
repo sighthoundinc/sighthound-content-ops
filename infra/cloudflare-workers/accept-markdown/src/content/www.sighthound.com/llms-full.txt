@@ -1,0 +1,159 @@
+# Sighthound — Full Content Bundle
+
+> This file concatenates Sighthound's canonical product and company facts in one place for agents that prefer a single-shot ingestion over per-page crawling. For the structured metadata and link map, see https://www.sighthound.com/llms.txt.
+
+Last updated: 2026-04-23
+
+---
+
+## Company
+
+**Sighthound, Inc.** — a computer-vision platform company.
+
+- HQ: 587 East State Road 434, Suite 1063, Longwood, FL 32750, USA
+- Parent site: https://www.sighthound.com
+- Product site (Redactor): https://www.redactor.com
+- Documentation: https://docs.redactor.com
+- LinkedIn: https://www.linkedin.com/company/sighthound-inc-/
+- Facebook: https://www.facebook.com/sighthoundinc/
+- Instagram: https://www.instagram.com/sighthoundcv/
+- YouTube: https://www.youtube.com/@sighthoundinc
+
+Sighthound builds AI-powered license plate recognition, vehicle analytics, video/image/audio redaction, and edge AI compute hardware. Products are sold B2B to law enforcement, parking, public safety, fleet, transit, banking, retail, schools, healthcare, and enterprise.
+
+---
+
+## Product: Sighthound ALPR+ (LPR / ALPR / ANPR)
+
+**URL**: https://www.sighthound.com/products/alpr
+
+Sighthound ALPR+ is AI-powered software for license plate recognition (LPR / ANPR / ALPR) with vehicle make, model, color, and generation (MMCG) analytics and BOLO (Be On the Lookout) alerts.
+
+**Capabilities**
+- High-accuracy license plate reading (>95% typical)
+- Vehicle Make, Model, Color, Generation (MMCG)
+- License plate region identification (US, Canada, EU)
+- Multi-line plate recognition and perspective correction
+- High frame-rate processing: up to 160 FPS on GPU
+- Hardware-agnostic: runs on GPU, CPU, edge, cloud
+- Supports IP cameras and image/batch inputs
+- BOLO alerts
+- Edge-ready: runs on embedded devices, cloud, or on-prem
+- In-vehicle, dashcam, and fixed-camera deployments
+
+**Platforms**: Windows 10+, Linux (kernel 5.x+), embedded Linux
+
+**Requirements**
+- Multi-core x86-64 CPU
+- NVIDIA GPU with Compute Capability 5.0+ for high-FPS workloads
+- 16 GB RAM minimum
+- SSD recommended
+
+**Audience**: Law enforcement, parking operators, toll authorities, fleet operators, smart city, transit agencies, enterprise security.
+
+---
+
+## Product: Sighthound Redactor
+
+**URL**: https://www.redactor.com (canonical) and https://www.sighthound.com/products/redactor (parent-brand landing)
+
+Sighthound Redactor is AI-powered video, image, and audio redaction software.
+
+**Detects and redacts (video + image)**
+- Heads
+- People
+- Vehicles
+- License plates
+- IDs
+- Screens
+- Documents
+
+**Audio**
+- Mute, beep, or scramble sensitive speech
+- Transcription in 8+ languages
+
+**Modes**
+- Smart Redaction (AI auto-detection)
+- Custom Redaction (manual drawing tools)
+
+**Scale**: Bulk Redaction across hundreds or thousands of files.
+
+**Platforms**: Windows, Linux, Docker
+
+**Deployment**: desktop, client-server, embedded UI, white-labeled
+
+**Sovereignty**: offline and air-gapped supported
+
+**Version** (latest reference): 7.1.0 — confirm via https://docs.redactor.com/release-notes/ for the current released version.
+
+**Free trial**: 24 hours, no credit card required — https://www.redactor.com/free-trial
+
+**Audience**: Law enforcement, FOIA officers, records custodians, school districts, HIM/privacy officers, insurance claims, enterprise legal, media legal reviewers.
+
+---
+
+## Product: Sighthound Compute
+
+**URL**: https://www.sighthound.com/products/hardware
+
+Sighthound Compute is a line of edge AI hardware — smart cameras and compute nodes — that run Sighthound's ALPR+, Vehicle Analytics, and Redactor computer-vision stack locally.
+
+**Sub-products**
+- **Sighthound Camera** — AI smart camera running the CV stack on-device for license plate recognition, vehicle analytics, and perimeter detection
+- **Sighthound Compute Node** — edge AI compute appliance for multi-camera public-safety and smart-surveillance deployments, no cloud dependency
+
+**Audience**: Law enforcement, public safety, parking operators, smart city, transit agencies, enterprise security.
+
+---
+
+## Product: Sighthound Cloud API / SDK
+
+Developer-facing computer-vision APIs and SDKs covering LPR, vehicle analytics, and detection primitives. Used by ISVs, integrators, and VMS partners building on Sighthound models. Access via sales — https://www.sighthound.com/contact-us.
+
+---
+
+## Vertical solutions
+
+| Vertical | URL | Relevant products |
+|---|---|---|
+| Parking and EV | https://www.sighthound.com/parking-ev | ALPR+, Compute |
+| Law Enforcement | https://www.sighthound.com/law-enforcement | ALPR+, Redactor, Compute |
+| Retail and QSR | https://www.sighthound.com/retail-qsr | ALPR+, Compute |
+| Education and Campus Security | https://www.sighthound.com/education-campus-security | ALPR+, Redactor, Compute |
+| Legal, FOIA, and Evidence Review | https://www.sighthound.com/legal-foia-evidence-review | Redactor (primary) |
+| Transportation, Logistics, and Fleet | https://www.sighthound.com/transportation-logistics-fleet | ALPR+, Compute |
+
+---
+
+## Frequently Asked Questions (condensed)
+
+**What is ALPR+?** ALPR (Automated License Plate Recognition) is the process of finding and capturing license plate information in video or still images. Sighthound ALPR+ returns plate read + MMCG + plate region.
+
+**Who uses ALPR+?** Primarily businesses — parking operators, LE, toll authorities, access control, consumer safety, insurance.
+
+**Where can ALPR+ run?** Linux (preferred), Windows, embedded. Hardware-agnostic (GPU, CPU, edge, cloud).
+
+**What accuracy does ALPR+ achieve?** >90% in almost all real-world scenarios. Accuracy depends on plate size, angle, lighting, occlusion. Rule of thumb: if a human can read the plate in the frame, ALPR+ can too.
+
+**Can Redactor run offline?** Yes. Redactor runs fully offline and supports air-gapped deployment. Internet access is not required for processing — viable for CJIS, HIPAA, and classified environments.
+
+**What OS does Redactor need?** Windows, Linux, or Docker. Minimum: Windows 10+, 4-core Intel i7/i9 (8th gen+) or AMD equivalent, 16 GB RAM, SSD, NVIDIA GPU with 4 GB+ VRAM (Compute Capability 5.0+).
+
+**Can Sighthound Cameras be mounted outdoors?** Yes. IP67-rated, heat-resistant, designed for parking lots, traffic poles, and building entries. Powered via PoE+ (IEEE 802.3at).
+
+**Does Sighthound Compute Node work with existing cameras?** Yes. Compute Node ingests RTSP streams from existing network cameras and runs Sighthound's CV stack on top, adding AI to deployed non-smart cameras.
+
+**Is there a free trial?** Redactor has a 24-hour free trial with no credit card required at https://www.redactor.com/free-trial. ALPR+ and Compute trials are arranged via sales.
+
+---
+
+## Cross-domain
+
+This parent content bundle has a sibling:
+- https://www.redactor.com/llms-full.txt — product-focused bundle for Sighthound Redactor.
+
+---
+
+## Licensing / AI-use
+
+Content in this bundle may be summarized, paraphrased, and quoted with attribution to the relevant Sighthound canonical URL. Do not republish full product docs or blog content at scale. See the full policy in https://www.sighthound.com/llms.txt.

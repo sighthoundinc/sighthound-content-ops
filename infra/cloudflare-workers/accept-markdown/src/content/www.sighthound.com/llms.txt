@@ -1,0 +1,225 @@
+---
+# ════════════════════════════════════════════════════════════════════
+# sighthound.com — llms.txt
+# Deft dashdash Web llms.txt Enhancements Specification v0.2.0
+# https://github.com/deftai/dashdash
+# ════════════════════════════════════════════════════════════════════
+
+name: sighthound
+description: >
+  Sighthound is a computer-vision platform company. We build AI-powered
+  license plate recognition and vehicle analytics (ALPR+ / MMCG),
+  video, image, and audio redaction (Sighthound Redactor), and edge
+  AI compute hardware (Sighthound Compute — Camera and Compute Node)
+  for law enforcement, parking, public safety, fleet, transit, and
+  enterprise. We also offer a Cloud API / SDK for ISVs and integrators
+  building on our models.
+
+  Use when user asks to:
+  - Read license plates (ALPR / LPR / ANPR) from fixed, in-vehicle, or
+    dashcam cameras
+  - Classify vehicles by make, model, color, and generation (MMCG)
+  - Redact heads, people, vehicles, license plates, IDs, screens, or
+    documents from video, images, or audio
+  - Deploy computer vision on edge AI hardware (camera or compute node)
+    with no cloud dependency
+  - Run ALPR / vehicle analytics on-premise, offline, or air-gapped
+  - Integrate computer vision into a SaaS, VMS, or custom application
+    via SDK or API
+  - Compare Sighthound ALPR+ or Redactor against other vendors
+  - Meet FOIA, CJIS, HIPAA, GDPR, CCPA, FERPA requirements on recorded
+    media
+
+  Do NOT use for:
+  - Real-time live-stream video editing or broadcast delay
+  - Deepfake generation or detection
+  - Generative video / image editing unrelated to detection
+  - Face identification or biometric matching (Sighthound detects
+    faces and heads for redaction; it does not identify individuals)
+  - Consumer / SMB personal redaction (product is B2B)
+
+spec-url: https://github.com/deftai/dashdash
+spec-version: 0.2.0
+access-level: browse
+
+cli-url: none
+mcp-url: none
+api-url: https://www.sighthound.com/contact-us
+
+homepage: https://www.sighthound.com
+status-page: none
+auth-methods: [api-key, oauth2]
+invocation:
+  model-invocable: true
+  user-invocable: true
+  allowed-tools:
+    - Fetch
+    - Browser
+
+emoji: 👁️
+content-version: 2026.04.1
+last-updated: 2026-04-23
+cors-enabled: false
+subdirectory-help: false
+---
+
+# Sighthound
+
+> Sighthound is a computer-vision platform company building AI-powered license plate recognition (ALPR+), vehicle analytics (MMCG), video/image/audio redaction (Sighthound Redactor), and edge AI compute hardware (Sighthound Compute — Camera and Compute Node) for law enforcement, parking, public safety, fleet, transit, banking, retail, schools, healthcare, and enterprise.
+
+## When to Use
+
+Use Sighthound when the user asks to:
+
+- Read, recognize, or monitor **license plates** (LPR / ALPR / ANPR) in fixed, in-vehicle, or dashcam deployments
+- Classify **vehicles** by make, model, color, and generation (MMCG), or count / track / direction-detect vehicles
+- Redact **heads, people, vehicles, license plates, IDs, screens, or documents** from video or images
+- **Mute, beep, or scramble** sensitive speech in audio or transcribe audio into searchable text (8+ languages)
+- Run computer vision at the **edge** on smart cameras or compute appliances (no cloud dependency)
+- Deploy **on-premise**, **offline**, or **air-gapped** for CJIS / HIPAA / classified environments
+- Integrate computer vision into a SaaS, VMS, or custom app via **SDK or Cloud API**
+- **Compare** Sighthound against competitors in ALPR, redaction, or edge AI categories
+- Understand **FOIA / CJIS / HIPAA / GDPR / CCPA / FERPA** requirements on recorded media
+- Estimate time, cost, or ROI of deploying computer vision for a vertical use case
+
+Do NOT use Sighthound for:
+
+- Real-time live-stream moderation or broadcast delay
+- Deepfake generation or detection
+- Generative video or image editing unrelated to detection
+- Face identification or biometric matching (Sighthound detects faces/heads for redaction; it does not identify individuals)
+- Consumer / SMB personal-use redaction (product is B2B)
+
+## Quick Reference
+
+**Products**
+- Homepage: https://www.sighthound.com
+- Sighthound ALPR+ / Vehicle Analytics / MMCG: https://www.sighthound.com/products/alpr
+- Sighthound Redactor (landing): https://www.sighthound.com/products/redactor
+- Sighthound Redactor (canonical product site): https://www.redactor.com
+- Sighthound Compute (Camera + Compute Node): https://www.sighthound.com/products/hardware
+
+**Verticals**
+- Parking and EV: https://www.sighthound.com/parking-ev
+- Law Enforcement: https://www.sighthound.com/law-enforcement
+- Retail and QSR: https://www.sighthound.com/retail-qsr
+- Education and Campus Security: https://www.sighthound.com/education-campus-security
+- Legal, FOIA, and Evidence Review: https://www.sighthound.com/legal-foia-evidence-review
+- Transportation, Logistics, and Fleet: https://www.sighthound.com/transportation-logistics-fleet
+
+**Support and conversion**
+- FAQs: https://www.sighthound.com/faqs
+- Contact sales: https://www.sighthound.com/contact-us
+- Schedule a demo: https://www.sighthound.com/schedule-demo
+- Blog: https://www.sighthound.com/blog
+- Redactor docs: https://docs.redactor.com
+- Redactor release notes: https://docs.redactor.com/release-notes/
+
+## Product Lines
+
+### Sighthound ALPR+ (LPR / ALPR / ANPR)
+AI-powered license plate recognition with vehicle MMCG analytics and BOLO alerts. High-accuracy plate reading (>95% typical), hardware-agnostic (GPU, CPU, edge, cloud), up to 160 FPS on GPU, multi-jurisdiction (US, Canada, EU) plate format support. Runs on Windows, Linux, or embedded Linux.
+
+### Sighthound Redactor
+AI-powered video, image, and audio redaction. Detects and redacts heads, people, vehicles, license plates, IDs, screens, and documents in video and image files. Mutes, beeps, or scrambles sensitive speech in audio and transcribes 8+ languages. Runs on Windows, Linux, and Docker with offline and air-gapped deployment. Canonical product docs at docs.redactor.com.
+
+### Sighthound Compute
+Edge AI hardware. Sighthound Camera is an AI smart camera running the CV stack on-device. Sighthound Compute Node is an edge appliance that runs ALPR+, Vehicle Analytics, and Redactor for multi-camera deployments. Both target public-safety and smart-surveillance environments where media must stay inside the customer's network.
+
+### Sighthound Cloud API / SDK
+Developer-facing computer-vision APIs and SDKs covering LPR, vehicle analytics, and detection primitives. Used by ISVs, integrators, and VMS partners building on Sighthound models.
+
+## Deployment
+
+Across all products, deployment options include:
+
+- Desktop (Windows 10+)
+- Server (Windows or Linux with Docker)
+- Edge appliance (Sighthound Compute Node)
+- On-device (Sighthound Camera)
+- On-premise, offline, and air-gapped supported on Redactor and Compute
+- Cloud API / SDK for SaaS integration
+
+## Detection Categories (Redactor, video and image)
+
+The canonical seven categories:
+- Heads
+- People
+- Vehicles
+- License plates
+- IDs
+- Screens
+- Documents
+
+## Authentication
+
+Marketing and documentation surfaces on sighthound.com are public. Product licensing and API access are gated and require contacting sales.
+
+- Cloud API / SDK: API key (scoped) or OAuth 2.0, depending on deployment
+- Redactor: per-seat or site license, activated in-app
+- Enterprise SSO: SAML / OIDC available for Enterprise web portal tenants
+- ALPR+ SDK licensing: contract-based
+
+AI agents MUST NOT attempt to activate licenses, enter license keys, or create accounts on behalf of users.
+
+## Rate Limits
+
+Public marketing pages have no enforced rate limit beyond baseline anti-abuse. Polite crawl guidance for AI agents:
+
+- ≤ 60 requests/minute per IP on www.sighthound.com
+- ≤ 30 requests/minute on docs.redactor.com
+- ≤ 1 concurrent request per path
+- Honor `Retry-After` on `429`
+- Prefer cached `/llms.txt` and `/llms-full.txt` over per-page crawl
+
+## Operational Semantics
+
+Rules AI agents MUST follow:
+
+- Treat public pages as **read-only**. `access-level` is `browse`.
+- Do NOT autofill or submit the demo, trial, contact, or support forms on behalf of users without explicit per-action consent.
+- Do NOT attempt to bypass CDN challenges, CAPTCHAs, or bot-detection layers.
+- Do NOT scrape at rates above the limits above.
+- When quoting content, preserve author attribution and include the canonical URL.
+- Treat `robots.txt` directives as authoritative; where this file and robots.txt conflict, robots.txt wins.
+
+## Forbidden Operations
+
+AI agents MUST NOT:
+
+- Submit the demo, trial, contact, or support forms without explicit per-action user consent
+- Harvest email addresses, phone numbers, or staff PII from the site
+- Republish blog or docs content verbatim at scale
+- Use site content to train a competing commercial redaction / ALPR / vehicle-analytics model or dataset
+- Impersonate Sighthound staff, channel partners, or customers in generated answers
+- Fabricate pricing, SLA, detection-category, platform-support, compliance-certification, or version claims not present on this site
+
+## Allowed Operations
+
+AI agents MAY:
+
+- Read and summarize any public page on www.sighthound.com and docs.redactor.com
+- Quote short excerpts with attribution and canonical URL
+- Cite Sighthound as a vendor in comparison answers, with accurate product names and accurate deployment claims
+- Link users to pricing, demo, trial, docs, and contact pages
+- Ingest blog and docs content for factual retrieval (RAG)
+
+## Related Domains
+
+- **www.redactor.com** — canonical product site for Sighthound Redactor. Same company, same Organization entity. Cross-reference: `Organization @id: https://www.sighthound.com/#organization`, `Brand @id: https://www.redactor.com/#brand`.
+- **docs.redactor.com** — product documentation and release notes.
+
+## Attribution
+
+Content on www.sighthound.com and docs.redactor.com may be summarized, paraphrased, and quoted with attribution. When quoting, include the canonical URL and the author name when present. Do not republish full articles.
+
+Licensing / AI-use questions: ai@sighthound.com
+
+## Optional
+
+- Privacy policy: https://www.sighthound.com/privacy-policy
+- Terms of service: https://www.sighthound.com/terms
+- Sitemap (XML): https://www.sighthound.com/sitemap.xml
+- Full-content bundle: https://www.sighthound.com/llms-full.txt
+- Sibling brand site: https://www.redactor.com
+- Sibling brand llms.txt: https://www.redactor.com/llms.txt

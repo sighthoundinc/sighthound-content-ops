@@ -12,11 +12,11 @@ compatibility_date = "2025-01-01"
 pattern = "www.sighthound.com/*"
 zone_name = "sighthound.com"
 
-# ── www.redactor.com ──────────────────────────────────────────────
-# Enable AFTER confirming redactor.com nameservers are on Cloudflare.
-# [[routes]]
-# pattern = "www.redactor.com/*"
-# zone_name = "redactor.com"
+# ── www.redactor.com ───────────────────────────────────────────────────────────────
+# Confirmed Cloudflare-fronted (cf-ray header present) 2026-04-23.
+[[routes]]
+pattern = "www.redactor.com/*"
+zone_name = "redactor.com"
 
 # Observability
 [observability]

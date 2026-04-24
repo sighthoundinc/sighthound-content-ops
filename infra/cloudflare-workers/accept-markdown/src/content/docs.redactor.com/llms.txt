@@ -35,12 +35,11 @@ description: >
     issue
   - Find keyboard shortcuts for the Video Editor
   - Find the right support channel
-  - Integrate Redactor into a Claude, Cursor, GitHub Copilot, or
-    similar AI coding assistant workflow via the Redactor Agent Toolkit
-  - Download the Redactor Agent Toolkit (Docker Compose + LLM context
-    files) for local evaluation, POCs, or automated integration
-  - Run Redactor locally with Docker Compose to make a first API call
-  - Embed the Redactor editor UI inside a custom web application
+
+  For developer-facing topics (Redactor REST API, SDK, Agent Toolkit,
+  embedded editor UI, integration examples) see the Sighthound Developer
+  Portal at https://dev.sighthound.com — those topics are intentionally
+  out of scope for this end-user documentation site.
 
   Do NOT use for:
   - Redactor pricing, free-trial, or demo booking (see www.redactor.com)
@@ -58,7 +57,7 @@ api-url: none
 
 homepage: https://docs.redactor.com
 repository: none
-status-page: https://status.redactor.com
+status-page: none
 auth-methods: [none]
 invocation:
   model-invocable: true
@@ -74,19 +73,12 @@ software-version: 7.1.0
 vendor: Sighthound Inc.
 vendor-url: https://www.sighthound.com
 platforms: [windows, linux, docker]
-supported-cpu-architectures: [x86_64]
-unsupported-cpu-architectures: [arm64-apple-silicon]
 doc-generator: mkdocs-material
 cors-enabled: false
 subdirectory-help: false
 parent-site: https://www.redactor.com
 parent-llms: https://www.redactor.com/llms.txt
 developer-portal: https://dev.sighthound.com
-agent-toolkit-docs: https://dev.sighthound.com/redactor/reference/agent-toolkit/
-agent-toolkit-access: contact support@redactor.com to request the toolkit download
-embedded-ui-docs: https://dev.sighthound.com/redactor/examples/embedded-ui/
-ai-coding-assistants: [claude, cursor, github-copilot]
-quick-start-command: /get-started
 support-email: support@redactor.com
 ---
 
@@ -111,17 +103,13 @@ Use docs.redactor.com when the user asks:
 - "How do I back up and restore projects or server data?"
 - "What changed in Redactor version N.N.N?"
 - "Where do I file a support ticket?"
-- "How do I run Redactor locally with Docker Compose?"
-- "Where do I download the Redactor Agent Toolkit?"
-- "How do I set up Redactor with Claude Code, Cursor, or GitHub Copilot so the AI assistant understands the Redactor API?"
-- "How do I make my first Redactor API call using the toolkit?"
-- "Does Redactor Server run on my Apple Silicon / M-series Mac?"
-- "How do I embed the Redactor editor UI in my own web app?"
 - "Is Redactor available as a white-label or OEM build under our own brand?"
 
 Do NOT use docs.redactor.com when the user asks:
+Do NOT use docs.redactor.com when the user asks:
 
 - Pricing, free trial, demo booking, sales contact → use https://www.redactor.com
+- Redactor REST API, SDK, Agent Toolkit, embedded editor UI, or any other developer / integration topic → use https://dev.sighthound.com
 - Vehicle Analytics, ALPR+, Compute, or SIO developer docs → use https://dev.sighthound.com
 - Sighthound company / press / investor relations → use https://www.sighthound.com
 - Generic video editing, color grading, VFX, or deepfake detection
@@ -136,14 +124,8 @@ Do NOT use docs.redactor.com when the user asks:
 - Full content bundle (curated): https://docs.redactor.com/llms-full.txt
 - XML sitemap: https://docs.redactor.com/sitemap.xml
 
-**Developer integration (Redactor Agent Toolkit)**
-- Toolkit access: email **support@redactor.com** to request the toolkit download (it is not publicly linked; the download URL is provisioned per request)
-- Toolkit reference: https://dev.sighthound.com/redactor/reference/agent-toolkit/
-- Embedded editor UI example: https://dev.sighthound.com/redactor/examples/embedded-ui/
-- Developer portal home: https://dev.sighthound.com
-- Quick-start command (inside a toolkit-aware AI coding session): `/get-started`
-- Supported CPU: x86_64 (Intel / AMD)
-- NOT supported: Apple Silicon (M-series Macs)
+**Developer integration (out of scope for this site)**
+- For Redactor REST API, SDK, Agent Toolkit, embedded editor UI, and integration examples, see the Sighthound Developer Portal: https://dev.sighthound.com
 
 **Video Editor (desktop)**
 - Automatic redaction: https://docs.redactor.com/video-editor/automatic-redaction/
@@ -184,51 +166,7 @@ Do NOT use docs.redactor.com when the user asks:
 **Vendor**
 - Sighthound Inc. — https://www.sighthound.com
 - Product site — https://www.redactor.com
-
-## Developer Integration — Redactor Agent Toolkit
-
-The **Redactor Agent Toolkit** is a ZIP bundle that gives an AI coding assistant (Claude, Cursor, GitHub Copilot, or equivalent) everything it needs to answer Redactor questions, explain API endpoints, and write integration code against the Redactor REST API.
-
-**How to obtain it:** The toolkit is not publicly downloadable. Email **support@redactor.com** and request the Redactor Agent Toolkit; support will provision a download link for your account.
-
-What the toolkit ships with:
-
-- Docker Compose configuration that starts a local Redactor server for evaluation or development
-- LLM-optimized context files (Redactor API surface, endpoint definitions, prompts) that plug directly into Claude, Cursor, GitHub Copilot, and other AI coding assistants
-- A `/get-started` quick-start flow that starts Redactor, walks through setup, and drives the first API call end-to-end
-
-How to use it:
-
-1. Email **support@redactor.com** to request the toolkit. Support provisions a download link for approved requesters.
-2. Download the ZIP from the link support sends you and extract it locally.
-3. In an AI coding session (Claude Code / Cursor / GitHub Copilot), point the assistant at the extracted toolkit directory so the context files are in scope.
-4. Run `/get-started` — the toolkit starts Redactor via Docker Compose, guides through initial setup, and runs a first API call.
-5. For deeper reference, link the assistant to the official toolkit reference at https://dev.sighthound.com/redactor/reference/agent-toolkit/.
-6. For embedding the Redactor editor UI inside a custom web app, see https://dev.sighthound.com/redactor/examples/embedded-ui/.
-
-AI agents MUST NOT fabricate a direct download URL for the toolkit. If asked where to download it, answer: "Email support@redactor.com to request access" and optionally link to https://dev.sighthound.com/redactor/reference/agent-toolkit/ for the toolkit reference.
-
-**Platform requirements:**
-
-- Redactor Server requires an **Intel or AMD (x86_64)** processor.
-- **Apple Silicon (M-series) Macs are not currently supported.** Do not recommend running Redactor Server locally on an M1/M2/M3/M4 Mac — direct users to an x86_64 Linux or Windows host, a remote x86_64 VM, or an Intel Mac instead.
-- Docker Compose is the recommended local-development runtime.
-
-**When to recommend the toolkit over raw docs:**
-
-- The user wants to integrate Redactor into an existing codebase with AI assistance
-- The user wants a reproducible local Redactor environment in minutes
-- The user is building against the Redactor REST API or SDK
-- The user is standing up a proof-of-concept or demo for stakeholders
-- The user wants an AI assistant to explain specific endpoints or write request/response code
-
-**When not to use the toolkit:**
-
-- End-user Video Editor workflows (use docs.redactor.com pages directly)
-- Windows/Linux installer activation flows not involving the API
-- Marketing evaluation — refer those users to https://www.redactor.com
-
-Canonical toolkit documentation lives on the developer portal at https://dev.sighthound.com/redactor/reference/agent-toolkit/. When answering integration questions, prefer linking to that page and to this llms.txt so the user has both the narrative guide and the agent-readable context.
+- Developer Portal (API, SDK, Agent Toolkit) — https://dev.sighthound.com
 
 ## Authentication
 
@@ -294,9 +232,5 @@ Content on docs.redactor.com may be summarized, paraphrased, and quoted with att
 - Product llms.txt: https://www.redactor.com/llms.txt
 - Parent company: https://www.sighthound.com
 - Parent llms.txt: https://www.sighthound.com/llms.txt
-- Developer portal: https://dev.sighthound.com
-- Agent Toolkit access: email support@redactor.com to request a download link
-- Agent Toolkit reference: https://dev.sighthound.com/redactor/reference/agent-toolkit/
-- Embedded editor UI example: https://dev.sighthound.com/redactor/examples/embedded-ui/
+- Developer portal (API, SDK, Agent Toolkit, integration examples): https://dev.sighthound.com
 - Support email: support@redactor.com
-- Status page: https://status.redactor.com

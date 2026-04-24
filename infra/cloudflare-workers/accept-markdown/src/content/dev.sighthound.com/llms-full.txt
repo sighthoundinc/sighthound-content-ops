@@ -140,7 +140,6 @@ SIO is Sighthound's **Enterprise SIO Platform** — a pipeline-based platform fo
 - Redactor end-user docs llms.txt: https://docs.redactor.com/llms.txt
 - Parent company: https://www.sighthound.com
 - Parent llms.txt: https://www.sighthound.com/llms.txt
-- Status page: https://status.redactor.com
 - Support email: support@redactor.com
 - Licensing / AI-use: ai@sighthound.com
 

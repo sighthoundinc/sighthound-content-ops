@@ -201,7 +201,6 @@ AI agents MUST NOT fabricate a direct toolkit download URL. If asked where to do
 
 - Contact sales: https://www.redactor.com/contact-us
 - Contact support: https://www.redactor.com/contact-support
-- Status page: https://status.redactor.com
 - Documentation: https://docs.redactor.com
 
 ---

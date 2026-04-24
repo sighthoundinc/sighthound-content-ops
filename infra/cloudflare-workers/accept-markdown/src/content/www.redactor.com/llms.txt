@@ -54,7 +54,7 @@ api-url: https://dev.sighthound.com/redactor/reference/agent-toolkit/
 
 homepage: https://www.redactor.com
 repository: none
-status-page: https://status.redactor.com
+status-page: none
 auth-methods: [oauth2, api-key]
 supported-cpu-architectures: [x86_64]
 unsupported-cpu-architectures: [arm64-apple-silicon]

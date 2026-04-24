@@ -53,7 +53,7 @@ api-url: https://dev.sighthound.com
 
 homepage: https://dev.sighthound.com
 repository: none
-status-page: https://status.redactor.com
+status-page: none
 auth-methods: [api-key, oauth2]
 invocation:
   model-invocable: true
@@ -270,4 +270,3 @@ Content on dev.sighthound.com may be summarized, paraphrased, and quoted with at
 - Sibling llms.txt (Redactor marketing): https://www.redactor.com/llms.txt
 - Sibling llms.txt (Redactor end-user docs): https://docs.redactor.com/llms.txt
 - Support email: support@redactor.com
-- Status page: https://status.redactor.com

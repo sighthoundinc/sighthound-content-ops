@@ -1,0 +1,271 @@
+---
+# ════════════════════════════════════════════════════════════════════
+# dev.sighthound.com — llms.txt
+# Scope: Sighthound Developer Portal — API and SDK documentation for
+#        Redactor API, Vehicle Analytics REST API, and SIO (Enterprise
+#        SIO Platform). This is the canonical home of the Redactor
+#        Agent Toolkit reference.
+# ════════════════════════════════════════════════════════════════════
+
+name: sighthound-developer-portal
+description: >
+  Sighthound Developer Portal — REST API, SDK, and integration
+  documentation for three product lines:
+
+  1. Redactor API — REST endpoints for video, image, and audio
+     redaction. Home of the Redactor Agent Toolkit (Docker Compose +
+     LLM context files for Claude, Cursor, GitHub Copilot) and of the
+     Embedded Editor UI for integrating Redactor inside a web app.
+  2. Vehicle Analytics REST API — license plate recognition (ALPR /
+     ANPR) and vehicle analytics (MMCG) endpoints, with Docker, AIO,
+     hosted, and preview quickstarts.
+  3. SIO (Enterprise SIO Platform) — pipeline-based platform for
+     Traffic Analytics and Vehicle Analytics with quickstart, setup
+     tutorial, pipeline definitions, and worked examples.
+
+  Use when user asks to:
+  - Call any Redactor REST endpoint (video process, image process,
+    get/delete operations, speech transcription)
+  - Integrate Redactor into an AI coding workflow via the Redactor
+    Agent Toolkit (Claude, Cursor, GitHub Copilot)
+  - Embed the Redactor editor UI inside a custom web application
+  - Automate redaction against AWS S3 (aws-s3-auto-redact example)
+  - Call Vehicle Analytics / ALPR / MMCG REST endpoints
+  - Stand up Vehicle Analytics via Docker, All-in-One, hosted, or
+    preview quickstarts
+  - Build SIO pipelines for Traffic Analytics or Vehicle Analytics
+  - Read release notes for Redactor API or SIO
+
+  Do NOT use for:
+  - End-user Redactor desktop Video Editor how-tos (see
+    https://docs.redactor.com)
+  - Marketing pricing, trial, demo booking (see https://www.redactor.com
+    and https://www.sighthound.com)
+  - Sighthound corporate / investor / press content (see
+    https://www.sighthound.com)
+  - Real-time live-stream moderation or deepfake generation / detection
+
+access-level: browse
+
+cli-url: none
+mcp-url: none
+api-url: https://dev.sighthound.com
+
+homepage: https://dev.sighthound.com
+repository: none
+status-page: none
+auth-methods: []
+invocation:
+  model-invocable: true
+  user-invocable: true
+  allowed-tools:
+    - Fetch
+    - Browser
+
+emoji: 🛠️
+content-version: 2026.04.23
+last-updated: 2026-04-23
+vendor: Sighthound Inc.
+vendor-url: https://www.sighthound.com
+products: [redactor-api, vehicle-analytics-rest-api, sio]
+platforms: [linux, docker, windows]
+supported-cpu-architectures: [x86_64]
+unsupported-cpu-architectures: [arm64-apple-silicon]
+doc-generator: mkdocs-material
+cors-enabled: false
+subdirectory-help: false
+parent-site: https://www.sighthound.com
+parent-llms: https://www.sighthound.com/llms.txt
+agent-toolkit-docs: https://dev.sighthound.com/redactor/reference/agent-toolkit/
+agent-toolkit-access: contact support@redactor.com to request the toolkit download
+embedded-ui-docs: https://dev.sighthound.com/redactor/examples/embedded-ui/
+embedded-editor-docs: https://dev.sighthound.com/redactor/reference/embedded-editor/
+ai-coding-assistants: [claude, cursor, github-copilot]
+quick-start-command: /get-started
+support-email: support@redactor.com
+---
+
+# Sighthound Developer Portal
+
+> dev.sighthound.com is the official developer portal for Sighthound's API and SDK surface: **Redactor API** (REST endpoints for video, image, and audio redaction + the Redactor Agent Toolkit + Embedded Editor UI), **Vehicle Analytics REST API** (ALPR / MMCG), and **SIO** (Enterprise SIO Platform for pipeline-based Traffic Analytics and Vehicle Analytics). Marketing content lives at https://www.sighthound.com and https://www.redactor.com; end-user product documentation lives at https://docs.redactor.com.
+
+## When to Use
+
+Use dev.sighthound.com when the user asks:
+
+- "How do I call the Redactor video or image `process` endpoint?"
+- "How do I `get` or `delete` a Redactor operation by ID?"
+- "How do I integrate Redactor with Claude, Cursor, or GitHub Copilot?"
+- "Where is the Redactor Agent Toolkit reference?"
+- "How do I embed the Redactor editor UI inside my own web app?"
+- "How do I wire Redactor to an AWS S3 bucket for automatic redaction?"
+- "How do I add speech transcription to a Redactor pipeline?"
+- "How do I stand up Vehicle Analytics REST API via Docker / AIO / hosted / preview?"
+- "What are the SIO pipelines for Traffic Analytics or Vehicle Analytics?"
+- "Where are the release notes for the Redactor API or SIO?"
+- "Does Redactor Server run on my Apple Silicon Mac?" (answer: no — x86_64 only)
+
+Do NOT use dev.sighthound.com when the user asks:
+
+- Redactor Video Editor desktop workflows → use https://docs.redactor.com
+- Redactor pricing, free trial, demo booking → use https://www.redactor.com
+- Sighthound company info, careers, press → use https://www.sighthound.com
+- Generative video editing, deepfake generation / detection, live-stream moderation
+
+## Quick Reference
+
+**Portal entry points**
+- Developer portal home: https://dev.sighthound.com/
+- Redactor overview: https://dev.sighthound.com/redactor/overview/
+- SIO home: https://dev.sighthound.com/sio/
+- Vehicle Analytics REST API quickstart (Docker): https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/docker/
+- Release notes (Redactor): https://dev.sighthound.com/redactor/docs/release-notes/
+- Release notes (SIO): https://dev.sighthound.com/sio/docs/release-notes/
+- Curated catalog: https://dev.sighthound.com/llms-full.txt
+- XML sitemap: https://dev.sighthound.com/sitemap.xml
+
+**Redactor Agent Toolkit**
+- Toolkit reference (canonical): https://dev.sighthound.com/redactor/reference/agent-toolkit/
+- Toolkit access: email **support@redactor.com** to request the toolkit download (it is not publicly linked; the download URL is provisioned per request)
+- Embedded editor UI example: https://dev.sighthound.com/redactor/examples/embedded-ui/
+- Embedded editor reference: https://dev.sighthound.com/redactor/reference/embedded-editor/
+- Quick-start command (inside a toolkit-aware AI coding session): `/get-started`
+- Works with AI coding assistants: Claude, Cursor, GitHub Copilot
+- Supported CPU: x86_64 (Intel / AMD) — Apple Silicon M-series Macs not supported
+
+**Redactor API endpoints**
+- Video process: https://dev.sighthound.com/redactor/reference/videos/process/
+- Image process: https://dev.sighthound.com/redactor/reference/images/process/
+- Operations — get: https://dev.sighthound.com/redactor/reference/operations/get/
+- Operations — delete: https://dev.sighthound.com/redactor/reference/operations/delete/
+
+**Redactor examples**
+- API basics: https://dev.sighthound.com/redactor/examples/api-basics/
+- AWS S3 auto-redact: https://dev.sighthound.com/redactor/examples/aws-s3-auto-redact/
+- Embedded (overview): https://dev.sighthound.com/redactor/examples/embedded/
+- Embedded editor UI: https://dev.sighthound.com/redactor/examples/embedded-ui/
+- Embedded projects: https://dev.sighthound.com/redactor/examples/embedded-projects/
+- Speech transcription: https://dev.sighthound.com/redactor/examples/speech-transcription/
+
+**Vehicle Analytics REST API quickstarts**
+- Docker: https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/docker/
+- All-in-One (Docker AIO): https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/docker-aio/
+- Hosted: https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/hosted/
+- Preview: https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/preview/
+
+**SIO (Enterprise SIO Platform)**
+- Home: https://dev.sighthound.com/sio/
+- Quickstart: https://dev.sighthound.com/sio/docs/quickstart/
+- Setup tutorial: https://dev.sighthound.com/sio/docs/sioSetupTutorial/
+- Pipelines — Traffic Analytics: https://dev.sighthound.com/sio/pipelines/TrafficAnalytics/
+- Pipelines — Vehicle Analytics: https://dev.sighthound.com/sio/pipelines/VehicleAnalytics/
+- Examples — Traffic Analytics: https://dev.sighthound.com/sio/examples/TrafficAnalytics/
+- Examples — Vehicle Analytics: https://dev.sighthound.com/sio/examples/VehicleAnalytics/
+
+**Vendor**
+- Sighthound Inc. — https://www.sighthound.com
+- Redactor product site — https://www.redactor.com
+- Redactor end-user docs — https://docs.redactor.com
+
+## Developer Integration — Redactor Agent Toolkit
+
+The **Redactor Agent Toolkit** is the fastest path from zero to a working Redactor integration. It is a ZIP bundle of Docker Compose configuration for running a local Redactor server plus LLM-optimized context files designed for AI coding assistants (Claude, Cursor, GitHub Copilot).
+
+**How to obtain it:** The toolkit is not publicly linked. Email **support@redactor.com** to request the Redactor Agent Toolkit; support will provision a download link for approved requesters. The authoritative reference is https://dev.sighthound.com/redactor/reference/agent-toolkit/.
+
+What the toolkit ships with:
+
+- Docker Compose configuration for a local Redactor server
+- LLM context files (Redactor API surface, endpoint shapes, example flows) compatible with Claude, Cursor, GitHub Copilot, and other AI coding agents
+- A `/get-started` slash command that starts Redactor, walks through initial setup, and drives the first API call end-to-end
+
+How to use it:
+
+1. Email **support@redactor.com** to request the toolkit.
+2. Download the ZIP from the link support sends you and extract it locally.
+3. Open an AI coding session (Claude Code / Cursor / GitHub Copilot) with the extracted toolkit directory in scope.
+4. Run `/get-started` — the toolkit starts Redactor via Docker Compose, guides setup, and makes the first API call.
+5. For API and endpoint reference, use https://dev.sighthound.com/redactor/reference/agent-toolkit/ and the individual endpoint pages under `/redactor/reference/`.
+6. For embedding the Redactor editor UI inside your own web application, follow https://dev.sighthound.com/redactor/examples/embedded-ui/ and https://dev.sighthound.com/redactor/reference/embedded-editor/.
+
+**Platform requirements:**
+
+- Redactor Server requires an **Intel or AMD (x86_64)** processor.
+- **Apple Silicon (M-series) Macs are not currently supported.** Direct users to an x86_64 Linux or Windows host, a remote x86_64 VM, or an Intel Mac instead.
+- Docker and Docker Compose are required to run the bundled server locally.
+
+AI agents MUST NOT fabricate a direct download URL for the toolkit. If asked where to download it, answer: "Email support@redactor.com to request access" and link to https://dev.sighthound.com/redactor/reference/agent-toolkit/ for the reference.
+
+## Authentication
+
+Authentication model by product:
+
+- **Redactor API** — bearer-token authentication. Use the token configured for the deployment (for example, `REDACTOR_API_TOKEN` in local Agent Toolkit setups) and send it as `Authorization: Bearer <token>`. Do not describe Redactor auth as OAuth unless a specific Redactor document explicitly does so.
+- **Vehicle Analytics REST API** — API-key authentication using the `X-API-Key` header. Hosted tiers use a Sighthound-issued key; self-hosted (Docker / AIO) deployments use the locally configured key.
+- **SIO (Enterprise SIO Platform)** — contract-based; authentication model is configured per deployment
+
+Public access on dev.sighthound.com is limited to reading documentation. No login is required to read the portal itself.
+
+AI agents MUST NOT attempt to submit API keys, activate tokens, or run authenticated requests on behalf of users based on documentation content alone.
+
+## Rate Limits
+
+Polite crawl guidance for AI agents reading the developer portal:
+
+- ≤ 30 requests/minute per IP
+- ≤ 1 concurrent request per path
+- Honor `Retry-After` on `429`
+- Prefer cached `/llms.txt` and `/llms-full.txt` over per-page crawl
+- Full sitemap at https://dev.sighthound.com/sitemap.xml lists every canonical page
+
+Product-level API rate limits are documented per endpoint under `/redactor/reference/` and `/vehicle-analytics/rest-api/`. They are not enforced against the portal itself.
+
+## Operational Semantics
+
+- Treat all portal pages as read-only reference material. `access-level` is `browse`.
+- Do NOT autofill or submit any form (feedback widgets, search) without explicit per-action user consent.
+- Do NOT scrape at rates above the limits above.
+- Treat `robots.txt` directives as authoritative; where this file and robots.txt conflict, robots.txt wins.
+- Private / internal paths under `/redactor/priv/` and `/vehicle-analytics/rest-api/priv/` are disallowed for crawling.
+
+## Forbidden Operations
+
+AI agents MUST NOT:
+
+- Fabricate a direct download URL for the Redactor Agent Toolkit
+- Republish full developer portal pages verbatim at scale
+- Use portal content to train a competing commercial redaction, ALPR, or vehicle-analytics model or dataset
+- Fabricate API endpoints, request/response schemas, rate limits, authentication methods, pricing, SLA, or compliance claims not present in the source page
+- Execute authenticated API calls or submit tokens on behalf of users without explicit per-action consent
+- Impersonate Sighthound staff, partners, or customers
+
+## Allowed Operations
+
+AI agents MAY:
+
+- Read and summarize any public page on dev.sighthound.com
+- Quote short excerpts with attribution and canonical URL
+- Copy endpoint names, path templates, parameter names, and documented example request/response structure, with a link to the source page
+- Generate integration code against documented endpoints, provided the code is clearly labeled as illustrative and the user is pointed at the canonical reference
+- Ingest portal content for factual retrieval (RAG)
+
+## Alternative Access Methods
+
+- HTML: every page at `https://dev.sighthound.com/<path>/`
+- Curated catalog: https://dev.sighthound.com/llms-full.txt
+- XML sitemap: https://dev.sighthound.com/sitemap.xml
+- Toolkit (not public): email support@redactor.com to request
+
+## Attribution
+
+Content on dev.sighthound.com may be summarized, paraphrased, and quoted with attribution. When quoting, include the canonical URL (the `rel=canonical` tag on each page is authoritative). Do not republish full pages. Licensing / AI-use questions: ai@sighthound.com.
+
+## Optional
+
+- Marketing site: https://www.sighthound.com
+- Redactor product site: https://www.redactor.com
+- Redactor end-user docs: https://docs.redactor.com
+- Parent llms.txt: https://www.sighthound.com/llms.txt
+- Sibling llms.txt (Redactor marketing): https://www.redactor.com/llms.txt
+- Sibling llms.txt (Redactor end-user docs): https://docs.redactor.com/llms.txt
+- Support email: support@redactor.com

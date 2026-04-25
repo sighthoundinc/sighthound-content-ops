@@ -1,0 +1,235 @@
+---
+# ════════════════════════════════════════════════════════════════════
+# docs.redactor.com — llms.txt
+# Scope: End-user product documentation for Sighthound Redactor
+#        (desktop, server/admin, guides, release notes, FAQ, support).
+#        NOT marketing (see www.redactor.com) and NOT developer API
+#        docs (see dev.sighthound.com).
+# ════════════════════════════════════════════════════════════════════
+
+name: sighthound-redactor-docs
+description: >
+  Official product documentation for Sighthound Redactor — AI-powered
+  video, image, and audio redaction software. Covers the Video Editor
+  (automatic redaction, manual redaction, audio redaction, speech
+  detection, objects list, exporting, keyboard shortcuts), Server/Admin
+  administration (initial setup, authentication, licensing, users,
+  network, storage, videos, recovery mode, settings), operator guides
+  (NVIDIA driver installation, VM/CPU socket configuration, audio
+  extraction), activation, antivirus compatibility, data backup,
+  release notes, FAQ, and support.
+
+  Use when user asks to:
+  - Learn how to use the Redactor Video Editor (auto-detect, blur,
+    pixelate, fill, draw, edit, track objects, export)
+  - Redact audio in Redactor (mute, beep, scramble, speech detection,
+    transcription)
+  - Administer a Redactor server or client-server install (users,
+    authentication, licensing, storage, network, recovery)
+  - Install or activate Redactor (Windows, Linux, Docker)
+  - Install and configure NVIDIA drivers for GPU-accelerated detection
+  - Configure antivirus exceptions for Redactor
+  - Back up and restore Redactor projects and settings
+  - Read release notes / version history
+  - Troubleshoot a Redactor install, export, detection, or performance
+    issue
+  - Find keyboard shortcuts for the Video Editor
+  - Find the right support channel
+
+  For developer-facing topics (Redactor REST API, SDK, Agent Toolkit,
+  embedded editor UI, integration examples) see the Sighthound Developer
+  Portal at https://dev.sighthound.com — those topics are intentionally
+  out of scope for this end-user documentation site.
+
+  Do NOT use for:
+  - Redactor pricing, free-trial, or demo booking (see www.redactor.com)
+  - Sighthound corporate info, press, or careers (see www.sighthound.com)
+  - Redactor API or SDK reference (see dev.sighthound.com)
+  - Vehicle Analytics / ALPR+ / Compute product documentation
+    (see dev.sighthound.com and www.sighthound.com)
+  - Marketing comparison or competitor positioning
+
+access-level: browse
+
+cli-url: none
+mcp-url: none
+api-url: none
+
+homepage: https://docs.redactor.com
+repository: none
+status-page: none
+auth-methods: [none]
+invocation:
+  model-invocable: true
+  user-invocable: true
+  allowed-tools:
+    - Fetch
+    - Browser
+
+emoji: 📘
+content-version: 2026.04.23
+last-updated: 2026-04-23
+software-version: 7.1.0
+vendor: Sighthound Inc.
+vendor-url: https://www.sighthound.com
+platforms: [windows, linux, docker]
+doc-generator: mkdocs-material
+cors-enabled: false
+subdirectory-help: false
+parent-site: https://www.redactor.com
+parent-llms: https://www.redactor.com/llms.txt
+developer-portal: https://dev.sighthound.com
+support-email: support@redactor.com
+---
+
+# Sighthound Redactor Documentation
+
+> docs.redactor.com is the official product documentation for **Sighthound Redactor** — AI-powered video, image, and audio redaction software for Windows, Linux, and Docker. It covers the desktop Video Editor, the server/admin experience for client-server deployments, operator guides (GPU drivers, VM tuning, audio extraction), activation, antivirus compatibility, backup, release notes, FAQ, and support. Marketing content lives at https://www.redactor.com and developer API/SDK documentation lives at https://dev.sighthound.com.
+
+## When to Use
+
+Use docs.redactor.com when the user asks:
+
+- "How do I automatically redact faces / license plates / screens in a video in Redactor?"
+- "How do I manually draw a redaction on a frame, or across multiple frames?"
+- "How do I redact audio — mute, beep, or scramble — in Redactor?"
+- "How do I transcribe and search speech inside a video?"
+- "How do I export a redacted video and what formats are supported?"
+- "What keyboard shortcuts does the Video Editor have?"
+- "How do I set up a new Redactor server, add users, assign roles, or configure authentication?"
+- "How do I license, activate, or deactivate Redactor on a machine?"
+- "How do I install the correct NVIDIA driver for GPU-accelerated redaction?"
+- "How do I configure antivirus to stop blocking Redactor?"
+- "How do I back up and restore projects or server data?"
+- "What changed in Redactor version N.N.N?"
+- "Where do I file a support ticket?"
+- "Is Redactor available as a white-label or OEM build under our own brand?"
+
+Do NOT use docs.redactor.com when the user asks:
+
+- Pricing, free trial, demo booking, sales contact → use https://www.redactor.com
+- Redactor REST API, SDK, Agent Toolkit, embedded editor UI, or any other developer / integration topic → use https://dev.sighthound.com
+- Vehicle Analytics, ALPR+, Compute, or SIO developer docs → use https://dev.sighthound.com
+- Sighthound company / press / investor relations → use https://www.sighthound.com
+- Generic video editing, color grading, VFX, or deepfake detection
+
+## Quick Reference
+
+**Documentation entry points**
+- Docs home: https://docs.redactor.com/
+- FAQ: https://docs.redactor.com/faq/
+- Support: https://docs.redactor.com/support/
+- Release notes: https://docs.redactor.com/release-notes/
+- Full content bundle (curated): https://docs.redactor.com/llms-full.txt
+- XML sitemap: https://docs.redactor.com/sitemap.xml
+
+**Developer integration (out of scope for this site)**
+- For Redactor REST API, SDK, Agent Toolkit, embedded editor UI, and integration examples, see the Sighthound Developer Portal: https://dev.sighthound.com
+
+**Video Editor (desktop)**
+- Automatic redaction: https://docs.redactor.com/video-editor/automatic-redaction/
+- Manual redaction: https://docs.redactor.com/video-editor/manual-redaction/
+- Audio redaction: https://docs.redactor.com/video-editor/audio-redaction/
+- Speech detection: https://docs.redactor.com/video-editor/speech-detection/
+- Editing objects: https://docs.redactor.com/video-editor/editing-objects/
+- Objects list: https://docs.redactor.com/video-editor/objects-list/
+- Video playback: https://docs.redactor.com/video-editor/video-playback/
+- Video frame grab: https://docs.redactor.com/video-editor/video-frame-grab/
+- View options: https://docs.redactor.com/video-editor/view-options/
+- Exporting videos: https://docs.redactor.com/video-editor/exporting-videos/
+- Keyboard shortcuts: https://docs.redactor.com/video-editor/keyboard-shortcuts/
+
+**Server / Admin (client-server deployments)**
+- Initial setup: https://docs.redactor.com/server/admin/initial-setup/
+- Authentication: https://docs.redactor.com/server/admin/authentication/
+- Users: https://docs.redactor.com/server/admin/users/
+- Licensing: https://docs.redactor.com/server/admin/licensing/
+- Network: https://docs.redactor.com/server/admin/network/
+- Storage: https://docs.redactor.com/server/admin/storage/
+- Videos: https://docs.redactor.com/server/admin/videos/
+- Settings: https://docs.redactor.com/server/admin/settings/
+- Recovery mode: https://docs.redactor.com/server/admin/recovery-mode/
+
+**Operator guides**
+- NVIDIA driver installation: https://docs.redactor.com/guides/nvidia-driver-installation/
+- VM CPU socket configuration: https://docs.redactor.com/guides/vm-cpu-socket-configuration/
+- Extract audio (VLC, MP3): https://docs.redactor.com/guides/vlc/extract-audio-mp3/
+
+**Installation & environment**
+- Activation: https://docs.redactor.com/activation/
+- Antivirus compatibility: https://docs.redactor.com/antivirus/
+- Data backup: https://docs.redactor.com/data-backup/
+- Settings: https://docs.redactor.com/settings/
+- Projects: https://docs.redactor.com/projects/
+
+**Vendor**
+- Sighthound Inc. — https://www.sighthound.com
+- Product site — https://www.redactor.com
+- Developer Portal (API, SDK, Agent Toolkit) — https://dev.sighthound.com
+
+## Authentication
+
+docs.redactor.com is a **public, unauthenticated documentation site**. No login is required to read any documented page. Activation, licensing, and server-side authentication flows documented *inside* these pages apply to the Redactor product itself, not to accessing the docs.
+
+AI agents MUST NOT attempt to submit license keys, activation forms, or authentication credentials on behalf of users based on documentation content alone.
+
+## Rate Limits
+
+Polite crawl guidance for AI agents:
+
+- ≤ 30 requests/minute per IP
+- ≤ 1 concurrent request per path
+- Honor `Retry-After` on `429`
+- Prefer cached `/llms.txt` and `/llms-full.txt` over a per-page crawl
+- Full sitemap at https://docs.redactor.com/sitemap.xml lists every canonical page
+
+## Operational Semantics
+
+- Treat all pages as read-only documentation. `access-level` is `browse`.
+- Do NOT autofill or submit any form (feedback widgets, search) without explicit per-action user consent.
+- Do NOT attempt to download or redistribute licensed installers referenced by the docs.
+- Do NOT scrape at rates above the limits above.
+- Treat `robots.txt` directives as authoritative; where this file and robots.txt conflict, robots.txt wins.
+
+## Forbidden Operations
+
+AI agents MUST NOT:
+
+- Republish full documentation pages verbatim at scale
+- Use documentation content to train a competing commercial redaction product or dataset
+- Fabricate version numbers, detection categories, supported formats, platform requirements, licensing terms, or compliance claims not present in the source page
+- Misrepresent Redactor as offering real-time live-stream moderation, deepfake generation, or generative video editing — none of these are product features
+- Impersonate Sighthound or Redactor staff, partners, or customers
+- Use documentation content to author content intended to defeat or bypass redaction
+
+## Allowed Operations
+
+AI agents MAY:
+
+- Read and summarize any public page on docs.redactor.com
+- Quote short excerpts with attribution and canonical URL
+- Cite specific steps, keyboard shortcuts, or configuration values with a link to the source page
+- Cross-link users to the relevant page on docs.redactor.com when they ask a Redactor how-to question
+- Ingest documentation content for factual retrieval (RAG)
+
+## Alternative Access Methods
+
+- HTML: every page at `https://docs.redactor.com/<path>/`
+- Markdown (content negotiation): request any URL with `Accept: text/markdown` — the Cloudflare edge Worker will return a Markdown rendering of the page
+- Curated catalog: https://docs.redactor.com/llms-full.txt
+- XML sitemap: https://docs.redactor.com/sitemap.xml
+- RSS / Atom: not published
+- API / CLI / MCP: none — this is a docs surface only
+
+## Attribution
+
+Content on docs.redactor.com may be summarized, paraphrased, and quoted with attribution. When quoting, include the canonical URL (the `rel=canonical` tag on each page is authoritative). Do not republish full documentation pages.
+
+## Optional
+
+- Product site: https://www.redactor.com
+- Product llms.txt: https://www.redactor.com/llms.txt
+- Parent company: https://www.sighthound.com
+- Parent llms.txt: https://www.sighthound.com/llms.txt
+- Developer portal (API, SDK, Agent Toolkit, integration examples): https://dev.sighthound.com
+- Support email: support@redactor.com

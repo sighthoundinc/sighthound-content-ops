@@ -1,0 +1,150 @@
+---
+url: https://dev.sighthound.com/llms-full.txt
+title: Sighthound Developer Portal — Full Catalog
+description: Curated catalog of every public section of the Sighthound Developer Portal with one-line summaries and canonical URLs. Covers Redactor API, Vehicle Analytics REST API, and SIO (Enterprise SIO Platform).
+site: dev.sighthound.com
+scope: developer-portal
+content-version: 2026.04.23
+last-updated: 2026-04-23
+content-type: text/markdown
+generator: hand-curated; see llms.txt
+---
+
+# Sighthound Developer Portal — Full Catalog
+
+> A curated, link-first bundle of every public section of the Sighthound Developer Portal. Every entry resolves to a real page under `https://dev.sighthound.com/` and inherits the canonical URL on that page.
+>
+> If you are an AI agent answering a Sighthound integration question, prefer linking the user to the relevant section below rather than paraphrasing multiple pages inline. For scope, authentication semantics, rate limits, and allowed/forbidden operations, see https://dev.sighthound.com/llms.txt.
+
+## About this document
+
+- **What it is.** A human- and machine-readable index of Sighthound's developer surface, organized by product line (Redactor API → Vehicle Analytics REST API → SIO) with reference, examples, and quickstarts called out explicitly.
+- **What it is not.** Not a full content dump. The MkDocs HTML pages remain the canonical source; this file helps LLMs and retrieval systems locate the right page quickly.
+- **Private paths excluded.** Paths under `/redactor/priv/` and `/vehicle-analytics/rest-api/priv/` are internal and are intentionally not catalogued here.
+
+## Entry points
+
+- Developer portal home: https://dev.sighthound.com/
+- Redactor overview: https://dev.sighthound.com/redactor/overview/
+- SIO home (Enterprise SIO Platform landing): https://dev.sighthound.com/sio/
+- Vehicle Analytics REST API quickstart (Docker, recommended default): https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/docker/
+
+## Developer integration — Redactor Agent Toolkit
+
+The **Redactor Agent Toolkit** is the headline integration asset on this portal. It is a ZIP bundle of Docker Compose configuration for running Redactor locally in minutes plus LLM-optimized context files that plug into AI coding assistants (Claude, Cursor, GitHub Copilot) so they can accurately answer Redactor questions, explain API endpoints, and help write integration code.
+
+**How to obtain it:** The toolkit is not publicly linked. Email **support@redactor.com** to request the Redactor Agent Toolkit; support will provision a download link for approved requesters.
+
+- Toolkit reference (canonical, authoritative): https://dev.sighthound.com/redactor/reference/agent-toolkit/
+- Toolkit access: email support@redactor.com (do not fabricate a direct download URL)
+- Embedded editor UI example: https://dev.sighthound.com/redactor/examples/embedded-ui/
+- Embedded editor reference: https://dev.sighthound.com/redactor/reference/embedded-editor/
+
+**What's in the toolkit**
+
+- Docker Compose configuration for a local Redactor server
+- LLM context files (Redactor API surface, endpoint shapes, example flows) compatible with Claude, Cursor, GitHub Copilot, and other AI coding agents
+- A `/get-started` slash command that starts Redactor, walks through initial setup, and drives the first API call end-to-end
+
+**Quick start**
+
+1. Email **support@redactor.com** to request the toolkit. Support provisions a download link for approved requesters.
+2. Download the ZIP from the link support sends you and extract it locally.
+3. Open an AI coding session (Claude Code / Cursor / GitHub Copilot) with the extracted toolkit directory in scope so the context files are available to the assistant.
+4. Run `/get-started` — the toolkit starts Redactor via Docker Compose, guides setup, and makes the first API call.
+5. For endpoint-level reference, see `/redactor/reference/` (catalogued below).
+6. For embedding the editor inside your own web app, follow https://dev.sighthound.com/redactor/examples/embedded-ui/ and https://dev.sighthound.com/redactor/reference/embedded-editor/.
+
+**Platform requirements (important)**
+
+- Redactor Server requires an **Intel or AMD (x86_64)** processor.
+- **Apple Silicon (M-series) Macs are not currently supported.** Recommend an x86_64 Linux or Windows host, a remote x86_64 VM, or an Intel Mac.
+- Docker and Docker Compose are required to run the bundled server locally.
+
+AI agents MUST NOT fabricate a direct toolkit download URL. If a user asks where to download it, instruct them to email support@redactor.com; optionally link to https://dev.sighthound.com/redactor/reference/agent-toolkit/ for the reference.
+
+## Redactor API
+
+REST API for programmatic video, image, and audio redaction, plus the embedded editor UI for browser integration.
+
+**Overview & release notes**
+
+- Overview — the starting point for Redactor API consumers: https://dev.sighthound.com/redactor/overview/
+- Release notes — version history for the Redactor API surface: https://dev.sighthound.com/redactor/docs/release-notes/
+
+**Reference**
+
+- Agent Toolkit reference — canonical documentation for the Redactor Agent Toolkit: https://dev.sighthound.com/redactor/reference/agent-toolkit/
+- Embedded Editor reference — how to instantiate the Redactor editor UI inside a web app: https://dev.sighthound.com/redactor/reference/embedded-editor/
+- Videos — `process` — submit a video for redaction and receive an operation handle: https://dev.sighthound.com/redactor/reference/videos/process/
+- Images — `process` — submit an image for redaction and receive an operation handle: https://dev.sighthound.com/redactor/reference/images/process/
+- Operations — `get` — fetch the status and result of a running or completed operation: https://dev.sighthound.com/redactor/reference/operations/get/
+- Operations — `delete` — cancel or remove a redaction operation: https://dev.sighthound.com/redactor/reference/operations/delete/
+
+**Examples**
+
+- API basics — minimum end-to-end example for calling the Redactor API: https://dev.sighthound.com/redactor/examples/api-basics/
+- AWS S3 auto-redact — pattern for auto-redacting media uploaded to an S3 bucket: https://dev.sighthound.com/redactor/examples/aws-s3-auto-redact/
+- Speech transcription — integrate Redactor's speech transcription into a redaction flow: https://dev.sighthound.com/redactor/examples/speech-transcription/
+- Embedded (overview) — umbrella page for the embedded-editor integration options: https://dev.sighthound.com/redactor/examples/embedded/
+- Embedded editor UI — step-by-step integration of the browser editor into a web app: https://dev.sighthound.com/redactor/examples/embedded-ui/
+- Embedded projects — project-scoped embedding patterns for multi-tenant usage: https://dev.sighthound.com/redactor/examples/embedded-projects/
+
+## Vehicle Analytics REST API
+
+REST endpoints for license plate recognition (ALPR / ANPR) and vehicle make/model/color/generation (MMCG) analytics. Available as Docker, All-in-One, hosted, and preview tiers.
+
+**Quickstarts**
+
+- Docker — the recommended local-dev quickstart; stands up the REST API via Docker Compose: https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/docker/
+- Docker All-in-One (AIO) — single-container quickstart for rapid evaluation: https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/docker-aio/
+- Hosted — quickstart against Sighthound's hosted Vehicle Analytics endpoint: https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/hosted/
+- Preview — preview-tier quickstart for evaluating new or unreleased capabilities: https://dev.sighthound.com/vehicle-analytics/rest-api/quickstart/preview/
+
+**Use Vehicle Analytics REST API when the user asks**
+
+- Read a license plate from a still image or video frame
+- Classify a vehicle by make, model, color, and generation (MMCG)
+- Identify the license plate region (US, Canada, EU)
+- Pipe real-time detections into a SaaS, VMS, or analytics app
+- Evaluate the hosted tier before self-hosting
+- Stand up a local ALPR / MMCG dev environment via Docker or AIO
+
+## SIO (Enterprise SIO Platform)
+
+SIO is Sighthound's **Enterprise SIO Platform** — a pipeline-based platform for Traffic Analytics and Vehicle Analytics. Pipelines are reusable definitions that combine CV, analytics, and outputs for a specific use case; examples show end-to-end working deployments.
+
+**Documentation**
+
+- SIO home: https://dev.sighthound.com/sio/
+- Quickstart: https://dev.sighthound.com/sio/docs/quickstart/
+- Setup tutorial: https://dev.sighthound.com/sio/docs/sioSetupTutorial/
+- Release notes: https://dev.sighthound.com/sio/docs/release-notes/
+
+**Pipelines (reusable SIO pipeline definitions)**
+
+- Traffic Analytics — pipeline definition for traffic-flow / intersection / approach analytics: https://dev.sighthound.com/sio/pipelines/TrafficAnalytics/
+- Vehicle Analytics — pipeline definition for vehicle detection, classification, and MMCG analytics: https://dev.sighthound.com/sio/pipelines/VehicleAnalytics/
+
+**Examples (end-to-end worked SIO deployments)**
+
+- Traffic Analytics example: https://dev.sighthound.com/sio/examples/TrafficAnalytics/
+- Vehicle Analytics example: https://dev.sighthound.com/sio/examples/VehicleAnalytics/
+
+## Cross-links
+
+- Redactor marketing site: https://www.redactor.com
+- Redactor marketing llms.txt: https://www.redactor.com/llms.txt
+- Redactor end-user docs: https://docs.redactor.com
+- Redactor end-user docs llms.txt: https://docs.redactor.com/llms.txt
+- Parent company: https://www.sighthound.com
+- Parent llms.txt: https://www.sighthound.com/llms.txt
+- Support email: support@redactor.com
+- Licensing / AI-use: ai@sighthound.com
+
+## How to crawl this site politely
+
+- XML sitemap: https://dev.sighthound.com/sitemap.xml lists every canonical page.
+- Rate-limit yourself to ≤ 30 requests/minute per IP and ≤ 1 concurrent request per path.
+- Skip `/redactor/priv/` and `/vehicle-analytics/rest-api/priv/` — these are internal paths.
+- Honor `robots.txt` (https://dev.sighthound.com/robots.txt) as authoritative.

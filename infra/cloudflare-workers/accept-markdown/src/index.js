@@ -8,13 +8,12 @@
 // 3. Otherwise pass through HTML with Vary: Accept and add LLM discoverability headers
 //    (X-LLMs-Txt and Link: rel="llms-help").
 //
-// Routes: www.sighthound.com/*, www.redactor.com/*, docs.redactor.com/*
+// Routes: www.sighthound.com/*, www.redactor.com/*
 //
-// docs.redactor.com keeps a Worker route for Accept-Markdown HTML→Markdown
-// conversion only; its /llms.txt, /llms-full.txt, and /robots.txt now ship
-// from the redactor-mkdocs repo (Cloudflare Pages). dev.sighthound.com
-// ships its own llms files from developer-portal-mkdocs and is not yet
-// fronted by this Worker (DNS cutover pending).
+// MkDocs sites own their own LLM documents:
+// - docs.redactor.com → redactor-mkdocs/docs/llms*.txt
+// - dev.sighthound.com → developer-portal-mkdocs/docs/llms*.txt
+// Do not add Worker-hosted static .txt files for those documentation sites.
 
 import shLlms from './content/www.sighthound.com/llms.txt';
 import shLlmsFull from './content/www.sighthound.com/llms-full.txt';
@@ -255,6 +254,13 @@ function convertPageToMarkdown(html, pageUrl) {
 }
 
 function extractMainContent(html) {
+  const richTextBlocks = extractElementsByClass(html, /(?:^|\s)(?:w-richtext|text-rich-text)(?:\s|$)/i);
+  if (richTextBlocks.length > 0) {
+    const best = richTextBlocks
+      .map((block) => ({ block, textLength: stripTags(block).replace(/\s+/g, ' ').trim().length }))
+      .sort((a, b) => b.textLength - a.textLength)[0];
+    if (best.textLength > 250) return best.block;
+  }
   let m = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);
   if (m) return m[1];
 
@@ -270,6 +276,44 @@ function extractMainContent(html) {
   body = body.replace(/<footer\b[^>]*>[\s\S]*?<\/footer>/gi, '');
   body = body.replace(/<aside\b[^>]*>[\s\S]*?<\/aside>/gi, '');
   return body;
+}
+
+function extractElementsByClass(html, classPattern) {
+  const blocks = [];
+  const openingTagPattern = /<([a-z0-9-]+)\b[^>]*\bclass=["']([^"']*)["'][^>]*>/gi;
+  let match;
+
+  while ((match = openingTagPattern.exec(html)) !== null) {
+    const tagName = match[1].toLowerCase();
+    const className = match[2];
+    if (!classPattern.test(className)) continue;
+
+    const start = match.index;
+    const end = findMatchingClosingTag(html, tagName, openingTagPattern.lastIndex);
+    if (end > start) {
+      blocks.push(html.slice(start, end));
+    }
+  }
+
+  return blocks;
+}
+
+function findMatchingClosingTag(html, tagName, searchStart) {
+  const tagPattern = new RegExp(`<\\/?${tagName}\\b[^>]*>`, 'gi');
+  tagPattern.lastIndex = searchStart;
+
+  let depth = 1;
+  let match;
+  while ((match = tagPattern.exec(html)) !== null) {
+    if (match[0][1] === '/') {
+      depth -= 1;
+      if (depth === 0) return tagPattern.lastIndex;
+    } else {
+      depth += 1;
+    }
+  }
+
+  return -1;
 }
 
 function htmlToMarkdown(html) {

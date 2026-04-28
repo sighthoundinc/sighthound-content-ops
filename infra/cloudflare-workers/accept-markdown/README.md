@@ -1,6 +1,6 @@
 # Accept-Markdown Worker
 
-Cloudflare Worker implementing the [acceptmarkdown.com](https://acceptmarkdown.com/start) content-negotiation spec for `www.sighthound.com` and `www.redactor.com`, plus authoritative hosting of `/llms.txt`, `/llms-full.txt`, and `/robots.txt` for both domains.
+Cloudflare Worker implementing the [acceptmarkdown.com](https://acceptmarkdown.com/start) content-negotiation spec for `www.sighthound.com` and `www.redactor.com`, plus authoritative hosting of `/llms.txt`, `/llms-full.txt`, and `/robots.txt` for those marketing domains.
 
 ## What it does
 
@@ -36,6 +36,11 @@ src/content/
 
 To edit any of these, change the file and redeploy — no CMS touch needed.
 
+MkDocs documentation sites own their own LLM documents and are not Worker-hosted:
+
+- `docs.redactor.com` → `redactor-mkdocs/docs/llms.txt` and `redactor-mkdocs/docs/llms-full.txt`
+- `dev.sighthound.com` → `developer-portal-mkdocs/docs/llms.txt` and `developer-portal-mkdocs/docs/llms-full.txt`
+
 ## Local development
 
 ```shell
@@ -61,7 +66,7 @@ curl -sL -H 'Accept: text/markdown' http://127.0.0.1:8787/blog/campus-vehicle-tr
 
 ## Deploy
 
-Requires a Cloudflare account with Workers enabled and the `sighthound.com` zone present.
+Requires a Cloudflare account with Workers enabled and the `sighthound.com` and `redactor.com` zones present.
 
 ```shell
 # One-time
@@ -71,20 +76,7 @@ npx wrangler login
 npm run deploy
 ```
 
-First deploy will prompt Cloudflare to attach the route pattern declared in `wrangler.toml` (`www.sighthound.com/*`) to the `sighthound.com` zone.
-
-### Redactor
-
-The `www.redactor.com/*` route is commented out in `wrangler.toml`. Enable it only after confirming `redactor.com` nameservers point to Cloudflare:
-
-```shell
-dig redactor.com NS +short
-```
-
-Expected output: two `*.cloudflare.com` entries. If it's still on Webflow's default nameservers, you need to move the zone to Cloudflare first (free plan is fine). Once the nameservers are Cloudflare:
-
-1. Uncomment the `[[routes]]` block for `www.redactor.com/*` in `wrangler.toml`.
-2. `npm run deploy` again.
+Deploy attaches only the route patterns declared in `wrangler.toml`: `www.sighthound.com/*` and `www.redactor.com/*`.
 
 ## Validation
 

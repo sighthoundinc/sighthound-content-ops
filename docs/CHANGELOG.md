@@ -4,6 +4,17 @@ Tracks changes to authoritative documentation under `docs/` and repo-root docs. 
 
 Newest entries first.
 
+## 2026-06-12
+
+### Changed — Repository restructure (docs/archive convention)
+
+- Moved 43 historical root reports (sprints, phases, governance, audits, fix logs, AI-assistant history, design history) into flat `docs/archive/` with an index `docs/archive/README.md`. Three space-named files renamed to kebab-case (`ai-assistant-mvp-spec.md`, `ai-assistant-premium-ux-upgrade.md`, `phase-0-deterministic-workflow-intelligence.md`).
+- Moved 10 historical completion docs from `docs/` into `docs/archive/`.
+- Moved root `audits/` audit kit to `docs/audits/app-audit-2025/` (self-contained, `__dirname`-relative).
+- Moved `critical-data/` to `data/legacy-import/`; updated the default path in `scripts/import-legacy-xlsx.mjs` (env override `LEGACY_XLSX_PATH` unchanged).
+- Untracked generated `reports/` output and gitignored `/reports/`; archived the superseded `/login` autoresearch program (`program 2.md` → `docs/archive/autoresearch-program-login-bundle.md`).
+- Added `Repository structure` section to `README.md` and layout conventions to `AGENTS.md`. Canonical root docs and all runtime/CI paths unchanged.
+
 ## 2026-04-22
 
 ### Added — `docs/content-style-guide.md` (v2026.04)

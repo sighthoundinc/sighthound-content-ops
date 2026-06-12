@@ -20,6 +20,12 @@ Content authoring authority lives under `docs/`:
 - `docs/content-relay/exceptions.md` — per-post logged exceptions to the style guide.
 - `docs/CHANGELOG.md` — documentation changelog.
 
+Repository layout conventions (MUST):
+- Historical status/completion/audit reports live in `docs/archive/` (flat; see `docs/archive/README.md`). Do not accumulate new report files at the repo root — when a report stops being actionable, `git mv` it into `docs/archive/`.
+- Versioned script source data lives under `data/` (e.g. `data/legacy-import/` for `scripts/import-legacy-xlsx.mjs`).
+- Generated tool output (`reports/`, `results/`, `coverage/`) is gitignored — never commit it.
+- `HOW_TO_USE_APP.md` MUST stay at the repo root: it is read at runtime by `src/app/api/ai/utils/user-manual.ts` via `process.cwd()`.
+
 ## Rule Conflict Resolution (MUST)
 
 If instructions appear to conflict, resolve in this order:

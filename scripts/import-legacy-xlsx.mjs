@@ -18,7 +18,7 @@ const PRIMARY_CALENDAR_SHEET = process.env.LEGACY_CALENDAR_SHEET ?? "Calendar Vi
 const LEGACY_START_YEAR = Number.parseInt(process.env.LEGACY_START_YEAR ?? "2023", 10);
 const XLSX_PATH =
   process.env.LEGACY_XLSX_PATH ??
-  path.join(repoRoot, "critical-data", "Blog Content Tracking - Sighthound and Redactor (cleaned).xlsx");
+  path.join(repoRoot, "data", "legacy-import", "Blog Content Tracking - Sighthound and Redactor (cleaned).xlsx");
 const DRY_RUN = process.argv.includes("--dry-run");
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !IMPORT_CREATED_BY_USER_ID) {

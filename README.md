@@ -120,6 +120,24 @@ Detail page ordering rule:
 - Design tokens reference: `docs/DESIGN_TOKENS.md`
 - Performance budgets: `docs/PERFORMANCE_BUDGET.md`
 - Bundle-size autoresearch tool: `autoresearch/README.md` (runbook in `OPERATIONS.md` §12)
+
+## Repository structure
+- `src/` — Next.js app (App Router), components, libs, API routes
+- `public/` — static assets
+- `supabase/` — migrations and edge functions
+- `tests/` — Jest + Playwright suites
+- `scripts/` — maintenance and CI scripts
+- `docs/` — living documentation; `docs/archive/` holds historical reports (see `docs/archive/README.md`); `docs/audits/app-audit-2025/` holds the audit kit
+- `design-system/` — canonical brand tokens, assets, reference UI kits
+- `deft/` — rules framework (see `AGENTS.md`)
+- `data/` — versioned source data for scripts (e.g. legacy import spreadsheet)
+- `autoresearch/`, `program.md`, `history/` — bundle-size autoresearch state
+- `snapshots/` — read-only upstream llms.txt mirrors (`scripts/pull-upstream-llms.sh`)
+- `eval/` — fixture/rule harnesses (e.g. Slack contract lint)
+- `infra/` — deployment infra (Cloudflare Workers)
+- Root docs — `README.md`, `SPECIFICATION.md`, `AGENTS.md`, `HOW_TO_USE_APP.md` (read at runtime by Ask AI), `OPERATIONS.md`, `CLAUDE.md`, `LICENSE`
+- Generated output (`reports/`, `results/`, `coverage/`, `.next/`) is gitignored
+
 ## Home page rendering
 - `/` is a Server Component. Dashboard summary + tasks snapshot are fetched server-side via `@supabase/ssr` cookies before the initial HTML is returned.
 - Only the bucket tile `onClick` (filter intent) lives in a client component (`src/app/home-bucket-link.tsx`); everything else on `/` is server-rendered.

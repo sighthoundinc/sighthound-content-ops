@@ -337,7 +337,7 @@ User-facing guide to markdown formatting in comments.
 - Troubleshooting
 - Technical details
 
-### `docs/COMMENT_IMPROVEMENTS_SUMMARY.md`
+### `docs/archive/COMMENT_IMPROVEMENTS_SUMMARY.md`
 **Status:** ✨ NEW (273 lines)
 
 Technical documentation for the implementation.

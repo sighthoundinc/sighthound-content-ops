@@ -58,3 +58,4 @@ next-env.d.ts
 # experiment-strategy document and MUST stay tracked so round history survives.
 /research.env
 /results/
+/reports/

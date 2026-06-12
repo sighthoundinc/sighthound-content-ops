@@ -16,7 +16,7 @@ export const GET = withApiContract(async function GET() {
     {
       deprecatedIdeasDeleteHits: globalThis.__deprecatedIdeasDeleteHits || 0,
       timestamp: new Date().toISOString(),
-      note: "Deprecation metrics for internal monitoring. See PHASE_E_COMPLETION.md",
+      note: "Deprecation metrics for internal monitoring. See docs/archive/PHASE_E_COMPLETION.md",
     },
     { status: 200 }
   );

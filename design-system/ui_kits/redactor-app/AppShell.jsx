@@ -1,4 +1,6 @@
 const { useState } = React;
+// Legacy local prototype retained for historical comparison.
+// The current v0.9.1 Redactor UI kit entrypoint is RedactorShell.jsx.
 
 function AppShell({ children, active, onNav }) {
   const nav = [

@@ -72,9 +72,9 @@ export function LoginAmbient() {
       >
         <defs>
           <linearGradient id="sh-login-wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#4f60dc" />
-            <stop offset="55%" stopColor="#7a4fdc" />
-            <stop offset="100%" stopColor="#f62470" />
+            <stop offset="0%" stopColor="var(--sh-blurple)" />
+            <stop offset="55%" stopColor="var(--sh-blurple-700)" />
+            <stop offset="100%" stopColor="var(--sh-orange-red)" />
           </linearGradient>
         </defs>
         <path

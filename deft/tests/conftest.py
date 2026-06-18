@@ -9,6 +9,7 @@ Author: Scott Adams (msadams) — 2026-03-09
 
 import contextlib
 import io
+import os
 import sys
 from collections import deque
 from pathlib import Path
@@ -46,6 +47,44 @@ if sys.platform == "win32":
             _orig = getattr(_mod, _fn_name, None)
             if _orig is not None:
                 setattr(_mod, _fn_name, _make_safe(_orig))
+
+
+@pytest.fixture(autouse=True)
+def _restore_cwd():
+    """Snapshot the working directory and restore it after every test (#1681).
+
+    Defense-in-depth against a stray ``os.chdir`` leaking out of a test. Combined
+    with ``tmp_path_retention_count = 0`` (pyproject.toml, #281), an unrestored
+    chdir into a ``tmp_path`` leaves later tests stranded in a directory pytest
+    deleted at teardown, cascading thousands of ``FileNotFoundError``s across the
+    session (the #1681 ``task check`` cascade). Tests SHOULD use
+    ``monkeypatch.chdir`` (auto-restoring); this fixture heals any that do not so
+    the leak cannot cascade, then fails the offending test loudly so the stray
+    chdir is fixed at its source.
+
+    monkeypatch is function-scoped and torn down before this autouse fixture, so
+    a properly ``monkeypatch.chdir``'d test has already been restored by the time
+    this guard runs -- the failure only fires on a bare, unrestored ``os.chdir``.
+    """
+    try:
+        original = os.getcwd()
+    except FileNotFoundError:
+        original = None
+    yield
+    if original is None:
+        return
+    try:
+        current = os.getcwd()
+    except FileNotFoundError:
+        current = None
+    if current != original:
+        # Heal first so the leak cannot cascade into later tests, then fail loud.
+        os.chdir(original)
+        pytest.fail(
+            f"Test left the working directory at {current!r}; expected "
+            f"{original!r}. Use monkeypatch.chdir(...) instead of a bare "
+            "os.chdir to avoid the #1681 FileNotFoundError cascade."
+        )
 
 
 @pytest.fixture(scope="session")
@@ -128,17 +167,51 @@ def deft_run_module(deft_module):
     return sys.modules["deft_run"]
 
 
+@pytest.fixture(scope="session")
+def doctor_module():
+    """Load scripts/doctor.py -- the canonical doctor implementation (#1335).
+
+    After the Epic-1 extraction, the doctor helpers (``_classify_taskfile_include``,
+    ``_TASKFILE_INCLUDE_SNIPPET``, ``_includes_block_has_deft_taskfile``,
+    ``read_yn``, ``HAS_RICH`` for the doctor surface, etc.) live in
+    ``scripts/doctor.py``. Tests that previously poked at these symbols on
+    the ``run`` (deft_run) module MUST target this fixture instead, because
+    the ``run::cmd_doctor`` shim defers to ``scripts/doctor.py`` and the
+    extracted helpers' globals resolve under the ``doctor`` module's
+    namespace -- monkeypatching ``deft_run`` is invisible to the running
+    code after Epic-1.
+
+    Registers the loaded module as ``sys.modules["doctor"]`` so the
+    ``run::cmd_doctor`` shim's ``import doctor`` picks up the same object
+    the tests are patching (otherwise the shim would re-load a fresh copy
+    via sys.path and the patches would be silently invisible).
+    """
+    import importlib.util
+    from pathlib import Path as _Path
+
+    if "doctor" in sys.modules:
+        return sys.modules["doctor"]
+    doctor_py = _Path(__file__).parent.parent / "scripts" / "doctor.py"
+    spec = importlib.util.spec_from_file_location("doctor", doctor_py)
+    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    sys.modules["doctor"] = module
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module
+
+
 @pytest.fixture
 def isolated_env(tmp_project_dir: Path, monkeypatch: pytest.MonkeyPatch):
     """Combine tmp_project_dir with env var overrides for CLI isolation.
 
-    Sets DEFT_USER_PATH and DEFT_PROJECT_PATH to temp locations so CLI
-    commands don't read/write real config files during tests.
+    Sets DEFT_USER_PATH, DEFT_PROJECT_PATH, and DEFT_VBRIEF_PROPOSED to temp
+    locations so CLI commands don't read/write real config files during tests.
     """
     user_md = tmp_project_dir / "USER.md"
-    project_md = tmp_project_dir / "PROJECT.md"
+    project_json = tmp_project_dir / "vbrief" / "PROJECT-DEFINITION.vbrief.json"
+    vbrief_proposed = tmp_project_dir / "vbrief" / "proposed"
     monkeypatch.setenv("DEFT_USER_PATH", str(user_md))
-    monkeypatch.setenv("DEFT_PROJECT_PATH", str(project_md))
+    monkeypatch.setenv("DEFT_PROJECT_PATH", str(project_json))
+    monkeypatch.setenv("DEFT_VBRIEF_PROPOSED", str(vbrief_proposed))
     monkeypatch.chdir(tmp_project_dir)
     return tmp_project_dir
 

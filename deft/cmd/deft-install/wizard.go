@@ -16,34 +16,70 @@ import (
 var errUserExit = errors.New("user chose to exit")
 var errBackToDrives = errors.New("user chose to reselect drive")
 
+// CanonicalFrameworkSubdir is the v0.27.1 canonical install layout: the
+// framework is deposited at <project>/.deft/core/ (#992, #1020). The legacy
+// <project>/deft/ layout is preserved behind --legacy-layout for in-flight
+// migrations only -- a consumer who runs the installer once without the flag
+// gets a canonical install no matter what was there before.
+//
+// Built as a constant expression via filepath.Separator so the value stays
+// immutable at the package surface and still resolves to the OS-native
+// separator at compile time (e.g. `.deft\core` on Windows, `.deft/core` on
+// Unix).
+const CanonicalFrameworkSubdir = ".deft" + string(filepath.Separator) + "core"
+
+// LegacyFrameworkSubdir is the pre-v0.27 layout. Selected via --legacy-layout.
+const LegacyFrameworkSubdir = "deft"
+
 // Wizard guides the user through choosing an install location.
 type Wizard struct {
-	scanner *bufio.Scanner
-	out     io.Writer
-	debug   bool
+	scanner      *bufio.Scanner
+	out          io.Writer
+	debug        bool
+	legacyLayout bool
 }
 
 // WizardResult holds the chosen paths after the wizard completes.
 type WizardResult struct {
-	ProjectName string
-	ProjectDir  string
-	DeftDir     string
-	Update      bool // true when deft/ already exists and user chose to update
+	ProjectName  string
+	ProjectDir   string
+	DeftDir      string
+	Update       bool // true when the framework dir already exists and user chose to update
+	LegacyLayout bool // true when --legacy-layout was passed; deposit at deft/ instead of .deft/core/
+}
+
+// frameworkSubdir returns the relative framework directory the wizard should
+// deposit into based on its layout selection.
+func (w *Wizard) frameworkSubdir() string {
+	if w.legacyLayout {
+		return LegacyFrameworkSubdir
+	}
+	return CanonicalFrameworkSubdir
 }
 
 // NewWizard creates a Wizard reading from in and writing to out.
 func NewWizard(in io.Reader, out io.Writer, debug bool) *Wizard {
+	return NewWizardWithLayout(in, out, debug, false)
+}
+
+// NewWizardWithLayout is like NewWizard but lets callers select the legacy
+// install layout (back-compat path for in-flight migrations only).
+func NewWizardWithLayout(in io.Reader, out io.Writer, debug, legacyLayout bool) *Wizard {
 	return &Wizard{
-		scanner: bufio.NewScanner(in),
-		out:     out,
-		debug:   debug,
+		scanner:      bufio.NewScanner(in),
+		out:          out,
+		debug:        debug,
+		legacyLayout: legacyLayout,
 	}
 }
 
 // Run executes the full install wizard and returns the chosen paths.
 func (w *Wizard) Run() (*WizardResult, error) {
 	w.printBanner()
+	return w.runAfterBanner()
+}
 
+func (w *Wizard) runAfterBanner() (*WizardResult, error) {
 	projectName, err := w.askProjectName()
 	if err != nil {
 		return nil, err
@@ -67,9 +103,13 @@ func (w *Wizard) Run() (*WizardResult, error) {
 			return nil, err
 		}
 
-		deftDir := filepath.Join(projectDir, "deft")
+		deftDir := filepath.Join(projectDir, w.frameworkSubdir())
 
-		// If deft/ already exists, offer to update instead of blocking.
+		// Offer to update when the chosen layout's framework dir already
+		// exists. We intentionally do NOT auto-migrate a legacy deft/ to
+		// the canonical layout here -- the relocator (scripts/relocate.py /
+		// `task relocate`) owns that path so the contract for in-flight
+		// state-A consumers is preserved (#992 PR2, #1020).
 		if info, statErr := os.Stat(deftDir); statErr == nil && info.IsDir() {
 			update, err := w.askUpdate(deftDir)
 			if err != nil {
@@ -77,13 +117,26 @@ func (w *Wizard) Run() (*WizardResult, error) {
 			}
 			if update {
 				return &WizardResult{
-					ProjectName: filepath.Base(projectDir),
-					ProjectDir:  projectDir,
-					DeftDir:     deftDir,
-					Update:      true,
+					ProjectName:  filepath.Base(projectDir),
+					ProjectDir:   projectDir,
+					DeftDir:      deftDir,
+					Update:       true,
+					LegacyLayout: w.legacyLayout,
 				}, nil
 			}
 			continue
+		}
+
+		// Surface (but do not auto-migrate) an existing legacy deft/ install
+		// when the user is running the canonical install. Pointing them at
+		// `task relocate` keeps the relocator the single migration path.
+		if !w.legacyLayout {
+			legacyDir := filepath.Join(projectDir, LegacyFrameworkSubdir)
+			if info, statErr := os.Stat(legacyDir); statErr == nil && info.IsDir() {
+				w.printf("\nNote: a legacy `deft/` install exists at %s.\n", legacyDir)
+				w.printf("      The installer will deposit the canonical `.deft/core/` layout alongside it.\n")
+				w.printf("      To migrate the legacy install in place, run `task relocate` after install.\n\n")
+			}
 		}
 
 		if err := w.checkGuards(deftDir); err != nil {
@@ -97,9 +150,10 @@ func (w *Wizard) Run() (*WizardResult, error) {
 		}
 		if confirmed {
 			return &WizardResult{
-				ProjectName: filepath.Base(projectDir),
-				ProjectDir:  projectDir,
-				DeftDir:     deftDir,
+				ProjectName:  filepath.Base(projectDir),
+				ProjectDir:   projectDir,
+				DeftDir:      deftDir,
+				LegacyLayout: w.legacyLayout,
 			}, nil
 		}
 		// Not confirmed — loop back to parent folder selection.
@@ -112,7 +166,12 @@ func (w *Wizard) Run() (*WizardResult, error) {
 
 func (w *Wizard) printBanner() {
 	w.printf("\nWelcome to Deft! — AI coding standards, installed in seconds.\n")
-	w.printf("Installer version: %s\n\n", version)
+	w.printf("Installer version: %s\n", version)
+	if w.legacyLayout {
+		w.printf("Layout         : legacy (deft/) -- back-compat path for in-flight migrations\n\n")
+	} else {
+		w.printf("Layout         : canonical (.deft/core/)\n\n")
+	}
 }
 
 func (w *Wizard) askProjectName() (string, error) {
@@ -149,7 +208,7 @@ func (w *Wizard) askProjectName() (string, error) {
 // "Create a new subfolder" creates a child folder and uses it as the project directory.
 func (w *Wizard) selectProjectDir(root, projectName string) (string, error) {
 	w.printf("Navigate to your project's root directory.\n")
-	w.printf("Deft will be installed as a subfolder (deft/) inside it.\n")
+	w.printf("Deft will be installed as a subfolder (%s/) inside it.\n", w.frameworkSubdir())
 
 	current := root
 	for {
@@ -168,13 +227,13 @@ func (w *Wizard) selectProjectDir(root, projectName string) (string, error) {
 		useIdx := 0
 		if !isDriveRoot(current) {
 			useIdx = nextIdx
-			w.printf("  %d. ** Install in this directory ** (%s%cdeft)\n", useIdx, current, os.PathSeparator)
+			w.printf("  %d. ** Install in this directory ** (%s%c%s)\n", useIdx, current, os.PathSeparator, w.frameworkSubdir())
 			nextIdx++
 		}
 
 		createIdx := nextIdx
-		w.printf("  %d. Create a new subfolder        (%s%cdeft)\n", createIdx,
-			filepath.Join(current, projectName), os.PathSeparator)
+		w.printf("  %d. Create a new subfolder        (%s%c%s)\n", createIdx,
+			filepath.Join(current, projectName), os.PathSeparator, w.frameworkSubdir())
 		nextIdx++
 
 		enterIdx := nextIdx
@@ -328,7 +387,7 @@ func (w *Wizard) checkGuards(deftDir string) error {
 }
 
 func (w *Wizard) askUpdate(deftDir string) (bool, error) {
-	w.printf("\nA deft/ folder already exists at %s\n", deftDir)
+	w.printf("\nA %s/ folder already exists at %s\n", w.frameworkSubdir(), deftDir)
 	w.printf("Would you like to update it with the latest version? [Y/n]: ")
 	input, err := w.readLine()
 	if err != nil {
@@ -340,7 +399,16 @@ func (w *Wizard) askUpdate(deftDir string) (bool, error) {
 
 func (w *Wizard) confirmExit() bool {
 	w.printf("Are you sure you want to exit? [y/N]: ")
-	input, _ := w.readLine()
+	// An I/O error on the readLine here is treated as "do not exit" so the
+	// wizard remains responsive on EOF / piped-input corner cases; surface
+	// the error in debug mode rather than swallowing it entirely (#1281).
+	input, err := w.readLine()
+	if err != nil {
+		if w.debug {
+			w.printf("[debug] confirmExit readLine: %v\n", err)
+		}
+		return false
+	}
 	return strings.TrimSpace(strings.ToLower(input)) == "y"
 }
 
@@ -463,12 +531,22 @@ func CheckWritePermission(dir string) error {
 	}
 
 	// Try creating and removing a temp file to verify write access.
-	tmp := filepath.Join(check, ".deft-install-write-test")
-	f, err := os.Create(tmp)
+	// #1303 pass-3 review (SLizard live P1 wizard.go:379-524 —
+	// CheckWritePermission race): use os.CreateTemp so two concurrent
+	// `deft-install` runs probing the same directory do not race on a
+	// static `.deft-install-write-test` filename. The `*` in the pattern
+	// is expanded to a unique suffix; defer os.Remove on the returned
+	// path so cleanup runs on every exit (success or failure), mirroring
+	// the git-installer fix in cmd/deft-install/git.go:235-249.
+	f, err := os.CreateTemp(check, ".deft-install-write-test-*")
 	if err != nil {
-		return fmt.Errorf("no write permission on %s — try running as administrator", check)
+		// Wrap the underlying os.CreateTemp error so callers can match
+		// it with errors.Is (e.g. fs.ErrPermission) and tooling
+		// preserves the root cause for diagnostics (#1281).
+		return fmt.Errorf("no write permission on %s — try running as administrator: %w", check, err)
 	}
+	tmpPath := f.Name()
+	defer os.Remove(tmpPath)
 	f.Close()
-	os.Remove(tmp)
 	return nil
 }

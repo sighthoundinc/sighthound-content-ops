@@ -24,6 +24,7 @@ See [../coding/testing.md](../coding/testing.md) for universal requirements.
 - ! ≥85% coverage
 - ! Count src/\*
 - ! Exclude entry points, scripts, generated code
+- ! Display-bound entry points (pygame/tkinter/PyQt/Kivy/Electron event loops) cannot run headlessly — exclude them via `[tool.coverage.run] omit` so the threshold measures logic modules only (see `Headless GUI / event-loop testing` under Patterns)
 
 ### Style
 - ! Follow PEP 8 via ruff + black + isort
@@ -54,6 +55,50 @@ See [commands.md](./commands.md).
 **Class**: `@pytest.fixture(autouse=True)` in class for shared setup
 **Property Testing**: `hypothesis` for property-based tests
 **Factories**: `pydantic-factories` for test data generation
+
+### Headless GUI / event-loop testing
+Display-bound entry points (pygame, tkinter, PyQt/PySide, Kivy, Electron bridges) start an event loop that needs a real display, so they cannot execute under headless CI or a swarm-agent session. Measuring them drags overall coverage below the 85% threshold even when every logic module is fully tested — the agent reports an inflated per-session coverage that collapses when the full `src/` is measured. Two complementary patterns keep the gate honest.
+
+**1. Headless display driver (test what you can).** For pygame/SDL, force the dummy video driver BEFORE importing the library so windowless smoke tests still run:
+```python
+import os
+
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")  # ! set BEFORE importing pygame
+os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+
+import pygame  # now safe to import under headless CI
+```
+For tkinter, skip the test when no display is available:
+```python
+import pytest
+
+tk = pytest.importorskip("tkinter")
+
+def _has_display() -> bool:
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        return False
+    root.destroy()
+    return True
+
+requires_display = pytest.mark.skipif(
+    not _has_display(), reason="no display available (headless CI)"
+)
+```
+
+**2. Coverage omit (exclude the unreachable loop).** Keep the blocking event loop in a thin entry-point module (e.g. `src/ui.py`) that holds no business logic, then omit it so the threshold reflects logic modules only:
+```toml
+[tool.coverage.run]
+omit = [
+  "*/tests/*",
+  "*/venv/*",
+  "*/.venv/*",
+  "src/ui.py",        # display-bound pygame/tkinter event loop — cannot run headlessly (#1027)
+]
+```
+- ~ Keep display-bound modules thin: push testable logic (state, scoring, input handling) into separate, fully-tested modules so only the event-loop shell is omitted
+- ⊗ Omit a module that mixes business logic with the event loop — refactor the logic out first, then omit only the loop
 
 ### Data Models
 **Pydantic BaseModel**:
@@ -110,9 +155,9 @@ def process_order(order: Order) -> ProcessedOrder:
 [project]
 requires-python=">=3.11"
 dependencies=["flask>=3.0.0"]  # or fastapi/typer[all]/textual[dev]
-[dependency-groups]  # PEP 735 — uv syncs these by default
+[dependency-groups]  # PEP 735 — uv syncs these automatically without extra flags
 dev=["pytest>=7.4","pytest-cov>=4.1","pytest-mock>=3.12","hypothesis>=6.0","black>=23","isort>=5.12","ruff>=0.1","mypy>=1.7","pydantic>=2.0"]
-[project.optional-dependencies]
+[project.optional-dependencies]  # pip/hatch compat — requires: uv sync --extra dev / pip install -e ".[dev]"
 prod=["pydantic>=2.0","logfire>=0.1"]  # ~ Observability for production
 [tool.pytest.ini_options]
 testpaths=["tests"]
@@ -136,6 +181,25 @@ warn_return_any=true
 warn_unused_configs=true
 disallow_untyped_defs=true
 ```
+
+## Hygiene
+
+**Types:**
+- ⊗ `# type: ignore` without an inline comment explaining exactly why it is safe
+- ⊗ `Any` as a function return type where the concrete type is knowable
+- ⊗ Bare `object` or untyped containers (`list`, `dict` with no generics) on public APIs
+
+**Error handling:**
+- ⊗ Bare `except:` or `except Exception: pass` — catch the specific exception; log or re-raise
+- ⊗ Returning `None` or a neutral default to mask an exception — let it propagate
+
+**Dead code:**
+- ~ Run `vulture` to detect unused functions, classes, and variables
+- ~ Add `vulture . --min-confidence 80` as a `task hygiene` target
+
+**Circular dependencies:**
+- ~ Run `pydeps <package>` or `importlab` to detect import cycles; resolve by extracting shared types to a lower-level module
+- ⊗ Circular imports between modules — see [coding/hygiene.md](../coding/hygiene.md) for resolution pattern
 
 ## Compliance Checklist
 

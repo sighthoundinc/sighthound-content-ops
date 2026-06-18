@@ -13,9 +13,9 @@
 - Check for custom rules and preferences
 - Override path via `DEFT_USER_PATH` env var
 
-**[core/glossary.md](./core/glossary.md)** - Term definitions
-- Load: When encountering unfamiliar terms (release, feature, demo sentence, context rot, etc.)
-- Contains: work decomposition hierarchy, GSD → Deft term mapping
+**[core/glossary.md](./core/glossary.md)** - Authoritative vocabulary
+- Load: When any term is undefined or used ambiguously; before introducing a new term
+- Contains: work decomposition hierarchy, hygiene terms, framework design terms, GSD → Deft mapping
 
 ## 📋 Task-Based Loading
 
@@ -29,11 +29,14 @@
    - [languages/python.md](./languages/python.md) - When writing Python
    - [languages/go.md](./languages/go.md) - When writing Go
    - [languages/typescript.md](./languages/typescript.md) - When writing TypeScript/JavaScript
+   - [languages/officejs.md](./languages/officejs.md) - When writing Office.js add-ins (Excel JavaScript API)
    - [languages/cpp.md](./languages/cpp.md) - When writing C++
+   - [languages/vba.md](./languages/vba.md) - When writing VBA (Excel macros)
 
-3. **[PROJECT.md](./PROJECT.md)** - Project-specific rules
-   - Load: When unsure about project standards
-   - Contains: project tech stack, coverage requirements, telemetry config
+3. **[vbrief/PROJECT-DEFINITION.vbrief.json](./vbrief/vbrief.md#project-definitionvbriefjson)** - Project identity gestalt
+   - Load: When unsure about project standards (tech stack, architecture, risks)
+   - Contains: project identity narratives (overview, tech stack, architecture, risks/unknowns, config) + scope registry across all lifecycle folders
+   - Replaces: the former `PROJECT.md` (deprecated)
 
 ### When Building Interfaces
 
@@ -59,6 +62,7 @@ Load as needed:
 - **[scm/github.md](./scm/github.md)** - When setting up CI/CD, PRs, issues
 - **[tools/taskfile.md](./tools/taskfile.md)** - When creating/modifying tasks
 - **[coding/testing.md](./coding/testing.md)** - When writing tests or checking coverage
+- **[coding/security.md](./coding/security.md)** - When handling untrusted input, auth, secrets, dependencies, or building agent surfaces (#661)
 - **[tools/telemetry.md](./tools/telemetry.md)** - When implementing logging, tracing, metrics
 
 ### When Working in a Swarm
@@ -67,11 +71,28 @@ Load as needed:
 - Load: Only when multiple agents working on same codebase
 - Contains: communication protocols, conflict resolution, handoff patterns
 
+### When Building LLM Applications
+
+**[patterns/llm-app.md](./patterns/llm-app.md)** - LLM application standards (#481)
+- Load: When the project calls any LLM API (OpenAI, Anthropic, Cohere, local models, etc.), builds agentic functionality, or implements RAG
+- Contains: prompt construction (delimiters, parameterized templates), explicit trust tiers (system > few-shot > user > retrieved > web), tool/function-call validation (confused-deputy mitigation), RAG hygiene (no LLM-write-back, provenance), output handling (schema validation, XSS sanitization), multi-agent orchestration (sub-agent-output-is-untrusted), LLM-specific observability
+- Source material: AI Agent Traps paper (`docs/ssrn-6372438.pdf`)
+
+**[patterns/role-as-overlay.md](./patterns/role-as-overlay.md)** - Role as overlay (#816)
+- Load: When the project applies a persona / role / stance to an LLM call (skill-defined reviewer / builder / summarizer roles, agent-level identities, per-call stance overrides) or designs a multi-turn agent that persists message history across turns
+- Contains: the role-as-system-overlay rule (never role-as-user-message), failure modes of role-injection-as-messages (history pollution, retrieval corruption, context-rot acceleration, false-memory propagation, resumption breakage), the call > session > agent precedence chain, the implementation contract for skills and sub-agent dispatch, and a provider-surface mapping (Anthropic `system`, OpenAI Chat `messages[0] role:system` / Responses `instructions`, Gemini `system_instruction`)
+- Source material: Flue SDK ([withastro/flue](https://github.com/withastro/flue)) README
+
+**[patterns/prompt-assembly-layer-ordering.md](./patterns/prompt-assembly-layer-ordering.md)** - Prompt assembly layer ordering (#836)
+- Load: When the project assembles a system prompt from more than one fragment, relies on provider-side prompt caching (Anthropic / OpenAI / local), or operates an agent across more than one user turn per session
+- Contains: the cached-prefix-vs-ephemeral-injection invariant, canonical content for each layer, most-stable-first ordering inside the cached prefix, observability fields for cache-tier telemetry, and the load-bearing link to frozen-memory-snapshot (#832)
+- Extends: `patterns/llm-app.md` `## Prompt construction` + `## LLM-specific observability`
+
 ### When Managing Context or Long Tasks
 
 - **[context/context.md](./context/context.md)** - Core context engineering strategies (Write, Select, Compress, Isolate)
-- **[context/working-memory.md](./context/working-memory.md)** - Scratchpad and externalization patterns with vBRIEF
-- **[context/long-horizon.md](./context/long-horizon.md)** - Multi-session checkpoint/resume patterns
+- **[context/working-memory.md](./context/working-memory.md)** - Scratchpad and externalization patterns with vBRIEF; plan.vbrief.json + scope vBRIEF relationship
+- **[context/long-horizon.md](./context/long-horizon.md)** - Multi-session checkpoint/resume patterns; lifecycle folder conventions
 - **[context/tool-design.md](./context/tool-design.md)** - Designing AI-consumable tools
 - **[context/deterministic-split.md](./context/deterministic-split.md)** - LLM vs deterministic responsibility boundaries
 - **[context/fractal-summaries.md](./context/fractal-summaries.md)** - Hierarchical memory compression (task → feature → release)
@@ -88,7 +109,7 @@ Load as needed:
 
 ### When Handling Session Interruptions
 
-- **[resilience/continue-here.md](./resilience/continue-here.md)** - Interruption recovery protocol with vBRIEF
+- **[resilience/continue-here.md](./resilience/continue-here.md)** - Interruption recovery protocol with vBRIEF; continue.vbrief.json + scope vBRIEF relationship
 - **[resilience/context-pruning.md](./resilience/context-pruning.md)** - Fresh context per task, eliminating context rot
 - Load: On session end, context exhaustion, or when resuming interrupted work
 
@@ -98,7 +119,7 @@ Load as needed:
 - **[strategies/discuss.md](./strategies/discuss.md)** - Structured alignment phase with Feynman technique
 - **[strategies/map.md](./strategies/map.md)** - Codebase mapping for existing projects (stack, architecture, conventions, concerns)
 - **[strategies/research.md](./strategies/research.md)** - Structured research: Don't Hand-Roll + Common Pitfalls output
-- **[core/glossary.md](./core/glossary.md)** - Term definitions (release, feature, task, demo sentence, etc.)
+- **[core/glossary.md](./core/glossary.md)** - Authoritative vocabulary (release, feature, task, demo sentence, context rot, etc.)
 - Load: When planning features with multiple phases or gray areas
 
 ### When Working with Changes
@@ -112,12 +133,12 @@ Load as needed:
 
 **[templates/make-spec.md](./templates/make-spec.md)** - Specification generation
 - Load: When user asks to create a project specification
-- Contains: interview process, output format
+- Contains: interview process, scope vBRIEF output format
 
 **[vbrief/vbrief.md](./vbrief/vbrief.md)** - Canonical vBRIEF usage
 - Load: Whenever creating, reading, or managing vBRIEF files in a project
-- Contains: 5-type taxonomy, naming conventions, lifecycle rules, specification flow, tool mappings
-- Key rule: all vBRIEF files live in `./vbrief/` — never workspace root
+- Contains: file taxonomy (root-level files + scope vBRIEFs in lifecycle folders), naming conventions, lifecycle rules, specification flow, tool mappings
+- Key rules: all vBRIEF files live in `./vbrief/` or lifecycle subfolders — never workspace root; scope vBRIEFs use `YYYY-MM-DD-descriptive-slug.vbrief.json` naming; `plan.status` inside each scope vBRIEF is the source of truth — not the folder location
 
 **[vbrief/schemas/vbrief-core.schema.json](./vbrief/schemas/vbrief-core.schema.json)** — vBRIEF JSON Schema
 - Load: When creating, validating, or debugging `.vbrief.json` files
@@ -142,7 +163,7 @@ coding.md → git.md (before committing)
 
 ### Project Overrides
 ```
-(any file) → PROJECT.md (check for overrides)
+(any file) → vbrief/PROJECT-DEFINITION.vbrief.json (check for project identity + overrides)
 ~/.config/deft/USER.md (check for personal preferences)
 ```
 
@@ -177,7 +198,7 @@ Load order:
 3. coding/coding.md (writing code)
 4. languages/python.md (Python-specific)
 5. interfaces/rest.md (REST API design)
-6. PROJECT.md (check for overrides)
+6. vbrief/PROJECT-DEFINITION.vbrief.json (check for project overrides)
 
 ### Scenario: "Add tests to existing Go code"
 Load order:
@@ -185,7 +206,7 @@ Load order:
 2. ~/.config/deft/USER.md (always)
 3. coding/testing.md (testing standards)
 4. languages/go.md (Go-specific testing)
-5. PROJECT.md (coverage requirements)
+5. vbrief/PROJECT-DEFINITION.vbrief.json (coverage requirements)
 
 ### Scenario: "Fix a bug"
 Load order:
@@ -207,9 +228,10 @@ Load order:
 1. main.md (always)
 2. ~/.config/deft/USER.md (always)
 3. context/context.md (context engineering strategies)
-4. context/long-horizon.md (checkpoint/resume patterns)
-5. context/working-memory.md (scratchpad patterns)
+4. context/long-horizon.md (checkpoint/resume patterns; lifecycle folder conventions)
+5. context/working-memory.md (scratchpad patterns; plan.vbrief.json + scope vBRIEF relationship)
 6. `./vbrief/plan.vbrief.json` (if resuming — read checkpoint, don't replay history)
+7. Scope vBRIEFs in `./vbrief/active/` (the durable scope records being implemented)
 
 ## 💡 Tips for Agents
 
@@ -220,7 +242,7 @@ Load order:
 
 **Check Precedence:**
 - Always check `~/.config/deft/USER.md` first (highest precedence)
-- Check `./PROJECT.md` for project-specific overrides
+- Check `./vbrief/PROJECT-DEFINITION.vbrief.json` for project identity and overrides
 - Follow most specific → most general
 
 **Update Meta Files Freely:**
@@ -230,4 +252,4 @@ Load order:
 **When In Doubt:**
 - Start with main.md and coding/coding.md
 - Add language/interface files as task becomes clear
-- Check project.md if behavior seems inconsistent
+- Check `vbrief/PROJECT-DEFINITION.vbrief.json` if behavior seems inconsistent

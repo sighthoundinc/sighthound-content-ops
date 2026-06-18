@@ -11,6 +11,7 @@ Author: Scott Adams (msadams) -- 2026-04-12
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,9 +23,7 @@ REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
 
 # go-task CLI is not installed in CI (GitHub Actions ubuntu-latest)
 _has_task = shutil.which("task") is not None
-requires_task = pytest.mark.skipif(
-    not _has_task, reason="go-task CLI not available"
-)
+requires_task = pytest.mark.skipif(not _has_task, reason="go-task CLI not available")
 
 _has_all_tools = all(shutil.which(t) for t in ("go", "uv", "task", "git", "gh"))
 requires_all_tools = pytest.mark.skipif(
@@ -35,6 +34,7 @@ requires_all_tools = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
+
 
 def run_script(
     script_name: str, cwd: Path | None = None, env: dict | None = None
@@ -52,10 +52,51 @@ def run_script(
     )
 
 
-
 # ===========================================================================
 # toolchain-check.py
 # ===========================================================================
+
+
+class TestTaskCheckAggregate:
+    """Static contract tests for the context-aware ``task check`` split."""
+
+    TASKFILE = REPO_ROOT / "Taskfile.yml"
+
+    @staticmethod
+    def _task_block(body: str, task_name: str) -> str:
+        start = re.search(rf"^  {re.escape(task_name)}:\n", body, re.MULTILINE)
+        assert start is not None, f"{task_name} task missing"
+        next_task = re.search(r"^  [^\s#][^\n]*:\n", body[start.end() :], re.MULTILINE)
+        if next_task is None:
+            return body[start.end() :]
+        return body[start.end() : start.end() + next_task.start()]
+
+    def test_check_target_dispatches_through_project_context(self):
+        body = self.TASKFILE.read_text(encoding="utf-8")
+        assert "check:framework-source:" in body
+        assert "check:consumer:" in body
+        assert "--dispatch-task-check" in body
+
+    def test_consumer_check_does_not_depend_on_framework_self_tests(self):
+        body = self.TASKFILE.read_text(encoding="utf-8")
+        consumer_block = self._task_block(body, "check:consumer")
+        forbidden_deps = (
+            "core:validate",
+            "core:lint",
+            "core:test",
+            "verify:stubs",
+            "verify:links",
+            "verify:rule-ownership",
+            "verify:encoding",
+            "verify:destructive-gh-verbs",
+            "verify:scm-boundary",
+        )
+        for dep in forbidden_deps:
+            assert dep not in consumer_block
+        assert "doctor" in consumer_block
+        assert "verify:branch" in consumer_block
+        assert "vbrief:validate" in consumer_block
+
 
 class TestToolchainCheck:
     """Tests for scripts/toolchain-check.py."""
@@ -95,6 +136,7 @@ class TestToolchainCheck:
 # ===========================================================================
 # verify-stubs.py
 # ===========================================================================
+
 
 class TestVerifyStubs:
     """Tests for scripts/verify-stubs.py."""
@@ -146,9 +188,7 @@ class TestVerifyStubs:
 
     def test_bare_pass_detected(self, tmp_path):
         """Bare 'pass' after a colon-ending line is flagged as a stub."""
-        (tmp_path / "stub_fn.py").write_text(
-            "def placeholder():\n    pass\n", encoding="utf-8"
-        )
+        (tmp_path / "stub_fn.py").write_text("def placeholder():\n    pass\n", encoding="utf-8")
         result = run_script("verify-stubs.py", cwd=tmp_path)
         assert result.returncode == 1
         assert "bare pass" in result.stdout
@@ -157,6 +197,7 @@ class TestVerifyStubs:
 # ===========================================================================
 # validate-links.py
 # ===========================================================================
+
 
 class TestValidateLinks:
     """Tests for scripts/validate-links.py."""
@@ -176,9 +217,7 @@ class TestValidateLinks:
         (tmp_path / "README.md").write_text(
             "See [missing](nonexistent.md) here.\n", encoding="utf-8"
         )
-        result = run_script(
-            "validate-links.py", cwd=tmp_path, env={"LINK_CHECK_STRICT": "1"}
-        )
+        result = run_script("validate-links.py", cwd=tmp_path, env={"LINK_CHECK_STRICT": "1"})
         assert result.returncode == 1
         assert "broken internal link" in result.stdout.lower()
 
@@ -205,19 +244,13 @@ class TestValidateLinks:
         """Files in history/archive/ are excluded from scanning."""
         archive = tmp_path / "history" / "archive"
         archive.mkdir(parents=True)
-        (archive / "old.md").write_text(
-            "See [gone](deleted.md).\n", encoding="utf-8"
-        )
-        result = run_script(
-            "validate-links.py", cwd=tmp_path, env={"LINK_CHECK_STRICT": "1"}
-        )
+        (archive / "old.md").write_text("See [gone](deleted.md).\n", encoding="utf-8")
+        result = run_script("validate-links.py", cwd=tmp_path, env={"LINK_CHECK_STRICT": "1"})
         assert result.returncode == 0
 
     def test_strict_flag_argv(self, tmp_path):
         """--strict flag via argv triggers non-zero exit on broken links."""
-        (tmp_path / "doc.md").write_text(
-            "See [nope](nope.md).\n", encoding="utf-8"
-        )
+        (tmp_path / "doc.md").write_text("See [nope](nope.md).\n", encoding="utf-8")
         script = REPO_ROOT / "scripts" / "validate-links.py"
         result = subprocess.run(
             [sys.executable, str(script), "--strict"],
@@ -234,12 +267,13 @@ class TestValidateLinks:
 # change:init via task CLI
 # ===========================================================================
 
+
 @requires_task
 class TestChangeInit:
     """Tests for tasks/change.yml change:init task."""
 
     def test_correct_directory_structure(self, tmp_path):
-        """change:init creates proposal.md, design.md, tasks.vbrief.json, specs/."""
+        """change:init creates proposal.vbrief.json, tasks.vbrief.json, specs/."""
         # Set up minimal Taskfile that includes change.yml
         taskfile = (
             "version: '3'\n"
@@ -260,12 +294,18 @@ class TestChangeInit:
         assert result.returncode == 0, f"Unexpected failure: {result.stderr}"
         base = tmp_path / "history" / "changes" / "test-feature"
         assert base.is_dir()
-        assert (base / "proposal.md").is_file()
-        assert (base / "design.md").is_file()
+        assert (base / "proposal.vbrief.json").is_file()
         assert (base / "tasks.vbrief.json").is_file()
         assert (base / "specs").is_dir()
 
-        # Verify vBRIEF structure
+        # Verify proposal vBRIEF structure
+        proposal = json.loads((base / "proposal.vbrief.json").read_text("utf-8"))
+        assert proposal["vBRIEFInfo"]["version"] == "0.5"
+        assert proposal["plan"]["title"] == "test-feature"
+        assert "Problem" in proposal["plan"]["narratives"]
+        assert "Approach" in proposal["plan"]["narratives"]
+
+        # Verify tasks vBRIEF structure
         vbrief = json.loads((base / "tasks.vbrief.json").read_text("utf-8"))
         assert vbrief["vBRIEFInfo"]["version"] == "0.5"
         assert vbrief["plan"]["title"] == "test-feature"
@@ -337,6 +377,7 @@ class TestChangeInit:
 # commit:lint via task CLI
 # ===========================================================================
 
+
 @requires_task
 class TestCommitLint:
     """Tests for tasks/commit.yml commit:lint task."""
@@ -346,17 +387,23 @@ class TestCommitLint:
         subprocess.run(["git", "init"], cwd=str(tmp_path), capture_output=True, check=True)
         subprocess.run(
             ["git", "config", "user.email", "test@test.com"],
-            cwd=str(tmp_path), capture_output=True, check=True,
+            cwd=str(tmp_path),
+            capture_output=True,
+            check=True,
         )
         subprocess.run(
             ["git", "config", "user.name", "Test"],
-            cwd=str(tmp_path), capture_output=True, check=True,
+            cwd=str(tmp_path),
+            capture_output=True,
+            check=True,
         )
         (tmp_path / "f.txt").write_text("x", encoding="utf-8")
         subprocess.run(["git", "add", "."], cwd=str(tmp_path), capture_output=True, check=True)
         subprocess.run(
             ["git", "commit", "-m", message],
-            cwd=str(tmp_path), capture_output=True, check=True,
+            cwd=str(tmp_path),
+            capture_output=True,
+            check=True,
         )
 
     def _run_commit_lint(self, tmp_path: Path) -> subprocess.CompletedProcess:
@@ -397,8 +444,17 @@ class TestCommitLint:
     def test_all_valid_types_accepted(self, tmp_path):
         """All conventional commit types are accepted."""
         valid_types = (
-            "feat", "fix", "docs", "chore", "refactor",
-            "test", "style", "perf", "ci", "build", "revert",
+            "feat",
+            "fix",
+            "docs",
+            "chore",
+            "refactor",
+            "test",
+            "style",
+            "perf",
+            "ci",
+            "build",
+            "revert",
         )
         for ctype in valid_types:
             self._setup_repo(tmp_path, f"{ctype}: valid message")
@@ -411,5 +467,97 @@ class TestCommitLint:
             subprocess.run(["git", "add", "."], cwd=str(tmp_path), capture_output=True)
             subprocess.run(
                 ["git", "commit", "-m", f"{ctype}: valid message"],
-                cwd=str(tmp_path), capture_output=True,
+                cwd=str(tmp_path),
+                capture_output=True,
             )
+
+
+# ===========================================================================
+# QUICK-START.md bootstrap file (#358)
+# ===========================================================================
+
+
+class TestAgentsBootstrap:
+    """Tests for QUICK-START.md trampoline and templates/agents-entry.md (#358)."""
+
+    TRAMPOLINE_PATH = REPO_ROOT / "QUICK-START.md"
+    TEMPLATE_PATH = REPO_ROOT / "templates" / "agents-entry.md"
+    # The pre-v0.27 sentinel ``deft/main.md`` is still the trampoline's
+    # idempotency probe because QUICK-START.md is operator-facing and may
+    # describe both layouts; the template's canonical idempotency anchor
+    # was flipped in #1020 to the ``deft:managed-section v2`` marker (stable
+    # across both canonical and legacy install layouts).
+    SENTINEL = "deft/main.md"
+    TEMPLATE_SENTINEL = "<!-- deft:managed-section v3 -->"
+
+    def test_trampoline_exists_at_repo_root(self):
+        """QUICK-START.md must exist at the repository root."""
+        assert self.TRAMPOLINE_PATH.is_file()
+
+    def test_trampoline_is_agent_instructions(self):
+        """Trampoline must contain step-by-step agent instructions, not AGENTS.md content."""
+        content = self.TRAMPOLINE_PATH.read_text(encoding="utf-8")
+        assert "Step 1" in content
+        assert "Step 2" in content
+        assert "Step 3" in content
+        assert "templates/agents-entry.md" in content
+
+    def test_trampoline_has_contributor_guard(self):
+        """Trampoline must ask whether user is a consumer or contributor."""
+        content = self.TRAMPOLINE_PATH.read_text(encoding="utf-8")
+        assert "working on deft itself" in content
+
+    def test_trampoline_references_sentinel(self):
+        """Trampoline must use deft/main.md sentinel for idempotency check."""
+        content = self.TRAMPOLINE_PATH.read_text(encoding="utf-8")
+        assert self.SENTINEL in content
+
+    def test_template_exists(self):
+        """templates/agents-entry.md must exist as the single source of truth."""
+        assert self.TEMPLATE_PATH.is_file()
+
+    def test_template_contains_sentinel(self):
+        """Template must contain the v0.27 canonical v2 marker for idempotency (#1020)."""
+        content = self.TEMPLATE_PATH.read_text(encoding="utf-8")
+        assert self.TEMPLATE_SENTINEL in content
+
+    def test_template_references_v020_artifacts(self):
+        """Template must reference v0.20 skill names and artifacts."""
+        content = self.TEMPLATE_PATH.read_text(encoding="utf-8")
+        assert "deft-directive-setup" in content
+        assert "PROJECT-DEFINITION.vbrief.json" in content
+
+    def test_template_is_single_source_for_go_installer(self):
+        """cmd/deft-install/setup.go must source agentsMDEntry from the
+        templates package (//go:embed templates/agents-entry.md) rather than
+        a hardcoded raw string literal (#636).
+
+        If this test fails, the installer has grown a second hardcoded copy
+        of the AGENTS.md body and the single-source-of-truth contract is
+        broken. To repair: remove the hardcoded copy and rely on the embed
+        in templates/embed.go.
+        """
+        setup_go = (REPO_ROOT / "cmd" / "deft-install" / "setup.go").read_text(encoding="utf-8")
+        assert "templates.AgentsEntry" in setup_go, (
+            "cmd/deft-install/setup.go must reference templates.AgentsEntry "
+            "(sourced via //go:embed from templates/agents-entry.md) so that "
+            "editing the template alone is sufficient to change what the "
+            "installer writes (#636)."
+        )
+        assert "github.com/deftai/directive/templates" in setup_go, (
+            "cmd/deft-install/setup.go must import the templates package "
+            "(github.com/deftai/directive/templates) to consume the embedded "
+            "agents-entry.md (#636)."
+        )
+        # Guard against reintroduction of the backtick raw-string literal
+        # that previously held the hardcoded AGENTS.md body.
+        assert "agentsMDEntry = `" not in setup_go, (
+            "cmd/deft-install/setup.go reintroduced a hardcoded agentsMDEntry "
+            "raw-string literal. The AGENTS.md body must be sourced exclusively "
+            "from templates/agents-entry.md via the templates package embed (#636)."
+        )
+
+    def test_readme_calls_out_trampoline(self):
+        """README.md must reference QUICK-START.md near the top."""
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        assert "QUICK-START.md" in readme

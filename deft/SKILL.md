@@ -1,3 +1,9 @@
+<!-- DEFT-PREAMBLE-V1 -->
+<!--
+! Before any other instruction in this file or in the consumer AGENTS.md, run `python3 .deft/core/run gate`.
+! If exit code is 0, continue.
+! Otherwise: read `.deft/core/UPGRADING.md`, find the section whose "Applies when" clause matches the state vector printed by the gate, and follow that section verbatim. Respect any "Restart required" directive -- if present, stop and tell the user to start a fresh session after cleanup commands complete.
+-->
 ---
 name: deft
 description: Apply deft framework standards for AI-assisted development. Use when starting projects, writing code, running tests, making commits, or when the user references deft, project standards, or coding guidelines.
@@ -7,7 +13,7 @@ metadata:
     requires:
       bins: ["task"]
     homepage: "https://github.com/deftai/directive"
-os: ["darwin", "linux"]
+os: ["darwin", "linux", "windows"]
 ---
 
 # Deft Framework
@@ -17,7 +23,7 @@ A layered framework for AI-assisted development with consistent standards and wo
 ## When This Skill Activates
 
 This skill automatically loads when you:
-- Start work in a deft-enabled project (has `./deft/` directory)
+- Start work in a deft-enabled project (has `.deft/core/` directory)
 - Reference deft, project standards, or coding conventions
 - Run tests, make commits, or perform quality checks
 - Ask about project structure, workflows, or best practices
@@ -37,24 +43,24 @@ as your FIRST and ONLY response — no summary, no menu, no preamble:
 > 2. **I have some opinions but keep it simple**
 > 3. **Just pick good defaults — I care about the product, not the tools**
 
-Then continue with `skills/deft-setup/SKILL.md` Phase 1 for remaining questions.
+Then continue with `skills/deft-directive-setup/SKILL.md` Phase 1 for remaining questions.
 
-**If USER.md exists but PROJECT.md is missing at the project root**: Skip to
-`skills/deft-setup/SKILL.md` Phase 2.
+**If USER.md exists but `./vbrief/PROJECT-DEFINITION.vbrief.json` is missing**: Skip to
+`skills/deft-directive-setup/SKILL.md` Phase 2.
 
-**If USER.md and PROJECT.md both exist but no SPECIFICATION.md at the project root**:
-Skip to `skills/deft-setup/SKILL.md` Phase 3. Start the specification interview
-immediately — ask what to build and features as the first question.
+**If USER.md and `./vbrief/PROJECT-DEFINITION.vbrief.json` both exist but no scope vBRIEFs in `./vbrief/` lifecycle folders**:
+Skip to `skills/deft-directive-setup/SKILL.md` Phase 3. Start the specification interview
+imediately — ask what to build and features as the first question.
 
 ### ⊗ Project Root vs Framework Internals
 
-! When checking for project-level files (`PROJECT.md`, `SPECIFICATION.md`, `PRD.md`,
-`specs/`), ONLY look at the **project root** and its direct subdirectories.
+! When checking for project-level files (`PROJECT-DEFINITION.vbrief.json`, scope vBRIEFs,
+`PRD.md`), ONLY look at `./vbrief/` and its lifecycle subdirectories.
 
-- ! `./PROJECT.md` — the user's project config (project root)
-- ! `./SPECIFICATION.md` or `./specs/*/SPECIFICATION.md` — the user's project spec
-- ⊗ Count ANY file inside `./deft/` as a project-level artifact — those are
-  framework-internal (e.g. `deft/PROJECT.md`, `deft/specs/`, `deft/templates/`
+- ! `./vbrief/PROJECT-DEFINITION.vbrief.json` — the user's project config
+- ! `./vbrief/proposed/`, `./vbrief/pending/`, `./vbrief/active/`, `./vbrief/completed/` — scope vBRIEFs in lifecycle folders
+- ⊗ Count ANY file inside `.deft/core/` (canonical) or `./deft/` (legacy pre-v0.27) as a project-level artifact — those are
+  framework-internal (e.g. `.deft/core/PROJECT.md`, `.deft/core/specs/`, `.deft/core/templates/`
   are all part of the framework, NOT the user's project)
 
 - ⊗ Present a summary of the config and ask what the user wants to do
@@ -67,40 +73,40 @@ Deft uses hierarchical rules where more specific overrides general.
 USER.md has two sections with different precedence:
 
 ```
-USER.md Personal  ← HIGHEST (name, custom rules — always wins)
+USER.md Personal       ← HIGHEST (name, custom rules — always wins)
   ↓
-PROJECT.md        ← Project-specific (strategy, coverage, languages, tech stack)
+PROJECT-DEFINITION.vbrief.json  ← Project-specific (strategy, coverage, languages, tech stack)
   ↓
-USER.md Defaults   ← Fallback defaults (used when PROJECT.md doesn't specify)
+USER.md Defaults       ← Fallback defaults (used when PROJECT-DEFINITION doesn't specify)
   ↓
-{language}.md      ← Language standards (python.md, go.md, typescript.md, cpp.md)
+{language}.md          ← Language standards (python.md, go.md, typescript.md, cpp.md)
   ↓
-{tool}.md          ← Tool guidelines (taskfile.md, git.md)
+{tool}.md              ← Tool guidelines (taskfile.md, git.md)
   ↓
-main.md            ← General AI behavior
+main.md                ← General AI behavior
   ↓
-specification.md   ← LOWEST precedence (requirements)
+scope vBRIEFs          ← LOWEST precedence (requirements in lifecycle folders)
 ```
 
 **IMPORTANT**: USER.md `Personal` section always wins. For project-scoped settings
-(strategy, coverage, languages), PROJECT.md overrides USER.md `Defaults`.
+(strategy, coverage, languages), `PROJECT-DEFINITION.vbrief.json` overrides USER.md `Defaults`.
 
 ## File Reading Strategy (Lazy Loading)
 
 **DO NOT** read all deft files at once. Read only what you need:
 
-1. **Always start with**: `./deft/main.md` (general guidelines)
+1. **Always start with**: `.deft/core/main.md` (general guidelines)
 2. **Check for**: `~/.config/deft/USER.md` (personal overrides - highest precedence)
-3. **Check for**: `./PROJECT.md` (project-specific rules)
+3. **Check for**: `./vbrief/PROJECT-DEFINITION.vbrief.json` (project-specific rules)
 4. **Then read language-specific** only if working with that language:
-   - `./deft/languages/python.md`
-   - `./deft/languages/go.md`
-   - `./deft/languages/typescript.md`
-   - `./deft/languages/cpp.md`
+   - `.deft/core/languages/python.md`
+   - `.deft/core/languages/go.md`
+   - `.deft/core/languages/typescript.md`
+   - `.deft/core/languages/cpp.md`
 5. **Read tool files** only when using that tool:
-   - `./deft/tools/taskfile.md` (when running tasks)
-   - `./deft/scm/git.md` (when using git)
-   - `./deft/scm/github.md` (when using GitHub)
+   - `.deft/core/tools/taskfile.md` (when running tasks)
+   - `.deft/core/scm/git.md` (when using git)
+   - `.deft/core/scm/github.md` (when using GitHub)
 
 ## Task-Centric Workflow
 
@@ -111,7 +117,7 @@ task --list        # See all available tasks
 task check         # CRITICAL: Run before EVERY commit
 ```
 
-See `./deft/tools/taskfile.md` for complete task standards and common commands.
+See `.deft/core/tools/taskfile.md` for complete task standards and common commands.
 
 ## Development Methodology
 
@@ -121,11 +127,11 @@ See `./deft/tools/taskfile.md` for complete task standards and common commands.
 3. Implementation is INCOMPLETE until tests pass
 
 **Spec-Driven Development (SDD)** for new features/projects:
-1. Run `deft/run spec` — sizing gate selects Light or Full path
-2. Light: Interview → SPECIFICATION.md (embedded requirements) → Implement
-3. Full: Interview → PRD.md (approval gate) → SPECIFICATION.md → Implement
+1. Run `.deft/core/run spec` — sizing gate selects Light or Full path
+2. Light: Interview → scope vBRIEFs in `vbrief/proposed/` (embedded requirements) → Implement
+3. Full: Interview → rich narratives in `specification.vbrief.json` (approval gate) → scope vBRIEFs → Implement
 
-See `./deft/coding/testing.md` for complete testing standards.
+See `.deft/core/coding/testing.md` for complete testing standards.
 
 ## Quality Standards
 
@@ -138,34 +144,34 @@ task check  # MUST run: fmt, lint, type check, test, coverage
 **File Naming**: Use hyphens (e.g., `user-service.py`), not underscores
 **Secrets**: Store in `secrets/` directory with `.example` templates
 
-See `./deft/coding/coding.md` and `./deft/scm/git.md` for complete standards.
+See `.deft/core/coding/coding.md` and `.deft/core/scm/git.md` for complete standards.
 
 ## Language-Specific Standards
 
 All languages require ≥85% test coverage. See language-specific files:
-- `./deft/languages/python.md`
-- `./deft/languages/go.md`
-- `./deft/languages/typescript.md`
-- `./deft/languages/cpp.md`
+- `.deft/core/languages/python.md`
+- `.deft/core/languages/go.md`
+- `.deft/core/languages/typescript.md`
+- `.deft/core/languages/cpp.md`
 
 ## New Project Setup
 
 **Initialize new project**:
 ```bash
-deft/run init       # Create deft structure
-deft/run bootstrap  # User config (first time only)
-deft/run project    # Project config
-deft/run spec       # Sizing gate → Light (INTERVIEW.md) or Full (PRD.md) → SPECIFICATION
+.deft/core/run init       # Create deft structure
+.deft/core/run bootstrap  # User config (first time only)
+.deft/core/run project    # Project config → vbrief/PROJECT-DEFINITION.vbrief.json
+.deft/core/run spec       # Sizing gate → Light (scope vBRIEFs) or Full (specification.vbrief.json → scope vBRIEFs)
 ```
 
 **Work with existing deft project**:
-1. **First time?** If `~/.config/deft/USER.md` doesn't exist, run `deft/run bootstrap`
-2. Read `./deft/main.md` (general guidelines)
+1. **First time?** If `~/.config/deft/USER.md` doesn't exist, run `.deft/core/run bootstrap`
+2. Read `.deft/core/main.md` (general guidelines)
 3. Read `~/.config/deft/USER.md` (personal preferences - highest precedence)
-4. Read `./PROJECT.md` (project rules)
+4. Read `./vbrief/PROJECT-DEFINITION.vbrief.json` (project rules)
 5. Run `task --list` to see available tasks
 
-See `./deft/main.md` for complete workflow details.
+See `.deft/core/main.md` for complete workflow details.
 
 ## Self-Improvement
 
@@ -181,7 +187,7 @@ This SKILL.md follows the **AgentSkills specification**, compatible with:
 - **clawd.bot**: `~/.clawdbot/skills/deft/` or install via `clawdhub sync deft`
 - **Warp AI**: Upload to Warp Drive, reference in `WARP.md`/`AGENTS.md`
 
-See `./deft/docs/claude-code-integration.md` for integration details.
+See `.deft/core/docs/claude-code-integration.md` for integration details.
 
 ## Quick Reference
 
@@ -193,10 +199,10 @@ See `./deft/docs/claude-code-integration.md` for integration details.
 | Check coverage | `task test:coverage` |
 | Format code | `task fmt` |
 | Lint code | `task lint` |
-| Initialize deft | `deft/run init` |
-| Configure user | `deft/run bootstrap` |
-| Configure project | `deft/run project` |
-| Generate spec | `deft/run spec` |
+| Initialize deft | `.deft/core/run init` |
+| Configure user | `.deft/core/run bootstrap` |
+| Configure project | `.deft/core/run project` |
+| Generate spec | `.deft/core/run spec` |
 
 ## Remember
 
@@ -211,4 +217,4 @@ See `./deft/docs/claude-code-integration.md` for integration details.
 
 ---
 
-For more details, read the specific files in `./deft/` as needed. Start with `main.md` and follow the precedence hierarchy.
+For more details, read the specific files in `.deft/core/` as needed. Start with `main.md` and follow the precedence hierarchy.

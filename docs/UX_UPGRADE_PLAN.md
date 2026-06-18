@@ -14,6 +14,7 @@ Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in fou
 | `EmptyState` (via `DataPageEmptyState`) | Dashboard, My Tasks, Blogs, Social Posts, Ideas list empty states | One consistent empty-state look; backed by `UI_VOCAB.emptyStates` where applicable. |
 | Sidebar auto-collapse | `useSidebarState` | Below 1400px auto-collapses the first time; explicit user toggle wins afterwards. |
 | `NextActionCell` | `/tasks` Next Action column | Verb-first cell ("Submit Draft", "Publish Blog", "Waiting on Jane") replaces raw status pill. |
+| `OperationalTableFrame` + operational table action primitives | Blogs, My Tasks, Social Posts list; Dashboard copy/export dropdowns | Operational tables share results summary, action order, customize menu shape, selected-row bar, and pagination chrome without changing row data logic. |
 | `parseRecordDeepLink()` | `/social-posts` list | `?record=blog:<id>` or `?record=social:<id>` routes to the matching detail page. |
 | `perf-marks` (`markStart` / `markEnd`) | `/dashboard` and `/tasks` | `dashboard:tti` / `tasks:tti` measured; dev console warns on budget breach. |
 | Design tokens (spacing, radius, elevation, motion) | `globals.css` `:root` custom properties + `src/lib/motion.ts` | Available globally. Reduced-motion media query collapses duration tokens to `0ms`. |
@@ -58,6 +59,7 @@ These are substantive follow-up PRs. The primitive is callable today; the UI swa
 - `src/components/empty-state.tsx` — canonical empty-state primitive.
 - `src/components/next-action/` — `NextActionCell`, `NextActionPill`, `NextActionRing`.
 - `src/components/bulk/selection-cart.tsx` — persistent bulk selection bar.
+- `src/components/operational-table.tsx` — operational table frame, action slots, dropdown/menu items, selection bar, and compact customize menu.
 - `src/components/onboarding-tour.tsx` — first-run walkthrough scaffold.
 ### Hooks
 - `src/hooks/useBulkSelection.ts` — mixed-content aware selection state.

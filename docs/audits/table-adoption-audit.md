@@ -1,55 +1,52 @@
 # Table Adoption Audit
 
-**Date:** 2026-03-16  
-**Status:** Phase 4A Foundation Complete - Ready for Phase 4B Migration  
+**Date:** 2026-06-18
+**Status:** Operational table chrome convergence in progress
 **Confidence:** High
 
 ## Summary
-Phase 4A established the `DataTable` component as the unified table system. This audit tracks adoption across the application to ensure consistency is maintained.
 
-## Current Status
+The app has moved beyond the original “custom table to `DataTable`” migration. `DataTable` is now adopted on Blogs, Social Posts list mode, and My Tasks, while Dashboard keeps the specialized `DashboardTable` wrapper for mixed blog/social content. The current consistency work is focused on making the surrounding operational table chrome feel like one product: results summary, action order, customization menus, selection panels, pagination, loading/empty placement, and update feedback.
 
-| Page | Location | Current Implementation | Status | Phase | Notes |
-|------|----------|----------------------|--------|-------|-------|
-| Dashboard | `src/app/dashboard/page.tsx` | DashboardTable (wrapper) | ✅ DONE | 4A | Migrated in Phase 4A, uses StatusBadges, FilterBar |
-| Blogs | `src/app/blogs/page.tsx` | Custom `<table>` | ⏳ PENDING | 4B.2 | 3 table instances, needs DataTable migration |
-| Social Posts | `src/app/social-posts/page.tsx` | Custom `<table>` | ⏳ PENDING | 4B.3 | 1 table instance, needs DataTable migration |
-| Tasks | `src/app/tasks/page.tsx` | Custom `<table>` | ⏳ PENDING | 4B.4 | 2 table instances, needs DataTable migration |
-| Settings | `src/app/settings/page.tsx` | Custom table/grid | ⏳ PENDING | 4B+ | 1 table instance, can be addressed in maintenance phase |
-| Calendar | `src/app/calendar/page.tsx` | Custom rendering | ✅ INTACT | N/A | Not a traditional table, day-based layout intact |
+## Current status
 
-## Adoption Rules
+| Page | Location | Current implementation | Status | Notes |
+|---|---|---|---|---|
+| Dashboard | `src/app/dashboard/page.tsx` | `DashboardTable` plus shared action dropdown primitives | Partial | Keeps custom mixed-content table and saved-view column editor; copy/export dropdowns now use shared operational primitives. |
+| Blogs | `src/app/blogs/page.tsx` | `DataTable` plus `OperationalTableFrame` | Adopted | Table controls, copy/customize/import/export order, selection bar, and pagination use shared operational chrome. |
+| Social Posts | `src/app/social-posts/page.tsx` | `DataTable` in list mode plus `OperationalTableFrame` | Adopted for list view | Board and calendar modes are intentionally separate; list mode uses shared operational chrome and keeps mandatory/optional column rules. |
+| My Tasks | `src/app/tasks/page.tsx` | `DataTable` plus `OperationalTableFrame` | Adopted | Copy/customize/import/export controls and pagination use shared operational chrome while preserving task action-state behavior. |
+| Settings | `src/app/settings/page.tsx` | Specialized admin tables/grids | Excluded | Settings and Activity History are admin-oriented exceptions and do not need the operational table contract. |
+| Calendar | `src/app/calendar/page.tsx` | Calendar shell / stream rendering | Excluded | Calendar is not a traditional operational table and keeps calendar-specific layout rules. |
 
-To maintain consistency:
+## Shared primitives
 
-1. **No new custom `<table>` elements** - all new tables must use DataTable
-2. **Refactor existing tables incrementally** - use Phase 4B for planned migrations
-3. **Status badges** - all status displays must use StatusBadgeSystem or unified badge components
-4. **Filters** - all list pages should eventually use FilterBar component
+- `src/components/data-table.tsx` remains the common table body component for list-style operational tables.
+- `src/components/dashboard-table.tsx` remains the mixed-content dashboard table wrapper.
+- `src/lib/table.ts` remains the source for density, pagination, table container, header, and body class contracts.
+- `src/components/table-controls.tsx` remains the source for results summary, row-limit, and pagination controls.
+- `src/components/operational-table.tsx` now centralizes operational table chrome:
+  - `OperationalTableFrame`
+  - `OperationalTableActions`
+  - `OperationalTableDropdown`
+  - `OperationalTableMenuItem`
+  - `OperationalTableSelectionBar`
+  - `OperationalTableCustomizeMenu`
 
-## Risk Mitigation
+## Adoption rules
 
-### If 3+ pages use custom tables
-- System diverges from unified patterns
-- Filter/sort behavior becomes inconsistent  
-- Status badge styling drifts
-- **Mitigation:** Phase 4B migrations lock this in
+1. New operational list tables should use `DataTable` unless they have a documented reason for a specialized wrapper.
+2. New operational table sections should use `OperationalTableFrame` or the smaller operational action primitives.
+3. Table action order remains `Copy` → `Customize` → `Import` → `Export` when those actions are present.
+4. At most one primary action should appear in a horizontal table control strip.
+5. Pagination controls stay outside the table body.
+6. Row heights remain density-controlled and stable.
+7. Long text cells remain single-line truncated with a `title` value where possible.
+8. Sort indicators must use `AppIcon`, not Unicode glyphs.
 
-### Performance Guard
-- DataTable handles 100-300 rows efficiently
-- Beyond 300 rows: Plan virtual scrolling (react-virtual)
-- **Trigger:** When row counts exceed 300 in production
-- **Implementation:** Conditional rendering in DataTable wrapper
+## Remaining follow-ups
 
-## Next Steps
-
-Phase 4B will include:
-- 4B.2: Migrate Blogs page to DataTable
-- 4B.3: Migrate Social Posts page to DataTable  
-- 4B.4: Migrate Tasks page to DataTable
-- 4B.1: Command Palette & Quick Create (concurrent)
-
-## Archive
-- Phase 4A completed 2026-03-16 (foundation stable)
-- 3 pages ready for Phase 4B migration
-- Status system locked (no further consolidation needed)
+- Consider moving Dashboard’s richer saved-view column editor into a shared advanced column-view primitive if another page needs saved views.
+- Consider adding Social Posts copy/import actions only as a deliberate feature follow-up, not as part of chrome-only convergence.
+- Consider replacing inline selected-row bars with the floating `SelectionCart` only after confirming it does not obscure pagination or dense table content on small screens.
+- Keep visual QA focused on no horizontal overflow, stable pagination placement, and dropdown layering.

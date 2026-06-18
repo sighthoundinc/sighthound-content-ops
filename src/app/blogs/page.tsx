@@ -22,23 +22,21 @@ import { DetailDrawerField } from "@/components/detail-drawer";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-badge";
 import {
-  DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
-  DATA_PAGE_CONTROL_ACTIONS_CLASS,
-  DATA_PAGE_CONTROL_ROW_CLASS,
-  DATA_PAGE_CONTROL_STRIP_CLASS,
   DATA_PAGE_STACK_CLASS,
-  DATA_PAGE_TABLE_SECTION_CLASS,
   DataPageFilterPills,
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
+import {
+  OperationalTableActions,
+  OperationalTableCustomizeMenu,
+  OperationalTableDropdown,
+  OperationalTableFrame,
+  OperationalTableMenuItem,
+  OperationalTableSelectionBar,
+} from "@/components/operational-table";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { ProtectedPage } from "@/components/protected-page";
-import {
-  TablePaginationControls,
-  TableResultsSummary,
-  TableRowLimitSelect,
-} from "@/components/table-controls";
 import {
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
   getBlogPublishDate,
@@ -1388,123 +1386,64 @@ function BlogLibraryPageContent() {
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
-          <section className={DATA_PAGE_TABLE_SECTION_CLASS}>
-            <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} relative`}>
-              <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
-                <TableResultsSummary
-                  totalRows={sortedBlogs.length}
-                  currentPage={currentPage}
-                  rowLimit={rowLimit}
-                  noun="blogs"
-                />
-                <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
-                  <details className="relative">
-                    <summary
-                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
+          <OperationalTableFrame
+            totalRows={sortedBlogs.length}
+            currentPage={currentPage}
+            rowLimit={rowLimit}
+            noun="blogs"
+            pageCount={pageCount}
+            onRowLimitChange={(value) => {
+              setRowLimit(value as LibraryRowLimit);
+            }}
+            onPageChange={setCurrentPage}
+            actions={
+              <OperationalTableActions
+                copy={
+                  <OperationalTableDropdown label="Copy">
+                    <OperationalTableMenuItem
+                      disabled={sortedBlogs.length === 0}
+                      onClick={() => {
+                        closeOpenDetailsMenus();
+                        void copyAll("title");
+                      }}
                     >
-                      Copy
-                    </summary>
-                    <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
-                      <button
-                        type="button"
-                        disabled={sortedBlogs.length === 0}
-                        className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => {
-                          closeOpenDetailsMenus();
-                          void copyAll("title");
-                        }}
-                      >
-                        All titles
-                      </button>
-                      <button
-                        type="button"
-                        disabled={sortedBlogs.length === 0}
-                        className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => {
-                          closeOpenDetailsMenus();
-                          void copyAll("url");
-                        }}
-                      >
-                        All URLs
-                      </button>
-                    </div>
-                  </details>
-                  <details className="relative">
-                    <summary
-                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
+                      All titles
+                    </OperationalTableMenuItem>
+                    <OperationalTableMenuItem
+                      disabled={sortedBlogs.length === 0}
+                      onClick={() => {
+                        closeOpenDetailsMenus();
+                        void copyAll("url");
+                      }}
                     >
-                      Customize
-                    </summary>
-                    <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-md">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
-                          Show Columns
-                        </p>
-                        <button
-                          type="button"
-                          className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
-                          onClick={() => {
-                            resetColumnVisibility();
-                          }}
-                        >
-                          Reset Defaults
-                        </button>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
-                          Density
-                        </span>
-                        <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
-                          <button
-                            type="button"
-                            className={segmentedControlItemClass({
-                              isActive: rowDensity === "compact",
-                              className: "px-2 py-1 text-xs",
-                            })}
-                            onClick={() => {
-                              setRowDensity("compact");
-                            }}
-                          >
-                            Compact
-                          </button>
-                          <button
-                            type="button"
-                            className={segmentedControlItemClass({
-                              isActive: rowDensity === "comfortable",
-                              className: "px-2 py-1 text-xs",
-                            })}
-                            onClick={() => {
-                              setRowDensity("comfortable");
-                            }}
-                          >
-                            Comfortable
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-2 space-y-1">
-                        {columnOrder.map((column) => (
-                          <label
-                            key={column}
-                            className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-navy-500 hover:bg-blurple-50"
-                          >
-                            <span>{LIBRARY_COLUMN_LABELS[column]}</span>
-                            <input
-                              type="checkbox"
-                              checked={!hiddenColumnSet.has(column)}
-                              disabled={
-                                !hiddenColumnSet.has(column) &&
-                                visibleColumnOrder.length <= 1
-                              }
-                              onChange={() => {
-                                toggleColumnVisibility(column);
-                              }}
-                            />
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </details>
-                  {canRunDataImport ? (
+                      All URLs
+                    </OperationalTableMenuItem>
+                  </OperationalTableDropdown>
+                }
+                customize={
+                  <OperationalTableCustomizeMenu
+                    density={rowDensity}
+                    onDensityChange={setRowDensity}
+                    onReset={resetColumnVisibility}
+                    groups={[
+                      {
+                        columns: columnOrder.map((column) => ({
+                          id: column,
+                          label: LIBRARY_COLUMN_LABELS[column],
+                          checked: !hiddenColumnSet.has(column),
+                          disabled:
+                            !hiddenColumnSet.has(column) &&
+                            visibleColumnOrder.length <= 1,
+                          onToggle: () => {
+                            toggleColumnVisibility(column);
+                          },
+                        })),
+                      },
+                    ]}
+                  />
+                }
+                importAction={
+                  canRunDataImport ? (
                     <BlogImportModal
                       autoOpen={shouldAutoOpenImport}
                       triggerLabel="Import"
@@ -1517,87 +1456,80 @@ function BlogLibraryPageContent() {
                         );
                       }}
                     />
-                  ) : null}
+                  ) : null
+                }
+                exportAction={
                   <PermissionGate
                     can={canExportCsv || canExportSelectedCsv}
                     reason="You do not have permission to export."
                     requiredPermission={ExportScopePermissions.viewExport}
                   >
-                    <details className="relative">
-                      <summary
-                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-ink bg-ink text-white hover:bg-navy-700`}
+                    <OperationalTableDropdown label="Export">
+                      <OperationalTableMenuItem
+                        disabled={sortedBlogs.length === 0}
+                        onClick={() => {
+                          closeOpenDetailsMenus();
+                          exportCsv(getSmartExportScope());
+                        }}
                       >
-                        Export
-                      </summary>
-                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
-                        <button
-                          type="button"
-                          disabled={sortedBlogs.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={() => {
-                            closeOpenDetailsMenus();
-                            exportCsv(getSmartExportScope());
-                          }}
-                        >
-                          As .CSV file
-                        </button>
-                        <button
-                          type="button"
-                          disabled={sortedBlogs.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={() => {
-                            closeOpenDetailsMenus();
-                            exportPdf(getSmartExportScope());
-                          }}
-                        >
-                          As .PDF file
-                        </button>
-                      </div>
-                    </details>
+                        As .CSV file
+                      </OperationalTableMenuItem>
+                      <OperationalTableMenuItem
+                        disabled={sortedBlogs.length === 0}
+                        onClick={() => {
+                          closeOpenDetailsMenus();
+                          exportPdf(getSmartExportScope());
+                        }}
+                      >
+                        As .PDF file
+                      </OperationalTableMenuItem>
+                    </OperationalTableDropdown>
                   </PermissionGate>
-                </div>
-              </div>
-            </div>
-            {canSelectRows && selectedBlogs.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-4 py-3">
-                <p className="text-sm text-navy-500">
-                  <span className="font-semibold text-ink">{selectedBlogs.length}</span>{" "}
-                  selected
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="xs"
-                    onClick={() => {
-                      exportCsv("selected");
-                    }}
-                  >
-                    Export CSV
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="xs"
-                    onClick={() => {
-                      exportPdf("selected");
-                    }}
-                  >
-                    Export PDF
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="xs"
-                    onClick={() => {
-                      setSelectedBlogIds([]);
-                    }}
-                  >
-                    Clear selection
-                  </Button>
-                </div>
-              </div>
-            ) : null}
+                }
+              />
+            }
+            selection={
+              canSelectRows && selectedBlogs.length > 0 ? (
+                <OperationalTableSelectionBar
+                  count={selectedBlogs.length}
+                  actions={
+                    <>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => {
+                          exportCsv("selected");
+                        }}
+                      >
+                        Export CSV
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => {
+                          exportPdf("selected");
+                        }}
+                      >
+                        Export PDF
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => {
+                          setSelectedBlogIds([]);
+                        }}
+                      >
+                        Clear selection
+                      </Button>
+                    </>
+                  }
+                />
+              ) : null
+            }
+          >
             {hasNoResults && hasActiveFilters ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 <span>No blogs match your filters. Try clearing filters or create a new blog.</span>
@@ -1619,7 +1551,7 @@ function BlogLibraryPageContent() {
                 {canCreateBlogs ? (
                   <Link
                     href="/blogs/new"
-                    className="pressable inline-flex items-center rounded border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
                   >
                     New Blog
                   </Link>
@@ -1674,20 +1606,7 @@ function BlogLibraryPageContent() {
                 emptyMessage="No blogs found."
               />
             )}
-            <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
-              <TableRowLimitSelect
-                value={rowLimit}
-                onChange={(value) => {
-                  setRowLimit(value as LibraryRowLimit);
-                }}
-              />
-              <TablePaginationControls
-                currentPage={currentPage}
-                pageCount={pageCount}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          </section>
+          </OperationalTableFrame>
           <BlogDetailsDrawer
             blog={activeBlog}
             isOpen={Boolean(activeBlog)}

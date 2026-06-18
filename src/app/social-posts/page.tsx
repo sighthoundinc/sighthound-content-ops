@@ -37,25 +37,23 @@ import { CalendarTile } from "@/components/calendar-tile";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
-  DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
-  DATA_PAGE_CONTROL_ACTIONS_CLASS,
-  DATA_PAGE_CONTROL_ROW_CLASS,
-  DATA_PAGE_CONTROL_STRIP_CLASS,
   DATA_PAGE_STACK_CLASS,
-  DATA_PAGE_TABLE_SECTION_CLASS,
   DataPageFilterPills,
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
+import {
+  OperationalTableActions,
+  OperationalTableCustomizeMenu,
+  OperationalTableDropdown,
+  OperationalTableFrame,
+  OperationalTableMenuItem,
+  OperationalTableSelectionBar,
+} from "@/components/operational-table";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { SocialPostStatusInfo } from "@/components/social-post-status-info";
-import {
-  TablePaginationControls,
-  TableResultsSummary,
-  TableRowLimitSelect,
-} from "@/components/table-controls";
 import {
   SOCIAL_PLATFORMS,
   SOCIAL_PLATFORM_LABELS,
@@ -2806,176 +2804,106 @@ function SocialPostsPageContent() {
               </section>
             </DndContext>
           ) : view === "list" ? (
-            <section className={DATA_PAGE_TABLE_SECTION_CLASS}>
-              <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} relative`}>
-                <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
-                  <TableResultsSummary
-                    totalRows={filteredPosts.length}
-                    currentPage={listCurrentPage}
-                    rowLimit={listRowLimit}
-                    noun="social posts"
-                  />
-                  <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
-                    <details className="relative">
-                      <summary
-                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
+            <OperationalTableFrame
+              totalRows={filteredPosts.length}
+              currentPage={listCurrentPage}
+              rowLimit={listRowLimit}
+              noun="social posts"
+              pageCount={listPageCount}
+              onRowLimitChange={setListRowLimit}
+              onPageChange={setListCurrentPage}
+              actions={
+                <OperationalTableActions
+                  customize={
+                    <OperationalTableCustomizeMenu
+                      density={listRowDensity}
+                      onDensityChange={setListRowDensity}
+                      onReset={() => {
+                        setVisibleColumns(new Set(SOCIAL_POST_LIST_MANDATORY_COLUMNS));
+                        setListRowDensity("compact");
+                        closeOpenDetailsMenus();
+                      }}
+                      widthClassName="w-72"
+                      groups={[
+                        {
+                          label: "Mandatory Columns",
+                          columns: mandatoryTableColumns.map((column) => ({
+                            id: column.id,
+                            label: column.label,
+                            checked: true,
+                            locked: true,
+                          })),
+                        },
+                        {
+                          label: "Optional Columns",
+                          columns: optionalTableColumns.map((column) => ({
+                            id: column.id,
+                            label: column.label || "Actions",
+                            checked: visibleColumns.has(column.id),
+                            onToggle: () => {
+                              const nextVisible = new Set(visibleColumns);
+                              for (const mandatoryColumn of SOCIAL_POST_LIST_MANDATORY_COLUMNS) {
+                                nextVisible.add(mandatoryColumn);
+                              }
+                              if (nextVisible.has(column.id)) {
+                                nextVisible.delete(column.id);
+                              } else {
+                                nextVisible.add(column.id);
+                              }
+                              setVisibleColumns(nextVisible);
+                            },
+                          })),
+                        },
+                      ]}
+                    />
+                  }
+                  exportAction={
+                    <OperationalTableDropdown label="Export">
+                      <OperationalTableMenuItem
+                        disabled={sortedListPosts.length === 0}
+                        onClick={() => {
+                          closeOpenDetailsMenus();
+                          handleExportSocialPostsPdf(
+                            selectedRowIndices.size > 0 ? "selected" : "view"
+                          );
+                        }}
                       >
-                        Export
-                      </summary>
-                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
-                        <button
+                        As .PDF file
+                      </OperationalTableMenuItem>
+                    </OperationalTableDropdown>
+                  }
+                />
+              }
+              selection={
+                selectedRowIndices.size > 0 ? (
+                  <OperationalTableSelectionBar
+                    count={selectedRowIndices.size}
+                    actions={
+                      <>
+                        <Button
                           type="button"
-                          disabled={sortedListPosts.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={() => {
-                            closeOpenDetailsMenus();
-                            handleExportSocialPostsPdf(
-                              selectedRowIndices.size > 0 ? "selected" : "view"
-                            );
-                          }}
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => void handleBulkDelete()}
+                          disabled={isDeletingPost}
                         >
-                          As .PDF file
-                        </button>
-                      </div>
-                    </details>
-                    <details className="relative">
-                      <summary
-                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
-                      >
-                        Customize
-                      </summary>
-                      <div className="absolute right-0 z-20 mt-1 w-72 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-md">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
-                            Show Columns
-                          </p>
-                          <button
-                            type="button"
-                            className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
-                            onClick={() => {
-                              setVisibleColumns(
-                                new Set(SOCIAL_POST_LIST_MANDATORY_COLUMNS)
-                              );
-                              setListRowDensity("compact");
-                              closeOpenDetailsMenus();
-                            }}
-                          >
-                            Reset Defaults
-                          </button>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1.5">
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
-                            Density
-                          </span>
-                          <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
-                            <button
-                              type="button"
-                              className={segmentedControlItemClass({
-                                isActive: listRowDensity === "compact",
-                                className: "px-2 py-1 text-xs",
-                              })}
-                              onClick={() => {
-                                setListRowDensity("compact");
-                              }}
-                            >
-                              Compact
-                            </button>
-                            <button
-                              type="button"
-                              className={segmentedControlItemClass({
-                                isActive: listRowDensity === "comfortable",
-                                className: "px-2 py-1 text-xs",
-                              })}
-                              onClick={() => {
-                                setListRowDensity("comfortable");
-                              }}
-                            >
-                              Comfortable
-                            </button>
-                          </div>
-                        </div>
-                        <div className="mt-3">
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
-                            Mandatory Columns
-                          </p>
-                          <div className="space-y-1">
-                            {mandatoryTableColumns.map((column) => (
-                              <label
-                                key={column.id}
-                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-navy-500"
-                              >
-                                <span>{column.label}</span>
-                                <input
-                                  type="checkbox"
-                                  checked={true}
-                                  disabled
-                                  className="cursor-not-allowed"
-                                />
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="mt-3">
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
-                            Optional Columns
-                          </p>
-                          <div className="space-y-1">
-                            {optionalTableColumns.map((column) => (
-                              <label
-                                key={column.id}
-                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-navy-500 hover:bg-blurple-50"
-                              >
-                                <span>{column.label || "Actions"}</span>
-                                <input
-                                  type="checkbox"
-                                  checked={visibleColumns.has(column.id)}
-                                  onChange={(event) => {
-                                    const nextVisible = new Set(visibleColumns);
-                                    for (const mandatoryColumn of SOCIAL_POST_LIST_MANDATORY_COLUMNS) {
-                                      nextVisible.add(mandatoryColumn);
-                                    }
-                                    if (event.target.checked) {
-                                      nextVisible.add(column.id);
-                                    } else {
-                                      nextVisible.delete(column.id);
-                                    }
-                                    setVisibleColumns(nextVisible);
-                                  }}
-                                />
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </details>
-                  </div>
-                </div>
-              </div>
-              {selectedRowIndices.size > 0 ? (
-                <div className="mb-3 flex items-center gap-2 rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-3 py-2">
-                  <span className="text-sm font-medium text-blurple-800">
-                    {selectedRowIndices.size} selected
-                  </span>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    onClick={() => void handleBulkDelete()}
-                    disabled={isDeletingPost}
-                  >
-                    {isDeletingPost ? "Deleting..." : "Delete Selected"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setSelectedRowIndices(new Set())}
-                    disabled={isDeletingPost}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : null}
+                          {isDeletingPost ? "Deleting..." : "Delete Selected"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setSelectedRowIndices(new Set())}
+                          disabled={isDeletingPost}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    }
+                  />
+                ) : null
+              }
+            >
               <DataTable
                 data={pagedListPosts}
                 columns={listTableColumns}
@@ -2993,20 +2921,7 @@ function SocialPostsPageContent() {
                 selectedIndices={selectedRowIndices}
                 onSelectionChange={setSelectedRowIndices}
               />
-              <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
-                <TableRowLimitSelect
-                  value={listRowLimit}
-                  onChange={(value) => {
-                    setListRowLimit(value);
-                  }}
-                />
-                <TablePaginationControls
-                  currentPage={listCurrentPage}
-                  pageCount={listPageCount}
-                  onPageChange={setListCurrentPage}
-                />
-              </div>
-            </section>
+            </OperationalTableFrame>
           ) : (
             <section className="space-y-3">
               <CalendarControlBar

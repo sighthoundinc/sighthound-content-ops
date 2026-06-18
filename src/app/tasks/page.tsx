@@ -8,30 +8,27 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { Button } from "@/components/button";
+import { Button, buttonClass } from "@/components/button";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   PublisherStatusBadge,
   SocialPostStatusBadge,
 } from "@/components/status-badge";
 import {
-  DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS,
-  DATA_PAGE_CONTROL_ACTIONS_CLASS,
-  DATA_PAGE_CONTROL_ROW_CLASS,
-  DATA_PAGE_CONTROL_STRIP_CLASS,
   DATA_PAGE_STACK_CLASS,
-  DATA_PAGE_TABLE_SECTION_CLASS,
   DataPageEmptyState,
   DataPageFilterPills,
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
-import { ProtectedPage } from "@/components/protected-page";
 import {
-  TablePaginationControls,
-  TableResultsSummary,
-  TableRowLimitSelect,
-} from "@/components/table-controls";
+  OperationalTableActions,
+  OperationalTableCustomizeMenu,
+  OperationalTableDropdown,
+  OperationalTableFrame,
+  OperationalTableMenuItem,
+} from "@/components/operational-table";
+import { ProtectedPage } from "@/components/protected-page";
 import {
   getBlogPublishDate,
   normalizeBlogRows,
@@ -59,10 +56,6 @@ import {
 } from "@/lib/task-action-state";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
 import { getUserRoles } from "@/lib/roles";
-import {
-  SEGMENTED_CONTROL_CLASS,
-  segmentedControlItemClass,
-} from "@/lib/segmented-control";
 import {
   buildExportFilename,
   openBrandedPdfExport,
@@ -1821,165 +1814,97 @@ function MyTasksPageContent() {
                 )}
               </section>
 
-              <section className={DATA_PAGE_TABLE_SECTION_CLASS}>
-                <div className={`${DATA_PAGE_CONTROL_STRIP_CLASS} relative`}>
-                  <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
-                    <TableResultsSummary
-                      totalRows={combinedTaskRows.length}
-                      currentPage={currentPage}
-                      rowLimit={rowLimit}
-                      noun="tasks"
-                    />
-                    <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
-                      <details className="relative">
-                        <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
+              <OperationalTableFrame
+                totalRows={combinedTaskRows.length}
+                currentPage={currentPage}
+                rowLimit={rowLimit}
+                noun="tasks"
+                pageCount={pageCount}
+                onRowLimitChange={(value) => {
+                  setRowLimit(value);
+                }}
+                onPageChange={setCurrentPage}
+                actions={
+                  <OperationalTableActions
+                    copy={
+                      <OperationalTableDropdown label="Copy">
+                        <OperationalTableMenuItem
+                          disabled={combinedTaskRows.length === 0}
+                          onClick={() => {
+                            closeOpenDetailsMenus();
+                            void copyAllTasks("title");
+                          }}
                         >
-                          Copy
-                        </summary>
-                        <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
-                          <button
-                            type="button"
-                            disabled={combinedTaskRows.length === 0}
-
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            onClick={() => {
-                              closeOpenDetailsMenus();
-                              void copyAllTasks("title");
-                            }}
-                          >
-                            All titles
-                          </button>
-                          <button
-                            type="button"
-                            disabled={combinedTaskRows.length === 0}
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            onClick={() => {
-                              closeOpenDetailsMenus();
-                              void copyAllTasks("url");
-                            }}
-                          >
-                            All URLs
-                          </button>
-                        </div>
-                      </details>
-                      <details className="relative">
-                        <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
+                          All titles
+                        </OperationalTableMenuItem>
+                        <OperationalTableMenuItem
+                          disabled={combinedTaskRows.length === 0}
+                          onClick={() => {
+                            closeOpenDetailsMenus();
+                            void copyAllTasks("url");
+                          }}
                         >
-                          Customize
-                        </summary>
-                        <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-md">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-medium text-navy-500">
-                              Show Columns
-                            </p>
-                            <button
-                              type="button"
-                              className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
-                              onClick={() => {
-                                resetColumnVisibility();
-                              }}
-                            >
-                              Reset Defaults
-                            </button>
-                          </div>
-                          <div className="mt-2 flex items-center justify-between rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1.5">
-                            <span className="text-[11px] font-medium text-navy-500">
-                              Density
-                            </span>
-                            <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
-                              <button
-                                type="button"
-                                className={segmentedControlItemClass({
-                                  isActive: rowDensity === "compact",
-                                  className: "px-2 py-1 text-xs",
-                                })}
-                                onClick={() => {
-                                  setRowDensity("compact");
-                                }}
-                              >
-                                Compact
-                              </button>
-                              <button
-                                type="button"
-                                className={segmentedControlItemClass({
-                                  isActive: rowDensity === "comfortable",
-                                  className: "px-2 py-1 text-xs",
-                                })}
-                                onClick={() => {
-                                  setRowDensity("comfortable");
-                                }}
-                              >
-                                Comfortable
-                              </button>
-                            </div>
-                          </div>
-                          <div className="mt-2 space-y-1">
-                            {columnOrder.map((column) => (
-                              <label
-                                key={column}
-                                className="inline-flex w-full items-center justify-between gap-2 rounded px-1 py-1 text-xs text-navy-500 hover:bg-blurple-50"
-                              >
-                                <span>{TASK_TABLE_COLUMN_LABELS[column]}</span>
-                                <input
-                                  type="checkbox"
-                                  checked={!hiddenColumnSet.has(column)}
-                                  disabled={
-                                    !hiddenColumnSet.has(column) &&
-                                    visibleColumnOrder.length <= 1
-                                  }
-                                  onChange={() => {
-                                    toggleColumnVisibility(column);
-                                  }}
-                                />
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      </details>
-                      {canRunDataImport ? (
+                          All URLs
+                        </OperationalTableMenuItem>
+                      </OperationalTableDropdown>
+                    }
+                    customize={
+                      <OperationalTableCustomizeMenu
+                        density={rowDensity}
+                        onDensityChange={setRowDensity}
+                        onReset={resetColumnVisibility}
+                        groups={[
+                          {
+                            columns: columnOrder.map((column) => ({
+                              id: column,
+                              label: TASK_TABLE_COLUMN_LABELS[column],
+                              checked: !hiddenColumnSet.has(column),
+                              disabled:
+                                !hiddenColumnSet.has(column) &&
+                                visibleColumnOrder.length <= 1,
+                              onToggle: () => {
+                                toggleColumnVisibility(column);
+                              },
+                            })),
+                          },
+                        ]}
+                      />
+                    }
+                    importAction={
+                      canRunDataImport ? (
                         <Link
                           href="/blogs?import=1"
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-brand bg-brand text-white hover:bg-blurple-700`}
+                          className={buttonClass({ variant: "primary", size: "sm" })}
                         >
                           Import
                         </Link>
-                      ) : null}
-                      <details className="relative">
-                        <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-brand bg-brand text-white hover:bg-blurple-700`}
+                      ) : null
+                    }
+                    exportAction={
+                      <OperationalTableDropdown label="Export">
+                        <OperationalTableMenuItem
+                          disabled={combinedTaskRows.length === 0}
+                          onClick={() => {
+                            exportTaskCsv();
+                            closeOpenDetailsMenus();
+                          }}
                         >
-                          Export
-                        </summary>
-                        <div className="absolute right-0 z-20 mt-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white shadow-md">
-                          <button
-                            type="button"
-                            disabled={combinedTaskRows.length === 0}
-                            onClick={() => {
-                              exportTaskCsv();
-                              closeOpenDetailsMenus();
-                            }}
-                            className="block w-full px-3 py-1.5 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:bg-[color:var(--sh-gray)] disabled:text-navy-500/60"
-                          >
-                            As .CSV file
-                          </button>
-                          <button
-                            type="button"
-                            disabled={combinedTaskRows.length === 0}
-                            onClick={() => {
-                              exportTaskPdf();
-                              closeOpenDetailsMenus();
-                            }}
-                            className="block w-full px-3 py-1.5 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:bg-[color:var(--sh-gray)] disabled:text-navy-500/60"
-                          >
-                            As .PDF file
-                          </button>
-                        </div>
-                      </details>
-                    </div>
-                  </div>
-                </div>
+                          As .CSV file
+                        </OperationalTableMenuItem>
+                        <OperationalTableMenuItem
+                          disabled={combinedTaskRows.length === 0}
+                          onClick={() => {
+                            exportTaskPdf();
+                            closeOpenDetailsMenus();
+                          }}
+                        >
+                          As .PDF file
+                        </OperationalTableMenuItem>
+                      </OperationalTableDropdown>
+                    }
+                  />
+                }
+              >
                 <DataTable
                   data={pagedTasks}
                   columns={taskTableColumns}
@@ -1998,20 +1923,7 @@ function MyTasksPageContent() {
                   density={rowDensity}
                   emptyMessage="No tasks match your current filters."
                 />
-                <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
-                  <TableRowLimitSelect
-                    value={rowLimit}
-                    onChange={(value) => {
-                      setRowLimit(value);
-                    }}
-                  />
-                  <TablePaginationControls
-                    currentPage={currentPage}
-                    pageCount={pageCount}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              </section>
+              </OperationalTableFrame>
             </>
           )}
         </div>

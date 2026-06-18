@@ -82,6 +82,11 @@ import {
   DataPageTableFeedback,
   DataPageToolbar,
 } from "@/components/data-page";
+import {
+  OperationalTableActions,
+  OperationalTableDropdown,
+  OperationalTableMenuItem,
+} from "@/components/operational-table";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { ProtectedPage } from "@/components/protected-page";
 import {
@@ -4524,103 +4529,91 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div className={DATA_PAGE_CONTROL_ACTIONS_CLASS}>
-                    <details className="relative">
-                      <summary
-                        className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
-                      >
-                        Copy
-                      </summary>
-                      <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
-                        <button
-                          type="button"
-                          disabled={sortedRows.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={() => {
-                            closeOpenDashboardMenus();
-                            void handleCopyValues("title");
-                          }}
-                        >
-                          All titles
-                        </button>
-                        <button
-                          type="button"
-                          disabled={sortedRows.length === 0}
-                          className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={() => {
-                            closeOpenDashboardMenus();
-                            void handleCopyValues("url");
-                          }}
-                        >
-                          All URLs
-                        </button>
-                      </div>
-                    </details>
-                    <button
-                      type="button"
-                      className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
-                      onClick={() => {
-                        setIsEditColumnsOpen((previous) => {
-                          const nextIsOpen = !previous;
-                          if (nextIsOpen) {
-                            window.dispatchEvent(
-                              new CustomEvent("app:dropdown-opened", {
-                                detail: { id: "dashboard-customize-columns" },
-                              })
-                            );
-                          }
-                          return nextIsOpen;
-                        });
-                      }}
-                    >
-                      Customize
-                    </button>
-                    {canRunDataImport ? (
-                      <BlogImportModal
-                        triggerLabel="Import"
-                        triggerVariant="primary"
-                        triggerSize="sm"
-                        triggerClassName={DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS}
-                        onImported={async (summary) => {
-                          await loadData();
-                          showSuccess(
-                            `Import complete: ${summary.created} created, ${summary.updated} updated, ${summary.failed} failed.`
-                          );
-                        }}
-                      />
-                    ) : null}
-                    {canExportCsv || canExportSelectedCsv ? (
-                      <details className="relative">
-                        <summary
-                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} cursor-pointer list-none border border-brand bg-brand text-white hover:bg-blurple-700`}
-                        >
-                          Export
-                        </summary>
-                        <div className="absolute right-0 z-30 mt-1 w-40 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md">
-                          <button
-                            type="button"
+                    <OperationalTableActions
+                      copy={
+                        <OperationalTableDropdown label="Copy" widthClassName="w-40">
+                          <OperationalTableMenuItem
                             disabled={sortedRows.length === 0}
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
-                              handleExportCsv(getSmartExportScope());
                               closeOpenDashboardMenus();
+                              void handleCopyValues("title");
                             }}
                           >
-                            As .CSV file
-                          </button>
-                          <button
-                            type="button"
+                            All titles
+                          </OperationalTableMenuItem>
+                          <OperationalTableMenuItem
                             disabled={sortedRows.length === 0}
-                            className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={() => {
-                              handleExportPdf(getSmartExportScope());
                               closeOpenDashboardMenus();
+                              void handleCopyValues("url");
                             }}
                           >
-                            As .PDF file
-                          </button>
-                        </div>
-                      </details>
-                    ) : null}
+                            All URLs
+                          </OperationalTableMenuItem>
+                        </OperationalTableDropdown>
+                      }
+                      customize={
+                        <button
+                          type="button"
+                          className={`${DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS} border border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50`}
+                          onClick={() => {
+                            setIsEditColumnsOpen((previous) => {
+                              const nextIsOpen = !previous;
+                              if (nextIsOpen) {
+                                window.dispatchEvent(
+                                  new CustomEvent("app:dropdown-opened", {
+                                    detail: { id: "dashboard-customize-columns" },
+                                  })
+                                );
+                              }
+                              return nextIsOpen;
+                            });
+                          }}
+                        >
+                          Customize
+                        </button>
+                      }
+                      importAction={
+                        canRunDataImport ? (
+                          <BlogImportModal
+                            triggerLabel="Import"
+                            triggerVariant="primary"
+                            triggerSize="sm"
+                            triggerClassName={DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS}
+                            onImported={async (summary) => {
+                              await loadData();
+                              showSuccess(
+                                `Import complete: ${summary.created} created, ${summary.updated} updated, ${summary.failed} failed.`
+                              );
+                            }}
+                          />
+                        ) : null
+                      }
+                      exportAction={
+                        canExportCsv || canExportSelectedCsv ? (
+                          <OperationalTableDropdown label="Export" widthClassName="w-40">
+                            <OperationalTableMenuItem
+                              disabled={sortedRows.length === 0}
+                              onClick={() => {
+                                handleExportCsv(getSmartExportScope());
+                                closeOpenDashboardMenus();
+                              }}
+                            >
+                              As .CSV file
+                            </OperationalTableMenuItem>
+                            <OperationalTableMenuItem
+                              disabled={sortedRows.length === 0}
+                              onClick={() => {
+                                handleExportPdf(getSmartExportScope());
+                                closeOpenDashboardMenus();
+                              }}
+                            >
+                              As .PDF file
+                            </OperationalTableMenuItem>
+                          </OperationalTableDropdown>
+                        ) : null
+                      }
+                    />
                   </div>
                 </div>
                 {isEditColumnsOpen ? (

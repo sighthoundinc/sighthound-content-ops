@@ -216,6 +216,9 @@ Content Relay uses an authored workspace hierarchy rather than a generic dashboa
 - Empty, loading, and error states explain what happened and what to do next.
 - Main pages keep shortcut key combinations out of the chrome; use the clickable `Shortcut` affordance and shared shortcuts modal when available.
 - Useful links expose consistent `Open` / `Copy` actions, and all controls use the shared icon and button primitives.
+- Calendar tiles and event cards use flat surfaces with filled/outlined site markers; today and focused dates use restrained borders/rings rather than glows.
+- Ask AI next steps, comments, and assignment history use readable divided rows, while only actionable warnings retain callout surfaces.
+- Login keeps one quiet brand accent and a static wave so the sign-in form remains the visual anchor.
 
 ## 7) Transition gates reference
 - Never transition without required target-stage fields.

@@ -77,7 +77,7 @@ export function AIChatPanel() {
               <h2 className="text-sm font-semibold text-ink tracking-tight">
                 Ask AI
               </h2>
-              <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-navy-500">
+              <span className="text-xs font-medium text-navy-500">
                 Read-only · Advisory
               </span>
             </div>

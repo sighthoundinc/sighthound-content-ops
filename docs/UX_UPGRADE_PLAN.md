@@ -8,6 +8,9 @@ Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in fou
 - Shared surfaces use Content Relay tokens, semantic workflow colors, and tokenized motion; decorative gradients and idle animation are intentionally limited.
 - Empty, loading, error, focus, and reduced-motion states are treated as part of the visual contract, not afterthoughts.
 - App-shell branding is static and shortcut key combinations remain discoverable through the shared shortcuts modal rather than persistent chrome.
+- Calendar month/week/stream views now use flat opaque surfaces, shared site/type markers, and border-based today/focus emphasis rather than gradient tiles or event-card shadows.
+- Ask AI next steps and detail comments/history use divided rows; semantic blocker and warning callouts remain visually distinct.
+- Login ambient decoration is reduced to one quiet accent and a static wave, preserving the form-first composition.
 - This pass is presentation-only and does not alter workflow state, API contracts, permissions, or persisted data.
 ## Adoption Matrix (source of truth)
 ### Adopted end-to-end

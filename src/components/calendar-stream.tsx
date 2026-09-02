@@ -214,11 +214,11 @@ export function CalendarStreamView({
 
   return (
     <div
-      className="rounded-xl border border-[color:var(--sh-gray-200)]/90 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+      className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white"
     >
       {/* Sticky weekday header — relies on page scroll; parent must NOT be overflow-hidden */}
       <div
-        className="sticky top-0 z-10 grid rounded-t-xl border-b border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/95 backdrop-blur-sm"
+        className="sticky top-0 z-10 grid rounded-t-lg border-b border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]"
         style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
       >
         <div aria-hidden className="px-2 py-1.5" />
@@ -239,7 +239,7 @@ export function CalendarStreamView({
         <button
           type="button"
           onClick={handleLoadEarlier}
-          className="rounded-md px-2 py-0.5 text-[11px] font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
+          className="rounded-md px-2 py-1 text-xs font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
         >
           Load earlier weeks
         </button>
@@ -406,7 +406,7 @@ export function CalendarStreamView({
         })}
       </div>
 
-      <div className="flex justify-center rounded-b-xl border-t border-[color:var(--sh-gray-200)]/70 bg-[color:var(--sh-gray)]/40 px-3 py-0.5">
+      <div className="flex justify-center rounded-b-lg border-t border-[color:var(--sh-gray-200)]/70 bg-[color:var(--sh-gray)]/40 px-3 py-0.5">
         <button
           type="button"
           onClick={handleLoadLater}

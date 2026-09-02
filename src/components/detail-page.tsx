@@ -383,11 +383,11 @@ export function CommentsSection({
       {comments.length === 0 ? (
         <p className="text-sm leading-5 text-navy-500">{emptyMessage}</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="divide-y divide-[color:var(--sh-gray-200)] rounded-lg border border-[color:var(--sh-gray-200)] bg-white">
           {comments.map((comment) => (
             <li
               key={comment.id}
-              className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs transition-shadow motion-reduce:transition-none hover:shadow-brand-sm"
+              className="overflow-hidden px-4 py-3 first:rounded-t-lg last:rounded-b-lg"
             >
               <div className="flex min-w-0 items-start gap-3">
                 <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-semibold uppercase text-white">
@@ -445,14 +445,14 @@ export function AssignmentChangesTimeline({
       ) : (
         groups.map((group) => (
           <section key={group.id} className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-navy-500">
+            <h4 className="text-sm font-semibold text-navy-500">
               {group.label}
             </h4>
-            <ul className="space-y-2">
+            <ul className="divide-y divide-[color:var(--sh-gray-200)] rounded-lg border border-[color:var(--sh-gray-200)] bg-white">
               {group.entries.map((entry) => (
                 <li
                   key={entry.id}
-                  className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2"
+                  className="px-3 py-2 first:rounded-t-lg last:rounded-b-lg"
                 >
                   <p className="text-sm font-medium leading-5 text-ink">{entry.title}</p>
                   {entry.detail ? (

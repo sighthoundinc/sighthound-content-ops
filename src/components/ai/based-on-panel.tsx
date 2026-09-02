@@ -85,10 +85,10 @@ export function BasedOnPanel({
                   key={`${fact.label}-${fact.value}`}
                   className="contents"
                 >
-                  <dt className="truncate text-[11px] font-medium text-navy-500">
+                  <dt className="truncate text-xs font-medium text-navy-500">
                     {fact.label}
                   </dt>
-                  <dd className="truncate font-mono text-[11px] text-ink">
+                  <dd className="truncate font-mono text-xs text-ink">
                     {fact.value}
                   </dd>
                 </div>
@@ -107,7 +107,7 @@ export function BasedOnPanel({
                         ? "noopener noreferrer"
                         : undefined
                     }
-                    className="inline-flex items-center gap-1 text-[11px] text-navy-500 hover:text-ink hover:underline"
+                    className="inline-flex items-center gap-1 text-xs text-navy-500 hover:text-ink hover:underline"
                   >
                     <AppIcon
                       name={link.href.startsWith("http") ? "externalLink" : "link"}
@@ -120,7 +120,7 @@ export function BasedOnPanel({
               ))}
             </ul>
           ) : null}
-          <p className="text-[10px] text-navy-500">
+          <p className="text-xs text-navy-500">
             Source:{" "}
             {responseSource === "gemini"
               ? `Gemini${aiModel ? ` · ${aiModel}` : ""}`

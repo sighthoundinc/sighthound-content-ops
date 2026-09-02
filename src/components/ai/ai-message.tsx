@@ -27,7 +27,7 @@ export function AIMessage({ response }: AIMessageProps) {
   return (
     <div className="flex flex-col gap-5">
       {showAssignee && response.assignee?.name && (
-        <div className="inline-flex items-center gap-1.5 self-start rounded-full border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2.5 py-1 text-[11px] font-medium text-navy-500 shadow-sm">
+        <div className="inline-flex items-center gap-1.5 self-start rounded-full border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2.5 py-1 text-xs font-medium text-navy-500">
           <span className="text-navy-500">{response.assignee.role ?? 'Assigned to'}:</span>
           <span className="text-ink">{response.assignee.name}</span>
         </div>
@@ -35,7 +35,7 @@ export function AIMessage({ response }: AIMessageProps) {
       {response.currentState && (
         <section className="space-y-2">
           {showHeading && (
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-500">
+            <h3 className="text-sm font-semibold text-navy-500">
               Current State
             </h3>
           )}
@@ -47,7 +47,7 @@ export function AIMessage({ response }: AIMessageProps) {
       {/* Workflow sections are hidden for factual Q&A */}
       {!isFactual && response.blockers && response.blockers.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-500">
+          <h3 className="text-sm font-semibold text-navy-500">
             Blockers
           </h3>
           <div className="space-y-2">
@@ -135,7 +135,7 @@ function ProvenanceChip({
   return (
     <span
       title={title}
-      className="inline-flex items-start gap-1.5 text-[11px] font-medium text-navy-500 leading-4 break-words"
+      className="inline-flex items-start gap-1.5 text-xs font-medium leading-4 text-navy-500 break-words"
     >
       <span
         className={`mt-1 inline-block h-1.5 w-1.5 rounded-full ${dotClass} shrink-0`}

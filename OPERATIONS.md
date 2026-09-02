@@ -227,6 +227,9 @@ Dashboard filtering operating model:
 - Do not add decorative idle animations, generic page gradients, nested card chrome, or inline shortcut key prose.
 - Validate loading, empty, error, focus, and reduced-motion states alongside the happy path when reviewing UI changes.
 - Preserve existing workflow, table, link-target, and z-index contracts while refining visual hierarchy.
+- Calendar review should confirm opaque month/week/stream surfaces, site/type marker dots, and border-based today/focus states without event-card hover elevation.
+- Ask AI and detail-page review should confirm divided next-step/comment/history rows, semantic warning callouts, readable 12px metadata, and unchanged provenance/order behavior.
+- Login review should confirm one static ambient accent, no secondary blur orb, and a form-first composition at desktop and mobile widths.
 
 ## 11) Documentation maintenance rule
 When workflow behavior changes, update:

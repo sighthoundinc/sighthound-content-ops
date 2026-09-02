@@ -42,10 +42,10 @@ export function CalendarTile({
   return (
     <article
       className={cn(
-        "relative flex h-40 flex-col rounded-xl border border-[color:var(--sh-gray-200)]/90 bg-gradient-to-b from-white via-white to-[color:var(--sh-gray)]/55 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
+        "relative flex h-40 flex-col rounded-lg border border-[color:var(--sh-gray-200)] bg-white transition-[border-color,background-color] duration-150 motion-reduce:transition-none",
         !isCurrentMonth && "border-[color:var(--sh-gray-200)]/70 bg-[color:var(--sh-gray)]/75",
         isToday &&
-          "border-brand bg-blurple-50/80 shadow-[0_0_0_1px_rgba(79,70,229,0.24),0_14px_24px_-16px_rgba(79,70,229,0.5)]",
+          "border-brand bg-blurple-50/70 ring-1 ring-inset ring-brand/25",
         isFocused && "ring-2 ring-brand ring-offset-2 ring-offset-white",
         todayContainerClassName && isToday && todayContainerClassName,
         className,

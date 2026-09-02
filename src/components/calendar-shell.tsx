@@ -45,7 +45,7 @@ export function CalendarGridSurface({
   return (
     <div
       className={cn(
-        "rounded-xl border border-[color:var(--sh-gray-200)]/90 bg-[color:var(--sh-gray)]/70 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]",
+        "rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/70 p-2",
         surfaceClassName
       )}
     >

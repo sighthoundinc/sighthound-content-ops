@@ -23,20 +23,34 @@ const SEVERITY_CONFIG: Record<Severity, SeverityConfig> = {
 
 export function AIQualityCard({ issue }: QualityCardProps) {
   const config = SEVERITY_CONFIG[issue.severity] ?? SEVERITY_CONFIG.info;
+  const content = (
+    <>
+      <AppIcon
+        name={config.icon}
+        size={16}
+        boxClassName="mt-0.5 h-4 w-4"
+        className={`shrink-0 ${config.iconColor}`}
+      />
+      <div className="min-w-0 flex-1">
+        <h4 className={`text-sm font-medium ${config.textColor}`}>{issue.title}</h4>
+        <p className={`mt-0.5 text-xs leading-5 ${config.textColor} opacity-90`}>
+          {issue.description}
+        </p>
+      </div>
+    </>
+  );
+
+  if (issue.severity === 'info') {
+    return (
+      <div className="flex gap-2 border-b border-[color:var(--sh-gray-200)] px-1 py-3 first:pt-0 last:border-b-0">
+        {content}
+      </div>
+    );
+  }
 
   return (
     <Card tone={config.tone}>
-      <div className="flex gap-2">
-        <AppIcon
-          name={config.icon}
-          size={16}
-          className={`mt-0.5 flex-shrink-0 ${config.iconColor}`}
-        />
-        <div className="flex-1">
-          <h4 className={`text-sm font-medium ${config.textColor}`}>{issue.title}</h4>
-          <p className={`text-xs opacity-90 ${config.textColor}`}>{issue.description}</p>
-        </div>
-      </div>
+      <div className="flex gap-2">{content}</div>
     </Card>
   );
 }

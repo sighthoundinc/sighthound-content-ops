@@ -324,6 +324,9 @@ Adoption across existing dashboard, tasks, blogs, social-posts, and calendar sur
 - Decorative gradients and idle motion are not default treatments. Motion must communicate interaction or state and collapse under `prefers-reduced-motion`.
 - Empty, loading, error, and focus states must remain explicit and actionable.
 - Shortcut key combinations remain discoverable through the shared shortcuts modal rather than persistent main-page chrome.
+- Calendar month/week/stream surfaces use opaque neutral tiles and shared marker dots for site/type identity; today/focused dates use borders or inset rings, and stream headers remain opaque so sticky positioning is stable.
+- Non-interactive Ask AI next steps, informational quality items, comments, and assignment history use divided rows instead of repeated nested cards; critical and warning states retain semantic callouts.
+- Login ambient treatment uses one low-opacity brand accent and a static wave; decorative blur and idle motion must not compete with the sign-in form.
 - This contract is visual-only and does not change workflow status values, API shapes, permissions, or data storage.
 
 ## 14) Definition of done for workflow changes

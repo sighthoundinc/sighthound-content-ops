@@ -115,6 +115,9 @@ Detail page ordering rule:
 - The workspace favors deliberate hierarchy over a uniform card grid: one dominant work region, quiet supporting context, and semantic state accents.
 - Shared visual primitives provide the consistent seam for buttons, icons, tooltips, empty/loading/error states, surfaces, and motion.
 - Decorative gradients and idle animation are intentionally limited; state and interaction should explain movement.
+- Calendar surfaces are flat and opaque, with filled/outlined markers for site and content type and restrained border/ring emphasis for today and focus.
+- Ask AI and record history use divided, readable rows; only semantic warnings and blockers receive stronger callout treatment.
+- Login uses a single quiet brand accent and static wave so the form remains the primary anchor.
 - Shortcut key combinations live in the shared shortcuts modal, not persistent page chrome.
 - These refinements are presentation-only; workflow data, statuses, permissions, and APIs remain unchanged.
 

@@ -8,10 +8,9 @@
 //   2. A low-opacity SVG grain overlay. Inlined as a data URI so the
 //      background commits in the same paint as the page shell (no extra
 //      network request, zero CLS risk).
-//   3. A thin, slow-drifting gradient "wave" motif from the brand
+//   3. A thin, static gradient "wave" motif from the brand
 //      (Blurple → Red-Orange). Kept at ~6% opacity and bottom-anchored so
-//      it never competes with the form. Motion is gated on
-//      `prefers-reduced-motion` per the Layout Invariants in AGENTS.md.
+//      it never competes with the form.
 //
 // Everything here is `pointer-events-none` and `aria-hidden` — it must
 // never intercept clicks or be read by assistive tech.
@@ -26,12 +25,7 @@ export function LoginAmbient() {
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
     >
       {/* Layer 1 — soft Blurple radial glow centered behind the composition. */}
-      <div
-        className="absolute left-1/2 top-1/2 h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blurple-100/70 blur-3xl"
-      />
-      <div
-        className="absolute left-[68%] top-[28%] h-[320px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blurple-200/40 blur-3xl"
-      />
+      <div className="absolute left-1/2 top-1/2 h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blurple-100/55 blur-3xl" />
 
       {/* Layer 2 — grain overlay. 4% opacity is enough to kill the plasticky,
           flat-white feeling without introducing a visible texture. */}
@@ -45,27 +39,9 @@ export function LoginAmbient() {
       />
 
       {/* Layer 3 — Content Relay wave motif. Sits along the bottom third,
-          full-bleed. Motion is a slow horizontal drift; the keyframe is
-          defined locally via a <style> tag so we don't need to touch
-          globals.css for a login-only ornament. `motion-reduce` collapses
-          the animation to 0ms and removes the transform so users with
-          reduced-motion preferences see a perfectly still curve. */}
-      <style>{`
-        @keyframes sh-login-wave-drift {
-          0%   { transform: translate3d(-2%, 0, 0); }
-          50%  { transform: translate3d(2%, 0, 0); }
-          100% { transform: translate3d(-2%, 0, 0); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .sh-login-wave {
-            animation: none !important;
-            transform: none !important;
-          }
-        }
-      `}</style>
+          full-bleed and static so the auth form remains the only focal action. */}
       <svg
-        className="sh-login-wave absolute inset-x-0 bottom-0 h-[42vh] w-[110%] -translate-x-[5%]"
-        style={{ animation: "sh-login-wave-drift 22s ease-in-out infinite" }}
+        className="absolute inset-x-0 bottom-0 h-[42vh] w-[110%] -translate-x-[5%]"
         viewBox="0 0 1600 480"
         preserveAspectRatio="none"
         xmlns="http://www.w3.org/2000/svg"

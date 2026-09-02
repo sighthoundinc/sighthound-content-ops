@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
+import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ProtectedPage } from "@/components/protected-page";
 import { parseApiResponseJson, isApiFailure, getApiErrorMessage } from "@/lib/api-response";
@@ -336,22 +337,23 @@ export default function IdeasPage() {
                 Capture ideas quickly, then convert them into scheduled blog assignments.
               </p>
             </div>
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="md"
               onClick={() => {
                 setIsCreateModalOpen(true);
               }}
-              className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700"
             >
               New Idea
-            </button>
+            </Button>
           </header>
 
           <form
             onSubmit={handleQuickIdeaSubmit}
             className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3"
           >
-            <label className="block text-xs font-semibold uppercase tracking-wide text-navy-500">
+            <label className="block text-sm font-medium text-ink">
               Quick capture
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -363,19 +365,20 @@ export default function IdeasPage() {
                 placeholder="Add idea..."
                 className="min-w-60 flex-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm"
               />
-              <button
+              <Button
                 type="submit"
+                variant="secondary"
+                size="md"
                 disabled={isSubmitting}
-                className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Save
-              </button>
+              </Button>
             </div>
           </form>
 
 
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
+            <h3 className="subsection-label">
               Active Ideas
             </h3>
 
@@ -424,40 +427,44 @@ export default function IdeasPage() {
                     {/* Action Buttons */}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {idea.created_by === user?.id || isAdmin ? (
-                        <button
+                        <Button
                           type="button"
+                          variant="destructive"
+                          size="sm"
                           disabled={deletingIdeaId === idea.id}
-                          className="rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => {
                             void handleDeleteIdea(idea);
                           }}
                         >
                           {deletingIdeaId === idea.id ? "Deleting…" : "Delete"}
-                        </button>
+                        </Button>
                       ) : null}
-                      <button
+                      <Button
                         type="button"
-                        className="rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
+                        variant="secondary"
+                        size="sm"
                         onClick={() => {
                           openEditModal(idea);
                         }}
                       >
                         Edit Idea
-                      </button>
+                      </Button>
                       {canCreateBlog ? (
-                        <button
+                        <Button
                           type="button"
-                          className="rounded-md border border-ink bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink"
+                          variant="primary"
+                          size="sm"
                           onClick={() => {
                             router.push(`/blogs/new?ideaId=${idea.id}`);
                           }}
                         >
                           Convert to Blog
-                        </button>
+                        </Button>
                       ) : null}
-                      <button
+                      <Button
                         type="button"
-                        className="rounded-md border border-ink bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink"
+                        variant={canCreateBlog ? "secondary" : "primary"}
+                        size="sm"
                         onClick={() => {
                           const search = new URLSearchParams({
                             create: "1",
@@ -467,7 +474,7 @@ export default function IdeasPage() {
                         }}
                       >
                         Convert to Social Post
-                      </button>
+                      </Button>
                     </div>
                   </li>
                 ))}
@@ -497,9 +504,10 @@ export default function IdeasPage() {
                     Keep it lightweight: title, site, and optional comments or references.
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
-                  className="rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-sm text-navy-500 hover:bg-blurple-50"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     if (!isSubmitting) {
                       setIsCreateModalOpen(false);
@@ -507,7 +515,7 @@ export default function IdeasPage() {
                   }}
                 >
                   Close
-                </button>
+                </Button>
               </div>
 
               <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
@@ -554,16 +562,18 @@ export default function IdeasPage() {
                   />
                 </label>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="submit"
+                    variant="primary"
+                    size="md"
                     disabled={isSubmitting}
-                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmitting ? "Creating..." : "Create Idea"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
+                    variant="secondary"
+                    size="md"
                     onClick={() => {
                       if (!isSubmitting) {
                         setIsCreateModalOpen(false);
@@ -571,7 +581,7 @@ export default function IdeasPage() {
                     }}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -598,9 +608,10 @@ export default function IdeasPage() {
                     Update the title, site, or comments and references before converting.
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
-                  className="rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1 text-sm text-navy-500 hover:bg-blurple-50"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     if (!isSubmitting) {
                       closeEditModal();
@@ -608,7 +619,7 @@ export default function IdeasPage() {
                   }}
                 >
                   Close
-                </button>
+                </Button>
               </div>
 
               <form className="mt-4 space-y-4" onSubmit={handleEditSubmit}>
@@ -655,16 +666,18 @@ export default function IdeasPage() {
                   />
                 </label>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="submit"
+                    variant="primary"
+                    size="md"
                     disabled={isSubmitting}
-                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmitting ? "Saving..." : "Save Changes"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
+                    variant="secondary"
+                    size="md"
                     onClick={() => {
                       if (!isSubmitting) {
                         closeEditModal();
@@ -672,7 +685,7 @@ export default function IdeasPage() {
                     }}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>

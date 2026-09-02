@@ -75,8 +75,8 @@ export function LoginHero() {
         across blogs and socials.
       </p>
 
-      <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.18em] text-navy-500/70">
-        Turning Sight Into Insight
+      <p className="mt-10 text-sm text-navy-500/70">
+        Turning sight into insight.
       </p>
     </section>
   );

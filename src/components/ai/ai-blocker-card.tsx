@@ -25,7 +25,7 @@ export function AIBlockerCard({ blocker }: BlockerCardProps) {
   const config = SEVERITY_CONFIG[blocker.severity] ?? SEVERITY_CONFIG.info;
 
   return (
-    <Card tone={config.tone} className="transition-shadow hover:shadow-sm">
+    <Card tone={config.tone}>
       <div className="flex items-start gap-2.5">
         <AppIcon
           name={config.icon}

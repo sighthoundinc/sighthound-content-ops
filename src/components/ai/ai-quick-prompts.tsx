@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { Button } from '@/components/button';
 import { useAIAssistant } from '@/providers/ai-assistant-provider';
 import { ArrowRightIcon } from "@/lib/icons";
 
@@ -111,16 +112,18 @@ export function AIQuickPrompts() {
           onChange={(e) => setCustomPrompt(e.target.value)}
           placeholder="Ask anything about this…"
           disabled={isLoading}
-          className="flex-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-ink placeholder:text-navy-500/60 transition-colors hover:border-[color:var(--sh-gray-400)] focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-50"
+          className="focus-field flex-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-ink placeholder:text-navy-500/60 hover:border-[color:var(--sh-gray-400)] focus:border-brand focus:outline-none focus:shadow-brand-focus disabled:opacity-60"
         />
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          size="icon"
+          className="!h-9 !w-9"
           disabled={isLoading || !customPrompt.trim()}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-ink text-white transition-colors hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Send"
         >
           <ArrowRightIcon size={16} boxClassName="h-4 w-4" />
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -139,7 +142,7 @@ function PromptGroup({
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
+      <p className="text-xs font-medium text-navy-500">
         {label}
       </p>
       <div className="flex flex-col gap-1.5">
@@ -148,7 +151,7 @@ function PromptGroup({
             key={prompt}
             onClick={() => onAsk(prompt)}
             disabled={isLoading}
-            className="group w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-left text-sm text-navy-500 transition-all duration-150 ease-out hover:border-[color:var(--sh-gray-200)] hover:bg-blurple-50 hover:shadow-sm hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none motion-reduce:transform-none motion-reduce:transition-none"
+            className="group w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-left text-sm text-navy-500 transition-colors duration-150 ease-out hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
           >
             <span className="inline-flex w-full items-center justify-between gap-2">
               <span className="truncate">{prompt}</span>

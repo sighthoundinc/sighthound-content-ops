@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { Button } from "@/components/button";
+import { InfoIcon, WarningIcon } from "@/lib/icons";
 
 type ConfirmationTone = "danger" | "default";
 
@@ -61,17 +62,21 @@ export function ConfirmationModal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-md rounded-xl border border-[color:var(--sh-gray-200)] bg-surface p-4 shadow-brand-lg"
+        className="relative w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-surface p-4 shadow-brand-lg"
       >
         <div className="flex items-start gap-3">
           <span
-            className={`mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm ${
+            className={`mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full ${
               tone === "danger"
                 ? "bg-rose-100 text-rose-700"
                 : "bg-blurple-100 text-blurple-700"
             }`}
           >
-            {tone === "danger" ? "!" : "?"}
+            {tone === "danger" ? (
+              <WarningIcon size={15} boxClassName="h-4 w-4" />
+            ) : (
+              <InfoIcon size={15} boxClassName="h-4 w-4" />
+            )}
           </span>
           <div>
             <h3 className="text-base font-semibold text-ink">{title}</h3>

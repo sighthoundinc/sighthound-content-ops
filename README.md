@@ -111,6 +111,13 @@ Detail page ordering rule:
 - Blog and social comment creation also posts to Slack with `Action: New comment`, `By: <name>`, and full multi-line comment text.
 - Comment notifications preserve line breaks and neutralize Slack ping tokens to avoid accidental channel/user pings.
 
+## Authored UI direction
+- The workspace favors deliberate hierarchy over a uniform card grid: one dominant work region, quiet supporting context, and semantic state accents.
+- Shared visual primitives provide the consistent seam for buttons, icons, tooltips, empty/loading/error states, surfaces, and motion.
+- Decorative gradients and idle animation are intentionally limited; state and interaction should explain movement.
+- Shortcut key combinations live in the shared shortcuts modal, not persistent page chrome.
+- These refinements are presentation-only; workflow data, statuses, permissions, and APIs remain unchanged.
+
 ## Documentation map
 - User workflow guide: `HOW_TO_USE_APP.md`
 - Technical behavior/spec: `SPECIFICATION.md`

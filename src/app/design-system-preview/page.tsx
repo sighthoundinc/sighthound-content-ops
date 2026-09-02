@@ -21,6 +21,12 @@ import {
   TableSkeletonRow,
 } from "@/components/skeleton";
 import { Tooltip } from "@/components/tooltip";
+import {
+  ArrowRightIcon,
+  InfoIcon,
+  MoreIcon,
+  WarningIcon,
+} from "@/lib/icons";
 import { TYPOGRAPHY } from "@/lib/typography";
 
 import { DetailDrawerPreview } from "./detail-drawer-preview";
@@ -152,7 +158,7 @@ function PreviewButton({
     borderRadius: radius,
     border: "1px solid transparent",
     cursor: "pointer",
-    transition: "all 200ms cubic-bezier(0.2,0,0.2,1)",
+    transition: "all var(--motion-duration-slow) var(--motion-easing-out)",
     whiteSpace: "nowrap",
   };
 
@@ -246,6 +252,52 @@ export default function DesignSystemPreviewPage() {
             both button-radius variants, and the navy-tinted shadow ramp.
           </p>
         </header>
+
+        {/* ---- Authored composition ---- */}
+        <section className="mb-14">
+          <SectionTitle>Authored composition — hierarchy before decoration</SectionTitle>
+          <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+            <div className="rounded-xl bg-ink p-6 text-white shadow-brand-lg">
+              <div className="subsection-label !text-white/60">Today&apos;s relay</div>
+              <div className="mt-3 max-w-xl">
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Give the next piece of work a clear home.
+                </h2>
+                <p className="mt-2 max-w-lg text-sm leading-6 text-white/70">
+                  One dominant work region, quiet supporting context, and accents
+                  that explain state instead of competing for attention.
+                </p>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Button variant="primary" size="md">
+                  Open dashboard
+                  <ArrowRightIcon className="text-white" size={15} boxClassName="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  className="!text-white hover:!bg-white/10 hover:!text-white"
+                >
+                  Review calendar
+                </Button>
+              </div>
+            </div>
+            <Card tone="muted" className="flex flex-col justify-between">
+              <div>
+                <div className="subsection-label">Supporting context</div>
+                <p className="body-text mt-2">
+                  Empty, loading, and error states should feel intentional and
+                  make the next useful action obvious.
+                </p>
+              </div>
+              <div className="mt-6 grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+                <Badge tone="success">On track</Badge>
+                <Badge tone="warning">Needs attention</Badge>
+                <Badge tone="critical">Blocked</Badge>
+              </div>
+            </Card>
+          </div>
+        </section>
 
         {/* ---- Logos ---- */}
         <section className="mb-14">
@@ -401,7 +453,10 @@ export default function DesignSystemPreviewPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <PreviewButton>Talk to our team</PreviewButton>
                 <PreviewButton variant="secondary">Watch demo</PreviewButton>
-                <PreviewButton variant="tertiary">Learn more →</PreviewButton>
+                <PreviewButton variant="tertiary">
+                  Learn more
+                  <ArrowRightIcon size={15} boxClassName="h-4 w-4" />
+                </PreviewButton>
               </div>
             </div>
             <div>
@@ -485,7 +540,7 @@ export default function DesignSystemPreviewPage() {
                   xs secondary
                 </Button>
                 <Button variant="icon" size="icon" aria-label="More options">
-                  ⋯
+                  <MoreIcon size={16} />
                 </Button>
               </div>
             </div>
@@ -702,7 +757,7 @@ export default function DesignSystemPreviewPage() {
             <div className="relative w-full max-w-md rounded-xl border border-[color:var(--sh-gray-200)] bg-surface p-4 shadow-brand-lg">
               <div className="flex items-start gap-3">
                 <span className="bg-blurple-100 text-blurple-700 mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm">
-                  ?
+                  <InfoIcon size={16} />
                 </span>
                 <div>
                   <h3 className="text-ink text-base font-semibold">
@@ -727,7 +782,7 @@ export default function DesignSystemPreviewPage() {
             <div className="relative w-full max-w-md rounded-xl border border-[color:var(--sh-gray-200)] bg-surface p-4 shadow-brand-lg">
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-100 text-sm text-rose-700">
-                  !
+                  <WarningIcon size={16} />
                 </span>
                 <div>
                   <h3 className="text-ink text-base font-semibold">
@@ -868,7 +923,7 @@ export default function DesignSystemPreviewPage() {
                 </Tooltip>
                 <Tooltip content="Reopen brief for editing (admin only)">
                   <Button variant="icon" size="icon" aria-label="More">
-                    ⋯
+                    <MoreIcon size={16} />
                   </Button>
                 </Tooltip>
                 <Tooltip content="Submit for editorial review">

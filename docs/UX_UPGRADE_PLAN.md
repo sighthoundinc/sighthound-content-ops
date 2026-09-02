@@ -3,6 +3,12 @@ Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in fou
 ## Definitions
 - **Shipped primitive**: exists under `src/lib`, `src/components`, or `src/hooks`. Typechecks, has tests where applicable, and can be imported.
 - **Adopted**: a real user-facing surface imports the primitive, so an end user experiences the change. Anything not explicitly listed as adopted should be treated as library-only.
+## Authored UI direction (current pass)
+- Workspace composition now favors one dominant work region with quieter supporting context instead of equal-weight nested cards.
+- Shared surfaces use Content Relay tokens, semantic workflow colors, and tokenized motion; decorative gradients and idle animation are intentionally limited.
+- Empty, loading, error, focus, and reduced-motion states are treated as part of the visual contract, not afterthoughts.
+- App-shell branding is static and shortcut key combinations remain discoverable through the shared shortcuts modal rather than persistent chrome.
+- This pass is presentation-only and does not alter workflow state, API contracts, permissions, or persisted data.
 ## Adoption Matrix (source of truth)
 ### Adopted end-to-end
 | Primitive | Adoption site | User-visible effect |

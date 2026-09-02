@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Button, buttonClass } from "@/components/button";
 import { AppIcon, type AppIconName } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -47,14 +48,14 @@ export function EmptyState({
     <div
       role="status"
       className={cn(
-        "flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[color:var(--sh-gray-200)] bg-white px-6 py-10 text-center",
+        "flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[color:var(--sh-gray-200)] bg-white px-6 py-12 text-center",
         className
       )}
     >
       <AppIcon
         name={icon}
-        className="text-navy-500/60"
-        boxClassName="h-10 w-10 rounded-full bg-[color:var(--sh-gray)]"
+        className="text-brand"
+        boxClassName="h-11 w-11 rounded-lg border border-[color:var(--sh-blurple-100)] bg-blurple-50"
         size={20}
       />
       <div className="flex flex-col gap-1">
@@ -67,18 +68,19 @@ export function EmptyState({
         action.href ? (
           <Link
             href={action.href}
-            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className={buttonClass({ variant: "primary", size: "sm" })}
           >
             {action.label}
           </Link>
         ) : (
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="sm"
             onClick={action.onClick}
-            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             {action.label}
-          </button>
+          </Button>
         )
       ) : null}
       {secondary ? (

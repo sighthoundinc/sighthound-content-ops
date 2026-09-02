@@ -89,7 +89,9 @@ export function OperationalTableFrame({
       {selection}
       {emptyState}
       {children}
-      <div className={DATA_PAGE_CONTROL_STRIP_CLASS}>
+      <div
+        className={`${DATA_PAGE_CONTROL_STRIP_CLASS} border-t border-[color:var(--sh-gray-200)] pt-4`}
+      >
         <div className="flex flex-wrap items-center gap-3">
           <TableRowLimitSelect value={rowLimit} onChange={onRowLimitChange} />
           <TablePaginationControls

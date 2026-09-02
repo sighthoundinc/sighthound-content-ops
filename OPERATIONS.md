@@ -221,6 +221,13 @@ Dashboard filtering operating model:
 - Once the user toggles manually, the localStorage preference wins regardless of viewport.
 - `prefers-reduced-motion` continues to suppress all sidebar transitions.
 
+## Visual quality notes
+- Keep workspace surfaces composition-led: one clear primary region, restrained supporting cards, and semantic accents.
+- Prefer shared button, icon, tooltip, empty-state, skeleton, and motion primitives over page-specific styling.
+- Do not add decorative idle animations, generic page gradients, nested card chrome, or inline shortcut key prose.
+- Validate loading, empty, error, focus, and reduced-motion states alongside the happy path when reviewing UI changes.
+- Preserve existing workflow, table, link-target, and z-index contracts while refining visual hierarchy.
+
 ## 11) Documentation maintenance rule
 When workflow behavior changes, update:
 - `README.md`

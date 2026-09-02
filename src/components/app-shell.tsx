@@ -51,7 +51,6 @@ const SECONDARY_NAV_ITEMS: NavItem[] = [
   { href: "/blogs/cardboard", label: "CardBoard", icon: "kanban" },
 ];
 const APP_SHELL_LOGO_SEQUENCE = [
-  { src: "/sighthound-badge-animated.gif", width: 64, height: 36, alt: "Sighthound badge" },
   { src: "/sighthound-badge-mark.svg", width: 36, height: 36, alt: "Sighthound badge mark" },
 ] as const;
 type ShortcutDefinition = {
@@ -140,9 +139,9 @@ export function AppShell({
     .join("");
   const activeHeaderLogo = APP_SHELL_LOGO_SEQUENCE[headerLogoSourceIndex] ?? null;
   const headerMenuTriggerClass =
-    "inline-flex min-h-9 items-center justify-center rounded-md px-1.5 text-sm font-medium text-navy-500 transition hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
+    "pressable inline-flex min-h-9 items-center justify-center rounded-md px-1.5 text-sm font-medium text-navy-500 hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus";
   const headerMenuItemClass =
-    "flex w-full items-center rounded-md px-2 py-2 text-left text-sm text-navy-500 transition hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
+    "pressable flex w-full items-center rounded-md px-2 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus";
   const closeOpenDetailsMenus = useCallback(
     (excludeDetails: HTMLDetailsElement | null = null) => {
       document.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
@@ -606,16 +605,13 @@ export function AppShell({
             className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-blurple-50"
             aria-label="Sighthound Content Relay"
           >
-            <div className="relative flex h-9 w-16 shrink-0 items-center">
+            <div className="relative flex h-9 w-9 shrink-0 items-center">
               {activeHeaderLogo ? (
                 <>
                   {!headerLogoLoaded ? (
                     <span
                       aria-hidden="true"
-                      className={cn(
-                        "absolute left-0 top-0 h-9 animate-pulse rounded-md bg-[color:var(--sh-gray-200)]/70",
-                        activeHeaderLogo.width === 64 ? "w-16" : "w-9"
-                      )}
+                      className="absolute left-0 top-0 h-9 w-9 animate-pulse rounded-md bg-[color:var(--sh-gray-200)]/70"
                     />
                   ) : null}
                   <Image
@@ -624,8 +620,7 @@ export function AppShell({
                     width={activeHeaderLogo.width}
                     height={activeHeaderLogo.height}
                     className={cn(
-                      "h-9 object-contain transition-opacity",
-                      activeHeaderLogo.width === 64 ? "w-auto" : "w-9",
+                      "h-9 w-9 object-contain transition-opacity",
                       headerLogoLoaded
                         ? "opacity-100"
                         : "pointer-events-none absolute left-0 top-0 opacity-0"
@@ -655,7 +650,7 @@ export function AppShell({
               type="button"
               aria-label="Search and commands"
               className={cn(
-                "inline-flex items-center gap-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs text-navy-500 transition hover:border-[color:var(--sh-gray-400)] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                "pressable inline-flex items-center gap-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs text-navy-500 hover:border-[color:var(--sh-gray-400)] hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus"
               )}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("command-palette:open"));
@@ -663,7 +658,6 @@ export function AppShell({
             >
               <SearchIcon boxClassName="h-4 w-4" size={12} />
               <span className="hidden sm:inline">Search</span>
-              <KbdShortcut>⌘K</KbdShortcut>
             </button>
             <div className="relative" ref={notificationPanelRef}>
               <button
@@ -945,7 +939,7 @@ export function AppShell({
                 const renderNavItem = (item: NavItem, isActive: boolean) => {
                   const navKey = `${item.href}-${item.label}`;
                   const navItemClassName = cn(
-                    "group flex w-full min-h-11 items-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
+                    "pressable group flex w-full min-h-11 items-center rounded-md motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-brand-focus",
                     collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2",
                     isActive
                       ? "bg-ink text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)] hover:bg-ink hover:text-white"
@@ -1055,7 +1049,7 @@ export function AppShell({
               setIsQuickCreateOpen(false);
             }}
           />
-          <section className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+          <section className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-ink">Quick Create</h2>
@@ -1141,7 +1135,7 @@ export function AppShell({
               setIsShortcutModalOpen(false);
             }}
           />
-          <section className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+          <section className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-ink">Shortcuts</h2>

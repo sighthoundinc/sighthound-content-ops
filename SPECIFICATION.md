@@ -318,6 +318,14 @@ Primitives authored under `src/lib`, `src/components`, and `src/hooks` are canon
 
 Adoption across existing dashboard, tasks, blogs, social-posts, and calendar surfaces is tracked in `docs/UX_UPGRADE_PLAN.md` — see the `Adoption Matrix` there for the authoritative “shipped vs adopted” state. These primitives must not be claimed as deployed on a given surface until that surface actually imports them.
 
+## 13.1) Authored UI composition contract
+- Workspace surfaces should establish hierarchy through composition: one dominant work region, quiet supporting context, and state-driven accents.
+- Shared primitives (`Button`, `Card`, `Badge`, `EmptyState`, `Skeleton`, `Tooltip`, `AppIcon`) are the visual seam for touched surfaces; page-level variants should not duplicate their behavior.
+- Decorative gradients and idle motion are not default treatments. Motion must communicate interaction or state and collapse under `prefers-reduced-motion`.
+- Empty, loading, error, and focus states must remain explicit and actionable.
+- Shortcut key combinations remain discoverable through the shared shortcuts modal rather than persistent main-page chrome.
+- This contract is visual-only and does not change workflow status values, API shapes, permissions, or data storage.
+
 ## 14) Definition of done for workflow changes
 A workflow change is complete only when:
 1. Status/transition logic is updated and validated.

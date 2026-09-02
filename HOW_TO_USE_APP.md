@@ -209,6 +209,14 @@ Ask AI lives on blog, social post, and idea detail pages. It never edits records
 - Natural-language interpretation uses Gemini first when available; deterministic logic is the fallback.
 - Deterministic workflow analysis (blockers, gates, transitions) is always the authority regardless of which source phrased the answer.
 
+## Visual direction
+Content Relay uses an authored workspace hierarchy rather than a generic dashboard template:
+- The home page leads with one dominant “Today’s relay” work region, followed by quieter supporting context.
+- Workflow colors communicate state; gradients and decorative motion are reserved for intentional brand moments.
+- Empty, loading, and error states explain what happened and what to do next.
+- Main pages keep shortcut key combinations out of the chrome; use the clickable `Shortcut` affordance and shared shortcuts modal when available.
+- Useful links expose consistent `Open` / `Copy` actions, and all controls use the shared icon and button primitives.
+
 ## 7) Transition gates reference
 - Never transition without required target-stage fields.
 - Never publish social content without a saved valid live link.

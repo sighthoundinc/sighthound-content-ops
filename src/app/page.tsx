@@ -33,23 +33,26 @@ export default async function HomePage() {
   const requiredByLabel = displayName ?? "You";
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blurple-50 via-white to-white px-4 py-12 sm:px-6 lg:py-20">
-      <div className="mx-auto max-w-5xl">
-        <section className="rounded-2xl border border-[color:var(--sh-gray-200)] bg-white/95 p-8 shadow-brand-sm backdrop-blur-sm sm:p-10">
+    <main className="min-h-screen bg-[color:var(--sh-gray)] px-4 py-8 sm:px-6 lg:py-12">
+      <div className="mx-auto max-w-6xl">
+        <section className="relative overflow-hidden rounded-lg border border-[color:var(--sh-navy-700)] bg-ink p-8 shadow-brand-md sm:p-10">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blurple-100">
+                Today&apos;s relay
+              </p>
+              <h1 className="page-title mt-3 !text-white">
                 Hi {userName},
               </h1>
             </div>
             {summary && roleDisplay && (
-              <span className="bg-blurple-50 text-blurple-800 inline-flex items-center gap-2 rounded-full border border-[color:var(--sh-blurple-100)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] whitespace-nowrap">
+              <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
                 {roleDisplay}
                 {hasMultipleRoles && " (Multiple roles)"}
               </span>
             )}
           </div>
-          <p className="mt-3 max-w-2xl text-base text-navy-500 sm:text-lg">
+          <p className="body-text mt-3 max-w-2xl !text-white/70">
             {hasAnyWork
               ? "Jump into what needs your attention now."
               : "All caught up—no pending work right now."}
@@ -63,15 +66,15 @@ export default async function HomePage() {
         )}
 
         {hasWork && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {workBuckets.map((bucket) => (
               <HomeBucketLink
                 key={bucket.id}
                 bucketId={bucket.id}
-                className={`group rounded-xl border p-4 transition sm:p-5 ${
+                className={`group pressable flex min-h-40 flex-col rounded-lg border p-5 shadow-brand-xs sm:p-6 ${
                   bucket.priority === "high"
                     ? "border-rose-300 bg-rose-50 text-ink hover:border-rose-400 hover:bg-rose-100 active:bg-ink active:text-white active:border-ink"
-                    : "border-[color:var(--sh-gray-200)] bg-white text-ink hover:border-[color:var(--sh-gray-200)] hover:bg-blurple-50 active:bg-ink active:text-white active:border-ink"
+                    : "border-[color:var(--sh-gray-200)] bg-white text-ink hover:border-[color:var(--sh-gray-400)] hover:bg-blurple-50 active:bg-ink active:text-white active:border-ink"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -94,7 +97,7 @@ export default async function HomePage() {
                     {bucket.count}
                   </span>
                 </div>
-                <h2 className="mt-4 text-base font-semibold text-ink group-active:text-white">
+                <h2 className="mt-auto pt-6 text-base font-semibold text-ink group-active:text-white">
                   {bucket.title}
                 </h2>
               </HomeBucketLink>
@@ -103,9 +106,9 @@ export default async function HomePage() {
         )}
 
         {hasSnapshotItems && (
-          <section className="mt-6 rounded-xl border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-sm sm:p-6">
+          <section className="mt-6 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-xs sm:p-6">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-ink">My Tasks Snapshot</h2>
+              <h2 className="section-title">My Tasks Snapshot</h2>
               <Link
                 href="/tasks"
                 className="text-brand hover:text-blurple-700 text-sm font-medium underline-offset-2 hover:underline"
@@ -126,7 +129,7 @@ export default async function HomePage() {
                       <li key={task.id}>
                         <Link
                           href={task.href}
-                          className="block rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 transition hover:bg-blurple-50"
+                          className="pressable block rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 hover:bg-blurple-50"
                         >
                           <p className="truncate text-sm font-medium text-ink">{task.title}</p>
                           <p className="mt-1 text-xs text-navy-500">
@@ -151,7 +154,7 @@ export default async function HomePage() {
                       <li key={task.id}>
                         <Link
                           href={task.href}
-                          className="block rounded-lg border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 transition hover:bg-blurple-50"
+                          className="pressable block rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 hover:bg-blurple-50"
                         >
                           <p className="truncate text-sm font-medium text-ink">{task.title}</p>
                           <p className="mt-1 text-xs text-navy-500">
@@ -169,14 +172,14 @@ export default async function HomePage() {
         )}
 
         {!hasAnyWork && !error && (
-          <div className="mt-6 rounded-xl border border-[color:var(--sh-gray-200)] bg-white p-8 text-center">
-            <CheckIcon boxClassName="h-12 w-12 mx-auto"
+          <div className="mt-6 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-10 text-center shadow-brand-xs">
+            <CheckIcon boxClassName="mx-auto h-12 w-12 rounded-lg border border-emerald-200 bg-emerald-50"
               size={32}
               className="text-emerald-600" />
-            <h2 className="mt-4 text-lg font-semibold text-ink">
+            <h2 className="section-title mt-4">
               All work is on track
             </h2>
-            <p className="mt-2 text-sm text-navy-500">
+            <p className="body-text mt-2 text-navy-500">
               No items awaiting action right now.
               {hasMultipleRoles &&
                 " No blogs need writing, and all completed writing is approved for publishing."}
@@ -187,7 +190,7 @@ export default async function HomePage() {
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/dashboard"
-            className={buttonClass({ variant: "secondary", size: "cta" })}
+            className={buttonClass({ variant: "primary", size: "cta" })}
           >
             Go to Dashboard
           </Link>

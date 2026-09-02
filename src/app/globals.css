@@ -246,10 +246,10 @@ optgroup,
   cursor: pointer;
   text-decoration: underline;
   text-decoration-color: transparent;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
   transition:
-    color 120ms ease,
-    text-decoration-color 120ms ease;
+    color var(--motion-duration-fast) var(--motion-easing-out),
+    text-decoration-color var(--motion-duration-fast) var(--motion-easing-out);
 }
 
 .interactive-link:hover,
@@ -260,22 +260,17 @@ optgroup,
 
 .pressable {
   transition:
-    transform 80ms ease,
-    background-color 120ms ease,
-    color 120ms ease,
-    border-color 120ms ease,
-    box-shadow 120ms ease;
-}
-
-.pressable:active {
-  transform: scale(0.95);
+    background-color var(--motion-duration-fast) var(--motion-easing-out),
+    color var(--motion-duration-fast) var(--motion-easing-out),
+    border-color var(--motion-duration-fast) var(--motion-easing-out),
+    box-shadow var(--motion-duration-fast) var(--motion-easing-out);
 }
 
 .focus-field {
   transition:
-    border-color 120ms ease,
-    background-color 120ms ease,
-    box-shadow 120ms ease;
+    border-color var(--motion-duration-fast) var(--motion-easing-out),
+    background-color var(--motion-duration-fast) var(--motion-easing-out),
+    box-shadow var(--motion-duration-fast) var(--motion-easing-out);
 }
 
 /* Phase 3.2 — input focus primitive migrated to Content Relay.
@@ -293,8 +288,8 @@ optgroup,
   transform: translateY(2px);
   pointer-events: none;
   transition:
-    opacity 120ms ease,
-    transform 120ms ease;
+    opacity var(--motion-duration-fast) var(--motion-easing-out),
+    transform var(--motion-duration-fast) var(--motion-easing-out);
 }
 
 .group:hover .reveal-on-row-hover,
@@ -314,7 +309,7 @@ optgroup,
   position: absolute;
   left: 50%;
   top: 100%;
-  z-index: 40;
+  z-index: 50;
   margin-top: 6px;
   min-width: max-content;
   transform: translateX(-50%) translateY(4px);
@@ -329,8 +324,8 @@ optgroup,
   padding: 6px 8px;
   pointer-events: none;
   transition:
-    opacity 120ms ease,
-    transform 120ms ease;
+    opacity var(--motion-duration-fast) var(--motion-easing-out),
+    transform var(--motion-duration-fast) var(--motion-easing-out);
   transition-delay: 300ms;
   white-space: nowrap;
 }
@@ -342,7 +337,7 @@ optgroup,
 }
 
 .table-row-focus {
-  transition: background-color 120ms ease;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-out);
 }
 
 .table-row-focus:hover,
@@ -351,7 +346,7 @@ optgroup,
 }
 
 .table-row-focus td:first-child {
-  transition: box-shadow 120ms ease;
+  transition: box-shadow var(--motion-duration-fast) var(--motion-easing-out);
 }
 
 .table-row-focus:hover td:first-child,

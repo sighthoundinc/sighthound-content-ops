@@ -65,7 +65,7 @@ import {
   SOCIAL_POST_TYPES,
   SOCIAL_POST_TYPE_LABELS,
 } from "@/lib/status";
-import { canUserActOnStatus } from "@/lib/social-post-workflow";
+import { canUserActOnStatus, isExecutionStage } from "@/lib/social-post-workflow";
 import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
 import { getUserRoles } from "@/lib/roles";
 import {
@@ -1148,7 +1148,7 @@ function SocialPostsPageContent() {
     }
     return Object.fromEntries(entries);
   }, [panelActivity, posts]);
-  const panelCanEditBrief = activePost
+  const panelCanEditBrief = activePost && !isExecutionStage(activePost.status)
     ? isAdmin || activePost.status === "draft" || activePost.status === "changes_requested"
     : false;
   const canCurrentUserActOnPost = useCallback(
@@ -1860,7 +1860,6 @@ function SocialPostsPageContent() {
         ? Math.max(1, Number(canvaPageRaw))
         : null;
     const normalizedPlatforms = Array.from(new Set(panelForm.platforms));
-    const canEditBrief = isAdmin || activePost.status === "draft" || activePost.status === "changes_requested";
     const statusChanged = panelForm.status !== activePost.status;
     const briefChanged =
       trimmedTitle !== activePost.title ||
@@ -1873,7 +1872,7 @@ function SocialPostsPageContent() {
       panelForm.associated_blog_id !== activePost.associated_blog_id ||
       normalizedPlatforms.join(",") !== activePost.platforms.join(",");
 
-    if (!canEditBrief && briefChanged) {
+    if (!panelCanEditBrief && briefChanged) {
       setPanelError(
         "Brief details are locked at this stage."
       );

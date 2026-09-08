@@ -445,7 +445,7 @@ export default function SocialPostEditorPage() {
   const [hasAppliedRequestedFocus, setHasAppliedRequestedFocus] = useState(false);
   const [savedFormSnapshot, setSavedFormSnapshot] = useState<string | null>(null);
   const canEditBrief = useMemo(() => {
-    if (!post) {
+    if (!post || isExecutionStage(post.status)) {
       return false;
     }
     if (isAdmin) {
@@ -802,7 +802,7 @@ export default function SocialPostEditorPage() {
         payload.reason = reason;
       }
       // Include brief field updates with transition only in editable stages.
-      if (form && (isAdmin || !isExecutionStage(currentStatus))) {
+      if (form && !isExecutionStage(currentStatus)) {
         const normalizedTitle = form.title.trim();
         const normalizedCanvaUrl =
           typeof form.canva_url === "string" && form.canva_url.trim().length > 0

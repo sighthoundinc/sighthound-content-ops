@@ -3,7 +3,7 @@ import type {
   SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { canUserActOnStatus } from "@/lib/social-post-workflow";
+import { getStatusActorId } from "@/lib/social-post-workflow";
 
 export type TaskActionState = "action_required" | "waiting_on_others";
 export type BlogReviewTaskType = "writer_review" | "publisher_review";
@@ -167,13 +167,8 @@ export function getAdminAssignmentTaskActionState(
 export function getSocialTaskActionState({
   status,
   userId,
-  isAdmin,
-  createdBy: _createdBy,
   workerUserId,
   reviewerUserId,
-  assignedToUserId: _assignedToUserId,
-  editorUserId: _editorUserId,
-  adminOwnerId: _adminOwnerId,
 }: {
   status: SocialPostStatus;
   userId: string;
@@ -185,19 +180,14 @@ export function getSocialTaskActionState({
   editorUserId: string | null;
   adminOwnerId: string | null;
 }): TaskActionState {
-  // Keep dashboard/My Tasks actionability aligned with transition authority.
-  // Creator/legacy-editor/assignment aliases must not expand non-admin ownership.
+  // Responsibility is not override capability: admins only owe their own stage work.
+  // Creator/legacy-editor/assignment aliases must not expand stage ownership.
   if (status === "published") {
     return "waiting_on_others";
   }
 
-  return canUserActOnStatus({
-    status,
-    workerUserId,
-    reviewerUserId,
-    userId,
-    isAdmin,
-  })
+  const owner = getStatusActorId(status, workerUserId, reviewerUserId);
+  return owner && owner === userId
     ? "action_required"
     : "waiting_on_others";
 }

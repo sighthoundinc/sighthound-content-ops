@@ -55,6 +55,7 @@ The product goal is predictable stage-based execution with explicit ownership an
 - If `title` is empty at create, API normalizes it to `Untitled social post` to keep create non-blocking.
 
 ### Required fields by transition target
+Required stored/merged values are checked against the existing request field schemas as well as emptiness. Invalid enums, malformed URLs/dates, and incorrect value types block advancement; valid request updates can repair invalid stored values in editable stages.
 | Target status | Required fields |
 |---|---|
 | `in_review` | `product`, `type`, `canva_url` |
@@ -64,9 +65,17 @@ The product goal is predictable stage-based execution with explicit ownership an
 | `published` | all above + at least one valid live link |
 
 ### Rollback and lock rules
+- The transition API uses service-only `apply_social_post_transition` (migration `20260908140000`), passing the exact fetched `updated_at`, source/target statuses, authenticated actor, normalized reason, and validated brief changes. The RPC locks/rechecks the record and atomically writes status, derived owner, and history. Event emission skips duplicate history. Response remains `{ success: true, post: { id, status } }`.
+- RPC stale versions/deadlocks map to 409, missing records to 404, authorization failures to 403, and known constraint/input failures to 400; unexpected failures use a safe 500 message. Optional notification exceptions do not change a committed success response.
+- Migrations `20260908134500` and `20260908135000` restrict privileged social RPCs to service role, enforce execution brief locks on combined updates, and validate stored platform/URL pairs at publication and after link mutations. Link writes acquire parent-row locks in ID order to serialize against publication. No existing content is backfilled.
+- SQL live-link validation accepts HTTPS supported-platform hosts/subdomains, optional standard port 443, and a non-root path; it rejects whitespace and credentials. Validation is syntactic, not proof of public accessibility. Existing published rows with invalid links must have a valid link saved before other edits.
+- Transitions reject nonempty `liveLinks` payloads with `400/BAD_REQUEST` before mutation. Save links separately first; the transition route does not create links.
+- Nonterminal transition targets require a next owner derived by `getNextAssignment`; missing owners return `400/BAD_REQUEST` before mutation.
+- The publishing handler validates stored `platform,url` pairs with `isValidSocialLiveLink`: HTTPS, matching supported platform domain/subdomain, non-root path, no credentials or non-default port. This validates syntax, not remote accessibility. Direct database constraints and concurrent link removal require separate verification.
 - Execution-stage rollback to `changes_requested` requires a non-empty reason.
 - `published` transition requires at least one valid public live link.
-- Execution stages lock brief edits for non-admin execution flow.
+- Execution-stage transition payloads reject all nine brief fields for every actor, including admins: title, product, type, Canva URL/page, caption, platforms, schedule, and associated blog. Rejection applies even when combined with rollback; status-only transitions remain available.
+- Full editor autosave/edit controls and drawer save controls mirror this lock. Admins must use the existing reopen endpoint to return to `creative_approved` before editing. Local SQL tests cover persisted handoffs and two publication/link race orderings; HTTP authentication, reassignment races, and browser behavior remain separate verification.
 
 ## 4) Blog workflow contract
 ### Operational sequence
@@ -85,6 +94,7 @@ Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revis
 
 ## 5) Queue and visibility contract
 ### My Tasks
+- Social responsibility uses the worker/reviewer stage owner for admins and non-admins alike. Admin override permission does not classify someone else's task as required by the admin.
 - Mixed list of blog and social work.
 - Action-state split:
   - `Required by me`
@@ -151,6 +161,7 @@ Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revis
   - Unscheduled cards with zero count are non-expandable and show passive empty-state messages.
 
 ## 6) Link behavior contract
+- `formatDateOnly` validates calendar components, rejects impossible dates instead of rolling them forward, and preserves the input calendar day. Its fixed UTC formatting frame does not convert the source timestamp to UTC.
 - Internal links open in same tab.
 - External links open in new tab.
 - Social post final completion requires saved live-link proof.

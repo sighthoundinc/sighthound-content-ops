@@ -45,16 +45,22 @@ Ownership rule:
 | Published | Terminal | Done |
 
 Mandatory gates:
+- Required details must contain valid values, not just be filled in. Correct invalid values before moving to the next stage.
 - Social post creation in `Draft`: Product, Type, Assigned to, Reviewer
 - Optional at create: Title, Platforms, Scheduled date, Associated blog
 - If Title is left empty at create, the app saves it as `Untitled social post`
 - `Draft → In Review`: Product, Type, Canva URL
 - Execution transitions: Product, Type, Canva URL, Platforms, Caption, Scheduled Publish Date
 - `Awaiting Live Link → Published`: at least one valid public live link
+- Before a handoff, assign the person responsible for the next stage. Missing assignments block progression.
+- Save an HTTPS live link for the matching LinkedIn, Facebook, or Instagram platform before marking Published. Platform homepage URLs and links containing login credentials are not accepted. Confirm the post is publicly accessible yourself; the app does not fetch it.
+- A published post must retain at least one valid live link. Save a valid replacement before removing or invalidating its last valid link.
 - In Social Posts list view, `Delete Selected` processes selected posts in one batch and shows a single summary (deleted, skipped published, and failed if any).
 
 Rollback rule:
+- If a concurrent modification is reported, refresh the post, review its current status and details, then retry. A successful handoff saves the new status and responsible person together.
 - Execution rollback to `Changes Requested` requires a non-empty reason.
+- In Ready to Publish and Awaiting Live Link, brief details are read-only for everyone, including admins. This includes caption, scheduled date, and associated blog. Ask an admin to use Edit Brief/Reopen before editing; reopening returns the post to Creative Approved.
 
 Flow:
 `Draft → In Review → (Changes Requested ↔ In Review) → Creative Approved → Ready to Publish → Awaiting Live Link → Published`
@@ -85,6 +91,7 @@ Key rule:
 5. Track blockers in `Waiting on Others`
 
 What “explicit updates” means:
+- Admins see work under `Required by me` only when they own its current social stage. The ability to override a transition does not make someone else's task theirs.
 - Stage reflects true progress
 - Rollback includes reason
 - Publish includes required proof/link data

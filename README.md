@@ -23,6 +23,9 @@ Social post create contract:
 
 ### Final gate
 Social posts must include at least one valid public live link before they can move to `Published`.
+- Save the matching LinkedIn, Facebook, or Instagram HTTPS post link before advancing; homepages are not publication proof.
+- Brief details are locked during Ready to Publish and Awaiting Live Link. Reopen the brief before editing.
+- Each handoff requires a next owner. If a concurrent change is reported, refresh the record before retrying.
 
 ## Daily usage pattern
 1. Open `My Tasks`
@@ -188,5 +191,6 @@ npm run check:full
 ```
 
 ## Migration note
+- Deploy social migrations `20260908134500`, `20260908135000`, and `20260908140000` before the atomic-transition API. They have been verified only on a disposable local database; remote rollout is a separate operation. See `OPERATIONS.md` for deployment and rollback constraints.
 - Task/dashboard performance relies on composite indexes introduced for ownership/status-heavy query paths (social posts, blogs, and task assignments). Apply latest Supabase migrations before validating queue/summary performance.
 - Legacy compatibility endpoint `DELETE /api/ideas/[id]/delete` is retired (`410 Gone`). Use `DELETE /api/ideas/[id]`.

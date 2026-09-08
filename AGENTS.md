@@ -175,6 +175,18 @@ All buttons consume one source of truth: the shared primitive at `src/components
 
 ## State & Workflow Authority (MUST)
 
+Social transition API guardrails:
+- Use service-only `apply_social_post_transition` for status mutations; pass the exact fetched `updated_at` without JavaScript date conversion, authenticated actor, normalized reason, and validated brief changes. Status, derived ownership, and history are atomic; skip duplicate history in `emitEvent`. Deploy migration `20260908140000` before the API and retain it during rollback.
+- Privileged `transition_social_post_status` and `reopen_social_post_for_brief_edit` RPCs are service-role-only. Never grant their actor-ID parameters to PUBLIC, anon, or authenticated callers.
+- Database execution guards reject brief edits even when combined with a status change. Publication requires a valid supported-platform stored link; link mutations lock parent posts and preserve at least one valid link on published posts.
+- Validate required stored/merged values against the same field schemas used for request payloads, not presence alone.
+- Nonempty `liveLinks` transition payloads return `400/BAD_REQUEST`; links must be saved separately before progression. Never fire-and-forget link mutations.
+- Execution-stage transition payloads reject all nine `LOCKED_BRIEF_FIELDS` for every actor, including admins, even when rolling back. Full editor and drawer controls mirror this lock; admin brief edits require the explicit reopen path.
+- Reject nonterminal handoffs when `getNextAssignment` returns no owner.
+- Validate stored live-link platform/URL pairs using `isValidSocialLiveLink` before publishing; row existence alone is insufficient.
+- URL validation is syntactic and does not prove remote visibility. Direct database/RPC enforcement and concurrent link removal require separate verification.
+- `formatDateOnly` must reject impossible calendar dates without rollover and preserve the input day, independent of the host timezone.
+
 1. Database is the source of truth for all statuses and transitions.
 2. Frontend must not allow invalid transitions (enforced via API + DB constraints).
 3. Derived states (for example overall stage) are read-only and must not be manually editable.
@@ -757,6 +769,7 @@ These rules apply to all table implementations (DataTable, DashboardTable, etc.)
    - social rows without an associated blog site resolve to canonical `Sighthound (SH)` fallback for deterministic filtering.
 
 ## Workspace Home Snapshot Contract (MUST)
+Social task responsibility is derived from the current worker/reviewer stage owner, regardless of admin role. Admin override capability does not make another person's task `action_required`. Preserve override controls separately from personal task classification.
 
 1. `GET /api/dashboard/tasks-snapshot` must return full grouped results for associated active tasks (no top-N truncation).
 2. `requiredByMe` contains all associated blog/social tasks where the logged-in user is currently responsible for action.

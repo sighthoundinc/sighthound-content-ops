@@ -11,6 +11,8 @@ import {
   isExecutionStage,
   LOCKED_BRIEF_FIELDS,
   REQUIRED_FIELDS_FOR_STATUS,
+  getNextAssignment,
+  isValidSocialLiveLink,
   type SocialPostStatus,
 } from "@/lib/social-post-workflow";
 import { getUserRoles } from "@/lib/roles";
@@ -73,6 +75,12 @@ export const POST = withApiContract(async function POST(
       );
     }
     const payload = parsedPayload.data;
+    if (payload.liveLinks && payload.liveLinks.length > 0) {
+      return NextResponse.json(
+        { error: "Save live links before changing status. Transitions do not save links." },
+        { status: 400 }
+      );
+    }
     const isAdmin = getUserRoles(auth.context.profile).includes("admin");
     const requestAuthToken = request.headers.get("authorization") ?? undefined;
 
@@ -92,6 +100,7 @@ export const POST = withApiContract(async function POST(
         `
         id,
         status,
+        updated_at,
         created_by,
         worker_user_id,
         reviewer_user_id,
@@ -175,6 +184,16 @@ export const POST = withApiContract(async function POST(
       );
     }
 
+    const nextOwner = getNextAssignment(
+      nextStatus, socialPost.worker_user_id, socialPost.reviewer_user_id
+    );
+    if (nextStatus !== "published" && !nextOwner) {
+      return NextResponse.json(
+        { error: "Assign the person responsible for the next stage before continuing." },
+        { status: 400 }
+      );
+    }
+
     // 6. Backward transitions require reason
     if (isBackwardTransition(currentStatus, nextStatus) && !normalizedReason) {
       return NextResponse.json(
@@ -189,19 +208,7 @@ export const POST = withApiContract(async function POST(
     const briefFieldUpdates: Record<string, unknown> = {};
     const mergedBriefState: Record<string, unknown> = { ...socialPost };
 
-    const BRIEF_FIELDS = [
-      "title",
-      "product",
-      "type",
-      "canva_url",
-      "canva_page",
-      "caption",
-      "platforms",
-      "scheduled_date",
-      "associated_blog_id",
-    ];
-
-    for (const field of BRIEF_FIELDS) {
+    for (const field of LOCKED_BRIEF_FIELDS) {
       const payloadValue = payload[field as keyof typeof payload];
       if (payloadValue !== undefined) {
         briefFieldUpdates[field] = payloadValue as string | number | string[] | null;
@@ -211,37 +218,22 @@ export const POST = withApiContract(async function POST(
 
     // 8. Check field locking for execution stages
     if (
-      !isAdmin &&
-      currentStatus === "awaiting_live_link" &&
+      isExecutionStage(currentStatus) &&
       Object.keys(briefFieldUpdates).length > 0
     ) {
       return NextResponse.json(
         {
           error:
-            "Awaiting Live Link is read-only. Only live links can be submitted in this stage.",
+            "Brief details are locked during execution. Ask an admin to reopen the brief before editing.",
         },
         { status: 400 }
       );
-    }
-    if (!isAdmin && isExecutionStage(currentStatus)) {
-      const lockedFieldsPresent = Object.keys(briefFieldUpdates).filter(
-        (field) => LOCKED_BRIEF_FIELDS.includes(field as typeof LOCKED_BRIEF_FIELDS[number])
-      );
-      if (lockedFieldsPresent.length > 0) {
-        return NextResponse.json(
-          {
-            error: `Cannot edit locked fields during ${currentStatus}: ${
-              lockedFieldsPresent.join(", ")
-            }`,
-          },
-          { status: 400 }
-        );
-      }
     }
 
     // 9. Validate required fields for next status (using merged state)
     const requiredFields = REQUIRED_FIELDS_FOR_STATUS[nextStatus] || [];
     const missingFields: string[] = [];
+    let hasInvalidRequiredField = false;
 
     for (const field of requiredFields) {
       const value = mergedBriefState[field];
@@ -254,6 +246,8 @@ export const POST = withApiContract(async function POST(
       
       if (isEmpty) {
         missingFields.push(field);
+      } else if (!transitionPayloadSchema.shape[field].safeParse(value).success) {
+        hasInvalidRequiredField = true;
       }
     }
 
@@ -268,14 +262,20 @@ export const POST = withApiContract(async function POST(
       );
     }
 
+    if (hasInvalidRequiredField) {
+      return NextResponse.json(
+        { error: "Required post details contain invalid values. Correct them before continuing." },
+        { status: 400 }
+      );
+    }
+
     // 10. Special validation for published: at least one live link required
     if (nextStatus === "published") {
       const { data: links, error: linksError } = await auth.context.adminClient
         .from("social_post_links")
-        .select("id")
-        .eq("social_post_id", id)
-        .limit(1);
-      if (linksError || !links || links.length === 0) {
+        .select("platform,url")
+        .eq("social_post_id", id);
+      if (linksError || !links?.some(isValidSocialLiveLink)) {
         return NextResponse.json(
           {
             error: "Cannot publish without at least one live link",
@@ -285,31 +285,35 @@ export const POST = withApiContract(async function POST(
       }
     }
 
-    // 11. Update status and merged brief fields atomically (database RLS will enforce permissions)
-    const updatePayload: Record<string, string | number | string[] | null | Date> = {
-      status: nextStatus,
-      updated_at: new Date().toISOString(),
-      ...briefFieldUpdates, // Include all brief field updates
-    };
+    // Lock/recheck version and actor; persist ownership and history atomically.
 
     const { data: updated, error: updateError } = await auth.context.adminClient
-      .from("social_posts")
-      .update(updatePayload)
-      .eq("id", id)
-      .eq("status", currentStatus) // Concurrency protection: fails if status changed
-      .select("id,status")
-      .maybeSingle();
+      .rpc("apply_social_post_transition", {
+        p_social_post_id: id,
+        p_from_status: currentStatus,
+        p_expected_updated_at: socialPost.updated_at,
+        p_to_status: nextStatus,
+        p_actor_id: auth.context.userId,
+        p_reason: normalizedReason,
+        p_brief: briefFieldUpdates,
+      });
 
     if (updateError) {
-      if (updateError.code === "PGRST116") {
-        return NextResponse.json(
-          {
-            error: "Concurrent modification detected. Refresh and retry.",
-          },
-          { status: 409 }
-        );
-      }
-      throw updateError;
+      const errors: Record<string, { status: number; error: string }> = {
+        "40001": { status: 409, error: "Concurrent modification detected. Refresh and retry." },
+        "40P01": { status: 409, error: "Concurrent modification detected. Refresh and retry." },
+        P0002: { status: 404, error: "Social post not found" },
+        "42501": { status: 403, error: "You are not authorized to transition this post. Refresh and try again." },
+        "23514": { status: 400, error: "Post details no longer meet the transition requirements. Refresh and check the required fields." },
+        "23503": { status: 400, error: "A linked record is no longer available. Refresh and check the post details." },
+        "22P02": { status: 400, error: "Invalid post details. Refresh and check the required fields." },
+      };
+      console.error("[POST /api/social-posts/[id]/transition] atomic transition failed", updateError);
+      const failure = errors[updateError.code];
+      return NextResponse.json(
+        { error: failure?.error ?? "Couldn't update post. Please try again." },
+        { status: failure?.status ?? 500 }
+      );
     }
     if (!updated) {
       return NextResponse.json(
@@ -320,130 +324,98 @@ export const POST = withApiContract(async function POST(
       );
     }
 
-    // 12. Log canonical activity event (non-blocking)
-    const activityType = isBackwardTransition(currentStatus, nextStatus)
-      ? "social_post_rolled_back"
-      : "social_post_status_changed";
-    auth.context.adminClient
-      .from("social_post_activity_history")
-      .insert({
-        social_post_id: id,
-        changed_by: auth.context.userId,
-        event_type: activityType,
-        field_name: "status",
-        old_value: currentStatus,
-        new_value: nextStatus,
-        metadata: normalizedReason ? { reason: normalizedReason } : {},
-      })
-      .then(({ error: activityError }) => {
-        if (activityError) {
-          console.warn(
-            "[POST /api/social-posts/[id]/transition] failed to record status activity",
-            activityError.message
-          );
+    // Delivery failures cannot turn an already committed transition into a 500.
+    try {
+      // 13. Resolve actor and target user names for display-layer notifications
+      const targetUserId =
+        nextStatus === "in_review" || nextStatus === "creative_approved"
+          ? socialPost.reviewer_user_id
+          : nextStatus === "published"
+            ? null
+            : socialPost.worker_user_id;
+      const profileIds = [auth.context.userId, targetUserId].filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0
+      );
+      const uniqueProfileIds = Array.from(new Set(profileIds));
+      let actorName: string | undefined;
+      let targetUserName: string | undefined;
+      if (uniqueProfileIds.length > 0) {
+        const { data: profileRows } = await auth.context.adminClient
+          .from("profiles")
+          .select("id,full_name")
+          .in("id", uniqueProfileIds);
+        const profileNameById = new Map<string, string>();
+        for (const row of profileRows ?? []) {
+          const id = typeof row.id === "string" ? row.id : "";
+          const fullName = typeof row.full_name === "string" ? row.full_name : "";
+          if (id) {
+            profileNameById.set(id, fullName);
+          }
         }
-      });
-
-    // 13. Insert live links if provided
-    if (Array.isArray(payload.liveLinks) && payload.liveLinks.length > 0) {
-      // Non-blocking insert, fire and forget
-      auth.context.adminClient
-        .from("social_post_links")
-        .insert(
-          payload.liveLinks.map((link) => ({
-            social_post_id: id,
-            platform: link.platform,
-            url: link.url,
-            created_at: new Date().toISOString(),
-          }))
-        );
-    }
-
-    // 14. Resolve actor and target user names for display-layer notifications
-    const targetUserId =
-      nextStatus === "in_review" || nextStatus === "creative_approved"
-        ? socialPost.reviewer_user_id
-        : nextStatus === "published"
-          ? null
-          : socialPost.worker_user_id;
-    const profileIds = [auth.context.userId, targetUserId].filter(
-      (value): value is string => typeof value === "string" && value.trim().length > 0
-    );
-    const uniqueProfileIds = Array.from(new Set(profileIds));
-    let actorName: string | undefined;
-    let targetUserName: string | undefined;
-    if (uniqueProfileIds.length > 0) {
-      const { data: profileRows } = await auth.context.adminClient
-        .from("profiles")
-        .select("id,full_name")
-        .in("id", uniqueProfileIds);
-      const profileNameById = new Map<string, string>();
-      for (const row of profileRows ?? []) {
-        const id = typeof row.id === "string" ? row.id : "";
-        const fullName = typeof row.full_name === "string" ? row.full_name : "";
-        if (id) {
-          profileNameById.set(id, fullName);
+        actorName = profileNameById.get(auth.context.userId);
+        if (targetUserId) {
+          targetUserName = profileNameById.get(targetUserId);
         }
       }
-      actorName = profileNameById.get(auth.context.userId);
-      if (targetUserId) {
-        targetUserName = profileNameById.get(targetUserId);
-      }
-    }
 
-    await emitEvent({
-      type: "social_post_status_changed",
-      contentType: "social_post",
-      contentId: id,
-      oldValue: currentStatus,
-      newValue: nextStatus,
-      fieldName: "status",
-      actor: auth.context.userId,
-      actorName,
-      targetUserId: targetUserId ?? undefined,
-      targetUserName,
-      contentTitle: socialPost.title,
-      metadata: {
-        reason: normalizedReason,
-      },
-      timestamp: Date.now(),
-    }, {
-      authToken: requestAuthToken,
-    });
-
-    // 15. Send Slack notification (non-blocking)
-    const TRANSITION_TO_SLACK_EVENT: Partial<Record<string, string>> = {
-      in_review: "social_submitted_for_review",
-      changes_requested: "social_changes_requested",
-      creative_approved: "social_creative_approved",
-      ready_to_publish: "social_ready_to_publish",
-      awaiting_live_link: "social_awaiting_live_link",
-      published: "social_published",
-    };
-
-    const slackEventType = TRANSITION_TO_SLACK_EVENT[nextStatus];
-    if (slackEventType) {
-      void emitWorkflowSlackEvent(auth.context.adminClient, {
-        eventType: slackEventType as
-          | "social_submitted_for_review"
-          | "social_changes_requested"
-          | "social_creative_approved"
-          | "social_ready_to_publish"
-          | "social_awaiting_live_link"
-          | "social_published",
-        socialPostId: id,
-        title: socialPost.title,
-        site: socialPost.product ?? "general_company",
-        actorName: actorName ?? "Team",
-        actorUserId: auth.context.userId,
+      await emitEvent({
+        type: "social_post_status_changed",
+        contentType: "social_post",
+        contentId: id,
+        oldValue: currentStatus,
+        newValue: nextStatus,
+        fieldName: "status",
+        actor: auth.context.userId,
+        actorName,
         targetUserId: targetUserId ?? undefined,
-        targetUserName: targetUserName ?? undefined,
+        targetUserName,
+        contentTitle: socialPost.title,
+        metadata: {
+          reason: normalizedReason,
+        },
+        timestamp: Date.now(),
+      }, {
+        authToken: requestAuthToken,
+        skipActivityHistory: true,
       });
+
+      // 14. Send optional Slack notification
+      const TRANSITION_TO_SLACK_EVENT: Partial<Record<string, string>> = {
+        in_review: "social_submitted_for_review",
+        changes_requested: "social_changes_requested",
+        creative_approved: "social_creative_approved",
+        ready_to_publish: "social_ready_to_publish",
+        awaiting_live_link: "social_awaiting_live_link",
+        published: "social_published",
+      };
+
+      const slackEventType = TRANSITION_TO_SLACK_EVENT[nextStatus];
+      if (slackEventType) {
+        await emitWorkflowSlackEvent(auth.context.adminClient, {
+          eventType: slackEventType as
+            | "social_submitted_for_review"
+            | "social_changes_requested"
+            | "social_creative_approved"
+            | "social_ready_to_publish"
+            | "social_awaiting_live_link"
+            | "social_published",
+          socialPostId: id,
+          title: socialPost.title,
+          site: socialPost.product ?? "general_company",
+          actorName: actorName ?? "Team",
+          actorUserId: auth.context.userId,
+          targetUserId: targetUserId ?? undefined,
+          targetUserName: targetUserName ?? undefined,
+        });
+      }
+
+    } catch (notificationError) {
+      console.error("[POST /api/social-posts/[id]/transition] notification delivery failed", notificationError);
     }
 
     return NextResponse.json({
       success: true,
-      post: updated,
+      post: { id: updated.id, status: updated.status },
     });
   } catch (err) {
     const error = err instanceof Error ? err.message : "Unknown error";

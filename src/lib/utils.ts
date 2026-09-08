@@ -17,7 +17,7 @@ export function formatDateInput(value: string | null | undefined) {
 
 /**
  * Formats a date-only string (YYYY-MM-DD or ISO timestamp) without timezone conversion.
- * Parses the date part directly and formats locally without converting through UTC.
+ * Validates the calendar date and formats it without converting the input timestamp.
  * This prevents day-shift bugs in behind-UTC timezones.
  *
  * @param value - Date string in YYYY-MM-DD format or ISO timestamp
@@ -27,8 +27,11 @@ export function formatDateOnly(value: string | null | undefined) {
   if (!value) {
     return "";
   }
+  if (!/^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d))?$/.test(value)) {
+    return "";
+  }
   const dateToken = value.slice(0, 10);
-  // Parse date string directly as local date, not UTC
+  // Read calendar components, never convert the source timestamp to another zone.
   const parts = dateToken.split("-");
   if (parts.length !== 3) {
     return "";
@@ -39,12 +42,22 @@ export function formatDateOnly(value: string | null | undefined) {
   if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
     return "";
   }
-  // Create date in local timezone (not UTC) to preserve the date value
-  const localDate = new Date(year, month, day);
+  // Use a fixed calendar frame so host DST rules cannot normalize the input day.
+  const localDate = new Date(0);
+  localDate.setUTCFullYear(year, month, day);
+  localDate.setUTCHours(0, 0, 0, 0);
+  if (
+    localDate.getUTCFullYear() !== year ||
+    localDate.getUTCMonth() !== month ||
+    localDate.getUTCDate() !== day
+  ) {
+    return "";
+  }
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   }).format(localDate);
 }
 

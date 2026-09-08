@@ -111,7 +111,14 @@ describe("date-only display (run in separate TZ processes)", () => {
   ])("%s stays on its calendar date", (input, expected) => {
     expect(formatDateOnly(input)).toBe(expected);
   });
-  test.each([null, undefined, "", "invalid"])("empty/malformed %p", (input) => {
+  test.each([
+    null, undefined, "", "invalid", "2026-02-30", "2026-13-01",
+    "2026-00-01", "2026-03-00", "2026-3x-08", "2026-03-08garbage",
+    "2025-02-29",
+    "2026-03-08T25:00:00Z", "2026-03-08T00:60:00Z",
+    "2026-03-08T00:00:60Z", "2026-03-08T00:00:00+25:00",
+    "2026-03-08T00:00:00+01:60",
+  ])("empty/malformed %p", (input) => {
     expect(formatDateOnly(input)).toBe("");
   });
 });

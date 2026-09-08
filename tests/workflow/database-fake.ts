@@ -10,7 +10,16 @@ export function databaseFake(record: Record<string, unknown>) {
   const updates: Record<string, unknown>[] = [];
   const filters: Array<[string, unknown]> = [];
   const inserts: Array<{ table: string; payload: unknown }> = [];
-  const rpc = jest.fn().mockResolvedValue({ data: { status: "creative_approved" }, error: null });
+  const rpc = jest.fn().mockImplementation(async (name: string, args: Record<string, unknown>) => {
+    if (state.failWrite) return { data: null, error: { code: "DB_FAILURE" } };
+    if (state.conflict) return { data: null, error: { code: "40001" } };
+    return {
+      data: name === "apply_social_post_transition"
+        ? { id: record.id, status: args.p_to_status }
+        : { status: "creative_approved" },
+      error: null,
+    };
+  });
   const from = jest.fn((table: string) => {
     let update: Record<string, unknown> | undefined;
     let insert: unknown;

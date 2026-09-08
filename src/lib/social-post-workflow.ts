@@ -140,6 +140,28 @@ export function getStatusActorId(
   }
 }
 
+/** Syntax/platform validation only; does not verify remote availability or privacy. */
+export function isValidSocialLiveLink(link: { platform?: unknown; url?: unknown }): boolean {
+  const domains: Record<string, string> = {
+    linkedin: "linkedin.com",
+    facebook: "facebook.com",
+    instagram: "instagram.com",
+  };
+  if (typeof link.platform !== "string" || typeof link.url !== "string") return false;
+  const domain = Object.prototype.hasOwnProperty.call(domains, link.platform)
+    ? domains[link.platform]
+    : undefined;
+  if (!domain) return false;
+  try {
+    const url = new URL(link.url);
+    return url.protocol === "https:" && !url.username && !url.password &&
+      !url.port && (url.hostname === domain || url.hostname.endsWith(`.${domain}`)) &&
+      url.pathname !== "/";
+  } catch {
+    return false;
+  }
+}
+
 export function canUserActOnStatus(options: {
   status: SocialPostStatus;
   workerUserId: string | null;
@@ -178,6 +200,9 @@ export const LOCKED_BRIEF_FIELDS = [
   "type",
   "canva_url",
   "canva_page",
+  "caption",
+  "scheduled_date",
+  "associated_blog_id",
 ] as const;
 const LOCKED_BRIEF_FIELD_SET = new Set<string>(LOCKED_BRIEF_FIELDS);
 
@@ -202,7 +227,7 @@ export function isFieldLocked(
  */
 export const REQUIRED_FIELDS_FOR_STATUS: Record<
   SocialPostStatus,
-  string[] | null
+  Array<typeof LOCKED_BRIEF_FIELDS[number]> | null
 > = {
   draft: null, // Create stage
   in_review: ["product", "type", "canva_url"],

@@ -32,6 +32,26 @@ npm run check:full
 ```
 
 ## 3) Core workflow contracts to verify after each release
+### Focused workflow regression harness
+- Run `npm run test:workflow` for executable domain assertions and real transition/reopen handlers with mocked database transport. `jest.workflow.config.js` narrows discovery to `tests/workflow/`; it also executes the existing status label/color contract through an import.
+- For date-only checks, run the same suite in separate processes with `TZ=America/Los_Angeles`, `TZ=UTC`, and `TZ=Pacific/Auckland`. Changing the application user's timezone is a separate UI check.
+- Handler tests assert actual status-based API codes (`BAD_REQUEST`, `FORBIDDEN`, `CONFLICT`), rejected-write behavior, and status concurrency predicates. They do NOT prove database RLS, triggers, persisted ownership, or concurrent transaction behavior.
+- `npm run test:workflow:ui` requires `WORKFLOW_UI_BASE_URL`, an existing `WORKFLOW_UI_STORAGE_STATE` file outside version control, `WORKFLOW_UI_POST_ID`, and `WORKFLOW_UI_EXPECTED_DATE` (`YYYY-MM-DD`). Use a disposable execution-stage social post and its non-admin worker session. For remote staging, explicitly set `WORKFLOW_UI_ALLOWED_ORIGIN` to that HTTPS origin. Never use production.
+- UI probes do not submit transitions and block non-read HTTP requests. Trace/video/screenshots are disabled to avoid capturing sessions or private content. An expired session may fail because token refresh is blocked; supply a fresh test session rather than relaxing mutation safety.
+- Missing environment prerequisites or test-runner initialization failures mean BLOCKED, not passed. No live workflow or RLS verification is implied by an offline green suite.
+- Diagnose a demonstrated failure with a named red command, minimized fixture, ranked falsifiable hypotheses, then an authority-layer fix and regression. Admin override semantics must be explicitly resolved before changing authorization.
+- Validation uses three-minute batches; ask before extending a stalled batch. Live mutations, fixture provisioning, migrations, and external notification delivery require separate approval.
+### Diagnostic replay, live, and differential runner
+- Run offline runner safety tests with `npm run test:workflow:tooling`. These test the diagnostic tooling, not application authorization.
+- CLI: `node scripts/debug/workflow-harness.mjs replay|live|differential <fixture.json>`. The checked-in example is `tests/debug/scenarios.json`; choose exactly one mode.
+- `replay` compares synthetic expected/observed results only. It does not execute route handlers; use `test:workflow` for handler execution. The sample contains three denial scenarios, not a complete workflow cycle.
+- Fixtures must be synthetic, credential-free JSON with logical actor/record names. Do not save session cookies, authorization headers, or real private content. Credentials must come from environment variables populated securely, never command-line literals.
+- Before an approved live run, configure `WF_ALLOW_MUTATIONS=yes` and side-specific `WF_A_ORIGIN`, `WF_A_DISPOSABLE=yes`, `WF_A_NOTIFICATIONS_ISOLATED=yes`, `WF_A_ACTOR_<NAME>` (ordinary-user JWT), and `WF_A_RECORD_<NAME>` (disposable record UUID). Names correspond to uppercase logical names in the fixture.
+- Expected persisted-state checks additionally require `WF_A_SUPABASE_ORIGIN` and `WF_A_PUBLIC_KEY` (anon/publishable). Exact remote HTTPS origins, including Supabase, must appear in comma-separated `WF_ALLOWED_STAGING_ORIGINS`. Never allowlist production.
+- `differential` requires the same settings with `WF_B_` for the second independently prepared target. Record IDs must not overlap across sides, even under different hostnames. Each side must satisfy the expected result; identical incorrect output fails.
+- Disposal and notification isolation are operator attestations, not automatic detection. The runner does not provision/reset records, disable notifications, verify deployed SHAs, or prove RLS. Prepare equivalent isolated fixtures and verify deployment identities separately.
+- Requests refuse redirects, have an eight-second timeout, and cap fixture/response data at 64 KiB. There are no retries. If a sent mutation times out or its state read fails, the write outcome may be unknown: inspect persisted state before retrying or cleaning up.
+- Exit codes: `0` passed comparisons, `1` assertion/transport failure, `2` invalid fixture, `3` blocked prerequisites. Output contains assertion results rather than raw response bodies or credentials. Direct RLS probes, real concurrency, and cross-surface action-state comparisons remain separate coverage.
 ### Social posts
 - Status flow remains:
   - `draft`

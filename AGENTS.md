@@ -15,6 +15,19 @@ Authoritative project documentation lives at the repo root:
 - `AGENTS.md` (this file — rules/invariants)
 - `README.md`, `HOW_TO_USE_APP.md`, `OPERATIONS.md`
 
+## Agent Skills (MUST)
+
+Project-local agent skills live under `skills/`.
+
+### `diagnosing-bugs` (narrow symptom routing)
+
+- Path: `skills/diagnosing-bugs/SKILL.md` (also installed for local agents under `~/.claude/skills/diagnosing-bugs` and `~/.codex/skills/diagnosing-bugs`).
+- Upstream: `mattpocock/skills` → `skills/engineering/diagnosing-bugs`, with a Content Relay overlay.
+- Invoke on explicit naming with a concrete symptom, or an observed workflow defect: wrong transition owner, missing-field advancement, editable execution brief, published without live link, dashboard/tasks/detail action disagreement, publishing before writing approval, or date-only day-shift. Require actual versus expected behavior; hypothetical examples and tooling requests do not trigger diagnosis.
+- Agents MUST NOT auto-invoke it on vague prompts ("broken", "failing", "slow", "debug this", design questions, or general reviews). Prefer a direct answer; for sustained forensic MODE use `deft/skills/deft-directive-debug` when that workflow is requested.
+- The skill description restricts automatic routing to these concrete symptoms. Broad automatic routing remains prohibited; invocation behavior must be checked in the target agent harness.
+- Preferred tight loops for this app: contract tests under `src/lib/*`, dual-actor API calls to blog/social transition routes asserting status + `errorCode`, then ownership/RLS proofs. HITL template: `skills/diagnosing-bugs/scripts/hitl-loop.template.sh`.
+
 Content authoring authority lives under `docs/`:
 - `docs/content-style-guide.md` — dual-domain content style guide for `www.sighthound.com` and `www.redactor.com` (owned by Content Relay, Slack `#content-ops-alerts`). Any public blog post, landing page, case study, or gated asset across either domain MUST follow it.
 - `docs/content-relay/exceptions.md` — per-post logged exceptions to the style guide.

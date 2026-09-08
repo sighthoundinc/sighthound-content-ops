@@ -3,6 +3,7 @@ import type {
   SocialPostStatus,
   WriterStageStatus,
 } from "@/lib/types";
+import { canUserActOnStatus } from "@/lib/social-post-workflow";
 
 export type TaskActionState = "action_required" | "waiting_on_others";
 export type BlogReviewTaskType = "writer_review" | "publisher_review";
@@ -167,12 +168,12 @@ export function getSocialTaskActionState({
   status,
   userId,
   isAdmin,
-  createdBy,
+  createdBy: _createdBy,
   workerUserId,
   reviewerUserId,
-  assignedToUserId,
-  editorUserId,
-  adminOwnerId,
+  assignedToUserId: _assignedToUserId,
+  editorUserId: _editorUserId,
+  adminOwnerId: _adminOwnerId,
 }: {
   status: SocialPostStatus;
   userId: string;
@@ -184,29 +185,19 @@ export function getSocialTaskActionState({
   editorUserId: string | null;
   adminOwnerId: string | null;
 }): TaskActionState {
-  const isWorkerStage =
-    status === "draft" ||
-    status === "changes_requested" ||
-    status === "ready_to_publish" ||
-    status === "awaiting_live_link";
-
-  if (isWorkerStage) {
-    const matchesWorkerOwner =
-      workerUserId === userId ||
-      editorUserId === userId ||
-      createdBy === userId ||
-      assignedToUserId === userId;
-    return matchesWorkerOwner ? "action_required" : "waiting_on_others";
+  // Keep dashboard/My Tasks actionability aligned with transition authority.
+  // Creator/legacy-editor/assignment aliases must not expand non-admin ownership.
+  if (status === "published") {
+    return "waiting_on_others";
   }
 
-  if (status === "in_review" || status === "creative_approved") {
-    const matchesReviewerOwner =
-      reviewerUserId === userId ||
-      adminOwnerId === userId ||
-      assignedToUserId === userId ||
-      isAdmin;
-    return matchesReviewerOwner ? "action_required" : "waiting_on_others";
-  }
-
-  return "waiting_on_others";
+  return canUserActOnStatus({
+    status,
+    workerUserId,
+    reviewerUserId,
+    userId,
+    isAdmin,
+  })
+    ? "action_required"
+    : "waiting_on_others";
 }

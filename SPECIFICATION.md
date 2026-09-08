@@ -46,6 +46,7 @@ The product goal is predictable stage-based execution with explicit ownership an
   - `SOCIAL_POST_NEXT_ACTION_LABELS`
   - `SOCIAL_POST_ALLOWED_TRANSITIONS`
 - Regression guardrail: `src/lib/social-post-workflow.contract.test.ts`.
+- Executable guardrails: `tests/workflow/domain.test.ts` asserts the exported smoke checks and independent transition/owner/preflight expectations. `tests/workflow/handlers.test.ts` calls the real route exports with mocked transport; database-backed behavior remains a separate proof obligation. Run via `npm run test:workflow`.
 
 ### Draft creation contract
 - New social posts are created in `draft`.

@@ -1,0 +1,18 @@
+[
+  {"query":"After I submitted social post P for review, it stayed assigned to me instead of the reviewer.","should_trigger":true},
+  {"query":"Post P advanced to Creative Approved with an empty caption; it should have been rejected.","should_trigger":true},
+  {"query":"As the worker I can still save a new Canva URL on P in Ready to Publish.","should_trigger":true},
+  {"query":"P was marked Published with zero saved live links.","should_trigger":true},
+  {"query":"Dashboard says post P needs my action but My Tasks says waiting on the reviewer.","should_trigger":true},
+  {"query":"Blog B became Published while its writing status was still In Progress.","should_trigger":true},
+  {"query":"B's scheduled date is 2026-02-11 but the dashboard renders Feb 10 for me in Los Angeles.","should_trigger":true},
+  {"query":"Use the diagnosing-bugs skill: post P fails review with 500 rather than 400 when Canva is missing.","should_trigger":true},
+  {"query":"Something is broken.","should_trigger":false},
+  {"query":"Debug this.","should_trigger":false},
+  {"query":"The app feels slow.","should_trigger":false},
+  {"query":"Audit all workflow security.","should_trigger":false},
+  {"query":"How should we handle missing required fields?","should_trigger":false},
+  {"query":"Install diagnosing-bugs for this repository.","should_trigger":false},
+  {"query":"Implement tests for wrong owner after transition and day-shift.","should_trigger":false},
+  {"query":"Explain why Ready to Publish locks the brief.","should_trigger":false}
+]

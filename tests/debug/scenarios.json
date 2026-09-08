@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "scenarios": [
+    {
+      "id": "social_owner_denied",
+      "operation": "social_transition",
+      "actor": "outsider",
+      "record": "social_draft",
+      "body": { "nextStatus": "in_review" },
+      "expected": { "status": 403, "errorCode": "FORBIDDEN", "state": { "status": "draft", "assigned_to_user_id": { "$actor": "worker" } } },
+      "observed": { "status": 403, "errorCode": "FORBIDDEN", "state": { "status": "draft", "assigned_to_user_id": { "$actor": "worker" } } }
+    },
+    {
+      "id": "blog_prerequisite_denied",
+      "operation": "blog_transition",
+      "actor": "worker",
+      "record": "blog_draft",
+      "body": { "publisher_status": "completed" },
+      "expected": { "status": 400, "errorCode": "BAD_REQUEST" },
+      "observed": { "status": 400, "errorCode": "BAD_REQUEST" }
+    },
+    {
+      "id": "social_reopen_denied",
+      "operation": "social_reopen",
+      "actor": "outsider",
+      "record": "social_ready",
+      "body": { "reason": "Synthetic regression case" },
+      "expected": { "status": 403, "errorCode": "FORBIDDEN" },
+      "observed": { "status": 403, "errorCode": "FORBIDDEN" }
+    }
+  ]
+}

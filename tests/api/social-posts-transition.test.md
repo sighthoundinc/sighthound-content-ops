@@ -1,3 +1,10 @@
+# Historical workflow test checklist
+
+This file is not executable and contains outdated title/assignment expectations.
+Use `tests/workflow/handlers.test.ts` and `tests/workflow/domain.test.ts` via
+`npm run test:workflow` instead. The historical examples below are not authority
+for current workflow rules. Live database/RLS verification remains separate.
+
 /**
  * Test Cases for POST /api/social-posts/[id]/transition
  *

@@ -154,7 +154,8 @@ export const POST = withApiContract(async function POST(
     };
     
     const allowedOwner = allowedActors[currentStatus];
-    if (!isAdmin && allowedOwner && allowedOwner !== auth.context.userId) {
+    // Missing stage owner must not open the transition to arbitrary non-admins.
+    if (!isAdmin && allowedOwner !== auth.context.userId) {
       return NextResponse.json(
         {
           error: "Permission denied: You are not authorized to transition this post at this stage.",

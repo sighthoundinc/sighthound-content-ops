@@ -176,6 +176,10 @@ npm run dev
 ```
 
 ## Validation
+Focused workflow checks use `npm run test:workflow`. Authenticated, read-only
+editor probes use `npm run test:workflow:ui` with disposable test fixtures and
+session configuration described in `OPERATIONS.md`. Offline handler tests do
+not verify database policies or persisted ownership.
 ```bash
 npm run lint
 npm run typecheck

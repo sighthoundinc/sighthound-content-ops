@@ -29,6 +29,7 @@ Project-local agent skills live under `skills/`.
 - Preferred tight loops for this app: contract tests under `src/lib/*`, dual-actor API calls to blog/social transition routes asserting status + `errorCode`, then ownership/RLS proofs. HITL template: `skills/diagnosing-bugs/scripts/hitl-loop.template.sh`.
 
 Content authoring authority lives under `docs/`:
+- `docs/blog-writing-instructions.md` — practical public-blog playbook and dated positioning snapshot; supplements but does not supersede the canonical style guide. Recheck all mutable product claims against current approved sources.
 - `docs/content-style-guide.md` — dual-domain content style guide for `www.sighthound.com` and `www.redactor.com` (owned by Content Relay, Slack `#content-ops-alerts`). Any public blog post, landing page, case study, or gated asset across either domain MUST follow it.
 - `docs/content-relay/exceptions.md` — per-post logged exceptions to the style guide.
 - `docs/CHANGELOG.md` — documentation changelog.

@@ -4,6 +4,24 @@ Tracks changes to authoritative documentation under `docs/` and repo-root docs. 
 
 Newest entries first.
 
+## 2026-10-01
+
+### Added — `docs/blog-writing-instructions.md`
+
+- Added a practical public-blog playbook for Sighthound and Redactor writers, including domain selection, editorial workflow, post structure, SEO, citations, resource links, and a pre-publish checklist.
+- Documented precedence between the canonical style guide, current marketing positioning, product reality, and dated internal ledgers; flagged known claim conflicts and the style guide’s word-count inconsistency.
+- Dated mutable product and roadmap guidance to the October 1, 2026 snapshot and require re-verification before publication.
+
+### Changed — `AGENTS.md` (repo root)
+
+- Indexed the blog-writing playbook under content authoring authority and clarified that it supplements the canonical style guide.
+
+### Updated — `docs/blog-writing-instructions.md`
+
+- Added a scoped Sighthound/Retriever overlay from the supplied October 2026 instructions while retaining the dual-domain style-guide authority and identifying internal source versions that still require verification.
+- Tightened Retriever/ALPR+ naming, metrics, demo/API, roadmap, escalation, customer-story, competitor/partner, responsible-use, CTA, citation, and visual-asset guardrails; removed the unapproved case-study link and ALPR figures.
+- Added concise guardrails for the queued Sighthound ALPR topics and expanded the pre-publish checklist.
+
 ## 2026-06-12
 
 ### Changed — Repository restructure (docs/archive convention)

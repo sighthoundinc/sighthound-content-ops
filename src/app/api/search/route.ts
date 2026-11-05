@@ -7,7 +7,8 @@
  * UI's read scope.
  *
  * Behaviour:
- *  - Empty query returns most recently updated items per group.
+ *  - Empty query returns most recently updated items per group (created ideas
+ *    are ordered by their creation time because they have no updated_at field).
  *  - Query is case-insensitive partial match on title columns.
  *  - Max 10 rows per group to keep response fast (<250ms p50 budget).
  */
@@ -68,10 +69,10 @@ export async function GET(request: NextRequest) {
   if (hasPermission(auth.context, "view_ideas")) {
     kinds.push("idea");
     tasks.push(
-      searchTable(adminClient, "ideas", {
+      searchTable(adminClient, "blog_ideas", {
         like,
-        columns: "id,title,site,updated_at",
-        orderColumn: "updated_at",
+        columns: "id,title,site,created_at",
+        orderColumn: "created_at",
       })
     );
   }

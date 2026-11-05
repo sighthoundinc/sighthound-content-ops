@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { withApiContract } from "@/lib/api-contract";
+import { requirePermission } from "@/lib/server-permissions";
 
 declare global {
   var __deprecatedIdeasDeleteHits: number | undefined;
@@ -11,7 +12,11 @@ declare global {
  * Exposes deprecation usage metrics for monitoring and removal readiness.
  * Not for external consumption.
  */
-export const GET = withApiContract(async function GET() {
+export const GET = withApiContract(async function GET(request: NextRequest) {
+  const auth = await requirePermission(request, "manage_users");
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
   return NextResponse.json(
     {
       deprecatedIdeasDeleteHits: globalThis.__deprecatedIdeasDeleteHits || 0,

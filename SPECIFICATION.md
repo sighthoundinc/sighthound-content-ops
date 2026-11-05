@@ -198,6 +198,7 @@ Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revis
 - Client-side transitions cannot bypass server transition rules.
 - API responses follow a stable success/error contract for predictable client behavior.
 - Canonical ideas delete route is `DELETE /api/ideas/[id]`; legacy `DELETE /api/ideas/[id]/delete` is retired and returns `410 Gone`.
+- `GET /api/internal/metrics` requires the locked `manage_users` permission.
 - Middleware gate for protected pages validates Supabase session identity in addition to cookie presence.
 
 ### 7.1) Ask AI contract (`POST /api/ai/assistant`)
@@ -215,6 +216,8 @@ Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revis
 - Grounded RAG metadata:
   - Every request also calls `fetchFacts(entityType, entityId)` to retrieve authoritative record metadata under the caller’s RLS.
   - Coverage: blogs (title, site, writer/publisher names, created/scheduled/display/actual publish dates, duration), social posts (title, type, product, canva link, platforms, caption, creator/reviewer/assigned-to names, scheduled date, live links, associated blog), ideas (title, site, creator, created date, converted status).
+  - Idea entity state must query only live-confirmed `blog_ideas` columns; because `updated_at` is absent, its cache version is derived from the selected field snapshot.
+  - The `ideas` PostgREST path is not exposed and its underlying SQL relation is unconfirmed; idea reads use `blog_ideas`.
   - Assignee UUIDs are resolved to display names via profile joins. If RLS clips a joined profile, facts expose an `*Unavailable` flag so prose discloses “name isn’t available to you” instead of inventing a name.
 - Factual intents are grounded strictly in `FactContext` and must never hallucinate:
   - `identity` answers title (and site/type/product for social posts).
@@ -313,7 +316,7 @@ Blogs and social posts support bidirectional navigation and context visibility t
   - `view_social_posts` → include social posts.
   - `view_ideas` → include ideas.
 - Query shape:
-  - Empty query returns most-recently-updated rows per group.
+  - Empty query returns most-recently-updated blogs/social posts; ideas are ordered by `created_at` because `blog_ideas` has no `updated_at` column.
   - Non-empty query performs case-insensitive partial match (`ilike`) on `title`; wildcard metacharacters (`%`, `_`) are stripped.
 - Per-group limit: 10 rows. Response shape: `{ query, results: SearchResult[] }`.
 - `SearchResult` fields: `id`, `title`, `kind` (`blog` | `social` | `idea`), `site`, `href`, `statusLabel?`.

@@ -54,6 +54,10 @@ import {
 } from "@/app/api/ai/utils/rate-limiter";
 import { recordAskAIEvent } from "@/app/api/ai/utils/telemetry";
 import { buildWorkspaceSnapshot } from "@/app/api/ai/utils/multi-entity-context";
+import {
+  getIdeaEntityCacheVersion,
+  queryIdeaEntityState,
+} from "@/app/api/ai/utils/idea-entity-state";
 
 interface EntityState {
   status: string;
@@ -238,13 +242,7 @@ async function getEntityState(
   }
 
   if (entityType === "idea") {
-    const { data, error } = await supabase
-      .from("blog_ideas")
-      .select(
-        "id,title,site,description,created_by,is_converted,converted_blog_id,created_at,updated_at"
-      )
-      .eq("id", entityId)
-      .maybeSingle();
+    const { data, error } = await queryIdeaEntityState(supabase, entityId);
 
     if (error) {
       console.error("[AI Assistant Idea Query Error]", { error, data });
@@ -268,7 +266,7 @@ async function getEntityState(
       ownerId:
         (typeof data.created_by === "string" ? data.created_by : null) || userId,
       title: typeof data.title === "string" ? data.title : undefined,
-      updatedAt: (data.updated_at as string | null) || (data.created_at as string | null) || undefined,
+      updatedAt: getIdeaEntityCacheVersion(data),
     };
   }
 

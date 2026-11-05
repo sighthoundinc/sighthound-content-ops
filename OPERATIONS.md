@@ -205,6 +205,7 @@ npm run check:full
 | Social cannot publish | No valid live link saved | Save at least one valid public link, retry |
 | Inconsistent queue ownership | Assignment/state mismatch | Refresh queue and re-run transition with current state |
 | Import partial failures | Key columns/row validation issues | Fix invalid rows, re-run import on valid selection |
+| Overdue checks fail to load records | Live schema lacks the overdue notification timestamp columns selected by the routes | Treat blog/social overdue reminders as unavailable; raise a separate schema-fix issue with the app owner |
 
 Dashboard filtering operating model:
 - Default dashboard filters are `Lens`, `Content Type`, `Status`, `Assigned to`, and `Site`.
@@ -236,7 +237,17 @@ Dashboard filtering operating model:
 - Authenticated via `authenticateRequest()` and permission-gated per entity (`view_dashboard`, `view_social_posts`, `view_ideas`).
 - Admin client is used for the data read; visibility is enforced by the per-entity permission check, not RLS, so permission role defaults must remain accurate.
 - Title-only `ilike` matching with wildcards stripped. Per-group limit 10. `Cache-Control: no-store`.
+- Ideas are read from the confirmed `blog_ideas` table and ordered by `created_at`; the live schema has no `updated_at` column. Ask AI idea state likewise selects only confirmed columns and derives its cache key from the selected field snapshot.
+- The `ideas` PostgREST path is not exposed, and its underlying SQL relation was not confirmed; do not add queries against `ideas`.
 - Budget: keep p50 <250 ms; no UI consumes this endpoint yet, but the contract is live.
+
+### Known live-schema gap: overdue/reminder routes
+- The live database does not expose `last_publish_overdue_notification_at` on `blogs`, or `last_review_overdue_notification_at` and `last_publish_overdue_notification_at` on `social_posts`.
+- `POST /api/blogs/overdue-checks` and `POST /api/social-posts/overdue-checks` select and update those columns, so their database operations currently fail. Do not assume overdue reminders are being sent.
+- This remains a separate production bug for the app owner to resolve with a verified schema change; the routes and live schema are intentionally unchanged by this Step 0 repair.
+
+### Internal metrics (`GET /api/internal/metrics`)
+- Requires the locked `manage_users` permission; unauthenticated and non-admin requests must not receive global metrics.
 
 ### UX primitives rollout
 - Primitives shipped under `src/lib`, `src/components`, and `src/hooks` are canonical. Adoption is tracked in `docs/UX_UPGRADE_PLAN.md`.

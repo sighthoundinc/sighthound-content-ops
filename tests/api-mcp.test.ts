@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { McpServer } from "@modelcontextprotocol/server";
 
 import { POST } from "@/app/api/mcp/route";
 import { POST as postMcpUrlSecret } from "@/app/api/mcp/s/[secret]/route";
@@ -349,6 +350,46 @@ describe("Content Relay read-only MCP endpoint", () => {
       infoSpy.mockRestore();
     }
   });
+
+  test.each([
+    ["unset", undefined],
+    ["empty", ""],
+  ])(
+    "URL-secret route returns 401 without registering tools when configuration is %s",
+    async (_label, configuredSecret) => {
+      const previousSecret = process.env.MCP_URL_SECRET;
+      const registerToolSpy = jest.spyOn(McpServer.prototype, "registerTool");
+
+      if (configuredSecret === undefined) {
+        delete process.env.MCP_URL_SECRET;
+      } else {
+        process.env.MCP_URL_SECRET = configuredSecret;
+      }
+
+      try {
+        const response = await postMcpUrlSecret(
+          new Request(`https://content-relay.test/api/mcp/s/${MCP_URL_SECRET}`, {
+            method: "POST",
+            body: "{}",
+          }),
+          { params: Promise.resolve({ secret: MCP_URL_SECRET }) }
+        );
+
+        expect(response.status).toBe(401);
+        expect(await response.json()).toEqual({ error: "Unauthorized" });
+        expect(resolveActiveProfileContext).not.toHaveBeenCalled();
+        expect(mcpRateLimiter.allow).not.toHaveBeenCalled();
+        expect(registerToolSpy).not.toHaveBeenCalled();
+        expect(mockAdmin.from).not.toHaveBeenCalled();
+      } finally {
+        if (previousSecret === undefined) {
+          delete process.env.MCP_URL_SECRET;
+        } else {
+          process.env.MCP_URL_SECRET = previousSecret;
+        }
+      }
+    }
+  );
 
   test("URL-secret route shares the bearer route rate limit", async () => {
     const allowSpy = jest.spyOn(mcpRateLimiter, "allow").mockReturnValue(false);

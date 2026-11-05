@@ -349,6 +349,13 @@ Authentication is enforced in three layers (full contract in `SPECIFICATION.md` 
 3. Set the variables only in the intended environment(s), then redeploy so the function receives them. Do not put the token in source control, logs, tickets, or chat.
 4. Use the deployed URL `https://<app-domain>/api/mcp` in a compatible client. The endpoint requires `Authorization: Bearer <MCP_API_TOKEN>`; missing and invalid credentials receive the same opaque `401`.
 
+### URL-path credentials on Vercel (deferred)
+- Keep MCP bearer-authenticated at `/api/mcp` on Vercel. Defer `/api/mcp/s/[secret]`; do not configure `MCP_URL_SECRET` or put a credential in a URL path or query string.
+- Vercel [Runtime Logs](https://vercel.com/docs/logs/runtime) describe `Request Path` as the actual path accessed. Its [Log Drains schema](https://vercel.com/docs/drains/reference/logs) includes `proxy.path`, which carries the request path and query parameters. Application logging cannot redact platform-generated request metadata before ingestion.
+- Vercel's environment-variable Secret redaction documentation covers build logs; it is not evidence that runtime request paths or Log Drain records are redacted.
+- To check a future configuration, use only a fake sentinel on a Preview deployment: send a request with that sentinel in the proposed path, filter the project Logs to Preview, and inspect **Request Path**. If a Log Drain is configured, inspect its `proxy.path` as well. A missing log entry does not prove pre-ingestion redaction. Do not use a real credential for this probe.
+- Keep the URL-secret route deferred unless Vercel or the hosting/ingress provider confirms and a fake-sentinel test verifies pre-ingestion redaction for every log destination.
+
 ### Rotation and disablement
 - The route accepts one token at a time; overlapping old/new tokens are not supported. Coordinate the Vercel variable update, redeployment, and client credential update in one maintenance window. The previous token becomes invalid after the new deployment is active.
 - To disable access immediately, remove `MCP_API_TOKEN` and redeploy. Treat a suspected token exposure the same way; do not wait for routine rotation.

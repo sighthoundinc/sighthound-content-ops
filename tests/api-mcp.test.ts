@@ -311,6 +311,32 @@ describe("Content Relay read-only MCP endpoint", () => {
     });
   });
 
+  test("registers no write tools when MCP_MUTATIONS_ENABLED is unset", async () => {
+    const configuredValue = process.env.MCP_MUTATIONS_ENABLED;
+    delete process.env.MCP_MUTATIONS_ENABLED;
+
+    try {
+      await withMcpClient(async (client) => {
+        const { tools } = await client.listTools();
+
+        expect(tools.map((tool) => tool.name).sort()).toEqual([
+          "get_blog",
+          "get_my_tasks",
+          "get_social_post",
+          "list_blogs",
+          "list_ideas",
+          "list_social_posts",
+        ]);
+      });
+    } finally {
+      if (configuredValue === undefined) {
+        delete process.env.MCP_MUTATIONS_ENABLED;
+      } else {
+        process.env.MCP_MUTATIONS_ENABLED = configuredValue;
+      }
+    }
+  });
+
   test("permission denial blocks the protected data query", async () => {
     context.permissions.delete("view_ideas");
 

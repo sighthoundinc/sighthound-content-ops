@@ -21,6 +21,7 @@ This runbook describes how to operate Content Relay safely in day-to-day environ
 - Dashboard and Social Posts list search filtering should remain debounced at the client (current standard: `180ms`) to avoid expensive recomputation on every keypress.
 
 ## 2) Environments and release gate
+Vercel deployments require Node.js `26.x`; the runtime is pinned by `engines.node` in `package.json`. Keep local and staging verification on the same major runtime.
 ### Recommended flow
 1. Validate changes in local development.
 2. Promote to staging and confirm stage transitions + required gates.

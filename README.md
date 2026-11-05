@@ -162,7 +162,7 @@ Detail page ordering rule:
 
 ## Local setup
 Prerequisite:
-- Node.js `20.x`
+- Node.js `26.x`
 1. Install dependencies
 ```bash
 npm install

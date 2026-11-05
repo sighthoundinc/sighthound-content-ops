@@ -425,3 +425,35 @@ The app uses one standardized branded export path for printable / PDF-ready tabl
 6. Server endpoint `POST /api/exports/pdf` returns print-ready HTML for future Puppeteer / Playwright conversion workflows. Cell values are sanitized to string / chip shapes only; row cap 5,000.
 7. Covered surfaces: Dashboard, Blogs, My Tasks, Social Posts list.
 8. Contract test: `tests/pdf-export.test.ts` locks brand tokens, logo resolution, gradient stripe, Lexend loading, page counter, chip palette, landscape switch, HTML escaping, and filename pattern.
+
+## 18) Read-only remote MCP API contract
+### Transport and authentication
+- Route: `POST /api/mcp`, Node.js runtime, official `@modelcontextprotocol/server` SDK, stateless Streamable HTTP with JSON responses. Request bodies are capped at 64 KiB.
+- Requires `Authorization: Bearer <MCP_API_TOKEN>`. Missing and invalid tokens return the same opaque `401`; token comparison uses fixed-length SHA-256 digests and `timingSafeEqual`.
+- `MCP_ACT_AS_USER_ID` is the only actor source. It must be a UUID for an active profile. The route resolves the active profile and role permissions using the shared server-permission path; an invalid, missing, or inactive actor fails closed with `503`.
+- No tool input accepts an actor identity. All callers share one configured actor and its permission set. This is not per-user authorization.
+- The route uses the service-role database client for read queries. Each tool must enforce its explicit application permission before any protected query; RLS is not the enforcement boundary for this endpoint.
+
+### Phase 1 tools
+- `list_blogs`: filters by site, overall status, writer UUID, publisher UUID, scheduled date range, archive state, and title/slug search; bounded pagination (`limit` 1–100, `offset` 0–10,000). Archive listing additionally requires `view_archived_blogs`.
+- `get_blog`: requires exactly one UUID or slug; includes metadata, up to 50 recent comments, and the latest 20 assignment-history rows. Archived records are hidden from actors without `view_archived_blogs`.
+- `list_social_posts`: filters by product, type, status, one or more platforms, and associated-blog UUID (including explicit null); bounded pagination; includes linked-blog context and `social_post_links`.
+- `get_social_post`: fetches by UUID and includes linked-blog context and `social_post_links`.
+- `list_ideas`: reads only confirmed `blog_ideas` columns and filters by site, converted state, or title; bounded pagination.
+- `get_my_tasks`: accepts no arguments and uses the configured actor plus the shared task classification/ownership logic. It deduplicates multiple blog associations, with `action_required` taking precedence over waiting states.
+- Permissions: blogs `view_dashboard`; social posts `view_social_posts`; ideas `view_ideas`; tasks `view_my_tasks`. Archived-blog listing additionally requires `view_archived_blogs`.
+- All schemas reject unknown fields. List limits are capped at 100 and offsets at 10,000. Search metacharacters that normalize to an empty string return no matches rather than dropping the search filter.
+- Every tool description states that Relay stores metadata rather than article text, drafts use `google_doc_url`, and article-text revision history is unavailable.
+- Every tool is annotated read-only and no mutation tool is registered.
+
+### Failure handling, limits, and telemetry
+- Tool-level permission failures are reported as permission errors before queries. Invalid inputs return a safe validation error; query failures return a generic tool failure without raw database details.
+- A best-effort sliding-window limiter permits 60 authenticated HTTP POST requests per minute per Node process. It is in-memory and not global across Vercel instances or cold starts.
+- Each tool invocation attempts to write only `user_id`, `event_type = 'mcp_tool_call'`, and `tool_name` to `access_logs`; credentials and tool arguments are excluded. Logging is fail-open.
+- `supabase/migrations/20261105111500_add_mcp_tool_access_logs.sql` adds the nullable tool-name field and constraints for MCP calls. It is a file-only migration until separately applied. Before it is applied, log writes fail and are swallowed; returned tool data remains unaffected.
+- `mcp_tool_call` rows are not currently represented in the unified Activity History API/UI.
+
+### Client compatibility
+- The public endpoint URL is `https://<app-domain>/api/mcp`. Compatible clients must support Streamable HTTP and allow a static bearer Authorization header.
+- Claude’s current custom-connector UI accepts a remote MCP URL and optional OAuth client credentials, but not a static bearer header. This token-authenticated endpoint is not directly compatible with Claude custom connectors until an OAuth adapter or custom-header support is available.
+- Operator configuration, Vercel setup, token rotation, permissions, operational logging, and the current connector limitation are maintained in `OPERATIONS.md` §14.

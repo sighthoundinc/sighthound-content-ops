@@ -331,3 +331,37 @@ Authentication is enforced in three layers (full contract in `SPECIFICATION.md` 
 ### Observability hooks
 - `logLoginEvent(userId)` fires fire-and-forget inside `AuthProvider` whenever a session is established. Access logs are visible under `Settings → Activity History → Login only`.
 - Middleware redirect loops will show up as repeated `302` responses to `/login` in server logs. If the loop is not visible in a browser devtools Network tab (because Next resolves 302s internally for SSR), `curl -I http://localhost:3000/foo` will expose it.
+
+## 14) Read-only MCP endpoint (Phase 1)
+### Scope and access model
+- Endpoint: `POST https://<app-domain>/api/mcp`, using the official MCP TypeScript SDK over stateless Streamable HTTP. The endpoint exposes only `list_blogs`, `get_blog`, `list_social_posts`, `get_social_post`, `list_ideas`, and `get_my_tasks`.
+- All callers present the same `MCP_API_TOKEN` and act as the one profile selected by `MCP_ACT_AS_USER_ID`. The actor must be an active profile. Caller-supplied identity is not accepted; anyone holding the token receives the configured actor’s permissions, not their own.
+- The endpoint uses the service-role client for reads, so each tool’s application permission check is a required security boundary and must run before its data query. Do not add a tool without a permission mapping and strict input schema.
+- Tool permissions: blogs require `view_dashboard`; archived blog listing additionally requires `view_archived_blogs` (an unauthorized archive request returns a permission error); social posts require `view_social_posts`; ideas require `view_ideas`; My Tasks requires `view_my_tasks`. `get_blog` hides archived rows from actors without archive permission.
+- Data is read-only. Relay stores blog metadata, not article text; draft documents are referenced by `google_doc_url`, and article-text revision history is unavailable.
+
+### Vercel configuration
+1. Generate a high-entropy token with a password manager or a secure local generator. A local OpenSSL option is `openssl rand -hex 32`; treat its output as a secret and copy it directly to the Vercel environment-variable form.
+2. In the Vercel project, open **Settings → Environment Variables** and configure:
+   - `MCP_API_TOKEN`: the generated random token.
+   - `MCP_ACT_AS_USER_ID`: UUID of the active `profiles` row whose existing permissions should govern MCP reads. Prefer a dedicated, least-privilege profile.
+3. Set the variables only in the intended environment(s), then redeploy so the function receives them. Do not put the token in source control, logs, tickets, or chat.
+4. Use the deployed URL `https://<app-domain>/api/mcp` in a compatible client. The endpoint requires `Authorization: Bearer <MCP_API_TOKEN>`; missing and invalid credentials receive the same opaque `401`.
+
+### Rotation and disablement
+- The route accepts one token at a time; overlapping old/new tokens are not supported. Coordinate the Vercel variable update, redeployment, and client credential update in one maintenance window. The previous token becomes invalid after the new deployment is active.
+- To disable access immediately, remove `MCP_API_TOKEN` and redeploy. Treat a suspected token exposure the same way; do not wait for routine rotation.
+- `MCP_ACT_AS_USER_ID` is configuration, not a per-client identity. Changing it changes the effective permissions and task results for every MCP caller; review the new profile’s active state and permissions before redeploying.
+
+### Claude custom connector compatibility
+- Anthropic’s current custom-connector instructions are at [Get started with custom connectors using remote MCP](https://support.anthropic.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp). The setup accepts an MCP URL and optional OAuth client ID/secret; it does not expose a field for a static bearer `Authorization` header.
+- Claude setup path is **Customize → Connectors → + → Add custom connector**, then enter the connector name and URL `https://<app-domain>/api/mcp`. Team/Enterprise connectors may first need an owner to add them under **Organization settings → Connectors**.
+- This endpoint’s static bearer-token authentication is therefore not currently compatible with Claude custom connectors. Adding the URL alone will receive `401`; do not paste `MCP_API_TOKEN` into OAuth fields. Direct Claude support requires an OAuth adapter or a supported custom bearer-header option. A compatible client must be able to set the required Authorization header.
+- Claude’s remote connector calls originate from Anthropic’s cloud and require the endpoint to be reachable over public HTTPS; local-only URLs and private/VPN-only services are not reachable by that connector.
+
+### Rate limit and logging
+- The best-effort limiter allows 60 authenticated HTTP `POST` requests per rolling minute in the current Node process. It is in-memory and per Vercel instance, not a global quota; cold starts, redeploys, and scale-out create separate windows. Do not treat it as global abuse protection.
+- Each tool invocation attempts to insert `user_id`, `event_type = 'mcp_tool_call'`, `tool_name`, and the database timestamp into `access_logs`. The bearer token and tool arguments are never logged. Log writes are best-effort and fail open, so a tool result is not blocked by telemetry failure.
+- The migration `supabase/migrations/20261105111500_add_mcp_tool_access_logs.sql` adds `tool_name` and permits the `mcp_tool_call` event type. It is file-only in this change; until it is applied, inserts fail and are intentionally swallowed, so MCP tool-call rows will not persist.
+- The current unified Activity History API/UI only includes login, dashboard, blog, and social-post activity; it does not display `mcp_tool_call`. Until that surface is extended, inspect authorized `access_logs` data directly after the migration is applied.
+- Apply and verify the migration through the normal database rollout process before depending on MCP logging. Do not run it as part of local implementation validation.

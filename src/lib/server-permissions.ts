@@ -75,6 +75,27 @@ async function loadActiveProfile(
   return profile as ActiveProfile;
 }
 
+export async function resolveActiveProfileContext(
+  userId: string,
+  adminClient: ReturnType<typeof createAdminClient> = createAdminClient()
+): Promise<AuthenticatedRequestContext | null> {
+  const profile = await loadActiveProfile(adminClient, userId);
+  if (!profile) {
+    return null;
+  }
+
+  const roles = getUserRoles(profile);
+  const rolePermissionRows = await getRolePermissionRows(adminClient);
+  const permissions = new Set(resolvePermissionsForRoles(roles, rolePermissionRows));
+
+  return {
+    userId,
+    profile,
+    permissions,
+    rolePermissionRows,
+    adminClient,
+  };
+}
 export async function authenticateRequest(
   request: NextRequest
 ): Promise<{ context: AuthenticatedRequestContext } | AuthFailure> {
@@ -90,24 +111,11 @@ export async function authenticateRequest(
   }
 
   const adminClient = createAdminClient();
-  const profile = await loadActiveProfile(adminClient, userData.user.id);
-  if (!profile) {
+  const context = await resolveActiveProfileContext(userData.user.id, adminClient);
+  if (!context) {
     return { error: "Active profile not found", status: 403 };
   }
-
-  const roles = getUserRoles(profile);
-  const rolePermissionRows = await getRolePermissionRows(adminClient);
-  const permissions = new Set(resolvePermissionsForRoles(roles, rolePermissionRows));
-
-  return {
-    context: {
-      userId: userData.user.id,
-      profile,
-      permissions,
-      rolePermissionRows,
-      adminClient,
-    },
-  };
+  return { context };
 }
 
 export function hasPermission(

@@ -517,6 +517,16 @@ After the Sighthound Content Relay migration finished (§19 of `design-system/MI
    - UI props and import payloads validated against explicit schemas/types before mutation.
 7. **Contracts must stay visible**:
    - Keep contract rules synchronized across `AGENTS.md`, `SPECIFICATION.md`, and source-level types/interfaces.
+## Remote MCP Read Boundary (MUST)
+
+1. `POST /api/mcp` is a stateless, read-only Streamable HTTP protocol route. Register only the Phase 1 tools defined in `SPECIFICATION.md` §18 unless a separately reviewed scope change authorizes more.
+2. Authenticate with `MCP_API_TOKEN` using constant-time comparison. Resolve the actor only from `MCP_ACT_AS_USER_ID`; require an active profile and use the shared role-permission resolution path. Never accept caller identity in MCP tool arguments.
+3. MCP reads use the service-role client and bypass RLS. Every tool must therefore enforce its mapped application permission before querying data. Service-role access by itself is never authorization.
+4. Use strict, bounded tool schemas. Keep `get_my_tasks` tied to the configured actor and shared task-classification/deduplication logic; action-required blog associations take precedence over waiting associations.
+5. Keep tool-call telemetry best-effort. Store only actor ID, `mcp_tool_call`, tool name, and database timestamp; never store bearer tokens or input arguments. Logging failures must not block results.
+6. Rate limiting is in-memory and per Node/Vercel instance, not global. Do not describe or rely on it as a global abuse-prevention control.
+7. Add database changes through append-only migrations and apply them only through the approved database rollout process. Keep migration/application status explicit in operational documentation.
+8. Keep the fixed-actor access model, per-tool permissions, tool descriptions, failure behavior, operational setup, and client compatibility documented in `SPECIFICATION.md`, `OPERATIONS.md`, `README.md`, `HOW_TO_USE_APP.md`, and `docs/api-standards.md` as applicable.
 
 ## UX Primitives Authority (MUST)
 

@@ -1,13 +1,16 @@
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { McpServer } from "@modelcontextprotocol/server";
 
 import { POST } from "@/app/api/mcp/route";
+import { POST as postMcpUrlSecret } from "@/app/api/mcp/s/[secret]/route";
 import {
   hasPermission,
   resolveActiveProfileContext,
   type AuthenticatedRequestContext,
 } from "@/lib/server-permissions";
 import {
+  MCP_URL_SECRET_REDACTED_PATH,
   mcpRateLimiter,
   SlidingWindowRateLimiter,
 } from "@/lib/mcp/security";
@@ -28,6 +31,7 @@ const OTHER_USER_ID = "22222222-2222-4222-8222-222222222222";
 const BLOG_ID = "33333333-3333-4333-8333-333333333333";
 const SOCIAL_POST_ID = "44444444-4444-4444-8444-444444444444";
 const MCP_TOKEN = "mcp-test-token-that-is-never-logged";
+const MCP_URL_SECRET = "mcp-url-secret-that-is-never-logged";
 
 const blogRow = {
   id: BLOG_ID,
@@ -194,7 +198,9 @@ describe("Content Relay read-only MCP endpoint", () => {
 
   beforeEach(() => {
     process.env.MCP_API_TOKEN = MCP_TOKEN;
+    process.env.MCP_URL_SECRET = MCP_URL_SECRET;
     process.env.MCP_ACT_AS_USER_ID = ACTOR_ID;
+    jest.spyOn(mcpRateLimiter, "allow").mockReturnValue(true);
     mockAdmin = createMockAdminClient();
     context = {
       userId: ACTOR_ID,
@@ -223,21 +229,28 @@ describe("Content Relay read-only MCP endpoint", () => {
 
   afterEach(() => {
     delete process.env.MCP_API_TOKEN;
+    delete process.env.MCP_URL_SECRET;
     delete process.env.MCP_ACT_AS_USER_ID;
+    jest.restoreAllMocks();
     jest.clearAllMocks();
   });
 
-  async function withMcpClient<T>(run: (client: Client) => Promise<T>) {
+  async function withMcpClient<T>(
+    run: (client: Client) => Promise<T>,
+    endpoint = new URL("https://content-relay.test/api/mcp"),
+    post: (request: Request) => Promise<Response> = POST,
+    authorization: string | null = `Bearer ${MCP_TOKEN}`
+  ) {
     const transport = new StreamableHTTPClientTransport(
-      new URL("https://content-relay.test/api/mcp"),
+      endpoint,
       {
         requestInit: {
-          headers: { authorization: `Bearer ${MCP_TOKEN}` },
+          headers: authorization ? { authorization } : {},
         },
         fetch: async (input, init) => {
           const request =
             input instanceof Request ? input : new Request(input, init);
-          return POST(request);
+          return post(request);
         },
       }
     );
@@ -248,6 +261,12 @@ describe("Content Relay read-only MCP endpoint", () => {
     } finally {
       await client.close();
     }
+  }
+  function withUrlSecretRoute(request: Request) {
+    const secret = new URL(request.url).pathname.split("/").pop();
+    return postMcpUrlSecret(request, {
+      params: Promise.resolve({ secret: secret ?? "" }),
+    });
   }
 
   test.each([
@@ -265,6 +284,133 @@ describe("Content Relay read-only MCP endpoint", () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
     expect(resolveActiveProfileContext).not.toHaveBeenCalled();
+  });
+
+  test("URL-secret route rejects invalid credentials without logging or echoing them", async () => {
+    const invalidSecret = "invalid-mcp-url-secret";
+    const infoSpy = jest.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const response = await postMcpUrlSecret(
+        new Request(`https://content-relay.test/api/mcp/s/${invalidSecret}`, {
+          method: "POST",
+          body: "{}",
+        }),
+        { params: Promise.resolve({ secret: invalidSecret }) }
+      );
+      const body = await response.text();
+
+      expect(response.status).toBe(401);
+      expect(body).toBe(JSON.stringify({ error: "Unauthorized" }));
+      expect(body).not.toContain(invalidSecret);
+      expect(infoSpy).not.toHaveBeenCalled();
+      expect(resolveActiveProfileContext).not.toHaveBeenCalled();
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  test("URL-secret route shares the read-only tools, actor, rate limit, and telemetry", async () => {
+    const infoSpy = jest.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      await withMcpClient(
+        async (client) => {
+          const { tools } = await client.listTools();
+          const result = await client.callTool({
+            name: "list_ideas",
+            arguments: {},
+          });
+
+          expect(tools.map((tool) => tool.name).sort()).toEqual([
+            "get_blog",
+            "get_my_tasks",
+            "get_social_post",
+            "list_blogs",
+            "list_ideas",
+            "list_social_posts",
+          ]);
+          expect(result.isError).not.toBe(true);
+        },
+        new URL(`https://content-relay.test/api/mcp/s/${MCP_URL_SECRET}`),
+        withUrlSecretRoute,
+        null
+      );
+
+      expect(resolveActiveProfileContext).toHaveBeenCalledWith(ACTOR_ID);
+      expect(mockAdmin.logWrites).toContainEqual({
+        user_id: ACTOR_ID,
+        event_type: "mcp_tool_call",
+        tool_name: "list_ideas",
+      });
+      expect(infoSpy).toHaveBeenCalledWith("[MCP] Request accepted", {
+        path: MCP_URL_SECRET_REDACTED_PATH,
+      });
+      expect(JSON.stringify(infoSpy.mock.calls)).not.toContain(MCP_URL_SECRET);
+      expect(JSON.stringify(mockAdmin.logWrites)).not.toContain(MCP_URL_SECRET);
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  test.each([
+    ["unset", undefined],
+    ["empty", ""],
+  ])(
+    "URL-secret route returns 401 without registering tools when configuration is %s",
+    async (_label, configuredSecret) => {
+      const previousSecret = process.env.MCP_URL_SECRET;
+      const registerToolSpy = jest.spyOn(McpServer.prototype, "registerTool");
+
+      if (configuredSecret === undefined) {
+        delete process.env.MCP_URL_SECRET;
+      } else {
+        process.env.MCP_URL_SECRET = configuredSecret;
+      }
+
+      try {
+        const response = await postMcpUrlSecret(
+          new Request(`https://content-relay.test/api/mcp/s/${MCP_URL_SECRET}`, {
+            method: "POST",
+            body: "{}",
+          }),
+          { params: Promise.resolve({ secret: MCP_URL_SECRET }) }
+        );
+
+        expect(response.status).toBe(401);
+        expect(await response.json()).toEqual({ error: "Unauthorized" });
+        expect(resolveActiveProfileContext).not.toHaveBeenCalled();
+        expect(mcpRateLimiter.allow).not.toHaveBeenCalled();
+        expect(registerToolSpy).not.toHaveBeenCalled();
+        expect(mockAdmin.from).not.toHaveBeenCalled();
+      } finally {
+        if (previousSecret === undefined) {
+          delete process.env.MCP_URL_SECRET;
+        } else {
+          process.env.MCP_URL_SECRET = previousSecret;
+        }
+      }
+    }
+  );
+
+  test("URL-secret route shares the bearer route rate limit", async () => {
+    const allowSpy = jest.spyOn(mcpRateLimiter, "allow").mockReturnValue(false);
+    const infoSpy = jest.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const response = await postMcpUrlSecret(
+        new Request(`https://content-relay.test/api/mcp/s/${MCP_URL_SECRET}`, {
+          method: "POST",
+          body: "{}",
+        }),
+        { params: Promise.resolve({ secret: MCP_URL_SECRET }) }
+      );
+
+      expect(response.status).toBe(429);
+      expect(response.headers.get("Retry-After")).toBeTruthy();
+      expect(resolveActiveProfileContext).not.toHaveBeenCalled();
+      expect(infoSpy).not.toHaveBeenCalled();
+    } finally {
+      allowSpy.mockRestore();
+      infoSpy.mockRestore();
+    }
   });
 
   test("uses only the configured active-profile identity", async () => {

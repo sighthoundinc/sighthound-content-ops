@@ -335,41 +335,42 @@ Authentication is enforced in three layers (full contract in `SPECIFICATION.md` 
 
 ## 14) Read-only MCP endpoint (Phase 1)
 ### Scope and access model
-- Endpoint: `POST https://<app-domain>/api/mcp`, using the official MCP TypeScript SDK over stateless Streamable HTTP. The endpoint exposes only `list_blogs`, `get_blog`, `list_social_posts`, `get_social_post`, `list_ideas`, and `get_my_tasks`.
-- All callers present the same `MCP_API_TOKEN` and act as the one profile selected by `MCP_ACT_AS_USER_ID`. The actor must be an active profile. Caller-supplied identity is not accepted; anyone holding the token receives the configured actor’s permissions, not their own.
+- Endpoints: `POST https://<app-domain>/api/mcp` with bearer authentication or `POST https://<app-domain>/api/mcp/s/<MCP_URL_SECRET>` with URL-secret authentication. Both use the official MCP TypeScript SDK over stateless Streamable HTTP and expose only `list_blogs`, `get_blog`, `list_social_posts`, `get_social_post`, `list_ideas`, and `get_my_tasks`.
+- Callers authenticate with either the bearer `MCP_API_TOKEN` or the URL-path `MCP_URL_SECRET`; both act as the one profile selected by `MCP_ACT_AS_USER_ID`. The actor must be an active profile. Caller-supplied identity is not accepted; anyone holding either credential receives the configured actor’s permissions, not their own.
 - The endpoint uses the service-role client for reads, so each tool’s application permission check is a required security boundary and must run before its data query. Do not add a tool without a permission mapping and strict input schema.
 - Tool permissions: blogs require `view_dashboard`; archived blog listing additionally requires `view_archived_blogs` (an unauthorized archive request returns a permission error); social posts require `view_social_posts`; ideas require `view_ideas`; My Tasks requires `view_my_tasks`. `get_blog` hides archived rows from actors without archive permission.
 - Data is read-only. Relay stores blog metadata, not article text; draft documents are referenced by `google_doc_url`, and article-text revision history is unavailable.
 
 ### Vercel configuration
-1. Generate a high-entropy token with a password manager or a secure local generator. A local OpenSSL option is `openssl rand -hex 32`; treat its output as a secret and copy it directly to the Vercel environment-variable form.
+1. Generate a separate high-entropy value for each credential with a password manager or a secure local generator. A local OpenSSL option is `openssl rand -hex 32`; treat its output as a secret and copy it directly to the Vercel environment-variable form.
 2. In the Vercel project, open **Settings → Environment Variables** and configure:
    - `MCP_API_TOKEN`: the generated random token.
+   - `MCP_URL_SECRET`: a separately generated high-entropy secret if URL-secret access is needed; this secret will be present in Vercel runtime request-path logs.
    - `MCP_ACT_AS_USER_ID`: UUID of the active `profiles` row whose existing permissions should govern MCP reads. Prefer a dedicated, least-privilege profile.
-3. Set the variables only in the intended environment(s), then redeploy so the function receives them. Do not put the token in source control, logs, tickets, or chat.
-4. Use the deployed URL `https://<app-domain>/api/mcp` in a compatible client. The endpoint requires `Authorization: Bearer <MCP_API_TOKEN>`; missing and invalid credentials receive the same opaque `401`.
+3. Set the variables only in the intended environment(s), then redeploy so the function receives them. Do not put either credential in source control, logs, tickets, or chat.
+4. Use `https://<app-domain>/api/mcp` with the `Authorization: Bearer <MCP_API_TOKEN>` header, or use `https://<app-domain>/api/mcp/s/<MCP_URL_SECRET>` when the client cannot set a static header. Missing and invalid credentials on either route receive the same opaque `401`.
 
-### URL-path credentials on Vercel (deferred)
-- Keep MCP bearer-authenticated at `/api/mcp` on Vercel. Defer `/api/mcp/s/[secret]`; do not configure `MCP_URL_SECRET` or put a credential in a URL path or query string.
-- Vercel [Runtime Logs](https://vercel.com/docs/logs/runtime) describe `Request Path` as the actual path accessed. Its [Log Drains schema](https://vercel.com/docs/drains/reference/logs) includes `proxy.path`, which carries the request path and query parameters. Application logging cannot redact platform-generated request metadata before ingestion.
-- Vercel's environment-variable Secret redaction documentation covers build logs; it is not evidence that runtime request paths or Log Drain records are redacted.
-- To check a future configuration, use only a fake sentinel on a Preview deployment: send a request with that sentinel in the proposed path, filter the project Logs to Preview, and inspect **Request Path**. If a Log Drain is configured, inspect its `proxy.path` as well. A missing log entry does not prove pre-ingestion redaction. Do not use a real credential for this probe.
-- Keep the URL-secret route deferred unless Vercel or the hosting/ingress provider confirms and a fake-sentinel test verifies pre-ingestion redaction for every log destination.
+### URL-secret MCP access on Vercel
+- In addition to bearer-authenticated `POST /api/mcp`, the read-only endpoint supports `POST /api/mcp/s/<MCP_URL_SECRET>`. Configure `MCP_URL_SECRET` as a high-entropy secret (the same `openssl rand -hex 32` generation guidance above applies). The route compares fixed-length SHA-256 digests with `timingSafeEqual`, then uses the same configured actor, permission checks, rate limiter, MCP handler, and best-effort tool telemetry as `/api/mcp`.
+- **Accepted security trade-off:** Vercel [Runtime Logs](https://vercel.com/docs/logs/runtime) record the actual `Request Path`; the [Log Drains schema](https://vercel.com/docs/drains/reference/logs) includes `proxy.path`. A URL-secret request may therefore expose `MCP_URL_SECRET` in platform logs. This is not redaction and must not be described as such. Vercel's environment-variable Secret redaction documentation covers build logs, not runtime request paths.
+- Application-controlled logs use the fixed path `/api/mcp/s/[redacted]`; application code must never log or echo the supplied secret, including in error details, telemetry, or responses. Do not put the secret in a query parameter. Platform-generated logs are outside this application-code guarantee.
+- To verify actual behavior, use only a fake sentinel in a Preview deployment. Inspect **Logs → Preview → Request Path** and any configured Log Drain's `proxy.path`; the platform path is expected to contain the sentinel. Never use a real credential for this probe.
 
 ### Rotation and disablement
-- The route accepts one token at a time; overlapping old/new tokens are not supported. Coordinate the Vercel variable update, redeployment, and client credential update in one maintenance window. The previous token becomes invalid after the new deployment is active.
-- To disable access immediately, remove `MCP_API_TOKEN` and redeploy. Treat a suspected token exposure the same way; do not wait for routine rotation.
+- Each credential accepts one configured value; overlapping old/new values are not supported. Rotate bearer and URL-secret credentials independently by updating the matching Vercel variable, redeploying, and updating clients. The old value becomes invalid after the new deployment is active.
+- To disable bearer access, remove `MCP_API_TOKEN` and redeploy. To disable URL-secret access, remove `MCP_URL_SECRET` and redeploy. Remove both to disable MCP access through either route. Treat a suspected credential exposure the same way; do not wait for routine rotation.
+- Rotating `MCP_URL_SECRET` changes the client URL and exposes the new value in platform request-path logs under the accepted trade-off above.
 - `MCP_ACT_AS_USER_ID` is configuration, not a per-client identity. Changing it changes the effective permissions and task results for every MCP caller; review the new profile’s active state and permissions before redeploying.
 
 ### Claude custom connector compatibility
 - Anthropic’s current custom-connector instructions are at [Get started with custom connectors using remote MCP](https://support.anthropic.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp). The setup accepts an MCP URL and optional OAuth client ID/secret; it does not expose a field for a static bearer `Authorization` header.
 - Claude setup path is **Customize → Connectors → + → Add custom connector**, then enter the connector name and URL `https://<app-domain>/api/mcp`. Team/Enterprise connectors may first need an owner to add them under **Organization settings → Connectors**.
-- This endpoint’s static bearer-token authentication is therefore not currently compatible with Claude custom connectors. Adding the URL alone will receive `401`; do not paste `MCP_API_TOKEN` into OAuth fields. Direct Claude support requires an OAuth adapter or a supported custom bearer-header option. A compatible client must be able to set the required Authorization header.
+- The bearer endpoint still requires a client that can set the Authorization header. A URL-secret connector can use `https://<app-domain>/api/mcp/s/<MCP_URL_SECRET>` without a bearer header, including with URL-only clients, but the secret will appear in Vercel runtime path logs as documented above. Do not enter `MCP_API_TOKEN` into OAuth fields.
 - Claude’s remote connector calls originate from Anthropic’s cloud and require the endpoint to be reachable over public HTTPS; local-only URLs and private/VPN-only services are not reachable by that connector.
 
 ### Rate limit and logging
 - The best-effort limiter allows 60 authenticated HTTP `POST` requests per rolling minute in the current Node process. It is in-memory and per Vercel instance, not a global quota; cold starts, redeploys, and scale-out create separate windows. Do not treat it as global abuse protection.
-- Each tool invocation attempts to insert `user_id`, `event_type = 'mcp_tool_call'`, `tool_name`, and the database timestamp into `access_logs`. The bearer token and tool arguments are never logged. Log writes are best-effort and fail open, so a tool result is not blocked by telemetry failure.
+- Each tool invocation attempts to insert `user_id`, `event_type = 'mcp_tool_call'`, `tool_name`, and the database timestamp into `access_logs`. Bearer credentials, URL secrets, and tool arguments are never stored in this telemetry. Log writes are best-effort and fail open, so a tool result is not blocked by telemetry failure.
 - The migration `supabase/migrations/20261105111500_add_mcp_tool_access_logs.sql` adds `tool_name` and permits the `mcp_tool_call` event type. It is file-only in this change; until it is applied, inserts fail and are intentionally swallowed, so MCP tool-call rows will not persist.
 - The current unified Activity History API/UI only includes login, dashboard, blog, and social-post activity; it does not display `mcp_tool_call`. Until that surface is extended, inspect authorized `access_logs` data directly after the migration is applied.
 - Apply and verify the migration through the normal database rollout process before depending on MCP logging. Do not run it as part of local implementation validation.

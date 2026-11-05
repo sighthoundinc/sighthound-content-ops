@@ -318,12 +318,14 @@ Content Relay uses an authored workspace hierarchy rather than a generic dashboa
 |- New blog/social comments also post to Slack with full comment text (multi-line), plus author and record context.
 
 ## 12) Optional read-only MCP access
-When an operator has enabled the remote MCP endpoint, a compatible MCP client can read Content Relay data from `https://<app-domain>/api/mcp`. The available tools are:
+When an operator has enabled the remote MCP endpoint, a compatible MCP client can read Content Relay data from `https://<app-domain>/api/mcp`. Operators may also provide clients that cannot set bearer headers with the URL-secret endpoint `https://<app-domain>/api/mcp/s/<MCP_URL_SECRET>`. The available tools are:
 - `list_blogs` / `get_blog`
 - `list_social_posts` / `get_social_post`
 - `list_ideas`
 - `get_my_tasks`
 
-This connection is read-only. It uses one operator-configured active profile for every caller, so access is limited to that profile’s permissions; the client cannot switch identities. Blog article text is not stored in Relay: use the returned `google_doc_url` for drafts, and note that article-text revision history is unavailable.
+Both connection methods are read-only and use one operator-configured active profile for every caller, so access is limited to that profile’s permissions; the client cannot switch identities. Blog article text is not stored in Relay: use the returned `google_doc_url` for drafts, and note that article-text revision history is unavailable.
 
-Claude’s current custom-connector setup accepts a remote MCP URL and optional OAuth client credentials, but does not provide a static `Authorization: Bearer` header field. Since this endpoint currently requires that bearer header, it cannot yet be connected directly through Claude’s custom connector. Do not enter the MCP token into OAuth fields; an OAuth adapter or a Claude client feature for custom bearer headers is needed first. See `OPERATIONS.md` §14 for operator details.
+The URL-secret form places its credential in the request path. Vercel runtime logs may record that actual path; application-owned logs redact it as `/api/mcp/s/[redacted]`. Use this option only with that platform-log exposure understood and accepted. Never use a real credential when testing log behavior; use a fake Preview sentinel instead.
+
+Claude’s current custom-connector setup accepts a remote MCP URL and optional OAuth client credentials, but does not provide a static `Authorization: Bearer` header field. The bearer endpoint therefore requires a compatible client, while the URL-secret endpoint can be supplied as a URL-only connection. Do not enter the bearer token into OAuth fields. See `OPERATIONS.md` §14 for operator details and the URL-path logging trade-off.

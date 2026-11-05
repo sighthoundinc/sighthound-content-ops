@@ -429,8 +429,9 @@ The app uses one standardized branded export path for printable / PDF-ready tabl
 ## 18) Read-only remote MCP API contract
 ### Transport and authentication
 - Route: `POST /api/mcp`, Node.js runtime, official `@modelcontextprotocol/server` SDK, stateless Streamable HTTP with JSON responses. Request bodies are capped at 64 KiB.
-- Requires `Authorization: Bearer <MCP_API_TOKEN>`. Missing and invalid tokens return the same opaque `401`; token comparison uses fixed-length SHA-256 digests and `timingSafeEqual`.
-- `/api/mcp/s/[secret]` is deferred on Vercel: Runtime Logs expose the actual request path, and Log Drains can include request path data. Keep the bearer route unless pre-ingestion redaction is confirmed and tested with a fake sentinel across every log destination; see `OPERATIONS.md` §14.
+- Supports either `Authorization: Bearer <MCP_API_TOKEN>` at `/api/mcp` or `MCP_URL_SECRET` in the single path segment at `/api/mcp/s/[secret]`. Both use fixed-length SHA-256 digests and `timingSafeEqual`; missing and invalid credentials return the same opaque `401`.
+- The URL-secret route delegates to the same request handler as the bearer route, including configured active-actor resolution, permission checks, per-instance rate limiting, read-only tool registration, and best-effort telemetry. It does not add mutation tools.
+- Vercel Runtime Logs and Log Drains may record the actual credential-bearing request path. This platform-log exposure is explicitly accepted by the owner and is not redaction. Application-controlled logs use `/api/mcp/s/[redacted]`; code must not log or echo the secret in responses, errors, or telemetry. See `OPERATIONS.md` §14 for the operational risk and Preview sentinel check.
 - `MCP_ACT_AS_USER_ID` is the only actor source. It must be a UUID for an active profile. The route resolves the active profile and role permissions using the shared server-permission path; an invalid, missing, or inactive actor fails closed with `503`.
 - No tool input accepts an actor identity. All callers share one configured actor and its permission set. This is not per-user authorization.
 - The route uses the service-role database client for read queries. Each tool must enforce its explicit application permission before any protected query; RLS is not the enforcement boundary for this endpoint.
@@ -455,6 +456,7 @@ The app uses one standardized branded export path for printable / PDF-ready tabl
 - `mcp_tool_call` rows are not currently represented in the unified Activity History API/UI.
 
 ### Client compatibility
-- The public endpoint URL is `https://<app-domain>/api/mcp`. Compatible clients must support Streamable HTTP and allow a static bearer Authorization header.
-- Claude’s current custom-connector UI accepts a remote MCP URL and optional OAuth client credentials, but not a static bearer header. This token-authenticated endpoint is not directly compatible with Claude custom connectors until an OAuth adapter or custom-header support is available.
-- Operator configuration, Vercel setup, token rotation, permissions, operational logging, and the current connector limitation are maintained in `OPERATIONS.md` §14.
+- The bearer endpoint is `https://<app-domain>/api/mcp`; compatible clients must support Streamable HTTP and allow a static bearer Authorization header.
+- Clients that cannot set a static header may use `https://<app-domain>/api/mcp/s/<MCP_URL_SECRET>`. Vercel may record this credential-bearing path in Runtime Logs and Log Drains; this is an accepted platform risk, not redaction. Application-controlled logs must use the fixed redacted path.
+- Claude’s current custom-connector UI accepts a remote MCP URL and optional OAuth client credentials, but not a static bearer header. It can use the URL-secret endpoint, subject to the documented platform-log exposure.
+- Operator configuration, Vercel setup, credential rotation, permissions, operational logging, and connector compatibility are maintained in `OPERATIONS.md` §14.

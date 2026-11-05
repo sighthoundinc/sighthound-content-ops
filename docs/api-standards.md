@@ -42,13 +42,14 @@ REST standards define target architecture; not every resource currently has full
 Current gap example:
 - `DELETE /api/blogs/[id]` is not implemented yet (blog deletes currently rely on direct client DB mutation paths + RLS safeguards).
 ## Remote MCP exception
-`POST /api/mcp` is a protocol endpoint, not a CRUD resource route. It uses the official MCP SDK’s stateless Streamable HTTP transport and MCP JSON-RPC envelopes, so it must not be wrapped in `withApiContract` or converted to the app’s ordinary REST response envelope.
-- Authenticate the exact `Authorization: Bearer <MCP_API_TOKEN>` credential before resolving the configured actor.
+`POST /api/mcp` and `POST /api/mcp/s/[secret]` are protocol endpoints, not CRUD resource routes. They use the official MCP SDK’s stateless Streamable HTTP transport and MCP JSON-RPC envelopes, so they must not be wrapped in `withApiContract` or converted to the app’s ordinary REST response envelope.
+- Authenticate either `Authorization: Bearer <MCP_API_TOKEN>` or the configured `MCP_URL_SECRET` path segment before resolving the configured actor. Both credentials use constant-time digest comparison.
 - Derive actor identity only from `MCP_ACT_AS_USER_ID`, require an active profile, and resolve permissions through the shared server-permission path.
 - The route uses the service-role database client; every registered tool must perform its explicit application-permission check before protected reads.
 - Tool schemas must be strict and bounded. Register read-only tools only; do not accept caller identity or add mutations without a separate security/design review.
 - Preserve opaque `401` for missing/invalid credentials, `503` for invalid actor configuration/resolution, and `429` with `Retry-After` for the best-effort per-process request limiter.
 - Tool-call telemetry is best-effort and excludes bearer credentials and tool arguments. See `SPECIFICATION.md` §18 and `OPERATIONS.md` §14.
+- Vercel may retain the actual path containing `MCP_URL_SECRET`; this is an accepted platform logging risk. Application-controlled logs must use `/api/mcp/s/[redacted]` and never log or echo the secret.
 
 ## Status code contract
 Use conventional codes, but keep response-shape consistency explicit:

@@ -5,25 +5,48 @@ import type { AuthenticatedRequestContext } from "@/lib/server-permissions";
 
 const MCP_RATE_LIMIT = 60;
 const MCP_RATE_WINDOW_MS = 60_000;
+const MCP_SECRET_MAX_LENGTH = 4096;
+
+export const MCP_URL_SECRET_REDACTED_PATH = "/api/mcp/s/[redacted]" as const;
+
+function hasMatchingMcpSecret(
+  presentedSecret: string,
+  configuredSecret: string | undefined
+) {
+  if (!configuredSecret) {
+    return false;
+  }
+
+  const presentedDigest = createHash("sha256")
+    .update(presentedSecret, "utf8")
+    .digest();
+  const configuredDigest = createHash("sha256")
+    .update(configuredSecret, "utf8")
+    .digest();
+  return timingSafeEqual(presentedDigest, configuredDigest);
+}
 
 export function isValidMcpBearerToken(
   authorizationHeader: string | null,
   configuredToken: string | undefined
 ) {
-  if (!configuredToken) {
-    return false;
-  }
 
   const match = authorizationHeader?.match(/^Bearer ([^\s]+)$/i);
-  if (!match || match[1].length > 4096) {
+  if (!match || match[1].length > MCP_SECRET_MAX_LENGTH) {
+    return false;
+  }
+  return hasMatchingMcpSecret(match[1], configuredToken);
+}
+
+export function isValidMcpUrlSecret(
+  presentedSecret: string | undefined,
+  configuredSecret: string | undefined
+) {
+  if (!presentedSecret || presentedSecret.length > MCP_SECRET_MAX_LENGTH) {
     return false;
   }
 
-  const presentedDigest = createHash("sha256").update(match[1], "utf8").digest();
-  const configuredDigest = createHash("sha256")
-    .update(configuredToken, "utf8")
-    .digest();
-  return timingSafeEqual(presentedDigest, configuredDigest);
+  return hasMatchingMcpSecret(presentedSecret, configuredSecret);
 }
 
 export class SlidingWindowRateLimiter {

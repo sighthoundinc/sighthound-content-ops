@@ -430,6 +430,7 @@ The app uses one standardized branded export path for printable / PDF-ready tabl
 ### Transport and authentication
 - Route: `POST /api/mcp`, Node.js runtime, official `@modelcontextprotocol/server` SDK, stateless Streamable HTTP with JSON responses. Request bodies are capped at 64 KiB.
 - Requires `Authorization: Bearer <MCP_API_TOKEN>`. Missing and invalid tokens return the same opaque `401`; token comparison uses fixed-length SHA-256 digests and `timingSafeEqual`.
+- `/api/mcp/s/[secret]` is deferred on Vercel: Runtime Logs expose the actual request path, and Log Drains can include request path data. Keep the bearer route unless pre-ingestion redaction is confirmed and tested with a fake sentinel across every log destination; see `OPERATIONS.md` §14.
 - `MCP_ACT_AS_USER_ID` is the only actor source. It must be a UUID for an active profile. The route resolves the active profile and role permissions using the shared server-permission path; an invalid, missing, or inactive actor fails closed with `503`.
 - No tool input accepts an actor identity. All callers share one configured actor and its permission set. This is not per-user authorization.
 - The route uses the service-role database client for read queries. Each tool must enforce its explicit application permission before any protected query; RLS is not the enforcement boundary for this endpoint.

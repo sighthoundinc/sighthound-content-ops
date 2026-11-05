@@ -527,6 +527,7 @@ After the Sighthound Content Relay migration finished (§19 of `design-system/MI
 6. Rate limiting is in-memory and per Node/Vercel instance, not global. Do not describe or rely on it as a global abuse-prevention control.
 7. Add database changes through append-only migrations and apply them only through the approved database rollout process. Keep migration/application status explicit in operational documentation.
 8. Keep the fixed-actor access model, per-tool permissions, tool descriptions, failure behavior, operational setup, and client compatibility documented in `SPECIFICATION.md`, `OPERATIONS.md`, `README.md`, `HOW_TO_USE_APP.md`, and `docs/api-standards.md` as applicable.
+9. Do not place MCP credentials in URL paths on Vercel. Runtime Logs expose the actual request path, and Log Drains can include request path data; keep bearer authentication unless pre-ingestion redaction is explicitly supported and verified for every configured log destination.
 
 ## UX Primitives Authority (MUST)
 

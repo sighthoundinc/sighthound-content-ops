@@ -126,11 +126,13 @@ export async function fetchHomeData(): Promise<HomeData> {
       tasksSnapshot = (await snapshotRes.json()) as TasksSnapshot;
     } catch (err) {
       console.error("home-data: snapshot parse failed", err);
-      // Non-fatal: leave tasksSnapshot as empty; don't overwrite a non-null
-      // error message from the summary fetch above.
+      // Leave tasksSnapshot empty, but never let a failed load read as
+      // "all caught up": surface it unless the summary already did.
+      error = error ?? "Couldn't load your task snapshot. Please try again.";
     }
   } else {
     console.error("home-data: snapshot fetch failed", snapshotRes.status);
+    error = error ?? "Couldn't load your task snapshot. Please try again.";
   }
 
   return {

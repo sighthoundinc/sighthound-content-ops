@@ -88,6 +88,8 @@ import {
   OperationalTableMenuItem,
 } from "@/components/operational-table";
 import { LinkQuickActions } from "@/components/link-quick-actions";
+import { LoadErrorState } from "@/components/load-error-state";
+import { UI_VOCAB } from "@/lib/ui-vocab";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   PublisherStatusBadge,
@@ -944,6 +946,9 @@ export default function DashboardPage() {
   const [showBulkPreviewModal, setShowBulkPreviewModal] = useState(false);
   const [bulkPreviewChangesSummary, setBulkPreviewChangesSummary] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSocialLoadFailed, setIsSocialLoadFailed] = useState(false);
+  const [isOverviewLoadFailed, setIsOverviewLoadFailed] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeBlogId, setActiveBlogId] = useState<string | null>(null);
   const [panelHistory, setPanelHistory] = useState<BlogHistoryRecord[]>([]);
@@ -1118,6 +1123,8 @@ export default function DashboardPage() {
     const supabase = getSupabaseBrowserClient();
     setIsLoading(true);
     setError(null);
+    setLoadError(null);
+    setIsSocialLoadFailed(false);
     const fetchBlogs = async () => {
       let { data, error } = await supabase
         .from("blogs")
@@ -1163,6 +1170,7 @@ export default function DashboardPage() {
     ] = await Promise.all([fetchBlogs(), fetchSocialPosts()]);
 
     if (blogsError) {
+      setLoadError("Couldn't load dashboard. Please try again.");
       setError("Couldn't load dashboard. Please refresh and try again.");
       setIsLoading(false);
       return;
@@ -1173,7 +1181,9 @@ export default function DashboardPage() {
     ) as BlogRecord[];
     setBlogs(nextBlogs);
     if (socialPostsError) {
+      console.error("Dashboard social posts load failed:", socialPostsError);
       setSocialPosts([]);
+      setIsSocialLoadFailed(true);
     } else {
       const socialPostStatusSet = new Set<SocialPostStatus>(SOCIAL_POST_STATUSES);
       const mappedSocialPosts: (DashboardSocialPostMetric | null)[] = ((socialPostsData ?? []) as Array<Record<string, unknown>>)
@@ -1347,6 +1357,7 @@ export default function DashboardPage() {
       return;
     }
     setIsOverviewLoading(true);
+    setIsOverviewLoadFailed(false);
     const response = await fetch("/api/dashboard/overview-metrics", {
       headers: {
         authorization: `Bearer ${session.access_token}`,
@@ -1354,6 +1365,7 @@ export default function DashboardPage() {
     }).catch(() => null);
     if (!response) {
       setOverviewMetrics(INITIAL_DASHBOARD_OVERVIEW_METRICS);
+      setIsOverviewLoadFailed(true);
       setIsOverviewLoading(false);
       showWarning("Dashboard overview is temporarily unavailable.");
       return;
@@ -1362,6 +1374,7 @@ export default function DashboardPage() {
     const payload = await parseApiResponseJson<DashboardOverviewMetrics>(response);
     if (isApiFailure(response, payload)) {
       setOverviewMetrics(INITIAL_DASHBOARD_OVERVIEW_METRICS);
+      setIsOverviewLoadFailed(true);
       setIsOverviewLoading(false);
       showWarning(getApiErrorMessage(payload, "Dashboard overview is temporarily unavailable."));
       return;
@@ -4112,6 +4125,17 @@ export default function DashboardPage() {
                 ))}
               </div>
             </section>
+          ) : isOverviewLoadFailed ? (
+            <section className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
+              <h2 className="text-sm font-semibold text-ink">Overview</h2>
+              <LoadErrorState
+                className="mt-3"
+                description="Couldn't load overview counts. Please try again."
+                onRetry={() => {
+                  void loadOverviewMetrics();
+                }}
+              />
+            </section>
           ) : (
             <section className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
               <h2 className="text-sm font-semibold text-ink">Overview</h2>
@@ -4516,8 +4540,33 @@ export default function DashboardPage() {
                 <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
               ))}
             </div>
+          ) : loadError ? (
+            <LoadErrorState
+              description={loadError}
+              onRetry={() => {
+                void loadData();
+              }}
+            />
           ) : (
             <div className="space-y-4">
+              {isSocialLoadFailed ? (
+                <div
+                  role="alert"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+                >
+                  <span>Couldn&apos;t load social posts. Showing blogs only.</span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => {
+                      void loadData();
+                    }}
+                  >
+                    {UI_VOCAB.errors.retry}
+                  </Button>
+                </div>
+              ) : null}
               <section className={`${DATA_PAGE_CONTROL_STRIP_CLASS} relative`} ref={columnEditorRef}>
                 <div className={DATA_PAGE_CONTROL_ROW_CLASS}>
                   <div className="flex flex-wrap items-center gap-3">

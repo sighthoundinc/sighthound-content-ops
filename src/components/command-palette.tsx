@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { UI_VOCAB } from "@/lib/ui-vocab";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import type { Command } from "@/lib/command-palette-config";
 import { AppIcon, SearchIcon } from "@/lib/icons";
@@ -17,6 +18,7 @@ export function CommandPalette() {
     selectResult,
     executeSelected,
     handleKeyDown,
+    isSearchUnavailable,
   } = useCommandPalette();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -99,9 +101,19 @@ export function CommandPalette() {
             role="listbox"
             aria-label="Command results"
           >
+            {isSearchUnavailable ? (
+              <div
+                role="alert"
+                className="border-b border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700"
+              >
+                {UI_VOCAB.errors.searchUnavailable}
+              </div>
+            ) : null}
             {results.length === 0 ? (
               <div className="p-8 text-center text-navy-500 text-sm">
-                No commands found
+                {isSearchUnavailable
+                  ? "No commands found"
+                  : UI_VOCAB.emptyStates.searchTitle}
               </div>
             ) : (
               <div className="divide-y divide-[color:var(--sh-gray-200)]">

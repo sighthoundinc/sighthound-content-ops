@@ -20,6 +20,7 @@ Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in fou
 | `BasedOnPanel` | `AIMessage` | Every Ask AI answer with curated links shows a collapsible "Based on" panel exposing link list + response source / model. |
 | `useDensityPreference` + `data-density` | `AppShell` root attribute, `DataTable` default via `readDensitySync()`, Settings toggle | User selects Compact / Comfortable; tables render at matching row height globally. |
 | `copyText()` | `LinkQuickActions` | Every Google Doc / Live URL / Canva link copy surfaces a semantic toast like "Copied Google Doc URL". |
+| `LoadErrorState` | Home, Dashboard, My Tasks, Blogs, Social Posts, Ideas, CardBoard, Inbox | A failed load shows an inline error with "Try again" instead of zeros or an empty state. |
 | `EmptyState` (via `DataPageEmptyState`) | Dashboard, My Tasks, Blogs, Social Posts, Ideas list empty states | One consistent empty-state look; backed by `UI_VOCAB.emptyStates` where applicable. |
 | Sidebar auto-collapse | `useSidebarState` | Below 1400px auto-collapses the first time; explicit user toggle wins afterwards. |
 | `NextActionCell` | `/tasks` Next Action column | Verb-first cell ("Submit Draft", "Publish Blog", "Waiting on Jane") replaces raw status pill. |

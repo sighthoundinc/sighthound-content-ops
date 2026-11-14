@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { parseApiResponseJson, isApiFailure, getApiErrorMessage } from "@/lib/api-response";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
@@ -31,6 +32,7 @@ export default function IdeasPage() {
   const [ideas, setIdeas] = useState<BlogIdeaRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ideasLoadError, setIdeasLoadError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quickIdeaTitle, setQuickIdeaTitle] = useState("");
@@ -52,6 +54,7 @@ export default function IdeasPage() {
   const loadIdeas = async () => {
     setIsLoading(true);
     setError(null);
+    setIdeasLoadError(null);
     const supabase = getSupabaseBrowserClient();
     const { data, error: loadError } = await supabase
       .from("blog_ideas")
@@ -60,6 +63,7 @@ export default function IdeasPage() {
 
     if (loadError) {
       console.error("Ideas load failed:", loadError);
+      setIdeasLoadError("Couldn't load ideas. Please try again.");
       setError("Couldn't load ideas. Please try again.");
       setIsLoading(false);
       return;
@@ -388,6 +392,13 @@ export default function IdeasPage() {
                   <div key={`skeleton-idea-${i}`} className="skeleton h-20 w-full" />
                 ))}
               </div>
+            ) : ideasLoadError ? (
+              <LoadErrorState
+                description={ideasLoadError}
+                onRetry={() => {
+                  void loadIdeas();
+                }}
+              />
             ) : activeIdeas.length === 0 ? (
               <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-4 text-sm text-navy-500">
                 No ideas yet. Add one in under 5 seconds.

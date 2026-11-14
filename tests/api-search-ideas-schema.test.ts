@@ -63,4 +63,20 @@ describe("global search idea schema", () => {
       ],
     });
   });
+
+  it("returns the auth failure instead of an empty success", async () => {
+    jest.mocked(authenticateRequest).mockResolvedValue({
+      error: "Missing access token",
+      status: 401,
+    });
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/search?q=relay")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(payload.success).toBe(false);
+    expect(payload.results).toEqual([]);
+  });
 });

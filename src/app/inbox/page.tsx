@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { Skeleton } from "@/components/skeleton";
 import { AppIcon, ArrowRightIcon, TaskIcon } from "@/lib/icons";
+import { isApiFailure, parseApiResponseJson } from "@/lib/api-response";
 import { UI_VOCAB } from "@/lib/ui-vocab";
 import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
@@ -59,70 +61,73 @@ export default function InboxPage() {
 }
 
 function InboxView() {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
+  const accessToken = session?.access_token ?? null;
   const [tab, setTab] = useState<InboxTab>("required");
   const [required, setRequired] = useState<SnapshotItem[]>([]);
   const [waiting, setWaiting] = useState<SnapshotItem[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activityError, setActivityError] = useState<string | null>(null);
 
   const timezone = profile?.timezone ?? "America/New_York";
 
-  useEffect(() => {
-    let isMounted = true;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [snapshot, feed] = await Promise.all([
-          fetch("/api/dashboard/tasks-snapshot", { cache: "no-store" }).then(
-            async (response) => {
-              if (!response.ok) {
-                return null;
-              }
-              return response.json();
-            }
-          ),
-          fetch("/api/activity-feed?limit=25", { cache: "no-store" }).then(
-            async (response) => {
-              if (!response.ok) {
-                return null;
-              }
-              return response.json();
-            }
-          ),
-        ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        if (snapshot?.requiredByMe) {
-          setRequired(normalizeSnapshotItems(snapshot.requiredByMe));
-        }
-        if (snapshot?.waitingOnOthers) {
-          setWaiting(normalizeSnapshotItems(snapshot.waitingOnOthers));
-        }
-        if (Array.isArray(feed?.activities)) {
-          setActivity(normalizeActivityItems(feed.activities));
-        }
-      } catch (loadError) {
-        console.error("inbox load failed", loadError);
-        if (isMounted) {
-          setError("Couldn’t load your inbox. Please refresh to retry.");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+  const loadInbox = useCallback(async () => {
+    if (!accessToken) {
+      return;
     }
-    void load();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    setLoading(true);
+    setError(null);
+    const headers = { authorization: `Bearer ${accessToken}` };
+    const [snapshotResponse, feedResponse] = await Promise.all([
+      fetch("/api/dashboard/tasks-snapshot", { cache: "no-store", headers }).catch(
+        () => null
+      ),
+      fetch("/api/activity-feed", { cache: "no-store", headers }).catch(
+        () => null
+      ),
+    ]);
+
+    // The task snapshot drives Required/Waiting. If it fails, the inbox
+    // must show a failure, never the "all caught up" empty state.
+    const snapshotPayload = snapshotResponse
+      ? await parseApiResponseJson<{
+          requiredByMe?: unknown;
+          waitingOnOthers?: unknown;
+        }>(snapshotResponse)
+      : null;
+    if (!snapshotResponse || isApiFailure(snapshotResponse, snapshotPayload)) {
+      console.error("inbox snapshot load failed", snapshotResponse?.status);
+      setRequired([]);
+      setWaiting([]);
+      setActivity([]);
+      setError("Couldn’t load your inbox. Please try again.");
+      setLoading(false);
+      return;
+    }
+    setRequired(normalizeSnapshotItems(snapshotPayload?.requiredByMe));
+    setWaiting(normalizeSnapshotItems(snapshotPayload?.waitingOnOthers));
+
+    const feedPayload = feedResponse
+      ? await parseApiResponseJson<{ data?: { activities?: unknown } }>(
+          feedResponse
+        )
+      : null;
+    if (!feedResponse || isApiFailure(feedResponse, feedPayload)) {
+      console.error("inbox activity load failed", feedResponse?.status);
+      setActivity([]);
+      setActivityError("Couldn’t load recent activity. Please try again.");
+    } else {
+      setActivity(normalizeActivityItems(feedPayload?.data?.activities));
+      setActivityError(null);
+    }
+    setLoading(false);
+  }, [accessToken]);
+
+  useEffect(() => {
+    void loadInbox();
+  }, [loadInbox]);
 
   const activeItems = useMemo(() => {
     if (tab === "required") {
@@ -189,9 +194,19 @@ function InboxView() {
           ))}
         </div>
       ) : error ? (
-        <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {error}
-        </div>
+        <LoadErrorState
+          description={error}
+          onRetry={() => {
+            void loadInbox();
+          }}
+        />
+      ) : tab === "activity" && activityError ? (
+        <LoadErrorState
+          description={activityError}
+          onRetry={() => {
+            void loadInbox();
+          }}
+        />
       ) : activeItems.length === 0 ? (
         <EmptyState
           icon="bell"
@@ -302,22 +317,24 @@ function normalizeSnapshotItems(value: unknown): SnapshotItem[] {
   if (!Array.isArray(value)) {
     return [];
   }
+  // Shape comes from /api/dashboard/tasks-snapshot (SnapshotTask). Blog ids
+  // are suffixed (`<uuid>:blog`), so always route with the server's `href`.
   return value
     .map((entry) => {
       if (typeof entry !== "object" || entry === null) {
         return null;
       }
       const record = entry as Record<string, unknown>;
-      const kind = record.content_type === "social_post" ? "social" : "blog";
       const id = String(record.id ?? "");
-      if (!id) {
+      const href = typeof record.href === "string" ? record.href : "";
+      if (!id || !href) {
         return null;
       }
+      const kind: SnapshotItem["kind"] = record.kind === "social" ? "social" : "blog";
       const title = String(record.title ?? "Untitled");
-      const href = kind === "social" ? `/social-posts/${id}` : `/blogs/${id}`;
-      const statusLabel = String(record.status_display ?? "Needs attention");
+      const statusLabel = String(record.statusLabel ?? "Needs attention");
       const updatedAt =
-        typeof record.updated_at === "string" ? record.updated_at : null;
+        typeof record.createdAt === "string" ? record.createdAt : null;
       return { id, kind, title, href, statusLabel, updatedAt };
     })
     .filter((entry): entry is SnapshotItem => entry !== null);
@@ -327,27 +344,29 @@ function normalizeActivityItems(value: unknown): ActivityItem[] {
   if (!Array.isArray(value)) {
     return [];
   }
+  // Shape comes from /api/activity-feed (ActivityRecord).
   return value
-    .map((entry, index) => {
+    .map((entry) => {
       if (typeof entry !== "object" || entry === null) {
         return null;
       }
       const record = entry as Record<string, unknown>;
-      const kind = String(record.content_type ?? "blog").toLowerCase() ===
-      "social_post"
-        ? "social"
-        : "blog";
-      const id = String(record.id ?? `activity-${index}`);
-      const title = String(record.title ?? "Untitled");
-      const action = String(record.event_type ?? "updated").replace(/_/g, " ");
-      const actor = String(record.actor_name ?? record.user_display_name ?? "Team");
-      const createdAt = String(record.created_at ?? new Date().toISOString());
-      const recordId = String(record.record_id ?? record.content_id ?? "");
+      const id = String(record.id ?? "");
+      const contentId = String(record.content_id ?? "");
+      const createdAt = typeof record.changed_at === "string" ? record.changed_at : "";
+      if (!id || !contentId || !createdAt) {
+        return null;
+      }
+      const kind: ActivityItem["kind"] =
+        record.content_type === "social_post" ? "social" : "blog";
+      const title = String(record.content_title ?? "Untitled");
+      const action = String(
+        record.event_title ?? String(record.event_type ?? "Updated").replace(/_/g, " ")
+      );
+      const actor = String(record.changed_by_name ?? "Team");
       const href =
-        kind === "social"
-          ? `/social-posts/${recordId || id}`
-          : `/blogs/${recordId || id}`;
-      return { id, kind, title, action, actor, createdAt, href };
+        kind === "social" ? `/social-posts/${contentId}` : `/blogs/${contentId}`;
+      return { id: `${kind}-${id}`, kind, title, action, actor, createdAt, href };
     })
     .filter((entry): entry is ActivityItem => entry !== null);
 }

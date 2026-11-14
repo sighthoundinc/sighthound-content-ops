@@ -16,6 +16,7 @@ import {
   DATA_PAGE_STACK_CLASS,
   DataPageToolbar,
 } from "@/components/data-page";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
@@ -48,7 +49,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDateOnly } from "@/lib/utils";
+import { cn, formatDateOnly } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 
@@ -209,6 +210,7 @@ export default function BlogCardBoardPage() {
   const [authors, setAuthors] = useState<ProfileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [productFilter, setProductFilter] = useState<ProductFilter>("all");
@@ -229,6 +231,7 @@ export default function BlogCardBoardPage() {
     const supabase = getSupabaseBrowserClient();
     setIsLoading(true);
     setError(null);
+    setLoadError(null);
 
     const [{ data: usersData, error: usersError }, blogsResponse] = await Promise.all([
       supabase.from("profiles").select("*").eq("is_active", true).order("full_name", {
@@ -243,6 +246,7 @@ export default function BlogCardBoardPage() {
 
     if (usersError) {
       console.error("Load users failed:", usersError);
+      setLoadError("Couldn't load team members. Please try again.");
       setError("Couldn't load team members. Please try again.");
       setIsLoading(false);
       return;
@@ -253,6 +257,7 @@ export default function BlogCardBoardPage() {
 
     if (blogsError) {
       console.error("Blogs load failed:", blogsError);
+      setLoadError("Couldn't load blogs. Please try again.");
       setError("Couldn't load blogs. Please try again.");
       setIsLoading(false);
       return;
@@ -750,7 +755,20 @@ export default function BlogCardBoardPage() {
           <DataPageFilterPills pills={activeFilterPills} />
 
 
-          <section className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3">
+          {loadError ? (
+            <LoadErrorState
+              description={loadError}
+              onRetry={() => {
+                void loadBoardData();
+              }}
+            />
+          ) : null}
+          <section
+            className={cn(
+              "rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3",
+              loadError ? "hidden" : null
+            )}
+          >
             <div className="overflow-x-auto pb-1">
               <div className="flex min-w-max gap-4">
                 {BOARD_STAGES.map((stage) => {
@@ -1062,7 +1080,7 @@ export default function BlogCardBoardPage() {
             </div>
           </section>
 
-          {hasNoResults ? (
+          {hasNoResults && !loadError ? (
             <DataPageEmptyState
               title="No cards found."
               description="No cards match your current filters."

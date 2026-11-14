@@ -51,6 +51,7 @@ import {
   OperationalTableSelectionBar,
 } from "@/components/operational-table";
 import { LinkQuickActions } from "@/components/link-quick-actions";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { SocialPostStatusInfo } from "@/components/social-post-status-info";
@@ -659,6 +660,8 @@ function SocialPostsPageContent() {
   const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const [view, setView] = useState<SocialPostsView>("list");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 180);
@@ -895,6 +898,7 @@ function SocialPostsPageContent() {
       const supabase = getSupabaseBrowserClient();
       setIsLoading(true);
       setError(null);
+      setLoadError(null);
 
       const [{ data: postsData, error: postsError }, { data: linksData, error: linksError }] =
         await Promise.all([
@@ -916,12 +920,14 @@ function SocialPostsPageContent() {
 
       if (postsError) {
         console.error("Social posts load failed:", postsError);
+        setLoadError("Couldn't load posts. Please try again.");
         setError("Couldn't load posts. Please try again.");
         setIsLoading(false);
         return;
       }
       if (linksError) {
         console.error("Social post links load failed:", linksError);
+        setLoadError("Couldn't load post links. Please try again.");
         setError("Couldn't load post links. Please try again.");
         setIsLoading(false);
         return;
@@ -956,7 +962,7 @@ function SocialPostsPageContent() {
 
     void loadPosts();
     void loadAvailableUsers();
-  }, [showError]);
+  }, [reloadToken, showError]);
 
   useEffect(() => {
     if (!error) {
@@ -2784,6 +2790,13 @@ function SocialPostsPageContent() {
                 <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
               ))}
             </div>
+          ) : loadError ? (
+            <LoadErrorState
+              description={loadError}
+              onRetry={() => {
+                setReloadToken((previous) => previous + 1);
+              }}
+            />
           ) : view === "board" ? (
             <DndContext sensors={sensors} onDragEnd={(event) => void handleDragEnd(event)}>
               <section className="grid gap-3 xl:grid-cols-3">

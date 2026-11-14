@@ -4,6 +4,7 @@ export const AUTH_BYPASS_PREFIXES = [
   "/_next",
   "/favicon",
   "/public",
+  "/.well-known",
 ];
 
 export function shouldBypassAuth(pathname: string) {

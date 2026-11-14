@@ -736,8 +736,7 @@ Before considering a task complete:
 7. Confirm documentation updates from the rule above are applied when applicable.
 8. Prefer small, reversible changes over broad rewrites unless the task explicitly requires larger refactoring.
 9. Apply risk-based validation from **Change Risk Classification** where applicable.
-10. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
-5. **After API changes that reference profile columns or data shapes**: Run database migrations (`supabase db push --yes`) to ensure schema alignment and prevent runtime errors like "column profiles.X does not exist".
+10. **After API changes that reference profile columns or data shapes**: Confirm the required migration exists in `supabase/migrations/` and flag that the target database must be migrated to prevent runtime errors like "column profiles.X does not exist". Applying migrations (`supabase db push`) is high risk and may target a live project: propose it and get explicit user approval before running it, and never pass `--yes`.
 
 ## Visual Regression (SHOULD)
 

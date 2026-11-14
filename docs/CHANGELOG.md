@@ -14,6 +14,11 @@ Newest entries first.
 ### Changed — `CLAUDE.md` (repo root)
 
 - Added an Agent Workflow Rules pointer to the new `AGENTS.md` sections.
+- Replaced the stale "no automated tests" note with a required-checks-by-change-type table and test commands.
+
+### Changed — `AGENTS.md` Delivery Quality Gate
+
+- `supabase db push` now requires explicit user approval and must not use `--yes`; removed the duplicated item.
 
 ## 2026-10-01
 

@@ -23,7 +23,28 @@ npm run lint         # ESLint only
 npm run typecheck    # tsc --noEmit only
 ```
 
-There are no automated tests. `npm run check` is the validation gate.
+### Required checks by change type
+
+Automated tests exist under `tests/` (Jest + Playwright). CI (`.github/workflows/api-check.yml`) runs only `scripts/check-api-patterns.sh`, so the checks below are run locally and are the "required checks" for the commit gate in `AGENTS.md`. Follow the Delivery Quality Gate time budget and ask before running validation (Post-Task Validation Confirmation).
+
+| Change touches | Required checks |
+|---|---|
+| Any code or config | `npm run check` |
+| `src/app/api/**` | `bash scripts/check-api-patterns.sh` + the matching Jest file(s) in `tests/` (e.g. `npx jest tests/api-mcp.test.ts`) |
+| `src/lib/**` logic, Ask AI, MCP | Matching Jest file(s) in `tests/` (`npx jest tests/<name>.test.ts`) |
+| Blog/social status transitions, ownership fields, `task-logic.ts`, `task-action-state.ts`, dashboard/tasks surfaces | `npm run test:workflow` (uses `tests/workflow/database-fake.ts`, no live DB) |
+| Social post editor UI | `npm run test:workflow:ui` |
+| UI copy/labels | `npx jest tests/ui/no-forbidden-strings.test.ts` |
+| Shared UI primitives, `globals.css`, typography | `npm run test:visual` (see Visual Regression in `AGENTS.md`) |
+| Permissions / RLS | `npm run test:workflow` + walk `tests/rls/sprint-1-permission-boundaries.checklist.ts` manually |
+| Docs only | None required; verify the diff |
+
+```bash
+npm test                 # all Jest tests under tests/
+npm run test:workflow    # workflow domain/handler/task-surface tests
+npm run test:workflow:ui # Playwright social editor flow
+npm run test:visual      # Playwright visual snapshots
+```
 
 ## Stack
 

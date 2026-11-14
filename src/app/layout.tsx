@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Lexend, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/providers/auth-provider";
 import { AlertsProvider } from "@/providers/alerts-provider";
@@ -13,16 +13,19 @@ import { AIFloatingAssistant } from "@/components/ai/ai-floating-assistant";
 // Exposed as --font-lexend-sans. Tailwind's `font-sans` and body default
 // resolve to this via `@theme inline { --font-sans: var(--font-lexend-sans) }`
 // in globals.css.
-const lexendSans = Lexend({
+// Fonts are self-hosted (src/app/fonts, OFL-licensed variable fonts) so
+// builds never depend on fetching from Google Fonts.
+const lexendSans = localFont({
+  src: "./fonts/lexend-latin-variable.woff2",
   variable: "--font-lexend-sans",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: "100 900",
   display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
+  src: "./fonts/jetbrains-mono-latin-variable.woff2",
   variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
+  weight: "100 800",
   display: "swap",
 });
 

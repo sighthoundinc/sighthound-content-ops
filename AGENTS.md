@@ -620,6 +620,107 @@ Requirements:
 - **Medium** → requires manual testing.
 - **High** → requires test plan + rollback consideration.
 
+## Task-Focused Review and Commit Gate (MUST)
+
+### Scope
+
+Keep the user's original task as the priority. Review the changes made for that task, their directly affected behavior, and relevant integration points. Before a commit, review all changes included in that commit, including changes made by others.
+
+Do not expand the task into a general repository cleanup. Record unrelated findings with their location, impact, and suggested follow-up; return to the original task. Do not automatically create tracking files or issues.
+
+Fix an additional problem only if it was introduced by the task or is a direct prerequisite for completing it. Keep the fix minimal. If resolving it requires substantial additional scope, explain the blocker and ask before proceeding.
+
+### Review
+
+For code and configuration changes, perform a review proportionate to the risk. Before committing, approving or merging a PR, or generating a release artifact, perform a production-grade review of the scoped changes, including relevant unchanged code and dependencies.
+
+Before every commit, inspect the complete final diff of all changes proposed for inclusion (`git status`, `git diff`, `git diff --staged`), including changes made by other agents or users. Identify unrelated or unexpected modifications before proceeding.
+
+**Exclude unrelated or unexpected changes from the proposed commit. If they cannot be safely isolated, stop and ask the user what to include. Never modify or commit another contributor's changes without authorization.**
+
+Consider, where applicable:
+
+- **Correctness and reliability:** Edge cases, input validation, errors, retries, timeouts, idempotency, workflow status transitions, resource leaks, and recovery.
+- **Security:** Trust boundaries, `requirePermission()` coverage, RLS policies, service-role `adminClient` usage, injection, secrets, and unsafe configuration.
+- **Concurrency and data:** Races (e.g. concurrent social-post editing), consistency, transactions, migrations, and potential data loss.
+- **Performance:** Hot paths (dashboard summary, tasks snapshot, list pages), query growth, blocking operations, and scaling.
+- **Operations:** Logging, monitoring, Vercel deployment, Supabase migration ordering, compatibility, and rollback.
+- **Maintainability and testing:** Naming, complexity, relevant documentation, test coverage (`tests/`, `npm test`, `npm run test:workflow`), and realistic failure cases.
+
+### Risk-Based Escalation
+
+Scale review depth to the potential impact of the change, not merely the size of the diff. Tiers align with **Change Risk Classification** above.
+
+- **Low risk:** Focused diff inspection and relevant lightweight checks.
+- **Moderate risk:** Review correctness, edge cases, integration points, failure handling, and relevant tests.
+- **High risk:** Perform deeper adversarial review, including security, concurrency, data integrity, failure recovery, deployment, and rollback where applicable.
+
+Always treat these as high risk: authentication (`src/middleware.ts`, auth provider, OAuth/provisioning), authorization (`src/lib/permissions.ts`, `src/lib/server-permissions.ts`, `role_permissions`, RLS), Supabase migrations and triggers, persistent data integrity (blog/social status transitions, ownership fields, activity history), destructive operations (deletes, wipe-app-clean, orphan cleanup), concurrency, service-role access, and production-critical integrations (Slack notifications, Edge Functions, Remote MCP).
+
+Do not expand the review beyond relevant code and dependencies without a justified reason.
+
+### Blocking Issues
+
+Do not commit, approve, merge, or release while the changes or their directly affected behavior have unresolved P0/P1 issues, failing required checks, missing critical tests, security vulnerabilities, data corruption risks, unsafe migrations, or broken rollback paths.
+
+If a required check fails because of a pre-existing or unrelated problem, do not chase it automatically. Report the failure and its likely scope, explain that it blocks the commit, and ask for direction.
+
+If a required check cannot be run (including when it exceeds the **Delivery Quality Gate** time budget or the user declines it under **Post-Task Validation Confirmation**), do not treat it as passing or proceed with the commit. Report the limitation and ask for direction. Never claim that an unrun check passed.
+
+### Documentation
+
+Keep documentation accurate and proportional to the task. Update affected documentation as part of the change, following the **Documentation Update Rule** and existing repo conventions (root docs: `README.md`, `SPECIFICATION.md`, `HOW_TO_USE_APP.md`, `OPERATIONS.md`, `AGENTS.md`; doc-level changes logged in `docs/CHANGELOG.md`; stale reports moved to `docs/archive/`).
+
+- **Public APIs, signatures, or CLI/script changes:** Update relevant docstrings, docs, and usage examples.
+- **New features, behavior, or configuration changes:** Update affected user-facing documentation (`HOW_TO_USE_APP.md`, `/resources`) and examples.
+- **Bug fixes or internal refactors:** Update documentation only if documented behavior changes or existing content is inaccurate.
+- Prefer updating existing documentation; avoid duplication and unrelated rewrites.
+
+Before committing, verify affected documentation matches the implementation. Do not claim completion with stale or missing required documentation.
+
+### Review Report
+
+Before committing, provide:
+
+1. A concise review summary and the scope reviewed.
+2. Detected issues with severity, including relevant pre-existing issues.
+3. Tests and checks run, their results, and any that could not be run.
+4. Remaining risks and unvalidated assumptions.
+5. An explicit reason the commit is safe to proceed—or the blockers preventing it.
+
+### Authorization
+
+Do not create a Git commit unless the user has explicitly requested or authorized committing for the current task (see **Git Commits**). A successful review does not automatically grant permission to commit.
+
+Do not approve or merge a PR or generate a release artifact without explicit authorization for that action. Do not approve your own generated code.
+
+If committing is not authorized, leave the changes uncommitted and report their review status.
+
+Do not claim the requested work is complete if relevant functionality, required validation, or safety concerns remain unresolved. Report partial progress and blockers instead.
+
+## Priority Graph and Two-Node Scope Limit (MUST)
+
+- Every implementation plan must include a progress bar for each task and for the overall plan (e.g. `[████░░░░░░] 40%`).
+- Every implementation plan must include a priority/task graph before execution. Show the original objective, the current deliverable, numbered tasks, dependencies, acceptance gates, and deferred work. Mark each node as `pending`, `active`, `blocked`, or `complete`.
+- Anchor execution to one deliverable. For incremental PR integration, this means the next independently reviewable increment—not completing the entire roadmap or fixing the surrounding system.
+- Stay within two nodes of that deliverable. Work must belong to the approved graph and be at most two dependency edges from the active deliverable. Newly discovered work is not automatically authorized, even when described as a prerequisite or blocker.
+- Do not manipulate the graph to bypass this limit. Do not combine substantial projects into one node, silently add dependencies, rename unrelated work as validation, or move the active deliverable. Each node must describe a concrete, bounded outcome.
+- Stop before expanding scope. If a necessary fix exceeds the limit, requires another repository, introduces a Supabase migration, or substantially changes architecture, explain the blocker, show the proposed graph change, and request explicit approval. Offer the smallest safe alternative. Do not implement the expansion while awaiting approval.
+- Keep deferred work deferred. Record inherited or unrelated problems without pursuing them unless they demonstrably block the current deliverable and their inclusion is explicitly approved.
+- Report delivery progress honestly. Each update must identify the active node, how the work advances the deliverable, and the next acceptance gate. Distinguish research, code written, tests passed, commit-ready, and merged; none substitutes for another.
+- Before every action, check: "Which approved node does this serve, and is it within the two-node limit?" If there is no clear answer, do not proceed.
+
+## Concise Communication and Planning (MUST)
+
+- Default to brief, direct responses. Prioritize actionable information.
+- Keep plans compact but recovery-ready: preserve the objective, active deliverable, task graph, dependencies, statuses, acceptance gates, and deferred work.
+- Maintain a concise checkpoint recording completed work, current state, blockers, important decisions, and the exact next action.
+- Update checkpoints at meaningful milestones so another session can resume without reconstructing the work.
+- Avoid lengthy introductions, repeated context, unnecessary summaries, excessive formatting, and narration of routine actions.
+- Keep progress reports brief: completed, active, blocked, and next.
+- Expand only when requested or necessary for correctness, safety, or critical decisions.
+- Never sacrifice recoverability or essential information for brevity.
+
 ## Delivery Quality Gate (MUST)
 
 Before considering a task complete:

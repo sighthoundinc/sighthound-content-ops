@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Agent Workflow Rules (MUST)
+
+Before planning, reviewing, or committing, read and follow these sections of `AGENTS.md`:
+
+- **Task-Focused Review and Commit Gate** — scope discipline, risk-based review, blocking issues, review report, commit authorization
+- **Priority Graph and Two-Node Scope Limit** — every plan needs a task graph and progress bars; stay within two nodes of the active deliverable
+- **Concise Communication and Planning** — brief responses, recovery-ready checkpoints
+
+Never commit without explicit user authorization for the current task.
+
 ## Commands
 
 ```bash

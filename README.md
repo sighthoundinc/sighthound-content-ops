@@ -196,7 +196,7 @@ npm run check:full
 - Legacy compatibility endpoint `DELETE /api/ideas/[id]/delete` is retired (`410 Gone`). Use `DELETE /api/ideas/[id]`.
 
 ## Read-only MCP
-- Phase 1 exposes six read-only tools at `https://<app-domain>/api/mcp`: `list_blogs`, `get_blog`, `list_social_posts`, `get_social_post`, `list_ideas`, and `get_my_tasks`.
-- Requests use a bearer token and a single active profile configured by the operator; callers cannot select another identity. Every tool applies that profile’s existing Content Relay permissions.
+- Phase 1 exposes six read-only tools at `https://<app-domain>/api/mcp`: `list_blogs`, `get_blog`, `list_social_posts`, `get_social_post`, `list_ideas`, and `get_my_tasks`. An optional URL-secret endpoint is available at `/api/mcp/s/<MCP_URL_SECRET>`.
+- Bearer and URL-secret requests use one active profile configured by the operator; callers cannot select another identity. Every tool applies that profile’s existing Content Relay permissions.
 - Relay stores blog metadata, not article text. Drafts remain in Google Docs (`google_doc_url`), and article-text revision history is unavailable.
-- Operator setup, token handling, rate-limit scope, logging, and the current Claude custom-connector limitation are documented in `OPERATIONS.md` §14. The technical contract is in `SPECIFICATION.md` §18.
+- Vercel runtime request-path logs may contain the URL secret; application-owned logs redact it as `/api/mcp/s/[redacted]`. Operator setup, credential handling, rate-limit scope, logging, and client compatibility are documented in `OPERATIONS.md` §14. The technical contract is in `SPECIFICATION.md` §18.

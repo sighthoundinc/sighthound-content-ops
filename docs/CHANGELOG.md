@@ -4,6 +4,22 @@ Tracks changes to authoritative documentation under `docs/` and repo-root docs. 
 
 Newest entries first.
 
+## 2026-11-14
+
+### Added — `AGENTS.md` (repo root)
+
+- Added **Task-Focused Review and Commit Gate**, **Priority Graph and Two-Node Scope Limit**, and **Concise Communication and Planning** agent rules.
+- Adapted to this repo: high-risk surfaces name auth, permissions/RLS, migrations, status transitions, destructive operations, service-role access, and Slack/Edge/MCP integrations; documentation guidance points to the existing Documentation Update Rule and root-doc conventions instead of Astro/Starlight.
+
+### Changed — `CLAUDE.md` (repo root)
+
+- Added an Agent Workflow Rules pointer to the new `AGENTS.md` sections.
+- Replaced the stale "no automated tests" note with a required-checks-by-change-type table and test commands.
+
+### Changed — `AGENTS.md` Delivery Quality Gate
+
+- `supabase db push` now requires explicit user approval and must not use `--yes`; removed the duplicated item.
+
 ## 2026-10-01
 
 ### Added — `docs/blog-writing-instructions.md`

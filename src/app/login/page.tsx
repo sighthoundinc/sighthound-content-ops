@@ -20,6 +20,7 @@
 // the page gives the form a clear visual anchor role and matches the
 // "premium minimalist" direction. See the conversation for rationale.
 
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { getSupabaseServerClient } from "@/lib/supabase/ssr";
@@ -30,6 +31,8 @@ import { LoginHero } from "./login-hero";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Sign in · Content Relay" };
 
 interface LoginPageProps {
   searchParams: Promise<{ reconnect?: string }>;

@@ -5,10 +5,14 @@
 // Disable Next's route-level caching: dashboard data is per-user and must
 // not be collapsed across requests.
 
+import type { Metadata } from "next";
 import Link from "next/link";
+
+import { AppShell } from "@/components/app-shell";
 
 import { buttonClass } from "@/components/button";
 import { AppIcon, CheckIcon } from "@/lib/icons";
+import { pageTitle } from "@/lib/page-title";
 import { UI_VOCAB } from "@/lib/ui-vocab";
 
 import { fetchHomeData } from "./home-data";
@@ -16,6 +20,10 @@ import { HomeBucketLink } from "./home-bucket-link";
 import { buildWorkBuckets } from "./home-work-buckets";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: pageTitle("Home") };
+
+const SNAPSHOT_PREVIEW_LIMIT = 8;
 
 export default async function HomePage() {
   const { displayName, summary, tasksSnapshot, error } = await fetchHomeData();
@@ -32,9 +40,15 @@ export default async function HomePage() {
     tasksSnapshot.waitingOnOthers.length > 0;
   const hasAnyWork = hasWork || hasSnapshotItems;
   const requiredByLabel = displayName ?? "You";
+  // Home is a snapshot, not the queue: show the first few of each list and
+  // send the rest to My Tasks. Both lists arrive sorted by publish date.
+  const requiredPreview = tasksSnapshot.requiredByMe.slice(0, SNAPSHOT_PREVIEW_LIMIT);
+  const waitingPreview = tasksSnapshot.waitingOnOthers.slice(0, SNAPSHOT_PREVIEW_LIMIT);
+  const hiddenRequiredCount = tasksSnapshot.requiredByMe.length - requiredPreview.length;
+  const hiddenWaitingCount = tasksSnapshot.waitingOnOthers.length - waitingPreview.length;
 
   return (
-    <main className="min-h-screen bg-[color:var(--sh-gray)] px-4 py-8 sm:px-6 lg:py-12">
+    <AppShell>
       <div className="mx-auto max-w-6xl">
         <section className="relative overflow-hidden rounded-lg border border-[color:var(--sh-navy-700)] bg-ink p-8 shadow-brand-md sm:p-10">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -132,13 +146,13 @@ export default async function HomePage() {
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
-                  Required by: {requiredByLabel}
+                  Required by: {requiredByLabel} ({tasksSnapshot.requiredByMe.length})
                 </p>
                 {tasksSnapshot.requiredByMe.length === 0 ? (
                   <p className="mt-2 text-sm text-navy-500">No items right now.</p>
                 ) : (
                   <ul className="mt-2 space-y-2">
-                    {tasksSnapshot.requiredByMe.map((task) => (
+                    {requiredPreview.map((task) => (
                       <li key={task.id}>
                         <Link
                           href={task.href}
@@ -154,16 +168,24 @@ export default async function HomePage() {
                     ))}
                   </ul>
                 )}
+                {hiddenRequiredCount > 0 ? (
+                  <Link
+                    href="/tasks"
+                    className="mt-2 inline-flex text-sm font-medium text-brand underline-offset-2 hover:text-blurple-700 hover:underline"
+                  >
+                    +{hiddenRequiredCount} more in My Tasks
+                  </Link>
+                ) : null}
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
-                  Waiting on Others
+                  Waiting on Others ({tasksSnapshot.waitingOnOthers.length})
                 </p>
                 {tasksSnapshot.waitingOnOthers.length === 0 ? (
                   <p className="mt-2 text-sm text-navy-500">No waiting items right now.</p>
                 ) : (
                   <ul className="mt-2 space-y-2">
-                    {tasksSnapshot.waitingOnOthers.map((task) => (
+                    {waitingPreview.map((task) => (
                       <li key={task.id}>
                         <Link
                           href={task.href}
@@ -179,6 +201,14 @@ export default async function HomePage() {
                     ))}
                   </ul>
                 )}
+                {hiddenWaitingCount > 0 ? (
+                  <Link
+                    href="/tasks"
+                    className="mt-2 inline-flex text-sm font-medium text-brand underline-offset-2 hover:text-blurple-700 hover:underline"
+                  >
+                    +{hiddenWaitingCount} more in My Tasks
+                  </Link>
+                ) : null}
               </div>
             </div>
           </section>
@@ -215,6 +245,6 @@ export default async function HomePage() {
           </Link>
         </div>
       </div>
-    </main>
+    </AppShell>
   );
 }

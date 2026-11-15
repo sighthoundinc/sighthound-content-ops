@@ -412,6 +412,13 @@ export default function SocialPostEditorPage() {
   const isAdmin = userRoles.includes("admin");
 
   const [post, setPost] = useState<SocialPostEditorRecord | null>(null);
+  useEffect(() => {
+    // Put the record title in the browser tab so several open records are
+    // distinguishable. Falls back to the route title until the record loads.
+    if (post?.title) {
+      document.title = `${post.title} · Content Relay`;
+    }
+  }, [post?.title]);
   const [form, setForm] = useState<EditorFormState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);

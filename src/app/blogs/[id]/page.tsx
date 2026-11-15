@@ -196,6 +196,13 @@ export default function BlogDetailPage() {
   });
 
   const [blog, setBlog] = useState<BlogRecord | null>(null);
+  useEffect(() => {
+    // Put the record title in the browser tab so several open records are
+    // distinguishable. Falls back to the route title until the record loads.
+    if (blog?.title) {
+      document.title = `${blog.title} · Content Relay`;
+    }
+  }, [blog?.title]);
   const [form, setForm] = useState<BlogFormState | null>(null);
   const [users, setUsers] = useState<ProfileRecord[]>([]);
   const [history, setHistory] = useState<BlogHistoryRecord[]>([]);

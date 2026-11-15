@@ -261,12 +261,28 @@ export function DataTable<TData>({
                 <tr
                   key={index}
                   className={cn(
-                    "cursor-pointer transition-colors",
+                    "cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
                     rowClassName
                       ? rowClassName(item, index, isActive, isSelected)
                       : defaultRowClass
                   )}
                   onClick={() => onRowClick?.(item, index)}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          // Only when the row itself is focused, so Enter /
+                          // Space inside a cell control keeps its own meaning.
+                          if (event.target !== event.currentTarget) {
+                            return;
+                          }
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onRowClick(item, index);
+                          }
+                        }
+                      : undefined
+                  }
                 >
                   {showSelection && (
                     <td

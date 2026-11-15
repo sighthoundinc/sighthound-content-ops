@@ -1,5 +1,6 @@
 'use client';
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { useEffect, useState } from 'react';
 import { useAIAssistant } from '@/providers/ai-assistant-provider';
 import { AIMessage } from './ai-message';
@@ -60,10 +61,12 @@ export function AIChatPanel() {
       {/* Panel */}
       <aside
         role="dialog"
+        aria-modal="true"
         aria-label="Ask AI"
         className="fixed right-0 top-0 z-40 flex h-full w-[420px] max-w-[calc(100vw-2rem)] flex-col border-l border-[color:var(--sh-gray-200)] bg-white shadow-brand-lg animate-in slide-in-from-right duration-[var(--motion-duration-slow)] ease-[var(--motion-easing-out)] motion-reduce:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
+        <DialogFocusScope />
         {/* Header */}
         <header className="flex items-center justify-between border-b border-[color:var(--sh-gray-200)] bg-white px-5 py-4">
           <div className="flex items-center gap-2.5">

@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { useEffect, useMemo, useState } from "react";
 import type { NameResolutionResult, UserCandidate } from "@/lib/user-matching";
 import { Button, selectableCardClass } from "@/components/button";
@@ -108,7 +109,19 @@ export function NameResolutionModal({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50">
-      <div className="w-full max-h-[90vh] bg-surface rounded-lg shadow-lg flex flex-col max-w-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Resolve writer and publisher names"
+        className="w-full max-h-[90vh] bg-surface rounded-lg shadow-lg flex flex-col max-w-2xl"
+      >
+        <DialogFocusScope
+          onClose={() => {
+            if (!isLoading) {
+              onClose();
+            }
+          }}
+        />
         {/* Header */}
         <div className="px-6 py-4 border-b border-[color:var(--sh-gray-200)]">
           <h2 className="text-lg font-semibold text-ink">Resolve Writer & Publisher Names</h2>

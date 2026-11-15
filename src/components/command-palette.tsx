@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import React, { useEffect, useRef } from "react";
 import { UI_VOCAB } from "@/lib/ui-vocab";
 import { useCommandPalette } from "@/hooks/use-command-palette";
@@ -71,6 +72,7 @@ export function CommandPalette() {
           aria-modal="true"
           aria-labelledby="command-palette-title"
         >
+          <DialogFocusScope />
           {/* Search Input */}
           <div className="border-b border-[color:var(--sh-gray-200)] p-4">
             <div className="flex items-center gap-3">

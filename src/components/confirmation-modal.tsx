@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/button";
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { InfoIcon, WarningIcon } from "@/lib/icons";
 
 type ConfirmationTone = "danger" | "default";
@@ -31,21 +32,6 @@ export function ConfirmationModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onCancel();
-      }
-    };
-    window.addEventListener("keydown", handleEscape);
-    return () => {
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen, onCancel]);
-
   if (!isOpen) {
     return null;
   }
@@ -64,6 +50,13 @@ export function ConfirmationModal({
         aria-label={title}
         className="relative w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-surface p-4 shadow-brand-lg"
       >
+        <DialogFocusScope
+          onClose={() => {
+            if (!isConfirming) {
+              onCancel();
+            }
+          }}
+        />
         <div className="flex items-start gap-3">
           <span
             className={`mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full ${

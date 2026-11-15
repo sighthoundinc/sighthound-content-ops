@@ -20,6 +20,9 @@ Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in fou
 | `BasedOnPanel` | `AIMessage` | Every Ask AI answer with curated links shows a collapsible "Based on" panel exposing link list + response source / model. |
 | `useDensityPreference` + `data-density` | `AppShell` root attribute, `DataTable` default via `readDensitySync()`, Settings toggle | User selects Compact / Comfortable; tables render at matching row height globally. |
 | `copyText()` | `LinkQuickActions` | Every Google Doc / Live URL / Canva link copy surfaces a semantic toast like "Copied Google Doc URL". |
+| `DialogFocusScope` | ConfirmationModal, DetailDrawer, command palette, Quick Create, Shortcuts, Ask AI panel, blog import, name resolution, bulk preview, and inline modals/drawers on Ideas, Social Posts, Calendar, Settings | Focus moves into the dialog, Tab stays inside, focus returns to the trigger on close. |
+| `UnsavedChangesGuard` | `/blogs/new`, `/blogs/[id]`, `/social-posts/[id]` | Leaving with unsaved edits asks to keep editing or discard; tab close/reload shows the browser prompt. |
+| Skip link + keyboard-openable rows | `AppShell`, `DataTable` | "Skip to content" is the first tab stop; rows with a click action open with Enter/Space. |
 | `LoadErrorState` | Home, Dashboard, My Tasks, Blogs, Social Posts, Ideas, CardBoard, Inbox | A failed load shows an inline error with "Try again" instead of zeros or an empty state. |
 | `EmptyState` (via `DataPageEmptyState`) | Dashboard, My Tasks, Blogs, Social Posts, Ideas list empty states | One consistent empty-state look; backed by `UI_VOCAB.emptyStates` where applicable. |
 | Sidebar auto-collapse | `useSidebarState` | Below 1400px auto-collapses the first time; explicit user toggle wins afterwards. |

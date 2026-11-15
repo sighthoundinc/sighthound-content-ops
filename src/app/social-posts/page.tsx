@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseRecordDeepLink } from "@/lib/record-deep-link";
@@ -3093,7 +3094,13 @@ function SocialPostsPageContent() {
                 setActivePostId(null);
               }}
             />
-            <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl">
+            <aside
+              role="dialog"
+              aria-modal="true"
+              aria-label="Social post details"
+              className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl"
+            >
+              <DialogFocusScope />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-ink">{activePost.title}</h3>
@@ -3800,7 +3807,19 @@ function SocialPostsPageContent() {
                 }
               }}
             />
-            <div className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="New social post"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+            >
+              <DialogFocusScope
+                onClose={() => {
+                  if (!isCreating) {
+                    closeCreateModal();
+                  }
+                }}
+              />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-ink">New Social Post</h3>

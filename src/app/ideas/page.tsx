@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -507,7 +508,19 @@ export default function IdeasPage() {
                 }
               }}
             />
-            <div className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="New idea"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+            >
+              <DialogFocusScope
+                onClose={() => {
+                  if (!isSubmitting) {
+                    setIsCreateModalOpen(false);
+                  }
+                }}
+              />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-ink">New Idea</h3>
@@ -611,7 +624,19 @@ export default function IdeasPage() {
                 }
               }}
             />
-            <div className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Edit idea"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+            >
+              <DialogFocusScope
+                onClose={() => {
+                  if (!isSubmitting) {
+                    closeEditModal();
+                  }
+                }}
+              />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-ink">Edit Idea</h3>

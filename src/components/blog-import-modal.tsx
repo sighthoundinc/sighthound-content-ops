@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import * as XLSX from "xlsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -783,7 +784,13 @@ export function BlogImportModal({
             aria-label="Close import modal"
             onClick={closeModal}
           />
-          <div className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-xl border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl sm:p-5">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Import blogs"
+            className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-xl border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl sm:p-5"
+          >
+            <DialogFocusScope />
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-ink">Import Blogs</h2>

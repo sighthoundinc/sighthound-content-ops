@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -2318,7 +2319,13 @@ export default function CalendarPage() {
                   setActiveBlogId(null);
                 }}
               />
-              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-lg">
+              <aside
+                role="dialog"
+                aria-modal="true"
+                aria-label="Blog details"
+                className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-lg"
+              >
+                <DialogFocusScope />
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold text-ink">{activeBlog.title}</h3>
@@ -2413,7 +2420,13 @@ export default function CalendarPage() {
                   setActiveSocialPostId(null);
                 }}
               />
-              <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-lg">
+              <aside
+                role="dialog"
+                aria-modal="true"
+                aria-label="Social post details"
+                className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-lg"
+              >
+                <DialogFocusScope />
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold text-ink">

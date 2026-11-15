@@ -644,7 +644,7 @@ export function AppShell({
         Skip to content
       </a>
       <header className="border-b border-[color:var(--sh-gray-200)] bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-1">
           <button
             type="button"

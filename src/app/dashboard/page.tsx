@@ -4216,7 +4216,7 @@ export default function DashboardPage() {
                 }
                 filters={
                   <div className="md:col-span-2 xl:col-span-4 grid gap-3">
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-5">
                       <label className="block">
                         <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-navy-500">
                           Lens

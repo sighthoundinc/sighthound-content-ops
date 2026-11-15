@@ -92,7 +92,7 @@ const PRODUCT_FILTER_OPTIONS: Array<{ value: ProductFilter; label: string }> = [
 ];
 
 const WEBSITE_FILTER_OPTIONS: Array<{ value: WebsiteFilter; label: string }> = [
-  { value: "all", label: "All Websites" },
+  { value: "all", label: "All Sites" },
   { value: "sighthound.com", label: "SH" },
   { value: "redactor.com", label: "RED" },
 ];
@@ -1082,11 +1082,11 @@ export default function BlogCardBoardPage() {
                                 )}
                                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                                   <span className="inline-flex items-center gap-1.5 text-xs text-navy-500">
-                                    Writer:
+                                    Writing:
                                     <WriterStatusBadge status={blog.writer_status} />
                                   </span>
                                   <span className="inline-flex items-center gap-1.5 text-xs text-navy-500">
-                                    Publisher:
+                                    Publishing:
                                     <PublisherStatusBadge status={blog.publisher_status} />
                                   </span>
                                 </div>

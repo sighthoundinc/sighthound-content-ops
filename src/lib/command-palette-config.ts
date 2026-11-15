@@ -52,8 +52,8 @@ export const allCommands: Command[] = [
   },
   {
     id: "nav-tasks",
-    label: "Tasks",
-    description: "Go to tasks",
+    label: "My Tasks",
+    description: "Go to My Tasks",
     category: "navigation",
     actionType: "navigate",
     targetUrl: "/tasks",

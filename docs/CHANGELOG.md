@@ -4,6 +4,13 @@ Tracks changes to authoritative documentation under `docs/` and repo-root docs. 
 
 Newest entries first.
 
+## 2026-11-15
+
+### Added — `DESIGN.md` (repo root) and `docs/audits/impeccable-trial-2026-11/`
+
+- Added `DESIGN.md`, a generated summary of the app's visual system. It defers to `design-system/`, which remains the authority.
+- Added the Impeccable trial reports (critique and audit for home and My Tasks) and a comparison with `app-craft-audit`. Source-only review; the app was not rendered.
+
 ## 2026-11-14
 
 ### Added — `AGENTS.md` (repo root)

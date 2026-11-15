@@ -59,3 +59,8 @@ next-env.d.ts
 /research.env
 /results/
 /reports/
+
+# Impeccable skill install (local trial; 26MB engine binary, not versioned)
+/.claude/skills/impeccable/
+/.claude/agents/impeccable-*.md
+/.impeccable/

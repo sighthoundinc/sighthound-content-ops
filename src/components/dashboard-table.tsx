@@ -16,6 +16,12 @@ import {
   type SortDirection,
 } from "@/lib/table";
 
+/** "awaiting_review" → "Awaiting review"; raw bucket keys are not UI copy. */
+function formatLifecycleLabel(bucket: string) {
+  const text = bucket.replaceAll("_", " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export type DashboardTableColumnKey =
   | "content_type"
   | "site"
@@ -282,9 +288,9 @@ export function DashboardTable({
                         <td key={column} className={cn(bodyCellClass, "text-center")}>
                           <span
                             className="truncate text-navy-500"
-                            title={row.lifecycle_bucket.replaceAll("_", " ")}
+                            title={formatLifecycleLabel(row.lifecycle_bucket)}
                           >
-                            {row.lifecycle_bucket.replaceAll("_", " ")}
+                            {formatLifecycleLabel(row.lifecycle_bucket)}
                           </span>
                         </td>
                       );

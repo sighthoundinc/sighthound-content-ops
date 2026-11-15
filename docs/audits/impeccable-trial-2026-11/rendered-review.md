@@ -22,7 +22,7 @@ Signed in to production (build `b3d0c74`, before the fixes on this branch) with 
 | 3 | Activity history title-cased URLs and replaced underscores (`Https://Drive.Google.Com/… 3PX8…`) | `src/lib/activity-history-format.ts` |
 | 4 | Activity history read "Assigned to: Assigned to Haris" | same |
 | 5 | Drawer and blog page used "Workflow & Assignments", "Writer status", "Writer Workflow", "Save Writer Updates"; `AGENTS.md` requires "Content Workflow" and Writing / Publishing | drawer, `blogs/[id]`, `blogs`, `dashboard` |
-| 6 | Dashboard Lifecycle column showed lowercase raw values ("published") | `src/app/dashboard/page.tsx` |
+| 6 | Dashboard Lifecycle column showed lowercase raw values ("published") | `src/components/dashboard-table.tsx` |
 | 7 | Ideas: solid red Delete was the first and loudest button on every card | `src/app/ideas/page.tsx` |
 | 8 | Calendar: out-of-month day numbers failed contrast (axe, 6 nodes) | `src/components/calendar-tile.tsx` |
 | 9 | Blog drawer header showed four unlabelled status chips ("Published, Published, Writing Approved, Published"); now one labelled chip each for Writing and Publishing | `dashboard`, `blogs` |

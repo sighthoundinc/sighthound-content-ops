@@ -1655,8 +1655,14 @@ function BlogLibraryPageContent() {
             statusBadges={
               activeBlog ? (
                 <>
-                  <WriterStatusBadge status={activeBlog.writer_status} />
-                  <PublisherStatusBadge status={activeBlog.publisher_status} />
+                  <span className="inline-flex items-center gap-1 text-xs text-navy-500">
+                    Writing
+                    <WriterStatusBadge status={activeBlog.writer_status} />
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-navy-500">
+                    Publishing
+                    <PublisherStatusBadge status={activeBlog.publisher_status} />
+                  </span>
                   <span
                     className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-semibold ${getStageBadgeClasses(
                       getStageForBadge(activeBlog)

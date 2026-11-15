@@ -351,7 +351,7 @@ export default function IdeasPage() {
         <div className="space-y-6">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-xl font-semibold text-ink">Blog Ideas</h1>
+              <h1 className="section-title">Ideas</h1>
               <p className="text-sm text-navy-500">
                 Capture ideas quickly, then convert them into scheduled blog assignments.
               </p>

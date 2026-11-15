@@ -1506,6 +1506,7 @@ export default function CalendarPage() {
                 variant="primary"
                 size="md"
                 onClick={handleExportICS}
+                className="gap-2"
                 disabled={exportItems.length === 0}
                 title="Export calendar to iCalendar format for Outlook, Apple Calendar, or Google Calendar"
               >

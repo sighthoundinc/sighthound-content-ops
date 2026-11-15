@@ -25,13 +25,17 @@ Signed in to production (build `b3d0c74`, before the fixes on this branch) with 
 | 6 | Dashboard Lifecycle column showed lowercase raw values ("published") | `src/app/dashboard/page.tsx` |
 | 7 | Ideas: solid red Delete was the first and loudest button on every card | `src/app/ideas/page.tsx` |
 | 8 | Calendar: out-of-month day numbers failed contrast (axe, 6 nodes) | `src/components/calendar-tile.tsx` |
+| 9 | Blog drawer header showed four unlabelled status chips ("Published, Published, Writing Approved, Published"); now one labelled chip each for Writing and Publishing | `dashboard`, `blogs` |
+| 10 | Blog detail stage selects showed raw "Completed"; now the canonical labels | `blogs/[id]` |
+| 11 | Ideas page title was "Blog Ideas" at a larger size than other pages; now "Ideas" in the shared title style | `ideas` |
+| 12 | Settings showed the role as lowercase "admin" | `settings` |
+| 13 | User Manual tables: scroll regions were not keyboard focusable (axe) | `resources` |
+| 14 | "Export to Calendar" had no gap between icon and text | `calendar` |
 
 ## Open
 
 | Sev | Finding |
 |---|---|
-| P1 | Blog drawer header shows four status chips with no labels; a published blog reads "Published, Published, Writing Approved, Published". |
-| P2 | Blog detail stage selects show "Completed" where the canonical labels are "Writing Approved" / "Published". |
 | P2 | Activity history logs one change twice ("Status Updated" and "Published" at the same minute) and attributes everything to "System". |
 | P2 | Blog detail has three separate save buttons (metadata, writing, publishing). |
 | P2 | Onboarding tour card stays over the bottom-right of every page until dismissed and covers table actions and filters. |
@@ -40,10 +44,7 @@ Signed in to production (build `b3d0c74`, before the fixes on this branch) with 
 | P2 | Mobile tables (Social Posts, Dashboard) need sideways scrolling to reach key columns. |
 | P2 | Filter vocabulary differs by page: "All Authors / All Websites" on CardBoard, "Assigned to / Site" elsewhere. CardBoard cards label status chips "Writer:" / "Publisher:". |
 | P3 | Header content is capped at 1280px while the page is full width, so the header's right edge and logo do not line up with the content at 1440px. |
-| P3 | Command palette footer shows the word "Shortcut" with nothing beside it; nav item is "My Tasks" but the palette says "Tasks". |
-| P3 | Calendar month view shows a "+" button in all 35 day cells; "Export to Calendar" has no gap between icon and text. |
-| P3 | Ideas page title is "Blog Ideas" (nav says "Ideas") and renders larger than other page titles. |
-| P3 | Settings shows the role as raw lowercase "admin". |
-| P3 | User Manual tables on mobile: scroll regions not keyboard focusable (axe, 3 nodes). |
+| P3 | Command palette: nav item is "My Tasks" but the palette says "Tasks". (The lone "Shortcut" footer link is intentional per `AGENTS.md`.) |
+| P3 | Calendar month view shows a "+" button in all 35 day cells. |
 
 Checked and not a defect: the Ask AI panel's serifed capital "I" is Lexend's own glyph, not a fallback font.

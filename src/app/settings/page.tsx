@@ -1093,7 +1093,9 @@ function SettingsPageContent() {
                       </p>
                       <p className="mt-1 text-sm text-navy-500">
                         {myRoles.length > 0
-                          ? myRoles.join(", ")
+                          ? myRoles
+                              .map((role) => role.charAt(0).toUpperCase() + role.slice(1).replaceAll("_", " "))
+                              .join(", ")
                           : "No explicit role assigned"}
                       </p>
                     </div>

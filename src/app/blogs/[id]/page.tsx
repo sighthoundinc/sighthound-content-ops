@@ -31,7 +31,13 @@ import {
   canTransitionWriterStatus,
 } from "@/lib/permissions";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
-import { PUBLISHER_STATUSES, SITES, WRITER_STATUSES } from "@/lib/status";
+import {
+  PUBLISHER_STATUSES,
+  PUBLISHER_STATUS_LABELS,
+  SITES,
+  WRITER_STATUSES,
+  WRITER_STATUS_LABELS,
+} from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
   BlogHistoryRecord,
@@ -41,7 +47,7 @@ import type {
   PublisherStageStatus,
   WriterStageStatus,
 } from "@/lib/types";
-import { formatDateInput, toTitleCase } from "@/lib/utils";
+import { formatDateInput } from "@/lib/utils";
 import { formatDateInTimezone } from "@/lib/format-date";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
@@ -1653,7 +1659,7 @@ export default function BlogDetailPage() {
                             : false
                         }
                       >
-                        {toTitleCase(status)}
+                        {WRITER_STATUS_LABELS[status]}
                       </option>
                     ))}
                   </select>
@@ -1750,7 +1756,7 @@ export default function BlogDetailPage() {
                             : false
                         }
                       >
-                        {toTitleCase(status)}
+                        {PUBLISHER_STATUS_LABELS[status]}
                       </option>
                     ))}
                   </select>

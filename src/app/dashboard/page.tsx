@@ -94,8 +94,6 @@ import { UI_VOCAB } from "@/lib/ui-vocab";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   PublisherStatusBadge,
-  StatusBadge,
-  WorkflowStageBadge,
   WriterStatusBadge,
 } from "@/components/status-badge";
 import {
@@ -4944,15 +4942,17 @@ export default function DashboardPage() {
             statusBadges={
               activeBlog ? (
                 <>
-                  <WorkflowStageBadge
-                    stage={getWorkflowStage({
-                      writerStatus: activeBlog.writer_status,
-                      publisherStatus: activeBlog.publisher_status,
-                    })}
-                  />
-                  <StatusBadge status={activeBlog.overall_status} />
-                  <WriterStatusBadge status={activeBlog.writer_status} />
-                  <PublisherStatusBadge status={activeBlog.publisher_status} />
+                  {/* One labelled chip per stage. Workflow stage and overall
+                      status are in the Overview section below; repeating
+                      them here read as "Published, Published, Published". */}
+                  <span className="inline-flex items-center gap-1 text-xs text-navy-500">
+                    Writing
+                    <WriterStatusBadge status={activeBlog.writer_status} />
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-navy-500">
+                    Publishing
+                    <PublisherStatusBadge status={activeBlog.publisher_status} />
+                  </span>
                 </>
               ) : null
             }

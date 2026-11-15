@@ -95,7 +95,12 @@ export default function ResourcesPage() {
               a piece is in, who owns the next step, and what needs to happen before it can move
               forward.
             </p>
-            <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+            <div
+              className="-mx-3 overflow-x-auto px-3 focus-visible:outline-none focus-visible:shadow-brand-focus sm:mx-0 sm:px-0"
+              tabIndex={0}
+              role="region"
+              aria-label="Scrollable table"
+            >
               <table className="min-w-[640px] border-collapse text-left text-sm sm:min-w-full">
                 <thead>
                   <tr className="border-b border-[color:var(--sh-gray-200)] text-ink">
@@ -162,7 +167,12 @@ export default function ResourcesPage() {
               the creative, and the final stage only closes once a real live link is saved so we
               always have proof of the post.
             </p>
-            <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+            <div
+              className="-mx-3 overflow-x-auto px-3 focus-visible:outline-none focus-visible:shadow-brand-focus sm:mx-0 sm:px-0"
+              tabIndex={0}
+              role="region"
+              aria-label="Scrollable table"
+            >
               <table className="min-w-[760px] border-collapse text-left text-sm sm:min-w-full">
                 <thead>
                   <tr className="border-b border-[color:var(--sh-gray-200)] text-ink">
@@ -246,7 +256,12 @@ export default function ResourcesPage() {
               side takes it live. Each phase has its own review step so nothing ships without a second
               set of eyes.
             </p>
-            <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+            <div
+              className="-mx-3 overflow-x-auto px-3 focus-visible:outline-none focus-visible:shadow-brand-focus sm:mx-0 sm:px-0"
+              tabIndex={0}
+              role="region"
+              aria-label="Scrollable table"
+            >
               <table className="min-w-[760px] border-collapse text-left text-sm sm:min-w-full">
                 <thead>
                   <tr className="border-b border-[color:var(--sh-gray-200)] text-ink">

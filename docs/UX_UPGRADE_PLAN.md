@@ -23,6 +23,7 @@ Tracks implementation state for the 20-initiative UI/UX upgrade sequenced in fou
 | `DialogFocusScope` | ConfirmationModal, DetailDrawer, command palette, Quick Create, Shortcuts, Ask AI panel, blog import, name resolution, bulk preview, and inline modals/drawers on Ideas, Social Posts, Calendar, Settings | Focus moves into the dialog, Tab stays inside, focus returns to the trigger on close. |
 | `UnsavedChangesGuard` | `/blogs/new`, `/blogs/[id]`, `/social-posts/[id]` | Leaving with unsaved edits asks to keep editing or discard; tab close/reload shows the browser prompt. |
 | Skip link + keyboard-openable rows | `AppShell`, `DataTable` | "Skip to content" is the first tab stop; rows with a click action open with Enter/Space. |
+| Off-canvas mobile menu + overflow safety net | `AppShell` (below 768px), `globals.css`, `DataPageToolbar`, calendar shell | On phones the sidebar becomes a menu opened from the header; no page scrolls sideways at 320–375px. Calendar grids keep a readable width and scroll inside their own section. |
 | `LoadErrorState` | Home, Dashboard, My Tasks, Blogs, Social Posts, Ideas, CardBoard, Inbox | A failed load shows an inline error with "Try again" instead of zeros or an empty state. |
 | `EmptyState` (via `DataPageEmptyState`) | Dashboard, My Tasks, Blogs, Social Posts, Ideas list empty states | One consistent empty-state look; backed by `UI_VOCAB.emptyStates` where applicable. |
 | Sidebar auto-collapse | `useSidebarState` | Below 1400px auto-collapses the first time; explicit user toggle wins afterwards. |

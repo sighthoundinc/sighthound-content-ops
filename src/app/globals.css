@@ -242,6 +242,23 @@ optgroup,
   font-variation-settings: inherit;
 }
 
+/* Small-screen overflow safety net.
+   1. A <select> is as wide as its longest <option> by default, so one long
+      blog title can push a whole page sideways. Cap form controls to their
+      container.
+   2. Long unbroken strings (URLs, slugs, pasted titles) wrap instead of
+      forcing horizontal scroll. Table cells are excluded so column sizing
+      and truncation keep working. */
+select,
+input,
+textarea {
+  max-width: 100%;
+}
+
+main :where(h1, h2, h3, h4, h5, p, li, a, label):not(:where(table *)) {
+  overflow-wrap: anywhere;
+}
+
 .interactive-link {
   cursor: pointer;
   text-decoration: underline;

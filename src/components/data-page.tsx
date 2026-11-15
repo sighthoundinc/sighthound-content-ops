@@ -101,7 +101,7 @@ export function DataPageToolbar({
     <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3">
       <div className="flex flex-wrap items-center gap-2">
         {showSearch ? (
-          <label className="relative min-w-[16rem] flex-1">
+          <label className="relative min-w-0 flex-1 basis-64">
             <input
               type="search"
               value={searchValue}
@@ -129,7 +129,11 @@ export function DataPageToolbar({
         ) : null}
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
-      {filters ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{filters}</div> : null}
+      {filters ? (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 [&>*]:min-w-0">
+          {filters}
+        </div>
+      ) : null}
     </section>
   );
 }

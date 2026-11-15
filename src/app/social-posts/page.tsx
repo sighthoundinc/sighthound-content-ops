@@ -2758,7 +2758,7 @@ function SocialPostsPageContent() {
                   onChange={(event) => {
                     setAssociatedBlogFilter(event.target.value);
                   }}
-                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  className="focus-field min-w-0 max-w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500 sm:max-w-xs"
                 >
                   <option value="all">All Blogs</option>
                   {Array.from(
@@ -2979,6 +2979,7 @@ function SocialPostsPageContent() {
                 }}
                 onModeChange={setCalendarMode}
               />
+              <div className="space-y-3 max-md:overflow-x-auto">
               <CalendarWeekdayHeaderRow
                 labels={weekdayLabels}
                 todayColumnIndex={todayWeekdayColumnIndex}
@@ -3050,6 +3051,7 @@ function SocialPostsPageContent() {
                   );
                 })}
               </CalendarGridSurface>
+              </div>
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Unscheduled

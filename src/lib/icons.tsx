@@ -38,6 +38,7 @@ import {
   FilterX,
   House,
   Info,
+  Menu,
   Kanban,
   Lightbulb,
   Link2,
@@ -136,6 +137,7 @@ export function Share2Icon(props: IconProps) { return renderIcon(Share2, props);
 export function SlackIcon(props: IconProps) { return renderIcon(Slack, props); }
 export function SparkleIcon(props: IconProps) { return renderIcon(Sparkle, props); }
 export function UploadIcon(props: IconProps) { return renderIcon(Upload, props); }
+export function MenuIcon(props: IconProps) { return renderIcon(Menu, props); }
 export function XIcon(props: IconProps) { return renderIcon(X, props); }
 
 // Convenience aliases matching the old `AppIconName` keys, so mechanical

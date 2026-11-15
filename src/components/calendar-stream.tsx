@@ -214,7 +214,9 @@ export function CalendarStreamView({
 
   return (
     <div
-      className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white"
+      // Below md the week grid keeps a readable minimum width; the calendar
+      // section scrolls sideways instead of crushing seven columns.
+      className="rounded-lg border border-[color:var(--sh-gray-200)] bg-white max-md:min-w-[44rem]"
     >
       {/* Sticky weekday header — relies on page scroll; parent must NOT be overflow-hidden */}
       <div

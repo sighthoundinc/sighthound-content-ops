@@ -37,8 +37,8 @@ export default async function HomePage() {
     <main className="min-h-screen bg-[color:var(--sh-gray)] px-4 py-8 sm:px-6 lg:py-12">
       <div className="mx-auto max-w-6xl">
         <section className="relative overflow-hidden rounded-lg border border-[color:var(--sh-navy-700)] bg-ink p-8 shadow-brand-md sm:p-10">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blurple-100">
                 Today&apos;s relay
               </p>
@@ -47,7 +47,7 @@ export default async function HomePage() {
               </h1>
             </div>
             {summary && roleDisplay && (
-              <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
+              <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
                 {roleDisplay}
                 {hasMultipleRoles && " (Multiple roles)"}
               </span>
@@ -129,8 +129,8 @@ export default async function HomePage() {
                 View all
               </Link>
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                   Required by: {requiredByLabel}
                 </p>
@@ -155,7 +155,7 @@ export default async function HomePage() {
                   </ul>
                 )}
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                   Waiting on Others
                 </p>

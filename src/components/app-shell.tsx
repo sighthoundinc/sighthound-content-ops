@@ -22,7 +22,7 @@ import {
 } from "@/lib/shortcuts";
 import { setActiveModal, getActiveModal } from "@/lib/modal-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { AppIcon, BellIcon, ChevronDownIcon, ChevronRightIcon, SearchIcon, type AppIconName } from "@/lib/icons";
+import { AppIcon, BellIcon, ChevronDownIcon, ChevronRightIcon, MenuIcon, SearchIcon, type AppIconName } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/tooltip";
 import { useAuth } from "@/providers/auth-provider";
@@ -100,6 +100,9 @@ export function AppShell({
     markAsRead,
   } = useNotifications();
   const { collapsed, setCollapsed } = useSidebarState();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  // The mobile menu always renders expanded, whatever the desktop preference.
+  const navCollapsed = isMobileNavOpen ? false : collapsed;
   const { density } = useDensityPreference();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -110,6 +113,30 @@ export function AppShell({
     null
   );
   const [quickViewError, setQuickViewError] = useState<string | null>(null);
+  useEffect(() => {
+    // Navigating closes the mobile menu.
+    setIsMobileNavOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    if (!isMobileNavOpen) {
+      return;
+    }
+    // Lock page scroll behind the menu, and close it if the viewport grows
+    // past the mobile breakpoint (rotation, resize).
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const desktopQuery = window.matchMedia("(min-width: 768px)");
+    const handleChange = () => {
+      if (desktopQuery.matches) {
+        setIsMobileNavOpen(false);
+      }
+    };
+    desktopQuery.addEventListener("change", handleChange);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      desktopQuery.removeEventListener("change", handleChange);
+    };
+  }, [isMobileNavOpen]);
   const broadcastGlobalPopoverClose = useCallback(() => {
     window.dispatchEvent(new CustomEvent("app:close-popovers"));
   }, []);
@@ -616,7 +643,20 @@ export function AppShell({
         Skip to content
       </a>
       <header className="border-b border-[color:var(--sh-gray-200)] bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-1">
+          <button
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={isMobileNavOpen}
+            aria-controls="app-sidebar"
+            className="pressable inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-navy-500 hover:bg-blurple-50 hover:text-ink focus-visible:outline-none focus-visible:shadow-brand-focus md:hidden"
+            onClick={() => {
+              setIsMobileNavOpen(true);
+            }}
+          >
+            <MenuIcon boxClassName="h-5 w-5" size={18} />
+          </button>
           <Link
             href="/"
             className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-blurple-50"
@@ -661,6 +701,7 @@ export function AppShell({
               <span className="block text-xs text-navy-500">Content Relay</span>
             </span>
           </Link>
+          </div>
 
           <div className="flex items-center gap-2">
             <button
@@ -817,7 +858,7 @@ export function AppShell({
                 <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--sh-gray-200)] text-xs font-semibold text-navy-500">
                   {profileInitials || "U"}
                 </span>
-                <span className="max-w-[160px] truncate">{profileDisplayName}</span>
+                <span className="hidden max-w-[160px] truncate sm:inline">{profileDisplayName}</span>
                 <ChevronRightIcon boxClassName="h-4 w-4"
                   size={12}
                   className={cn(
@@ -911,16 +952,42 @@ export function AppShell({
       ) : null}
 
       <div className="flex min-h-[calc(100vh-8rem)] w-full bg-[color:var(--sh-gray)]">
+        {isMobileNavOpen ? (
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="fixed inset-0 z-[105] bg-ink/40 md:hidden"
+            onClick={() => {
+              setIsMobileNavOpen(false);
+            }}
+          />
+        ) : null}
         <aside
           ref={sidebarRef}
+          id="app-sidebar"
+          role={isMobileNavOpen ? "dialog" : undefined}
+          aria-modal={isMobileNavOpen ? true : undefined}
+          aria-label={isMobileNavOpen ? "Menu" : undefined}
           className={cn(
-            "sticky top-0 h-screen shrink-0 flex flex-col border-r border-[color:var(--sh-gray-200)] bg-white transition-[width] duration-200 ease-in-out motion-reduce:transition-none",
-            collapsed ? "w-[72px]" : "w-[240px]"
+            "h-screen shrink-0 flex flex-col border-r border-[color:var(--sh-gray-200)] bg-white transition-[width] duration-200 ease-in-out motion-reduce:transition-none md:sticky md:top-0",
+            // Below md the sidebar is an off-canvas menu: hidden until the
+            // header menu button opens it, then a full-height overlay.
+            isMobileNavOpen
+              ? "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[110] max-md:w-[280px] max-md:max-w-[85vw] max-md:shadow-brand-lg"
+              : "max-md:hidden",
+            collapsed ? "md:w-[72px]" : "md:w-[240px]"
           )}
         >
+          {isMobileNavOpen ? (
+            <DialogFocusScope
+              onClose={() => {
+                setIsMobileNavOpen(false);
+              }}
+            />
+          ) : null}
           {/* Sidebar header with toggle */}
-          <div className={cn("shrink-0 py-3", collapsed ? "px-1" : "px-2")}>
-            {collapsed ? (
+          <div className={cn("shrink-0 py-3", navCollapsed ? "px-1" : "px-2")}>
+            {navCollapsed ? (
               <Tooltip
                 content="Open sidebar"
                 delay={100}
@@ -928,13 +995,26 @@ export function AppShell({
               >
                 <SidebarToggle
                   ref={sidebarToggleRef}
-                  collapsed={collapsed}
+                  collapsed={navCollapsed}
                   onToggle={handleSidebarToggle}
                 />
               </Tooltip>
             ) : (
               <div className="flex items-center justify-between">
                 <span className="px-1 text-xs font-medium text-navy-500">Menu</span>
+                {isMobileNavOpen ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-11"
+                    onClick={() => {
+                      setIsMobileNavOpen(false);
+                    }}
+                  >
+                    Close
+                  </Button>
+                ) : (
                 <Tooltip
                   content="Close sidebar"
                   delay={100}
@@ -942,10 +1022,11 @@ export function AppShell({
                 >
                   <SidebarToggle
                     ref={sidebarToggleRef}
-                    collapsed={collapsed}
+                    collapsed={navCollapsed}
                     onToggle={handleSidebarToggle}
                   />
                 </Tooltip>
+                )}
               </div>
             )}
           </div>
@@ -957,7 +1038,7 @@ export function AppShell({
                   const navKey = `${item.href}-${item.label}`;
                   const navItemClassName = cn(
                     "pressable group flex w-full min-h-11 items-center rounded-md motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-brand-focus",
-                    collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2",
+                    navCollapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2",
                     isActive
                       ? "bg-ink text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)] hover:bg-ink hover:text-white"
                       : "text-navy-500 font-medium hover:bg-blurple-50 hover:text-ink"
@@ -967,7 +1048,7 @@ export function AppShell({
                     <Link
                       href={item.href}
                       className={navItemClassName}
-                      aria-label={collapsed ? item.label : undefined}
+                      aria-label={navCollapsed ? item.label : undefined}
                       aria-current={isActive ? "page" : undefined}
                     >
                       <AppIcon
@@ -978,11 +1059,11 @@ export function AppShell({
                           isActive ? "text-white" : "text-navy-500/60 group-hover:text-navy-500"
                         )}
                       />
-                      {!collapsed ? <span className="text-sm">{item.label}</span> : null}
+                      {!navCollapsed ? <span className="text-sm">{item.label}</span> : null}
                     </Link>
                   );
 
-                  if (collapsed) {
+                  if (navCollapsed) {
                     return (
                       <Tooltip
                         key={navKey}
@@ -1043,13 +1124,13 @@ export function AppShell({
               })()}
             </nav>
           </div>
-          {!collapsed && sidebarContent ? (
+          {!navCollapsed && sidebarContent ? (
             <div className="shrink-0 border-t border-[color:var(--sh-gray-200)] px-1 pt-3 pb-3">{sidebarContent}</div>
           ) : null}
-          {!collapsed ? <SidebarVersionFooter /> : null}
+          {!navCollapsed ? <SidebarVersionFooter /> : null}
         </aside>
         <div className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-7xl px-6 py-6">
+          <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
             <main id="main-content" tabIndex={-1} className="min-w-0 focus:outline-none">
               {children}
             </main>

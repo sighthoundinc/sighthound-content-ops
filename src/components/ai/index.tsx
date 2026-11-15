@@ -1,4 +1,4 @@
-export { AIFloatingButton } from "./ai-floating-button";
+export { AskAIHeaderButton } from "./ask-ai-header-button";
 export { AIChatPanel } from "./ai-chat-panel";
 export { AIMessage } from "./ai-message";
 export { AIBlockerCard } from "./ai-blocker-card";

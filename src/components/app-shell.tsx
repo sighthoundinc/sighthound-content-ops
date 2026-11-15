@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getUserRoles } from "@/lib/roles";
 
+import { AskAIHeaderButton } from "@/components/ai/ask-ai-header-button";
 import { Button } from "@/components/button";
 import { KbdShortcut } from "@/components/kbd-shortcut";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
@@ -696,7 +697,7 @@ export function AppShell({
                 </span>
               )}
             </div>
-            <span className="leading-tight">
+            <span className="hidden leading-tight min-[420px]:block">
               <span className="block text-sm font-semibold text-ink">Sighthound</span>
               <span className="block text-xs text-navy-500">Content Relay</span>
             </span>
@@ -704,6 +705,7 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-2">
+            <AskAIHeaderButton />
             <button
               type="button"
               aria-label="Search and commands"
@@ -1130,7 +1132,7 @@ export function AppShell({
           {!navCollapsed ? <SidebarVersionFooter /> : null}
         </aside>
         <div className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-7xl px-4 pb-24 pt-5 sm:px-6 sm:pt-6">
+          <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
             <main id="main-content" tabIndex={-1} className="min-w-0 focus:outline-none">
               {children}
             </main>

@@ -41,7 +41,7 @@ function NewBlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { hasPermission, session, user } = useAuth();
-  const { showError } = useAlerts();
+  const { showError, showWarning } = useAlerts();
   const sourceIdeaId = searchParams.get("ideaId");
   const requestedScheduledPublishDate = searchParams.get("scheduled_publish_date");
   const [users, setUsers] = useState<ProfileRecord[]>([]);
@@ -285,36 +285,31 @@ function NewBlogPageContent() {
       return;
     }
 
+    // The blog now exists. From here on never strand the user on this form:
+    // resubmitting would only hit "slug already exists". Continue to the new
+    // blog and report anything that could not be saved alongside it.
+    let followUpWarning: string | null = null;
     const trimmedInitialComment = initialComment.trim();
     if (trimmedInitialComment) {
       if (!canCreateComments) {
-        setError("You do not have permission to add comments.");
-        setIsSubmitting(false);
-        return;
-      }
-      const commentResponse = await fetch(`/api/blogs/${createdBlogId}/comments`, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${session.access_token}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ comment: trimmedInitialComment }),
-      }).catch(() => null);
-      if (!commentResponse) {
-        setError("Blog created, but the initial comment couldn't be saved.");
-        setIsSubmitting(false);
-        return;
-      }
-      const commentPayload = await parseApiResponseJson<Record<string, unknown>>(commentResponse);
-      if (isApiFailure(commentResponse, commentPayload)) {
-        setError(
-          getApiErrorMessage(
-            commentPayload,
-            "Blog created, but the initial comment couldn't be saved."
-          )
-        );
-        setIsSubmitting(false);
-        return;
+        followUpWarning =
+          "Blog created, but you do not have permission to add comments.";
+      } else {
+        const commentResponse = await fetch(`/api/blogs/${createdBlogId}/comments`, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${session.access_token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ comment: trimmedInitialComment }),
+        }).catch(() => null);
+        const commentPayload = commentResponse
+          ? await parseApiResponseJson<Record<string, unknown>>(commentResponse)
+          : null;
+        if (!commentResponse || isApiFailure(commentResponse, commentPayload)) {
+          followUpWarning =
+            "Blog created, but the initial comment couldn't be saved. Add it again from the Comments section.";
+        }
       }
     }
 
@@ -333,6 +328,9 @@ function NewBlogPageContent() {
       }
     }
 
+    if (followUpWarning) {
+      showWarning(followUpWarning);
+    }
     setHasEdited(false);
     setIsSubmitting(false);
     router.push(`/blogs/${createdBlogId}`);

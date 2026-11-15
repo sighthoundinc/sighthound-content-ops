@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { NEXT_ACTION_LABELS, STATUS_LABELS } from '@/lib/social-post-workflow';
+import { NEXT_ACTION_LABELS } from '@/lib/social-post-workflow';
 import type { SocialPostStatus } from '@/lib/types';
 import { SocialPostStatusBadge } from './status-badge';
 
@@ -49,14 +49,12 @@ export function SocialPostStatusInfo({
   );
 
   const nextAction = useMemo(() => NEXT_ACTION_LABELS[status] || 'Continue', [status]);
-  const statusLabel = useMemo(() => STATUS_LABELS[status] || status, [status]);
 
   return (
     <div className="space-y-1">
-      {/* Status badge and label */}
+      {/* Status badge (the badge already carries the label) */}
       <div className="flex items-center gap-2">
         <SocialPostStatusBadge status={status} />
-        <span className="text-xs font-medium text-navy-500">{statusLabel}</span>
       </div>
 
       {/* Ownership and next action */}

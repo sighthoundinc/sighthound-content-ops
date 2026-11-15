@@ -44,7 +44,7 @@ export function DataPageHeader({
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div className="space-y-1">
-        <h2 className="section-title">{title}</h2>
+        <h1 className="section-title">{title}</h1>
         {description ? <p className="body-text text-navy-500">{description}</p> : null}
       </div>
       {primaryAction ? <div>{primaryAction}</div> : null}

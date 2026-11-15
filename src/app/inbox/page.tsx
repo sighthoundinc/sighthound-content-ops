@@ -149,8 +149,8 @@ function InboxView() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-6 py-6">
-      <header className="flex items-center justify-between">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-0 py-2 sm:px-6 sm:py-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="page-title">Inbox</h1>
           <p className="meta-text mt-1 text-navy-500">
@@ -167,7 +167,7 @@ function InboxView() {
           </Link>
         </div>
       </header>
-      <nav className="flex items-center gap-1 border-b border-[color:var(--sh-gray-200)]">
+      <nav className="flex flex-wrap items-center gap-1 border-b border-[color:var(--sh-gray-200)]">
         <TabButton
           label="Required"
           count={counts.required}

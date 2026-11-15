@@ -1518,7 +1518,7 @@ export default function CalendarPage() {
           />
           <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/70 p-3">
             {/* Row 1: Month Navigation + Today Chip + Mode Toggle */}
-            <div className="flex items-center justify-between gap-4 rounded-md bg-white p-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md bg-white p-3">
               {/* Month label (left) */}
               <div className="text-sm font-semibold text-ink">
                 {mode === "month"
@@ -1764,7 +1764,7 @@ export default function CalendarPage() {
             </section>
           ) : (
             <>
-              <section className="space-y-3">
+              <section className="space-y-3 max-md:overflow-x-auto">
                 {dragPreviewMessage ? (
                   <p className="rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-3 py-2 text-xs font-medium text-blurple-700">
                     {dragPreviewMessage}
@@ -2056,8 +2056,8 @@ export default function CalendarPage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="rounded-md border border-[color:var(--sh-gray-200)] bg-white">
-                    <table className="w-full table-fixed">
+                  <div className="overflow-x-auto rounded-md border border-[color:var(--sh-gray-200)] bg-white">
+                    <table className="w-full table-fixed max-md:min-w-[40rem]">
                       <colgroup>
                         <col className="w-20 sm:w-24" />
                         <col className="w-12 sm:w-14" />

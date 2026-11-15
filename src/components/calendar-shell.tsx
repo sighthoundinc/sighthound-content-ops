@@ -12,7 +12,7 @@ export function CalendarWeekdayHeaderRow({
   className?: string;
 }) {
   return (
-    <div className={cn("grid grid-cols-7 gap-2", className)}>
+    <div className={cn("grid grid-cols-7 gap-2 max-md:min-w-[44rem]", className)}>
       {labels.map((label, index) => (
         <div key={`${label}-${index}`} className="flex flex-col items-center justify-center gap-1">
           {todayColumnIndex === index ? (
@@ -45,7 +45,9 @@ export function CalendarGridSurface({
   return (
     <div
       className={cn(
-        "rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/70 p-2",
+        // Below md the 7-column grid keeps a readable minimum width; the
+        // parent section scrolls sideways instead of crushing the tiles.
+        "rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)]/70 p-2 max-md:min-w-[44rem]",
         surfaceClassName
       )}
     >

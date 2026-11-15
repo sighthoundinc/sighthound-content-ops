@@ -213,7 +213,7 @@ export function ConnectedServicesForm() {
           return (
             <div
               key={service.key}
-              className="flex items-start justify-between rounded-md border border-[color:var(--sh-gray-200)] bg-white px-4 py-3"
+              className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-4 py-3"
             >
               <div className="flex items-start gap-3">
                 <AppIcon
@@ -222,8 +222,8 @@ export function ConnectedServicesForm() {
                   size={20}
                   className={isConnected ? "text-navy-500" : "text-navy-500/60"}
                 />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h4 className="text-sm font-medium text-ink">
                       {service.name}
                     </h4>

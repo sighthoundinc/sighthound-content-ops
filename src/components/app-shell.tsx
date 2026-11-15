@@ -1130,7 +1130,7 @@ export function AppShell({
           {!navCollapsed ? <SidebarVersionFooter /> : null}
         </aside>
         <div className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
+          <div className="mx-auto w-full max-w-7xl px-4 pb-24 pt-5 sm:px-6 sm:pt-6">
             <main id="main-content" tabIndex={-1} className="min-w-0 focus:outline-none">
               {children}
             </main>

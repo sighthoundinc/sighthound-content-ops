@@ -1064,9 +1064,15 @@ export default function BlogCardBoardPage() {
                                     </p>
                                   </div>
                                 )}
-                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                  <WriterStatusBadge status={blog.writer_status} />
-                                  <PublisherStatusBadge status={blog.publisher_status} />
+                                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                  <span className="inline-flex items-center gap-1.5 text-xs text-navy-500">
+                                    Writer:
+                                    <WriterStatusBadge status={blog.writer_status} />
+                                  </span>
+                                  <span className="inline-flex items-center gap-1.5 text-xs text-navy-500">
+                                    Publisher:
+                                    <PublisherStatusBadge status={blog.publisher_status} />
+                                  </span>
                                 </div>
                               </article>
                             );

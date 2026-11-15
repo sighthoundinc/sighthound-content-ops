@@ -237,7 +237,7 @@ function AlertCard({
             {item.message}
           </p>
           {item.dedupCount > 1 ? (
-            <span className="text-[10px] text-navy-500">({item.dedupCount}x)</span>
+            <span className="text-xs text-navy-500">({item.dedupCount}x)</span>
           ) : null}
         </div>
         {item.actionLabel && item.onAction ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { clearClientCache } from "@/lib/client-cache";
 import {
   createContext,
   useCallback,
@@ -111,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(nextSession?.user ?? null);
 
     if (!nextSession?.user?.id) {
+      clearClientCache();
       setProfile(null);
       setPermissions([]);
       setGoogleConnected(false);
@@ -241,6 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshIntegrations,
     signOut: async () => {
       const supabase = getSupabaseBrowserClient();
+      clearClientCache();
       await supabase.auth.signOut();
     },
   };

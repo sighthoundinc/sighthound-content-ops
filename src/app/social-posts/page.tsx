@@ -1,5 +1,6 @@
 "use client";
 
+import { hasClientCache, readClientCache, writeClientCache } from "@/lib/client-cache";
 import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -522,9 +523,9 @@ function SocialPostCard({
           />
         </div>
         {!canTransition && post.status !== "published" ? (
-          <p className="mt-1 text-[11px] text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
+          <p className="mt-1 text-xs text-amber-700">{ASSIGNED_USER_HELPER_TEXT}</p>
         ) : null}
-        <p className="mt-2 text-[11px] text-navy-500/60">{linkCount} published links</p>
+        <p className="mt-2 text-xs text-navy-500/60">{linkCount} published links</p>
       </button>
       <div className="absolute right-2 top-2">
         <button
@@ -633,6 +634,12 @@ function SocialStatusColumn({
   );
 }
 
+const SOCIAL_POSTS_CACHE_KEY = "social-posts:list";
+type SocialPostsCache = {
+  posts: SocialPostWithRelations[];
+  postLinks: SocialPostLinkRecord[];
+};
+
 function SocialPostsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -657,12 +664,21 @@ function SocialPostsPageContent() {
   const requestedTitle = searchParams.get("title");
   const requestedScheduledDate = searchParams.get("scheduled_date");
   const requestedAssociatedBlog = searchParams.get("associated_blog");
-  const [posts, setPosts] = useState<SocialPostWithRelations[]>([]);
-  const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [posts, setPosts] = useState<SocialPostWithRelations[]>(
+    () => readClientCache<SocialPostsCache>(SOCIAL_POSTS_CACHE_KEY)?.posts ?? []
+  );
+  const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>(
+    () => readClientCache<SocialPostsCache>(SOCIAL_POSTS_CACHE_KEY)?.postLinks ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => !hasClientCache(SOCIAL_POSTS_CACHE_KEY));
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  useEffect(() => {
+    if (!isLoading && !loadError) {
+      writeClientCache<SocialPostsCache>(SOCIAL_POSTS_CACHE_KEY, { posts, postLinks });
+    }
+  }, [isLoading, loadError, postLinks, posts]);
   const [view, setView] = useState<SocialPostsView>("list");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 180);
@@ -897,7 +913,10 @@ function SocialPostsPageContent() {
   useEffect(() => {
     const loadPosts = async () => {
       const supabase = getSupabaseBrowserClient();
-      setIsLoading(true);
+      // Keep cached rows on screen while refreshing; skeleton only when empty.
+      if (!hasClientCache(SOCIAL_POSTS_CACHE_KEY)) {
+        setIsLoading(true);
+      }
       setError(null);
       setLoadError(null);
 
@@ -3027,7 +3046,7 @@ function SocialPostsPageContent() {
                               }}
                             >
                               <p className="truncate font-medium">{post.title}</p>
-                              <p className="text-[10px] text-navy-500">
+                              <p className="text-xs text-navy-500">
                                 {SOCIAL_POST_STATUS_LABELS[post.status]}
                               </p>
                             </button>
@@ -3035,7 +3054,7 @@ function SocialPostsPageContent() {
                           {hiddenItemCount > 0 ? (
                             <button
                               type="button"
-                              className="w-full rounded-md border border-dashed border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1 text-[11px] font-medium text-navy-500 transition-colors hover:border-[color:var(--sh-gray-400)] hover:bg-blurple-50"
+                              className="w-full rounded-md border border-dashed border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1 text-xs font-medium text-navy-500 transition-colors hover:border-[color:var(--sh-gray-400)] hover:bg-blurple-50"
                               onClick={() => {
                                 setCalendarMode("week");
                                 setActiveMonth(day);

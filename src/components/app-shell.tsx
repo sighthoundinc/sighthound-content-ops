@@ -691,7 +691,7 @@ export function AppShell({
                   />
                 </>
               ) : (
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-ink text-[10px] font-semibold uppercase tracking-wide text-white">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-ink text-xs font-semibold uppercase tracking-wide text-white">
                   SH
                 </span>
               )}
@@ -734,7 +734,7 @@ export function AppShell({
               >
                 <BellIcon boxClassName="h-5 w-5" size={16} />
                 {unreadCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-xs font-semibold text-white">
                     {unreadCount}
                   </span>
                 ) : null}
@@ -1274,7 +1274,7 @@ export function AppShell({
             </div>
             <div className="mt-4 space-y-4 text-xs text-navy-500">
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-500">
                   Navigation
                 </p>
                 <div className="space-y-2">
@@ -1296,7 +1296,7 @@ export function AppShell({
                 </div>
               </div>
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-500">
                   Create
                 </p>
                 <div className="space-y-2">
@@ -1305,24 +1305,24 @@ export function AppShell({
                       <span>New Blog</span>
                       <KbdShortcut>N</KbdShortcut>
                     </div>
-                    <p className="mt-1 text-[10px] text-navy-500">Direct shortcut</p>
+                    <p className="mt-1 text-xs text-navy-500">Direct shortcut</p>
                   </div>
                   <div className="rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2">
                     <div className="flex items-center justify-between gap-3">
                       <span>New Idea / Social Post</span>
                       <KbdShortcut>Q</KbdShortcut>
                     </div>
-                    <p className="mt-1 text-[10px] text-navy-500">
+                    <p className="mt-1 text-xs text-navy-500">
                       Opens Quick Create. Use Up/Down arrow keys and Enter to select.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[10px] text-amber-800">
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
                 <p className="font-medium">Tip: Press Q, then Up/Down arrow keys to navigate, Enter to select action</p>
               </div>
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-500">
                   {pageShortcutScopeLabel} shortcuts
                 </p>
                 {pageShortcuts.length > 0 ? (

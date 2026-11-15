@@ -56,7 +56,7 @@ export function SelectionCart({
           {count} selected
         </span>
         {summary ? (
-          <span className="text-[11px] text-navy-500">{summary}</span>
+          <span className="text-xs text-navy-500">{summary}</span>
         ) : null}
       </div>
       <div className="flex items-center gap-1">

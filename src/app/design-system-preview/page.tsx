@@ -27,6 +27,7 @@ import {
   MoreIcon,
   WarningIcon,
 } from "@/lib/icons";
+import { ProtectedPage } from "@/components/protected-page";
 import { TYPOGRAPHY } from "@/lib/typography";
 
 import { DetailDrawerPreview } from "./detail-drawer-preview";
@@ -202,7 +203,17 @@ function PreviewButton({
   );
 }
 
+// Internal reference surface: admins only. Other signed-in users are sent
+// back to the dashboard by ProtectedPage.
 export default function DesignSystemPreviewPage() {
+  return (
+    <ProtectedPage allowedRoles={["admin"]}>
+      <DesignSystemPreviewContent />
+    </ProtectedPage>
+  );
+}
+
+function DesignSystemPreviewContent() {
   return (
     <main
       style={{

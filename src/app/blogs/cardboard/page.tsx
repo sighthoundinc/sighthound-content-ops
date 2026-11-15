@@ -1,5 +1,6 @@
 "use client";
 
+import { hasClientCache, readClientCache, writeClientCache } from "@/lib/client-cache";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -194,6 +195,9 @@ function getStageUpdatePayload(blog: BlogRecord, targetStage: BoardStage): Stage
   };
 }
 
+const CARDBOARD_CACHE_KEY = "blogs:cardboard";
+type CardBoardCache = { blogs: BlogRecord[]; authors: ProfileRecord[] };
+
 export default function BlogCardBoardPage() {
   const router = useRouter();
   const { hasPermission, session, user } = useAuth();
@@ -206,9 +210,13 @@ export default function BlogCardBoardPage() {
   const canCreateBlogs = permissionContract.canCreateBlog;
   const canAssignWriter = permissionContract.canChangeWriterAssignment;
 
-  const [blogs, setBlogs] = useState<BlogRecord[]>([]);
-  const [authors, setAuthors] = useState<ProfileRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [blogs, setBlogs] = useState<BlogRecord[]>(
+    () => readClientCache<CardBoardCache>(CARDBOARD_CACHE_KEY)?.blogs ?? []
+  );
+  const [authors, setAuthors] = useState<ProfileRecord[]>(
+    () => readClientCache<CardBoardCache>(CARDBOARD_CACHE_KEY)?.authors ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => !hasClientCache(CARDBOARD_CACHE_KEY));
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -227,9 +235,17 @@ export default function BlogCardBoardPage() {
   const [quickAddAuthorId, setQuickAddAuthorId] = useState("");
   const [isCreatingIdea, setIsCreatingIdea] = useState(false);
 
+  useEffect(() => {
+    if (!isLoading && !loadError) {
+      writeClientCache<CardBoardCache>(CARDBOARD_CACHE_KEY, { blogs, authors });
+    }
+  }, [authors, blogs, isLoading, loadError]);
   const loadBoardData = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
-    setIsLoading(true);
+    // Keep cached cards on screen while refreshing; skeleton only when empty.
+    if (!hasClientCache(CARDBOARD_CACHE_KEY)) {
+      setIsLoading(true);
+    }
     setError(null);
     setLoadError(null);
 
@@ -813,7 +829,7 @@ export default function BlogCardBoardPage() {
                               </span>
                             ) : null}
                           </p>
-                          <p className="text-[11px] uppercase tracking-wide text-navy-500">
+                          <p className="text-xs uppercase tracking-wide text-navy-500">
                             Open table view
                           </p>
                         </button>
@@ -825,7 +841,7 @@ export default function BlogCardBoardPage() {
                               className="space-y-2 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3"
                               onSubmit={handleQuickAddIdea}
                             >
-                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-navy-500">
+                              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-navy-500">
                                 Title
                                 <input
                                   value={quickAddTitle}
@@ -836,7 +852,7 @@ export default function BlogCardBoardPage() {
                                   className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2.5 py-2 text-sm font-normal normal-case tracking-normal text-navy-500"
                                 />
                               </label>
-                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-navy-500">
+                              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-navy-500">
                                 Product
                                 <select
                                   value={quickAddSite}
@@ -852,7 +868,7 @@ export default function BlogCardBoardPage() {
                                   ))}
                                 </select>
                               </label>
-                              <label className="space-y-1 text-[11px] font-medium uppercase tracking-wide text-navy-500">
+                              <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-navy-500">
                                 Author
                                 <select
                                   value={quickAddAuthorId}
@@ -967,7 +983,7 @@ export default function BlogCardBoardPage() {
                                       </Button>
                                       <Button
                                         type="button"
-                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] text-navy-500 hover:bg-blurple-50"
+                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-xs text-navy-500 hover:bg-blurple-50"
                                         aria-label="Copy blog title"
                                         onClick={() => {
                                           void copyValue(blog.title, "Copied title.");
@@ -1002,7 +1018,7 @@ export default function BlogCardBoardPage() {
                                       ) : null}
                                       <Button
                                         type="button"
-                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] text-navy-500 hover:bg-blurple-50"
+                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-xs text-navy-500 hover:bg-blurple-50"
                                         aria-label="Copy blog title"
                                         onClick={() => {
                                           void copyValue(blog.title, "Copied title.");
@@ -1012,7 +1028,7 @@ export default function BlogCardBoardPage() {
                                       </Button>
                                       <Button
                                         type="button"
-                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] text-navy-500 hover:bg-blurple-50"
+                                        className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-xs text-navy-500 hover:bg-blurple-50"
                                         aria-label="Copy blog URL"
                                         onClick={() => {
                                           void copyValue(blog.live_url ?? "", "Copied URL.");

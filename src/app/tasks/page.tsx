@@ -1,5 +1,6 @@
 "use client";
 
+import { hasClientCache, readClientCache, writeClientCache } from "@/lib/client-cache";
 import { formatDateInTimezone } from "@/lib/format-date";
 
 import Link from "next/link";
@@ -340,6 +341,19 @@ function getTaskReason({
 }
 
 
+const TASKS_CACHE_KEY = "tasks:queue";
+type TasksCache = {
+  blogs: BlogRecord[];
+  socialTasks: SocialTaskItem[];
+  taskAssignments: Map<
+    string,
+    Array<{
+      taskType: "writer_review" | "publisher_review";
+      assignedAt: string | null;
+    }>
+  >;
+};
+
 function MyTasksPageContent() {
   const searchParams = useSearchParams();
   const { user, session, hasPermission, profile } = useAuth();
@@ -353,9 +367,13 @@ function MyTasksPageContent() {
   const isAdmin = userRoles.includes("admin");
   const canExportCsv = permissionContract.canExportCsv;
   const canRunDataImport = hasPermission("run_data_import");
-  const [blogs, setBlogs] = useState<BlogRecord[]>([]);
-  const [socialTasks, setSocialTasks] = useState<SocialTaskItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [blogs, setBlogs] = useState<BlogRecord[]>(
+    () => readClientCache<TasksCache>(TASKS_CACHE_KEY)?.blogs ?? []
+  );
+  const [socialTasks, setSocialTasks] = useState<SocialTaskItem[]>(
+    () => readClientCache<TasksCache>(TASKS_CACHE_KEY)?.socialTasks ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => !hasClientCache(TASKS_CACHE_KEY));
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
@@ -397,13 +415,21 @@ function MyTasksPageContent() {
         assignedAt: string | null;
       }>
     >
-  >(new Map());
+  >(() => readClientCache<TasksCache>(TASKS_CACHE_KEY)?.taskAssignments ?? new Map());
   const taskRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+  useEffect(() => {
+    if (!isLoading && !loadError) {
+      writeClientCache<TasksCache>(TASKS_CACHE_KEY, { blogs, socialTasks, taskAssignments });
+    }
+  }, [blogs, isLoading, loadError, socialTasks, taskAssignments]);
   const loadTasks = useCallback(async () => {
     if (!user?.id || !session?.access_token) {
       return;
     }
-    setIsLoading(true);
+    // Keep cached rows on screen while refreshing; skeleton only when empty.
+    if (!hasClientCache(TASKS_CACHE_KEY)) {
+      setIsLoading(true);
+    }
     setError(null);
     setLoadError(null);
     const queueResponse = await fetch("/api/tasks/queue", {

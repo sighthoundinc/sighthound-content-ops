@@ -1,5 +1,6 @@
 "use client";
 
+import { hasClientCache, readClientCache, writeClientCache } from "@/lib/client-cache";
 import { formatDateInTimezone } from "@/lib/format-date";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -331,6 +332,8 @@ function isBoardStageQueryFilter(value: string | null): value is BoardStageQuery
   return value === "idea" || value === "writing" || value === "reviewing" || value === "publishing" || value === "published";
 }
 
+const BLOGS_CACHE_KEY = "blogs:list";
+
 function BlogLibraryPageContent() {
   const searchParams = useSearchParams();
   const { hasPermission, profile } = useAuth();
@@ -344,8 +347,10 @@ function BlogLibraryPageContent() {
   const canExportCsv = permissionContract.canExportCsv;
   const canExportSelectedCsv = permissionContract.canExportSelectedCsv;
   const canSelectRows = canExportSelectedCsv;
-  const [blogs, setBlogs] = useState<BlogRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [blogs, setBlogs] = useState<BlogRecord[]>(
+    () => readClientCache<BlogRecord[]>(BLOGS_CACHE_KEY) ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => !hasClientCache(BLOGS_CACHE_KEY));
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -379,9 +384,17 @@ function BlogLibraryPageContent() {
   const boardStageQuery = searchParams.get("boardStage");
   const shouldAutoOpenImport = searchParams.get("import") === "1";
 
+  useEffect(() => {
+    if (!isLoading && !loadError) {
+      writeClientCache(BLOGS_CACHE_KEY, blogs);
+    }
+  }, [blogs, isLoading, loadError]);
   const loadBlogs = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
-    setIsLoading(true);
+    // Keep cached rows on screen while refreshing; skeleton only when empty.
+    if (!hasClientCache(BLOGS_CACHE_KEY)) {
+      setIsLoading(true);
+    }
     setError(null);
     setLoadError(null);
 

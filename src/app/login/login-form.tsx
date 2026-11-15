@@ -235,7 +235,7 @@ export function LoginForm() {
           tabIndex={showEmailForm ? -1 : 0}
         >
           <span className="h-px flex-1 bg-[color:var(--sh-gray-200)]" aria-hidden />
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">
+          <span className="text-xs font-semibold uppercase tracking-[0.12em]">
             Sign in with email
           </span>
           <span className="h-px flex-1 bg-[color:var(--sh-gray-200)]" aria-hidden />
@@ -251,7 +251,7 @@ export function LoginForm() {
         >
           <div className="my-4 flex items-center gap-3" aria-hidden>
             <div className="h-px flex-1 bg-[color:var(--sh-gray-200)]" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-navy-500">
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-navy-500">
               or
             </span>
             <div className="h-px flex-1 bg-[color:var(--sh-gray-200)]" />

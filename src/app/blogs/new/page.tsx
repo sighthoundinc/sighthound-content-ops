@@ -355,7 +355,7 @@ function NewBlogPageContent() {
             <span className="text-navy-500">New</span>
           </nav>
           <header>
-            <h2 className="text-xl font-semibold text-ink">Add Blog</h2>
+            <h1 className="text-xl font-semibold text-ink">Add Blog</h1>
             <p className="text-sm text-navy-500">
               Create a new blog assignment for Sighthound or Redactor.
             </p>

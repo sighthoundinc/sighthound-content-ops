@@ -102,7 +102,7 @@ function SortableColumnItem({
             {label}
           </span>
           {!isVisible ? (
-            <span className="rounded-full bg-[color:var(--sh-gray-200)] px-1.5 py-0.5 text-[10px] font-medium text-navy-500">
+            <span className="rounded-full bg-[color:var(--sh-gray-200)] px-1.5 py-0.5 text-xs font-medium text-navy-500">
               Hidden
             </span>
           ) : null}

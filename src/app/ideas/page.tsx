@@ -1,5 +1,6 @@
 "use client";
 
+import { hasClientCache, readClientCache, writeClientCache } from "@/lib/client-cache";
 import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,8 @@ function formatDateTime(value: string, timezone?: string | null) {
   return formatDateInTimezone(value, timezone ?? undefined, "MMM d, yyyy h:mm a");
 }
 
+const IDEAS_CACHE_KEY = "ideas:list";
+
 export default function IdeasPage() {
   const router = useRouter();
   const { hasPermission, profile, session, user } = useAuth();
@@ -30,8 +33,10 @@ export default function IdeasPage() {
     () => createUiPermissionContract(hasPermission),
     [hasPermission]
   );
-  const [ideas, setIdeas] = useState<BlogIdeaRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [ideas, setIdeas] = useState<BlogIdeaRecord[]>(
+    () => readClientCache<BlogIdeaRecord[]>(IDEAS_CACHE_KEY) ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => !hasClientCache(IDEAS_CACHE_KEY));
   const [error, setError] = useState<string | null>(null);
   const [ideasLoadError, setIdeasLoadError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -53,7 +58,10 @@ export default function IdeasPage() {
   const isAdmin = useMemo(() => getUserRoles(profile).includes("admin"), [profile]);
 
   const loadIdeas = async () => {
-    setIsLoading(true);
+    // Keep cached rows on screen while refreshing; skeleton only when empty.
+    if (!hasClientCache(IDEAS_CACHE_KEY)) {
+      setIsLoading(true);
+    }
     setError(null);
     setIdeasLoadError(null);
     const supabase = getSupabaseBrowserClient();
@@ -77,6 +85,12 @@ export default function IdeasPage() {
   useEffect(() => {
     void loadIdeas();
   }, []);
+
+  useEffect(() => {
+    if (!isLoading && !ideasLoadError) {
+      writeClientCache(IDEAS_CACHE_KEY, ideas);
+    }
+  }, [ideas, ideasLoadError, isLoading]);
 
   useEffect(() => {
     if (!error) {
@@ -337,7 +351,7 @@ export default function IdeasPage() {
         <div className="space-y-6">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-ink">Blog Ideas</h2>
+              <h1 className="text-xl font-semibold text-ink">Blog Ideas</h1>
               <p className="text-sm text-navy-500">
                 Capture ideas quickly, then convert them into scheduled blog assignments.
               </p>

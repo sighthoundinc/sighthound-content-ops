@@ -28,6 +28,7 @@ import {
   OperationalTableFrame,
   OperationalTableMenuItem,
 } from "@/components/operational-table";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   getBlogPublishDate,
@@ -356,6 +357,7 @@ function MyTasksPageContent() {
   const [socialTasks, setSocialTasks] = useState<SocialTaskItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [todayDateKey] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [currentPage, setCurrentPage] = useState(1);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
@@ -403,18 +405,21 @@ function MyTasksPageContent() {
     }
     setIsLoading(true);
     setError(null);
+    setLoadError(null);
     const queueResponse = await fetch("/api/tasks/queue", {
       headers: {
         authorization: `Bearer ${session.access_token}`,
       },
     }).catch(() => null);
     if (!queueResponse) {
+      setLoadError("Couldn't load tasks. Please try again.");
       setError("Couldn't load tasks. Please try again.");
       setIsLoading(false);
       return;
     }
     const queuePayload = await parseApiResponseJson<TasksQueueResponse>(queueResponse);
     if (isApiFailure(queueResponse, queuePayload)) {
+      setLoadError("Couldn't load tasks. Please try again.");
       setError(getApiErrorMessage(queuePayload, "Couldn't load tasks. Please try again."));
       setIsLoading(false);
       return;
@@ -1779,6 +1784,13 @@ function MyTasksPageContent() {
                 </div>
               </section>
             </>
+          ) : loadError ? (
+            <LoadErrorState
+              description={loadError}
+              onRetry={() => {
+                void loadTasks();
+              }}
+            />
           ) : (
             <>
               <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">

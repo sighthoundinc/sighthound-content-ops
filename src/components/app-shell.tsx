@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -598,6 +599,22 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-[color:var(--sh-gray)]" data-density={density}>
+      <a
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main-content")?.focus();
+        }}
+        onKeyDown={(event) => {
+          // Keep Enter on the skip link from reaching page-level shortcuts.
+          if (event.key === "Enter") {
+            event.stopPropagation();
+          }
+        }}
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink focus:shadow-brand-focus"
+      >
+        Skip to content
+      </a>
       <header className="border-b border-[color:var(--sh-gray-200)] bg-surface">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3">
           <Link
@@ -1033,7 +1050,7 @@ export function AppShell({
         </aside>
         <div className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-7xl px-6 py-6">
-            <main className="min-w-0">
+            <main id="main-content" tabIndex={-1} className="min-w-0 focus:outline-none">
               {children}
             </main>
           </div>
@@ -1049,7 +1066,17 @@ export function AppShell({
               setIsQuickCreateOpen(false);
             }}
           />
-          <section className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Quick Create"
+            className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
+          >
+            <DialogFocusScope
+              onClose={() => {
+                setIsQuickCreateOpen(false);
+              }}
+            />
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-ink">Quick Create</h2>
@@ -1135,7 +1162,17 @@ export function AppShell({
               setIsShortcutModalOpen(false);
             }}
           />
-          <section className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Shortcuts"
+            className="relative z-10 w-full max-w-md rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
+          >
+            <DialogFocusScope
+              onClose={() => {
+                setIsShortcutModalOpen(false);
+              }}
+            />
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-ink">Shortcuts</h2>

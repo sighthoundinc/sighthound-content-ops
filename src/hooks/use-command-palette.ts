@@ -16,6 +16,8 @@ export interface UseCommandPaletteReturn {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   results: Command[];
+  /** True when the live content search failed (not when it found nothing). */
+  isSearchUnavailable: boolean;
   groupedResults: Record<string, Command[]>;
   selectedIndex: number;
   selectResult: (index: number) => void;
@@ -25,7 +27,8 @@ export interface UseCommandPaletteReturn {
 
 export function useCommandPalette(): UseCommandPaletteReturn {
   const pathname = usePathname();
-  const { hasPermission, profile } = useAuth();
+  const { hasPermission, profile, session } = useAuth();
+  const accessToken = session?.access_token ?? null;
   const { showError } = useAlerts();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -95,11 +98,18 @@ export function useCommandPalette(): UseCommandPaletteReturn {
   // Live cross-entity search via /api/search. Results appear as a
   // "results" category below the canonical navigation/create groups.
   const [liveResults, setLiveResults] = useState<Command[]>([]);
+  const [isSearchUnavailable, setIsSearchUnavailable] = useState(false);
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 180);
   useEffect(() => {
     const trimmed = debouncedSearchTerm.trim();
     if (!isOpen || trimmed.length < 2) {
       setLiveResults([]);
+      setIsSearchUnavailable(false);
+      return;
+    }
+    if (!accessToken) {
+      setLiveResults([]);
+      setIsSearchUnavailable(true);
       return;
     }
     const controller = new AbortController();
@@ -107,11 +117,18 @@ export function useCommandPalette(): UseCommandPaletteReturn {
       try {
         const response = await fetch(
           `/api/search?q=${encodeURIComponent(trimmed)}`,
-          { signal: controller.signal, cache: "no-store" }
+          {
+            signal: controller.signal,
+            cache: "no-store",
+            headers: { authorization: `Bearer ${accessToken}` },
+          }
         );
         if (!response.ok) {
+          setLiveResults([]);
+          setIsSearchUnavailable(true);
           return;
         }
+        setIsSearchUnavailable(false);
         const payload = (await response.json()) as {
           results?: Array<{
             id: string;
@@ -146,6 +163,8 @@ export function useCommandPalette(): UseCommandPaletteReturn {
       } catch (error) {
         if ((error as { name?: string }).name !== "AbortError") {
           console.warn("command palette search failed", error);
+          setLiveResults([]);
+          setIsSearchUnavailable(true);
         }
       }
     };
@@ -153,7 +172,7 @@ export function useCommandPalette(): UseCommandPaletteReturn {
     return () => {
       controller.abort();
     };
-  }, [debouncedSearchTerm, isOpen]);
+  }, [accessToken, debouncedSearchTerm, isOpen]);
 
   const results = useMemo(
     () => [...liveResults, ...baseResults],
@@ -274,6 +293,7 @@ export function useCommandPalette(): UseCommandPaletteReturn {
     searchTerm,
     setSearchTerm,
     results,
+    isSearchUnavailable,
     groupedResults,
     selectedIndex,
     selectResult,

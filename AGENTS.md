@@ -539,7 +539,9 @@ The following primitives are canonical. New code MUST import from these modules 
 4. **Next-action labels** use `socialNextAction()` / `blogNextAction()` from `src/lib/next-action.ts`. Blog next-action labels are exported as `BLOG_NEXT_ACTION_LABELS` — do not introduce page-specific verb mappings.
 5. **Clipboard** uses `copyText()` from `src/lib/clipboard.ts`; toasts must carry a semantic subject (`Copied Google Doc URL`) rather than a generic `Copied!`.
 6. **Skeletons** replace centered spinners on tables, drawers, and detail pages via `src/components/skeleton.tsx`.
-7. **Empty states** render `<EmptyState />` from `src/components/empty-state.tsx` with copy sourced from `UI_VOCAB.emptyStates`.
+7. **Empty states** render `<EmptyState />` from `src/components/empty-state.tsx` with copy sourced from `UI_VOCAB.emptyStates`. A failed load is NOT an empty state: render `<LoadErrorState />` from `src/components/load-error-state.tsx` (with a retry handler) in place of the empty state whenever page data fails to load. Toasts may supplement it but never replace it.
+   - **Modals and drawers** render `<DialogFocusScope />` from `src/components/dialog-focus-scope.tsx` as the first child of the panel carrying `role="dialog"`. It moves focus in, traps Tab, restores focus on close, and handles Escape when given `onClose`. Do not hand-roll focus or Escape handling in new dialogs.
+   - **Forms and detail pages with editable state** mount `<UnsavedChangesGuard isDirty={...} />` from `src/components/unsaved-changes-guard.tsx` so in-app navigation and tab close cannot silently discard edits.
 8. **Next-action primitives** render via `<NextActionCell />`, `<NextActionPill />`, `<NextActionRing />` under `src/components/next-action/`.
 9. **Bulk selection** uses `useBulkSelection()` + `<SelectionCart />` under `src/hooks` and `src/components/bulk/`. Bulk controls stay permission-gated and visible-with-disabled-state rather than hidden.
 10. **Saved views** go through `src/lib/saved-views.ts`. Storage is localStorage today; swap to `/api/saved-views` without changing exported signatures when the DB migration lands.

@@ -1,3 +1,4 @@
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import type { BlogRecord } from "@/lib/types";
 
 export interface BulkActionPreviewModalProps {
@@ -28,7 +29,13 @@ export function BulkActionPreviewModal({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Review changes"
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
+      >
+        <DialogFocusScope onClose={onCancel} />
         <h2 className="text-lg font-semibold text-ink">Review Changes</h2>
         <p className="mt-1 text-sm text-navy-500">
           This action will affect {affectedCount} blog{affectedCount !== 1 ? "s" : ""}.

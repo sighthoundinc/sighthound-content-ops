@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -1853,7 +1854,17 @@ function SettingsPageContent() {
                     className="absolute inset-0 bg-ink/30"
                     onClick={closeEditUserModal}
                   />
-                  <div className="relative z-10 w-full max-w-xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Edit user"
+                    className="relative z-10 w-full max-w-xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+                  >
+                    <DialogFocusScope
+                      onClose={() => {
+                        closeEditUserModal();
+                      }}
+                    />
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="text-base font-semibold text-ink">Edit User</h3>
@@ -2008,7 +2019,21 @@ function SettingsPageContent() {
                       }
                     }}
                   />
-                  <div className="relative z-10 w-full max-w-sm rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Set new password"
+                    className="relative z-10 w-full max-w-sm rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+                  >
+                    <DialogFocusScope
+                      onClose={() => {
+                        if (!isResettingPassword) {
+                          setIsResetPasswordModalOpen(false);
+                          setResetPasswordInput("");
+                          setResetPasswordError(null);
+                        }
+                      }}
+                    />
                     <h3 className="text-base font-semibold text-ink">Set New Password</h3>
                     <p className="mt-1 text-sm text-navy-500">
                       Set a new password for{" "}
@@ -2077,7 +2102,20 @@ function SettingsPageContent() {
                       }
                     }}
                   />
-                  <div className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl">
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Delete inactive users"
+                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl"
+                  >
+                    <DialogFocusScope
+                      onClose={() => {
+                        if (!isDeletingInactiveUsers) {
+                          setIsDeleteInactiveUsersModalOpen(false);
+                          setInactiveUsersConfirmationText("");
+                        }
+                      }}
+                    />
                     <h3 className="text-base font-semibold text-ink">
                       Delete all inactive users?
                     </h3>
@@ -2213,7 +2251,19 @@ function SettingsPageContent() {
                       }
                     }}
                   />
-                  <div className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl">
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Wipe app clean"
+                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl"
+                  >
+                    <DialogFocusScope
+                      onClose={() => {
+                        if (!isWipingAppClean) {
+                          setIsWipeAppCleanModalOpen(false);
+                        }
+                      }}
+                    />
                     <h3 className="text-base font-semibold text-ink">
                       WIPE APP CLEAN?
                     </h3>

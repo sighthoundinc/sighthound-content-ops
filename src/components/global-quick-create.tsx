@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGlobalQuickCreate } from "@/hooks/use-global-quick-create";
 import { useRouter } from "next/navigation";
@@ -149,6 +150,7 @@ export function GlobalQuickCreate() {
           aria-modal="true"
           aria-labelledby="quick-create-title"
         >
+          <DialogFocusScope />
           {/* Header */}
           <div className="border-b border-[color:var(--sh-gray-200)] px-6 py-4">
             <h2

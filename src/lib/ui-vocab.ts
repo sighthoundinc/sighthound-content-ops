@@ -89,6 +89,13 @@ export const UI_VOCAB = {
     permission: "You don’t have permission to do that.",
     lockedField: "This field is locked at the current stage.",
     ownershipBlocked: "Only the assigned user can take this action.",
+    // Load-failure state (see <LoadErrorState />). Shown in place of an
+    // empty state so a failed load never reads as "nothing to do".
+    loadFailedTitle: "Couldn’t load this view",
+    loadFailedDescription:
+      "Nothing was changed. Try again, or refresh the page if this keeps happening.",
+    retry: "Try again",
+    searchUnavailable: "Search is unavailable right now. Please try again.",
   },
   nextActions: {
     // Waiting states surfaced on list rows / detail pages when the current

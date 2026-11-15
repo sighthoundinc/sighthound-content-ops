@@ -9,6 +9,7 @@ import Link from "next/link";
 
 import { buttonClass } from "@/components/button";
 import { AppIcon, CheckIcon } from "@/lib/icons";
+import { UI_VOCAB } from "@/lib/ui-vocab";
 
 import { fetchHomeData } from "./home-data";
 import { HomeBucketLink } from "./home-bucket-link";
@@ -55,13 +56,25 @@ export default async function HomePage() {
           <p className="body-text mt-3 max-w-2xl !text-white/70">
             {hasAnyWork
               ? "Jump into what needs your attention now."
-              : "All caught up—no pending work right now."}
+              : error
+                ? "We couldn’t load your work right now."
+                : "All caught up—no pending work right now."}
           </p>
         </section>
 
         {error && (
-          <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-            {error}
+          <div
+            role="alert"
+            className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"
+          >
+            <span>{error}</span>
+            <Link
+              href="/"
+              prefetch={false}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {UI_VOCAB.errors.retry}
+            </Link>
           </div>
         )}
 

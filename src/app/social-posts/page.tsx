@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseRecordDeepLink } from "@/lib/record-deep-link";
@@ -51,6 +52,7 @@ import {
   OperationalTableSelectionBar,
 } from "@/components/operational-table";
 import { LinkQuickActions } from "@/components/link-quick-actions";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { SocialPostStatusInfo } from "@/components/social-post-status-info";
@@ -659,6 +661,8 @@ function SocialPostsPageContent() {
   const [postLinks, setPostLinks] = useState<SocialPostLinkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const [view, setView] = useState<SocialPostsView>("list");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 180);
@@ -895,6 +899,7 @@ function SocialPostsPageContent() {
       const supabase = getSupabaseBrowserClient();
       setIsLoading(true);
       setError(null);
+      setLoadError(null);
 
       const [{ data: postsData, error: postsError }, { data: linksData, error: linksError }] =
         await Promise.all([
@@ -916,12 +921,14 @@ function SocialPostsPageContent() {
 
       if (postsError) {
         console.error("Social posts load failed:", postsError);
+        setLoadError("Couldn't load posts. Please try again.");
         setError("Couldn't load posts. Please try again.");
         setIsLoading(false);
         return;
       }
       if (linksError) {
         console.error("Social post links load failed:", linksError);
+        setLoadError("Couldn't load post links. Please try again.");
         setError("Couldn't load post links. Please try again.");
         setIsLoading(false);
         return;
@@ -956,7 +963,7 @@ function SocialPostsPageContent() {
 
     void loadPosts();
     void loadAvailableUsers();
-  }, [showError]);
+  }, [reloadToken, showError]);
 
   useEffect(() => {
     if (!error) {
@@ -2784,6 +2791,13 @@ function SocialPostsPageContent() {
                 <div key={`skeleton-row-${i}`} className="skeleton h-12 w-full" />
               ))}
             </div>
+          ) : loadError ? (
+            <LoadErrorState
+              description={loadError}
+              onRetry={() => {
+                setReloadToken((previous) => previous + 1);
+              }}
+            />
           ) : view === "board" ? (
             <DndContext sensors={sensors} onDragEnd={(event) => void handleDragEnd(event)}>
               <section className="grid gap-3 xl:grid-cols-3">
@@ -3080,7 +3094,13 @@ function SocialPostsPageContent() {
                 setActivePostId(null);
               }}
             />
-            <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl">
+            <aside
+              role="dialog"
+              aria-modal="true"
+              aria-label="Social post details"
+              className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl"
+            >
+              <DialogFocusScope />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-ink">{activePost.title}</h3>
@@ -3787,7 +3807,19 @@ function SocialPostsPageContent() {
                 }
               }}
             />
-            <div className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="New social post"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+            >
+              <DialogFocusScope
+                onClose={() => {
+                  if (!isCreating) {
+                    closeCreateModal();
+                  }
+                }}
+              />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-ink">New Social Post</h3>

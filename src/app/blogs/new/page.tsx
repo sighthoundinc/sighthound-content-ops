@@ -1,5 +1,6 @@
 "use client";
 
+import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -54,6 +55,7 @@ function NewBlogPageContent() {
   const [syncDisplayToScheduled, setSyncDisplayToScheduled] = useState(true);
   const [initialComment, setInitialComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasEdited, setHasEdited] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prefilledIdeaId, setPrefilledIdeaId] = useState<string | null>(null);
   const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
@@ -331,6 +333,7 @@ function NewBlogPageContent() {
       }
     }
 
+    setHasEdited(false);
     setIsSubmitting(false);
     router.push(`/blogs/${createdBlogId}`);
   };
@@ -360,7 +363,14 @@ function NewBlogPageContent() {
             </p>
           </header>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <UnsavedChangesGuard isDirty={hasEdited && !isSubmitting} />
+          <form
+            className="space-y-5"
+            onSubmit={handleSubmit}
+            onChange={() => {
+              setHasEdited(true);
+            }}
+          >
             {prefillNotice ? (
               <div
                 className={`rounded-md border px-3 py-2 text-sm ${

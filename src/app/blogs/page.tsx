@@ -36,6 +36,7 @@ import {
   OperationalTableSelectionBar,
 } from "@/components/operational-table";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   BLOG_SELECT_WITH_DATES_WITH_RELATIONS,
@@ -346,6 +347,7 @@ function BlogLibraryPageContent() {
   const [blogs, setBlogs] = useState<BlogRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<LibraryStatusFilter>("published");
   const [siteFilter, setSiteFilter] = useState<LibrarySiteFilter>("all");
@@ -381,6 +383,7 @@ function BlogLibraryPageContent() {
     const supabase = getSupabaseBrowserClient();
     setIsLoading(true);
     setError(null);
+    setLoadError(null);
 
     const { data, error: blogsError } = await supabase
       .from("blogs")
@@ -394,6 +397,7 @@ function BlogLibraryPageContent() {
       // (rule mL8dnnr6on7pTv5PFzcayY). Preserve the detail in the console
       // for debugging and show a safe fallback instead.
       console.error("Failed to load blogs:", blogsError);
+      setLoadError("Couldn't load blogs. Please try again.");
       setError("Couldn't load blogs. Please try again.");
       setIsLoading(false);
       return;
@@ -1386,6 +1390,15 @@ function BlogLibraryPageContent() {
           />
           <DataPageFilterPills pills={activeFilterPills} />
 
+          {loadError ? (
+            <LoadErrorState
+              description={loadError}
+              onRetry={() => {
+                void loadBlogs();
+              }}
+            />
+          ) : null}
+          <div className={loadError ? "hidden" : undefined}>
           <OperationalTableFrame
             totalRows={sortedBlogs.length}
             currentPage={currentPage}
@@ -1530,7 +1543,7 @@ function BlogLibraryPageContent() {
               ) : null
             }
           >
-            {hasNoResults && hasActiveFilters ? (
+            {!loadError && hasNoResults && hasActiveFilters ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 <span>No blogs match your filters. Try clearing filters or create a new blog.</span>
                 <button
@@ -1542,7 +1555,7 @@ function BlogLibraryPageContent() {
                 </button>
               </div>
             ) : null}
-            {hasNoResults && !hasActiveFilters ? (
+            {!loadError && hasNoResults && !hasActiveFilters ? (
               <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-4 py-4">
                 <div className="space-y-1">
                   <p className="text-sm font-semibold text-ink">No blogs yet.</p>
@@ -1607,6 +1620,7 @@ function BlogLibraryPageContent() {
               />
             )}
           </OperationalTableFrame>
+          </div>
           <BlogDetailsDrawer
             blog={activeBlog}
             isOpen={Boolean(activeBlog)}

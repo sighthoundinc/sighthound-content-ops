@@ -1,5 +1,6 @@
 "use client";
 
+import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -1921,6 +1922,9 @@ export default function BlogDetailPage() {
           </section>
           </div>
         </div>
+        <UnsavedChangesGuard
+          isDirty={isDetailDirty || newComment.trim().length > 0}
+        />
         <ConfirmationModal
           isOpen={pendingCompletionAction !== null}
           title={

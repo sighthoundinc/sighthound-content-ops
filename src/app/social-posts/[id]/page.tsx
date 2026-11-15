@@ -1,5 +1,6 @@
 "use client";
 
+import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -1916,6 +1917,9 @@ export default function SocialPostEditorPage() {
               </a>
             ))}
           </nav>
+          <UnsavedChangesGuard
+            isDirty={isBriefDirty || commentDraft.trim().length > 0}
+          />
           <ConfirmationModal
             isOpen={isDeleteModalOpen}
             title="Delete post?"

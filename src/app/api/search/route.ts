@@ -38,7 +38,12 @@ export async function GET(request: NextRequest) {
   const query = (url.searchParams.get("q") ?? "").trim();
   const auth = await authenticateRequest(request);
   if ("error" in auth) {
-    return NextResponse.json(EMPTY_RESPONSE, { status: 200 });
+    // Never answer an auth failure with an empty 200: the palette would
+    // render it as "no matches" and hide the real problem from the user.
+    return NextResponse.json(
+      { ...EMPTY_RESPONSE, success: false, error: auth.error },
+      { status: auth.status, headers: { "Cache-Control": "no-store" } }
+    );
   }
   const { adminClient } = auth.context;
 

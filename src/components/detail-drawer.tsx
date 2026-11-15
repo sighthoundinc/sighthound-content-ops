@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 
@@ -45,6 +46,7 @@ export function DetailDrawer({
           widthClassName ?? DETAIL_DRAWER_WIDTH_CLASS
         )}
       >
+        <DialogFocusScope />
         {children}
       </aside>
     </>

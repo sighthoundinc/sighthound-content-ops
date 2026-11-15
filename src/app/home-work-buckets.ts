@@ -1,4 +1,5 @@
 import type { AppIconName } from "@/lib/icons";
+import { PUBLISHER_STATUS_LABELS, WRITER_STATUS_LABELS } from "@/lib/status";
 import { validateTaskLogicConsistency } from "@/lib/task-logic";
 
 export interface DashboardSummary {
@@ -27,9 +28,16 @@ export interface WorkBucket {
   id: string;
   title: string;
   count: number;
-  href: string;
   icon: AppIconName;
   priority: "high" | "normal";
+}
+
+/**
+ * Terminal buckets (approved writing, published blogs) are shown for
+ * reference but are not work the viewer still has to do.
+ */
+export function isTerminalBucket(bucket: WorkBucket): boolean {
+  return bucket.id === "writer-completed" || bucket.id === "publisher-completed";
 }
 
 /**
@@ -52,7 +60,6 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
         id: "writer-needs-revision",
         title: "Awaiting Your Revision",
         count: needsRevision,
-        href: "/dashboard",
         icon: "warning",
         priority: "high",
       });
@@ -61,9 +68,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (inProgress > 0) {
       buckets.push({
         id: "writer-in-progress",
-        title: "Writing in Progress",
+        title: WRITER_STATUS_LABELS.in_progress,
         count: inProgress,
-        href: "/dashboard",
         icon: "writing",
         priority: "normal",
       });
@@ -72,9 +78,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (pendingReview > 0) {
       buckets.push({
         id: "writer-pending-review",
-        title: "Submitted for Editorial Review",
+        title: WRITER_STATUS_LABELS.pending_review,
         count: pendingReview,
-        href: "/dashboard",
         icon: "writing",
         priority: "normal",
       });
@@ -83,9 +88,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (completed > 0) {
       buckets.push({
         id: "writer-completed",
-        title: "Writing Approved",
+        title: WRITER_STATUS_LABELS.completed,
         count: completed,
-        href: "/dashboard",
         icon: "check",
         priority: "normal",
       });
@@ -94,9 +98,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (notStarted > 0 && data.userRoles.includes("admin")) {
       buckets.push({
         id: "writer-not-started",
-        title: "Not Started (Admin View)",
+        title: "Writing Not Started",
         count: notStarted,
-        href: "/dashboard",
         icon: "home",
         priority: "normal",
       });
@@ -113,9 +116,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (inProgress > 0) {
       buckets.push({
         id: "publisher-in-progress",
-        title: "Awaiting Publishing Approval",
+        title: PUBLISHER_STATUS_LABELS.in_progress,
         count: inProgress,
-        href: "/dashboard",
         icon: "warning",
         priority: "high",
       });
@@ -124,9 +126,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (pendingReview > 0) {
       buckets.push({
         id: "publisher-pending-review",
-        title: "Awaiting Publishing Review",
+        title: PUBLISHER_STATUS_LABELS.pending_review,
         count: pendingReview,
-        href: "/dashboard",
         icon: "warning",
         priority: "high",
       });
@@ -135,9 +136,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (publisherApproved > 0) {
       buckets.push({
         id: "publisher-approved",
-        title: "Publishing Approved — Ready to Publish",
+        title: PUBLISHER_STATUS_LABELS.publisher_approved,
         count: publisherApproved,
-        href: "/dashboard",
         icon: "check",
         priority: "high",
       });
@@ -146,9 +146,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (completed > 0) {
       buckets.push({
         id: "publisher-completed",
-        title: "Published",
+        title: PUBLISHER_STATUS_LABELS.completed,
         count: completed,
-        href: "/dashboard",
         icon: "check",
         priority: "normal",
       });
@@ -157,9 +156,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
     if (notStarted > 0) {
       buckets.push({
         id: "publisher-not-started",
-        title: "Awaiting Publishing Review",
+        title: "Publishing Not Started",
         count: notStarted,
-        href: "/dashboard",
         icon: "home",
         priority: "normal",
       });
@@ -184,7 +182,6 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
         id: "social-draft",
         title: "Social Posts in Draft",
         count: draft,
-        href: "/social-posts",
         icon: "writing",
         priority: "normal",
       });
@@ -195,7 +192,6 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
         id: "social-changes-requested",
         title: "Social Posts Need Changes",
         count: changesRequested,
-        href: "/social-posts",
         icon: "warning",
         priority: "high",
       });
@@ -206,7 +202,6 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
         id: "social-ready-to-publish",
         title: "Social Posts Ready to Publish",
         count: readyToPublish,
-        href: "/social-posts",
         icon: "writing",
         priority: "high",
       });
@@ -217,7 +212,6 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
         id: "social-awaiting-live-link",
         title: "Social Posts Awaiting Live Link",
         count: awaitingLink,
-        href: "/social-posts",
         icon: "warning",
         priority: "high",
       });
@@ -228,7 +222,6 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
         id: "social-in-review",
         title: "Social Posts in Review",
         count: inReview,
-        href: "/social-posts",
         icon: "writing",
         priority: "normal",
       });
@@ -239,7 +232,6 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
         id: "social-creative-approved",
         title: "Social Posts Creative Approved",
         count: creativeApproved,
-        href: "/social-posts",
         icon: "check",
         priority: "normal",
       });

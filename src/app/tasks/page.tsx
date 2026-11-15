@@ -17,7 +17,6 @@ import {
 } from "@/components/status-badge";
 import {
   DATA_PAGE_STACK_CLASS,
-  DataPageEmptyState,
   DataPageFilterPills,
   DataPageHeader,
   DataPageToolbar,
@@ -88,6 +87,7 @@ import type {
 } from "@/lib/types";
 import { formatDateOnly } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { UI_VOCAB } from "@/lib/ui-vocab";
 import { useAlerts } from "@/providers/alerts-provider";
 import { markEnd, markStart } from "@/lib/perf-marks";
 import { blogNextAction, socialNextAction } from "@/lib/next-action";
@@ -172,6 +172,61 @@ type TaskTableColumnKey =
   | "publish_date"
   | "options";
 const TASK_TABLE_COLUMN_VIEW_STORAGE_KEY = "tasks-column-view:v1";
+const TASK_FILTERS_STORAGE_KEY = "tasks-filters:v1";
+type SavedTaskFilters = {
+  searchQuery: string;
+  kindFilter: TaskKind | "all";
+  statusFilter: "all" | WriterStageStatus | PublisherStageStatus;
+  socialStatusFilter: "all" | SocialPostStatus;
+  siteFilter: "all" | "sighthound.com" | "redactor.com";
+  contentFilter: "all" | MixedContentFilterValue;
+  assignmentFilter: "all" | "personal" | "admin";
+  actionFilter: "all" | TaskActionState;
+  currentPage: number;
+};
+const pickSaved = <T extends string>(value: unknown, allowed: readonly T[]): T | "all" =>
+  typeof value === "string" && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : "all";
+/** Reads this session's saved My Tasks filters; unknown values fall back to "all". */
+function readSavedTaskFilters(): SavedTaskFilters | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    const stored = window.sessionStorage.getItem(TASK_FILTERS_STORAGE_KEY);
+    if (!stored) {
+      return null;
+    }
+    const parsed = JSON.parse(stored) as Record<string, unknown>;
+    const page = Number(parsed.currentPage);
+    return {
+      searchQuery: typeof parsed.searchQuery === "string" ? parsed.searchQuery : "",
+      kindFilter: pickSaved<TaskKind>(parsed.kindFilter, ["writer", "publisher"]),
+      statusFilter: pickSaved<WriterStageStatus | PublisherStageStatus>(parsed.statusFilter, [
+        ...WRITER_STATUSES,
+        ...PUBLISHER_STATUSES,
+      ]),
+      socialStatusFilter: pickSaved<SocialPostStatus>(
+        parsed.socialStatusFilter,
+        SOCIAL_POST_STATUSES
+      ),
+      siteFilter: pickSaved(parsed.siteFilter, ["sighthound.com", "redactor.com"] as const),
+      contentFilter: pickSaved<MixedContentFilterValue>(
+        parsed.contentFilter,
+        MIXED_CONTENT_FILTER_OPTIONS.map((option) => option.value)
+      ),
+      assignmentFilter: pickSaved(parsed.assignmentFilter, ["personal", "admin"] as const),
+      actionFilter: pickSaved<TaskActionState>(parsed.actionFilter, [
+        "action_required",
+        "waiting_on_others",
+      ]),
+      currentPage: Number.isInteger(page) && page > 0 ? page : 1,
+    };
+  } catch {
+    return null;
+  }
+}
 const TASK_TABLE_SORT_FIELDS = [
   "site",
   "content",
@@ -407,6 +462,7 @@ function MyTasksPageContent() {
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "personal" | "admin">("all");
   const [actionFilter, setActionFilter] = useState<"all" | TaskActionState>("all");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
   const [taskAssignments, setTaskAssignments] = useState<
     Map<
       string,
@@ -545,32 +601,92 @@ function MyTasksPageContent() {
   useEffect(() => {
     const intent = getDashboardFilterIntent();
     if (!intent) {
+      // No home-tile intent: restore the filters from earlier in this
+      // browser session so opening a task and coming back keeps the view.
+      const saved = readSavedTaskFilters();
+      if (saved) {
+        setSearchQuery(saved.searchQuery);
+        setKindFilter(saved.kindFilter);
+        setStatusFilter(saved.statusFilter);
+        setSocialStatusFilter(saved.socialStatusFilter);
+        setSiteFilter(saved.siteFilter);
+        setContentFilter(saved.contentFilter);
+        setAssignmentFilter(saved.assignmentFilter);
+        setActionFilter(saved.actionFilter);
+        setCurrentPage(saved.currentPage);
+      }
+      setFiltersHydrated(true);
       return;
     }
+    // A home tile counts one stage of one content type, so scope the view
+    // to that stage as well as the status. A status alone would also match
+    // the other blog stage and leave unrelated content in the list.
+    setSearchQuery("");
+    setSiteFilter("all");
+    setAssignmentFilter("all");
+    setActionFilter("all");
+    setKindFilter("all");
+    setStatusFilter("all");
+    setSocialStatusFilter("all");
+    setContentFilter("all");
     if (
       intent.type === "writer_status" &&
       WRITER_STATUSES.includes(intent.value as WriterStageStatus)
     ) {
       setStatusFilter(intent.value as WriterStageStatus);
-      setCurrentPage(1);
-      return;
-    }
-    if (
+      setKindFilter("writer");
+      setContentFilter("blog");
+    } else if (
       intent.type === "publisher_status" &&
       PUBLISHER_STATUSES.includes(intent.value as PublisherStageStatus)
     ) {
       setStatusFilter(intent.value as PublisherStageStatus);
-      setCurrentPage(1);
-      return;
-    }
-    if (
+      setKindFilter("publisher");
+      setContentFilter("blog");
+    } else if (
       intent.type === "social_status" &&
       SOCIAL_POST_STATUSES.includes(intent.value as SocialPostStatus)
     ) {
       setSocialStatusFilter(intent.value as SocialPostStatus);
-      setCurrentPage(1);
+      setContentFilter("social_post");
     }
+    setCurrentPage(1);
+    setFiltersHydrated(true);
   }, []);
+  useEffect(() => {
+    if (!filtersHydrated || typeof window === "undefined") {
+      return;
+    }
+    try {
+      window.sessionStorage.setItem(
+        TASK_FILTERS_STORAGE_KEY,
+        JSON.stringify({
+          searchQuery,
+          kindFilter,
+          statusFilter,
+          socialStatusFilter,
+          siteFilter,
+          contentFilter,
+          assignmentFilter,
+          actionFilter,
+          currentPage,
+        })
+      );
+    } catch {
+      // Storage can be unavailable (private mode, quota); filters still work.
+    }
+  }, [
+    actionFilter,
+    assignmentFilter,
+    contentFilter,
+    currentPage,
+    filtersHydrated,
+    kindFilter,
+    searchQuery,
+    siteFilter,
+    socialStatusFilter,
+    statusFilter,
+  ]);
   useEffect(() => {
     const action = searchParams.get("action");
     if (action === "action_required" || action === "waiting_on_others") {
@@ -1153,13 +1269,13 @@ function MyTasksPageContent() {
   const activeAdvancedFilterCount = useMemo(
     () =>
       [
-        socialStatusFilter !== "all",
         kindFilter !== "all",
         siteFilter !== "all",
         contentFilter !== "all",
       ].filter(Boolean).length,
-    [contentFilter, kindFilter, siteFilter, socialStatusFilter]
+    [contentFilter, kindFilter, siteFilter]
   );
+  const hasAnyTasks = taskItems.length + socialTasks.length > 0;
   const resetTaskFilters = useCallback(() => {
     setSearchQuery("");
     setKindFilter("all");
@@ -1438,8 +1554,10 @@ function MyTasksPageContent() {
 
   const updateTaskStatus = async (
     task: TaskItem,
-    nextStatus: WriterStageStatus | PublisherStageStatus
+    nextStatus: WriterStageStatus | PublisherStageStatus,
+    options: { isUndo?: boolean } = {}
   ) => {
+    const previousStatus = task.kind === "writer" ? task.writerStatus : task.publisherStatus;
     if (task.kind === "writer" && !WRITER_STATUSES.includes(nextStatus as WriterStageStatus)) {
       return;
     }
@@ -1479,7 +1597,7 @@ function MyTasksPageContent() {
         message: errorMessage,
         actionLabel: "Retry",
         onAction: () => {
-          void updateTaskStatus(task, nextStatus);
+          void updateTaskStatus(task, nextStatus, options);
         },
       });
       setSavingTaskId(null);
@@ -1505,9 +1623,25 @@ function MyTasksPageContent() {
     );
     setSavingTaskId(null);
 
+    // One click changes workflow status, so offer a way back. The undo goes
+    // through the same transition route and is subject to the same rules.
     updateAlert(statusId, {
       type: "success",
-      message: "Status updated.",
+      message: options.isUndo ? "Status change undone." : "Status updated.",
+      ...(options.isUndo || previousStatus === nextStatus
+        ? {}
+        : {
+            actionLabel: "Undo",
+            onAction: () => {
+              void updateTaskStatus(
+                task.kind === "writer"
+                  ? { ...task, writerStatus: nextStatus as WriterStageStatus }
+                  : { ...task, publisherStatus: nextStatus as PublisherStageStatus },
+                previousStatus,
+                { isUndo: true }
+              );
+            },
+          }),
     });
   };
 
@@ -1573,6 +1707,7 @@ function MyTasksPageContent() {
           if (blogTask.kind === "writer") {
             return (
               <select
+                aria-label={`Writing status for ${task.title}`}
                 value={blogTask.writerStatus}
                 disabled={savingTaskId === blogTask.id}
                 onChange={(event) => {
@@ -1709,7 +1844,7 @@ function MyTasksPageContent() {
                   <option value="waiting_on_others">Waiting on Others</option>
                 </select>
                 <select
-                  aria-label="Task Status"
+                  aria-label="Blog Task Status"
                   value={statusFilter}
                   onChange={(event) => {
                     setStatusFilter(event.target.value as "all" | WriterStageStatus | PublisherStageStatus);
@@ -1717,31 +1852,31 @@ function MyTasksPageContent() {
                   }}
                   className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
                 >
-                  <option value="all">All Statuses</option>
+                  <option value="all">All Blog Statuses</option>
                   {TASK_STATUS_FILTER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
                   ))}
                 </select>
+                <select
+                  aria-label="Social Task Status"
+                  value={socialStatusFilter}
+                  onChange={(event) => {
+                    setSocialStatusFilter(event.target.value as "all" | SocialPostStatus);
+                    setCurrentPage(1);
+                  }}
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                >
+                  <option value="all">All Social Statuses</option>
+                  {SOCIAL_POST_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {SOCIAL_POST_STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
                 {showAdvancedFilters ? (
                   <>
-                    <select
-                      aria-label="Social Task Status"
-                      value={socialStatusFilter}
-                      onChange={(event) => {
-                        setSocialStatusFilter(event.target.value as "all" | SocialPostStatus);
-                        setCurrentPage(1);
-                      }}
-                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                    >
-                      <option value="all">All Social Statuses</option>
-                      {SOCIAL_POST_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {SOCIAL_POST_STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
                     <select
                       aria-label="Task Type"
                       value={kindFilter}
@@ -1819,16 +1954,13 @@ function MyTasksPageContent() {
             />
           ) : (
             <>
+              {/* With three rows or fewer the table below already shows the
+                  same items, so the preview would only repeat it. */}
+              {combinedTaskRows.length > nextTasks.length ? (
               <section className="space-y-3 rounded-lg border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-4">
-                <h3 className="text-sm font-semibold text-navy-500">
+                <h2 className="text-sm font-semibold text-navy-500">
                   Next Tasks
-                </h3>
-                {nextTasks.length === 0 ? (
-                  <DataPageEmptyState
-                    title="No tasks found."
-                    description="No tasks match your current filters."
-                  />
-                ) : (
+                </h2>
                   <ol className="space-y-2">
                     {nextTasks.map((task, index) => (
                       <li key={task.id}>
@@ -1849,8 +1981,8 @@ function MyTasksPageContent() {
                       </li>
                     ))}
                   </ol>
-                )}
               </section>
+              ) : null}
 
               <OperationalTableFrame
                 totalRows={combinedTaskRows.length}
@@ -1959,7 +2091,11 @@ function MyTasksPageContent() {
                     (t) => t.id === highlightedTaskId
                   )}
                   density={rowDensity}
-                  emptyMessage="No tasks match your current filters."
+                  emptyMessage={
+                    hasAnyTasks
+                      ? `${UI_VOCAB.emptyStates.searchTitle}. ${UI_VOCAB.emptyStates.searchDescription}`
+                      : `${UI_VOCAB.emptyStates.tasksTitle}. ${UI_VOCAB.emptyStates.tasksDescription}`
+                  }
                 />
               </OperationalTableFrame>
             </>

@@ -17,7 +17,7 @@ import { UI_VOCAB } from "@/lib/ui-vocab";
 
 import { fetchHomeData } from "./home-data";
 import { HomeBucketLink } from "./home-bucket-link";
-import { buildWorkBuckets } from "./home-work-buckets";
+import { buildWorkBuckets, isTerminalBucket } from "./home-work-buckets";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +39,16 @@ export default async function HomePage() {
     tasksSnapshot.requiredByMe.length > 0 ||
     tasksSnapshot.waitingOnOthers.length > 0;
   const hasAnyWork = hasWork || hasSnapshotItems;
+  // Approved/published tiles are reference only; they must not make the
+  // greeting claim there is something to act on.
+  const hasPendingWork =
+    workBuckets.some((bucket) => !isTerminalBucket(bucket)) || hasSnapshotItems;
+  const attentionBuckets = workBuckets.filter((bucket) => bucket.priority === "high");
+  const otherBuckets = workBuckets.filter((bucket) => bucket.priority !== "high");
+  const bucketGroups = [
+    { id: "attention", heading: "Needs attention", buckets: attentionBuckets },
+    { id: "other", heading: "In progress and done", buckets: otherBuckets },
+  ].filter((group) => group.buckets.length > 0);
   const requiredByLabel = displayName ?? "You";
   // Home is a snapshot, not the queue: show the first few of each list and
   // send the rest to My Tasks. Both lists arrive sorted by publish date.
@@ -56,7 +66,7 @@ export default async function HomePage() {
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blurple-100">
                 Today&apos;s relay
               </p>
-              <h1 className="page-title mt-3 !text-white">
+              <h1 className="mt-3 text-2xl font-semibold leading-snug tracking-tight text-white">
                 Hi {userName},
               </h1>
             </div>
@@ -67,8 +77,8 @@ export default async function HomePage() {
               </span>
             )}
           </div>
-          <p className="body-text mt-3 max-w-2xl !text-white/70">
-            {hasAnyWork
+          <p className="mt-3 max-w-2xl text-sm font-normal leading-6 text-white/70">
+            {hasPendingWork
               ? "Jump into what needs your attention now."
               : error
                 ? "We couldn’t load your work right now."
@@ -79,7 +89,7 @@ export default async function HomePage() {
         {error && (
           <div
             role="alert"
-            className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"
+            className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"
           >
             <span>{error}</span>
             <Link
@@ -92,9 +102,16 @@ export default async function HomePage() {
           </div>
         )}
 
-        {hasWork && (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {workBuckets.map((bucket) => (
+        {bucketGroups.map((group) => (
+          <section key={group.id} className="mt-6" aria-labelledby={`home-buckets-${group.id}`}>
+            <h2
+              id={`home-buckets-${group.id}`}
+              className="text-xs font-semibold uppercase tracking-wide text-navy-500"
+            >
+              {group.heading}
+            </h2>
+          <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {group.buckets.map((bucket) => (
               <HomeBucketLink
                 key={bucket.id}
                 bucketId={bucket.id}
@@ -122,15 +139,17 @@ export default async function HomePage() {
                     }`}
                   >
                     {bucket.count}
+                    <span className="sr-only"> {bucket.count === 1 ? "item" : "items"}:</span>
                   </span>
                 </div>
-                <h2 className="mt-auto pt-6 text-base font-semibold text-ink group-active:text-white">
+                <h3 className="mt-auto pt-6 text-base font-semibold text-ink group-active:text-white">
                   {bucket.title}
-                </h2>
+                </h3>
               </HomeBucketLink>
             ))}
           </div>
-        )}
+          </section>
+        ))}
 
         {hasSnapshotItems && (
           <section className="mt-6 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-xs sm:p-6">

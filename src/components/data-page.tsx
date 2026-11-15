@@ -117,7 +117,7 @@ export function DataPageToolbar({
                 size="xs"
                 variant="ghost"
                 aria-label="Clear search"
-                className="absolute right-1 top-1/2 -translate-y-1/2 px-1 py-0.5 text-navy-500 hover:text-navy-500"
+                className="absolute right-1 top-1/2 h-6 min-w-6 -translate-y-1/2 px-1 py-0.5 text-navy-500 hover:text-ink"
                 onClick={() => {
                   onSearchChange("");
                 }}
@@ -155,7 +155,7 @@ export function DataPageFilterPills({ pills }: { pills: FilterPill[] }) {
             size="xs"
             variant="ghost"
             aria-label={`Remove ${pill.label}`}
-            className="px-1 py-0.5 text-navy-500 hover:text-navy-500"
+            className="h-6 min-w-6 px-1 py-0.5 text-navy-500 hover:text-ink"
             onClick={pill.onRemove}
           >
             <CloseIcon boxClassName="h-4 w-4" size={13} />

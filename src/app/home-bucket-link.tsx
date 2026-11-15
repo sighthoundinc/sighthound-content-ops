@@ -4,15 +4,13 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { setDashboardFilterIntent } from "@/lib/dashboard-filter-state";
-import {
-  ACTIVE_SOCIAL_STATUSES,
-  ACTIVE_WRITER_STATUSES,
-} from "@/lib/task-logic";
+import { WRITER_STATUSES } from "@/lib/status";
+import { ACTIVE_SOCIAL_STATUSES } from "@/lib/task-logic";
 
 // Static lookup maps hoisted to module scope — computed ONCE at module load
 // instead of on every click. Keeps the click handler small and allocation-free.
 const WRITER_STATUS_MAP: Record<string, string> = Object.fromEntries(
-  ACTIVE_WRITER_STATUSES.map((s) => [`writer-${s.replace(/_/g, "-")}`, s])
+  WRITER_STATUSES.map((s) => [`writer-${s.replace(/_/g, "-")}`, s])
 );
 
 const PUBLISHER_STATUS_MAP: Record<string, string> = {

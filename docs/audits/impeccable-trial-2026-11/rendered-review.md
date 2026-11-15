@@ -48,3 +48,17 @@ Signed in to production (build `b3d0c74`, before the fixes on this branch) with 
 | P3 | Calendar month view shows a "+" button in all 35 day cells. |
 
 Checked and not a defect: the Ask AI panel's serifed capital "I" is Lexend's own glyph, not a fallback font.
+
+## Follow-up, same day (production build `6a6c240` and later)
+
+Created two throwaway blogs assigned to the test account (`Test: Claude audit blog A` and `B`) to exercise home and My Tasks.
+
+Verified rendered: home tile count matches the filtered My Tasks list (2 items, pills for task type, content, and status); Undo reverts an inline status change; dashboard filters share one baseline; header lines up with the content edge; Lifecycle values are capitalised; palette says "My Tasks"; CardBoard uses "All Sites" and Writing / Publishing chip labels.
+
+New findings:
+
+| Sev | Finding | State |
+|---|---|---|
+| P2 | Home snapshot showed dates as raw `2026-11-15` | Fixed |
+| P2 | Home tiles lag up to 30 seconds behind the snapshot list after a change (summary is cached server-side, snapshot is not), so the page can show tasks with no tiles | Open |
+| P2 | Mobile calendar: Stream view is also a seven-column grid, so defaulting phones to it does not help (tried, reverted). Needs a single-column agenda view | Open |

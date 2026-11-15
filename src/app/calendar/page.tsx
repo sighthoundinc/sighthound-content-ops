@@ -463,13 +463,6 @@ export default function CalendarPage() {
   const [viewScope, setViewScope] = useState<CalendarViewScope>("all");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [mode, setMode] = useState<CalendarMode>("month");
-  useEffect(() => {
-    // A seven-column month grid needs sideways scrolling on a phone; start
-    // small screens on the single-column stream. Month and Week stay one tap away.
-    if (window.matchMedia("(max-width: 767px)").matches) {
-      setMode("stream");
-    }
-  }, []);
   const [contentFilters, setContentFilters] = useState<ContentTypeFilter[]>([
     "blogs",
     "social_posts",

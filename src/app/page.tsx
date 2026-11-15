@@ -14,6 +14,7 @@ import { buttonClass } from "@/components/button";
 import { AppIcon, CheckIcon } from "@/lib/icons";
 import { pageTitle } from "@/lib/page-title";
 import { UI_VOCAB } from "@/lib/ui-vocab";
+import { formatDateOnly } from "@/lib/utils";
 
 import { fetchHomeData } from "./home-data";
 import { HomeBucketLink } from "./home-bucket-link";
@@ -180,7 +181,7 @@ export default async function HomePage() {
                           <p className="truncate text-sm font-medium text-ink">{task.title}</p>
                           <p className="mt-1 text-xs text-navy-500">
                             {task.kind === "blog" ? "Blog" : "Social"} · {task.statusLabel}
-                            {task.scheduledDate ? ` · ${task.scheduledDate}` : ""}
+                            {task.scheduledDate ? ` · ${formatDateOnly(task.scheduledDate) || task.scheduledDate}` : ""}
                           </p>
                         </Link>
                       </li>
@@ -213,7 +214,7 @@ export default async function HomePage() {
                           <p className="truncate text-sm font-medium text-ink">{task.title}</p>
                           <p className="mt-1 text-xs text-navy-500">
                             {task.kind === "blog" ? "Blog" : "Social"} · {task.statusLabel}
-                            {task.scheduledDate ? ` · ${task.scheduledDate}` : ""}
+                            {task.scheduledDate ? ` · ${formatDateOnly(task.scheduledDate) || task.scheduledDate}` : ""}
                           </p>
                         </Link>
                       </li>

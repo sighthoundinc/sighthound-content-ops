@@ -452,19 +452,6 @@ export default function IdeasPage() {
 
                     {/* Action Buttons */}
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {idea.created_by === user?.id || isAdmin ? (
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          disabled={deletingIdeaId === idea.id}
-                          onClick={() => {
-                            void handleDeleteIdea(idea);
-                          }}
-                        >
-                          {deletingIdeaId === idea.id ? "Deleting…" : "Delete"}
-                        </Button>
-                      ) : null}
                       <Button
                         type="button"
                         variant="secondary"
@@ -501,6 +488,20 @@ export default function IdeasPage() {
                       >
                         Convert to Social Post
                       </Button>
+                      {idea.created_by === user?.id || isAdmin ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="ml-auto text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                          size="sm"
+                          disabled={deletingIdeaId === idea.id}
+                          onClick={() => {
+                            void handleDeleteIdea(idea);
+                          }}
+                        >
+                          {deletingIdeaId === idea.id ? "Deleting…" : "Delete"}
+                        </Button>
+                      ) : null}
                     </div>
                   </li>
                 ))}

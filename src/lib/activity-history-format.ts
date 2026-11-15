@@ -97,6 +97,11 @@ function isValueEmpty(value: string | null | undefined) {
 }
 
 function toPrettyFallbackValue(value: string) {
+  // Links are shown verbatim: title-casing or stripping underscores from a
+  // URL produces an address that no longer works.
+  if (/^https?:\/\//i.test(value.trim())) {
+    return value;
+  }
   if (value.includes("_")) {
     return toTitleCase(value.replace(/_/g, " "));
   }
@@ -248,7 +253,10 @@ export function formatActivityChangeDescription(
 
   if (isAssignmentField(entry.field_name)) {
     if (oldEmpty && !newEmpty) {
-      return `${fieldLabel}: Assigned to ${newValue}`;
+      // Avoid "Assigned to: Assigned to Jane" when the label already says it.
+      return fieldLabel.toLowerCase() === "assigned to"
+        ? `${fieldLabel}: ${newValue}`
+        : `${fieldLabel}: Assigned to ${newValue}`;
     }
     if (!oldEmpty && newEmpty) {
       return `${fieldLabel}: Unassigned`;

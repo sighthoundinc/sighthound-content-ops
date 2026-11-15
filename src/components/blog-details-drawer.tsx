@@ -129,7 +129,7 @@ export function BlogDetailsDrawer({
             ))}
           </div>
         </DetailDrawerSection>
-        <DetailDrawerSection title="Workflow & Assignments">
+        <DetailDrawerSection title="Content Workflow">
           {workflowContent}
         </DetailDrawerSection>
         <DetailDrawerSection title="Dates">{datesContent}</DetailDrawerSection>

@@ -61,7 +61,7 @@ export function CalendarTile({
           <p
             className={cn(
               "text-sm font-semibold text-ink",
-              !isCurrentMonth && "text-navy-500/60",
+              !isCurrentMonth && "text-navy-500",
               !isToday && isCurrentMonth && "text-ink",
               isToday && "text-blurple-700",
               isToday && todayDayLabelClassName,

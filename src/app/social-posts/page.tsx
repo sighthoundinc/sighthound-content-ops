@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { hasClientCache, readClientCache, writeClientCache } from "@/lib/client-cache";
 import { DialogFocusScope } from "@/components/dialog-focus-scope";
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -195,6 +196,7 @@ const ASSIGNED_USER_HELPER_TEXT = "Only assigned user can perform this action";
 const CREATE_DEFAULTS_STORAGE_KEY = "social-post-create-defaults:v1";
 const SOCIAL_POST_LIST_TABLE_VIEW_STORAGE_KEY = "social-posts-list-table-view:v1";
 const SOCIAL_POST_LIST_MANDATORY_COLUMNS = [
+  "title",
   "product",
   "type",
   "status",
@@ -2406,6 +2408,24 @@ function SocialPostsPageContent() {
   const allTableColumns = useMemo(
     (): DataTableColumn<SocialPostWithRelations>[] => [
       // Mandatory columns in specified order
+      {
+        id: "title",
+        label: "Title",
+        sortable: true,
+        className: "max-w-[22rem]",
+        render: (post) => (
+          <Link
+            href={`/social-posts/${post.id}`}
+            title={post.title}
+            className="interactive-link block truncate font-medium text-ink"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            {post.title || "Untitled"}
+          </Link>
+        ),
+      },
       {
         id: "product",
         label: "Product",

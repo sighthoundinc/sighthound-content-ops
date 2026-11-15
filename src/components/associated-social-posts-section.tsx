@@ -4,7 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/utils";
 import { ArrowRightIcon } from "@/lib/icons";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  SOCIAL_PLATFORM_LABELS,
+  SOCIAL_POST_STATUS_LABELS,
+  SOCIAL_POST_TYPE_LABELS,
+} from "@/lib/status";
+import { UI_VOCAB } from "@/lib/ui-vocab";
 import { useAuth } from "@/providers/auth-provider";
+
+const labelFor = (labels: Record<string, string>, value: string) => labels[value] ?? value;
 
 interface SocialPost {
   id: string;
@@ -28,30 +37,33 @@ export function AssociatedSocialPostsSection({
   const { session } = useAuth();
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
   const [fetchLoading, setFetchLoading] = useState(false);
+  const [fetchFailed, setFetchFailed] = useState(false);
 
   const fetchSocialPosts = useCallback(async () => {
     if (!session?.access_token) return;
 
     setFetchLoading(true);
+    setFetchFailed(false);
     try {
-      const response = await fetch(
-        `/api/blogs/${blogId}/associated-social-posts`,
-        {
-          headers: {
-            authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      // Same RLS-scoped read the Social Posts list uses. The previous
+      // /api/blogs/[id]/associated-social-posts route never existed, so this
+      // section always 404'd and showed "No associated social posts".
+      const { data, error } = await getSupabaseBrowserClient()
+        .from("social_posts")
+        .select("id,title,type,status,platforms,scheduled_date,created_at")
+        .eq("associated_blog_id", blogId)
+        .order("created_at", { ascending: false });
 
-      if (!response.ok) {
-        console.error("Failed to fetch associated social posts");
+      if (error) {
+        console.error("Failed to fetch associated social posts", error.message);
+        setFetchFailed(true);
         return;
       }
 
-      const data = await response.json();
-      setSocialPosts(data.data || []);
+      setSocialPosts((data ?? []) as SocialPost[]);
     } catch (err) {
       console.error("Error fetching associated social posts:", err);
+      setFetchFailed(true);
     } finally {
       setFetchLoading(false);
     }
@@ -95,14 +107,16 @@ export function AssociatedSocialPostsSection({
                   </h4>
                   <div className="flex gap-1 mt-1 flex-wrap">
                     <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-blurple-50 text-navy-500">
-                      {post.type}
+                      {labelFor(SOCIAL_POST_TYPE_LABELS, post.type)}
                     </span>
                     <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-blurple-50 text-navy-500">
-                      {post.status}
+                      {labelFor(SOCIAL_POST_STATUS_LABELS, post.status)}
                     </span>
                     {post.platforms && post.platforms.length > 0 && (
                       <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-blurple-50 text-navy-500">
-                        {post.platforms.join(", ")}
+                        {post.platforms
+                          .map((platform) => labelFor(SOCIAL_PLATFORM_LABELS, platform))
+                          .join(", ")}
                       </span>
                     )}
                   </div>
@@ -117,6 +131,19 @@ export function AssociatedSocialPostsSection({
               </div>
             </Link>
           ))
+        ) : fetchFailed ? (
+          <div role="alert" className="flex flex-wrap items-center justify-center gap-3 px-4 py-6">
+            <p className="text-sm text-navy-500">{UI_VOCAB.errors.loadFailedDescription}</p>
+            <button
+              type="button"
+              className="text-sm font-medium text-brand underline-offset-2 hover:underline"
+              onClick={() => {
+                void fetchSocialPosts();
+              }}
+            >
+              {UI_VOCAB.errors.retry}
+            </button>
+          </div>
         ) : (
           <div className="px-4 py-6 text-center">
             <p className="text-sm text-navy-500">No associated social posts.</p>

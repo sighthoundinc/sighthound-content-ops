@@ -1612,7 +1612,7 @@ export default function BlogDetailPage() {
           <section id="blog-workflow" className="grid gap-4 xl:grid-cols-2">
             <div className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
               <div>
-                <h3 className="text-base font-semibold text-ink">Writer Workflow</h3>
+                <h3 className="text-base font-semibold text-ink">Writing Workflow</h3>
                 <p className="text-sm text-navy-500">
                   Assigned writer: {selectedWriter?.full_name ?? "Unassigned"}
                 </p>
@@ -1689,7 +1689,7 @@ export default function BlogDetailPage() {
                       void handleWriterSave();
                     }}
                   >
-                    Save Writer Updates
+                    Save Writing Updates
                   </Button>
                   {form.writer_status !== "completed" ? (
                     <Button
@@ -1710,7 +1710,7 @@ export default function BlogDetailPage() {
 
             <div className="space-y-4 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4">
               <div>
-                <h3 className="text-base font-semibold text-ink">Publisher Workflow</h3>
+                <h3 className="text-base font-semibold text-ink">Publishing Workflow</h3>
                 <p className="text-sm text-navy-500">
                   Assigned publisher: {selectedPublisher?.full_name ?? "Unassigned"}
                 </p>
@@ -1786,7 +1786,7 @@ export default function BlogDetailPage() {
                       void handlePublisherSave();
                     }}
                   >
-                    Save Publisher Updates
+                    Save Publishing Updates
                   </Button>
                   {form.publisher_status !== "completed" ? (
                     <Button

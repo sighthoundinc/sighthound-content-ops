@@ -1693,11 +1693,11 @@ function BlogLibraryPageContent() {
                     value={getAssigneeLabel(activeBlog.publisher?.full_name)}
                   />
                   <DetailDrawerField
-                    label="Writer status"
+                    label="Writing status"
                     value={WRITER_STATUS_LABELS[activeBlog.writer_status]}
                   />
                   <DetailDrawerField
-                    label="Publisher status"
+                    label="Publishing status"
                     value={PUBLISHER_STATUS_LABELS[activeBlog.publisher_status]}
                   />
                 </div>

@@ -3185,7 +3185,8 @@ export default function DashboardPage() {
         return row.status_display;
       }
       if (column === "lifecycle_bucket") {
-        return row.lifecycle_bucket.replaceAll("_", " ");
+        const lifecycleText = row.lifecycle_bucket.replaceAll("_", " ");
+        return lifecycleText.charAt(0).toUpperCase() + lifecycleText.slice(1);
       }
       if (column === "scheduled_date") {
         return formatDateOnly(row.scheduled_date) || "—";
@@ -5039,7 +5040,7 @@ export default function DashboardPage() {
 
                   {isPanelEditMode && canEditWritingStage ? (
                     <label className="block space-y-1">
-                      <span className="text-xs text-navy-500">Writer status</span>
+                      <span className="text-xs text-navy-500">Writing status</span>
                       <select
                         className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.writer_status}
@@ -5075,14 +5076,14 @@ export default function DashboardPage() {
                     </label>
                   ) : (
                     <DetailDrawerField
-                      label="Writer status"
+                      label="Writing status"
                       value={WRITER_STATUS_LABELS[activeBlog.writer_status]}
                     />
                   )}
 
                   {isPanelEditMode && canEditPublishingStage ? (
                     <label className="block space-y-1">
-                      <span className="text-xs text-navy-500">Publisher status</span>
+                      <span className="text-xs text-navy-500">Publishing status</span>
                       <select
                         className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.publisher_status}
@@ -5116,7 +5117,7 @@ export default function DashboardPage() {
                     </label>
                   ) : (
                     <DetailDrawerField
-                      label="Publisher status"
+                      label="Publishing status"
                       value={PUBLISHER_STATUS_LABELS[activeBlog.publisher_status]}
                     />
                   )}

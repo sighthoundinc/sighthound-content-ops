@@ -18,6 +18,8 @@ import type { SocialPostStatus } from "@/lib/types";
 import {
   buildUserScopedResponseCacheKey,
   getServerResponseCacheValue,
+  PERSONAL_TASK_RESPONSE_CACHE_CONTROL,
+  PERSONAL_TASK_RESPONSE_CACHE_TTL_MS,
   setServerResponseCacheValue,
 } from "@/lib/server-response-cache";
 
@@ -37,9 +39,8 @@ type SnapshotResponse = {
   requiredByMe: SnapshotTask[];
   waitingOnOthers: SnapshotTask[];
 };
-const DASHBOARD_SNAPSHOT_CACHE_TTL_MS = 30_000;
-const DASHBOARD_SNAPSHOT_CACHE_CONTROL =
-  "private, max-age=30, stale-while-revalidate=30";
+const DASHBOARD_SNAPSHOT_CACHE_TTL_MS = PERSONAL_TASK_RESPONSE_CACHE_TTL_MS;
+const DASHBOARD_SNAPSHOT_CACHE_CONTROL = PERSONAL_TASK_RESPONSE_CACHE_CONTROL;
 
 function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
   if (leftDate && rightDate) {

@@ -294,3 +294,44 @@ export function getActivityTypeCategory(activityType: string) {
   const normalizedType = normalizeEventType(activityType);
   return ACTIVITY_TYPE_CATEGORIES[normalizedType] ?? "Activity";
 }
+
+const GENERIC_ACTIVITY_TITLES = new Set(["Status Updated", "Link Updated", "Assignment Updated"]);
+
+/**
+ * One workflow change can be recorded twice (for example a generic status
+ * event and a named "Published" event for the same transition). Collapse
+ * entries that describe the same field change in the same minute, keeping
+ * the one with the more specific title. Display-only; stored history is
+ * untouched.
+ */
+export function dedupeActivityEntries<
+  T extends ActivityChangeEntry & { changed_at: string }
+>(entries: T[]): T[] {
+  const indexByKey = new Map<string, number>();
+  const result: T[] = [];
+  for (const entry of entries) {
+    if (!entry.field_name) {
+      result.push(entry);
+      continue;
+    }
+    const key = [
+      entry.field_name,
+      entry.old_value ?? "",
+      entry.new_value ?? "",
+      entry.changed_at.slice(0, 16),
+    ].join("|");
+    const existingIndex = indexByKey.get(key);
+    if (existingIndex === undefined) {
+      indexByKey.set(key, result.length);
+      result.push(entry);
+      continue;
+    }
+    const existingIsGeneric = GENERIC_ACTIVITY_TITLES.has(
+      formatActivityEventTitle(result[existingIndex])
+    );
+    if (existingIsGeneric && !GENERIC_ACTIVITY_TITLES.has(formatActivityEventTitle(entry))) {
+      result[existingIndex] = entry;
+    }
+  }
+  return result;
+}

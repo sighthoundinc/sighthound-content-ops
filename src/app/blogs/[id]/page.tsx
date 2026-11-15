@@ -59,6 +59,7 @@ import {
   blogPublishedNotification,
 } from "@/lib/notification-helpers";
 import {
+  dedupeActivityEntries,
   formatActivityChangeDescription,
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
@@ -1032,7 +1033,7 @@ export default function BlogDetailPage() {
   };
   const groupedHistory = useMemo(() => {
     const groups = new Map<string, BlogHistoryRecord[]>();
-    for (const entry of history) {
+    for (const entry of dedupeActivityEntries(history)) {
       const dayLabel = formatDateInTimezone(
         entry.changed_at,
         profile?.timezone,

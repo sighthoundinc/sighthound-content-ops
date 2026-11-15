@@ -17,6 +17,8 @@ import type { SocialPostStatus } from "@/lib/types";
 import {
   buildUserScopedResponseCacheKey,
   getServerResponseCacheValue,
+  PERSONAL_TASK_RESPONSE_CACHE_CONTROL,
+  PERSONAL_TASK_RESPONSE_CACHE_TTL_MS,
   setServerResponseCacheValue,
 } from "@/lib/server-response-cache";
 
@@ -26,9 +28,8 @@ interface DashboardSummary {
   socialPostCounts: Record<string, number>;
   userRoles: string[];
 }
-const DASHBOARD_SUMMARY_CACHE_TTL_MS = 30_000;
-const DASHBOARD_SUMMARY_CACHE_CONTROL =
-  "private, max-age=30, stale-while-revalidate=30";
+const DASHBOARD_SUMMARY_CACHE_TTL_MS = PERSONAL_TASK_RESPONSE_CACHE_TTL_MS;
+const DASHBOARD_SUMMARY_CACHE_CONTROL = PERSONAL_TASK_RESPONSE_CACHE_CONTROL;
 
 export const GET = withApiContract(async function GET(request: NextRequest) {
   try {

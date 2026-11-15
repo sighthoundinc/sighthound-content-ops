@@ -197,7 +197,7 @@ export function DashboardSidebar({
               onOpenBlog(recentlyPublished.id);
             }}
           >
-            <p className="text-[11px] text-navy-500">
+            <p className="text-xs text-navy-500">
               {publishedDateLabel ?? "—"} {siteIndicator ? `· ${siteIndicator}` : ""}
             </p>
             <p className="mt-0.5 truncate text-xs font-medium text-ink">

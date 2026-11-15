@@ -70,7 +70,7 @@ export function PresenceBubbles({
       aria-label={`${label}: ${tooltip}`}
       className={cn("inline-flex items-center gap-2", className)}
     >
-      <span className="text-[10px] font-medium uppercase tracking-wide text-navy-500">
+      <span className="text-xs font-medium uppercase tracking-wide text-navy-500">
         {label}
       </span>
       <div className="flex items-center -space-x-1.5">
@@ -79,7 +79,7 @@ export function PresenceBubbles({
             key={user.userId}
             title={user.name}
             className={cn(
-              "inline-flex h-6 w-6 items-center justify-center rounded-full border border-white text-[10px] font-semibold shadow-sm",
+              "inline-flex h-6 w-6 items-center justify-center rounded-full border border-white text-xs font-semibold shadow-sm",
               paletteFor(user.userId)
             )}
           >
@@ -89,7 +89,7 @@ export function PresenceBubbles({
         {overflow > 0 ? (
           <span
             title={tooltip}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white bg-blurple-50 text-[10px] font-semibold text-navy-500 shadow-sm"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white bg-blurple-50 text-xs font-semibold text-navy-500 shadow-sm"
           >
             +{overflow}
           </span>

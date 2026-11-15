@@ -228,7 +228,7 @@ export function CalendarStreamView({
           <div
             key={`${label}-${index}`}
             className={cn(
-              "px-2 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-navy-500/70",
+              "px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-navy-500/70",
               todayColumnIndex === index ? "text-blurple-700" : null
             )}
           >
@@ -322,7 +322,7 @@ export function CalendarStreamView({
                       <div
                         key={dayKey}
                         className={cn(
-                          "flex items-center justify-end px-2 text-[10px] font-medium tabular-nums text-navy-500/80",
+                          "flex items-center justify-end px-2 text-xs font-medium tabular-nums text-navy-500/80",
                           index !== 0 ? "border-l border-[color:var(--sh-gray-200)]/50" : null,
                           isToday ? "bg-blurple-50 text-blurple-700" : null
                         )}
@@ -345,7 +345,7 @@ export function CalendarStreamView({
                         className="grid h-[28px] items-stretch"
                         style={{ gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))" }}
                       >
-                        <div className="flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-navy-500">
+                        <div className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-navy-500">
                           <span className={cn("h-1.5 w-1.5 rounded-full", rowMeta.dotClassName)} />
                           <span>{rowMeta.label}</span>
                         </div>
@@ -412,7 +412,7 @@ export function CalendarStreamView({
         <button
           type="button"
           onClick={handleLoadLater}
-          className="rounded-md px-2 py-0.5 text-[11px] font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
+          className="rounded-md px-2 py-0.5 text-xs font-medium text-navy-500 transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
         >
           Load later weeks
         </button>

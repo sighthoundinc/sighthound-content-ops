@@ -1064,7 +1064,7 @@ function SettingsPageContent() {
       <AppShell>
         <div className="space-y-7">
           <header className="space-y-2">
-            <h2 className="text-xl font-semibold text-ink">Settings</h2>
+            <h1 className="text-xl font-semibold text-ink">Settings</h1>
             <p className="text-sm text-navy-500">
               Manage your profile, workspace preferences, and admin controls in one place.
             </p>

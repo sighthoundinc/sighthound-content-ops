@@ -118,7 +118,7 @@ export function OnboardingTour({ initiallyOpen }: { initiallyOpen?: boolean }) {
       )}
     >
       <div className="flex items-center justify-between border-b border-[color:var(--sh-gray)] px-4 py-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
           Getting started · {stepIndex + 1} / {STEPS.length}
         </span>
         <button

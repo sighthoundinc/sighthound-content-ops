@@ -1,5 +1,6 @@
 "use client";
 
+import { hasClientCache, readClientCache, writeClientCache } from "@/lib/client-cache";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -845,6 +846,13 @@ const normalizeSavedLensShortcuts = (value: unknown): SavedLensShortcut[] => {
   return normalizedShortcuts.slice(0, DASHBOARD_LENS_ORDER.length);
 };
 
+const DASHBOARD_CACHE_KEY = "dashboard:rows";
+const DASHBOARD_OVERVIEW_CACHE_KEY = "dashboard:overview";
+type DashboardCache = {
+  blogs: BlogRecord[];
+  socialPosts: DashboardSocialPostMetric[];
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const { hasPermission, profile, session, user } = useAuth();
@@ -887,8 +895,12 @@ export default function DashboardPage() {
     canEditPublishingStage ||
     canDeleteBlog;
   const canSelectRows = canRunBulkActions || canExportSelectedCsv;
-  const [blogs, setBlogs] = useState<BlogRecord[]>([]);
-  const [socialPosts, setSocialPosts] = useState<DashboardSocialPostMetric[]>([]);
+  const [blogs, setBlogs] = useState<BlogRecord[]>(
+    () => readClientCache<DashboardCache>(DASHBOARD_CACHE_KEY)?.blogs ?? []
+  );
+  const [socialPosts, setSocialPosts] = useState<DashboardSocialPostMetric[]>(
+    () => readClientCache<DashboardCache>(DASHBOARD_CACHE_KEY)?.socialPosts ?? []
+  );
   const [assignableUsers, setAssignableUsers] = useState<
     Array<Pick<ProfileRecord, "id" | "full_name" | "email">>
   >([]);
@@ -931,10 +943,14 @@ export default function DashboardPage() {
   );
   const [rowLimit, setRowLimit] = useState<TableRowLimit>(DEFAULT_TABLE_ROW_LIMIT);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isOverviewLoading, setIsOverviewLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !hasClientCache(DASHBOARD_CACHE_KEY));
+  const [isOverviewLoading, setIsOverviewLoading] = useState(
+    () => !hasClientCache(DASHBOARD_OVERVIEW_CACHE_KEY)
+  );
   const [overviewMetrics, setOverviewMetrics] = useState<DashboardOverviewMetrics>(
-    INITIAL_DASHBOARD_OVERVIEW_METRICS
+    () =>
+      readClientCache<DashboardOverviewMetrics>(DASHBOARD_OVERVIEW_CACHE_KEY) ??
+      INITIAL_DASHBOARD_OVERVIEW_METRICS
   );
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
@@ -1119,9 +1135,19 @@ export default function DashboardPage() {
     socialStatusFilters.length +
     socialProductFilters.length;
 
+  useEffect(() => {
+    // Social rows are only cached when they loaded; a blogs-only fallback
+    // must not be replayed as if it were the full dashboard.
+    if (!isLoading && !loadError && !isSocialLoadFailed) {
+      writeClientCache<DashboardCache>(DASHBOARD_CACHE_KEY, { blogs, socialPosts });
+    }
+  }, [blogs, isLoading, isSocialLoadFailed, loadError, socialPosts]);
   const loadData = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
-    setIsLoading(true);
+    // Keep cached rows on screen while refreshing; skeleton only when empty.
+    if (!hasClientCache(DASHBOARD_CACHE_KEY)) {
+      setIsLoading(true);
+    }
     setError(null);
     setLoadError(null);
     setIsSocialLoadFailed(false);
@@ -1356,7 +1382,9 @@ export default function DashboardPage() {
       setIsOverviewLoading(false);
       return;
     }
-    setIsOverviewLoading(true);
+    if (!hasClientCache(DASHBOARD_OVERVIEW_CACHE_KEY)) {
+      setIsOverviewLoading(true);
+    }
     setIsOverviewLoadFailed(false);
     const response = await fetch("/api/dashboard/overview-metrics", {
       headers: {
@@ -1381,6 +1409,7 @@ export default function DashboardPage() {
     }
 
     setOverviewMetrics(payload);
+    writeClientCache(DASHBOARD_OVERVIEW_CACHE_KEY, payload);
     setIsOverviewLoading(false);
   }, [session?.access_token, showWarning]);
 
@@ -3997,7 +4026,7 @@ export default function DashboardPage() {
   const getOverviewMetricTitleClass = (isActive: boolean) =>
     isActive ? "text-xs font-semibold text-brand" : "text-xs font-semibold text-ink";
   const getOverviewMetricBreakdownClass = (isActive: boolean) =>
-    isActive ? "mt-1 text-[11px] text-navy-500" : "mt-1 text-[11px] text-navy-500";
+    isActive ? "mt-1 text-xs text-navy-500" : "mt-1 text-xs text-navy-500";
   const getOverviewMetricValueClass = (isActive: boolean) =>
     isActive
       ? "mt-2 text-2xl font-semibold tabular-nums text-ink"
@@ -4141,7 +4170,7 @@ export default function DashboardPage() {
               <h2 className="text-sm font-semibold text-ink">Overview</h2>
               <div className="mt-3 space-y-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Informational
                   </p>
                   <div className="mt-1 grid gap-2 text-sm md:grid-cols-3">
@@ -4151,7 +4180,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                     Actionable Now
                   </p>
                   <div className="mt-1 grid gap-2 text-sm md:grid-cols-3">
@@ -4299,7 +4328,7 @@ export default function DashboardPage() {
                               </button>
                               <button
                                 type="button"
-                                className="rounded px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50 hover:text-navy-500"
+                                className="rounded px-2 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50 hover:text-navy-500"
                                 onClick={() => {
                                   removeLensShortcut(shortcut);
                                 }}
@@ -4705,7 +4734,7 @@ export default function DashboardPage() {
                                   }}
                                 >
                                   <p className="font-medium">{view.name}</p>
-                                  <p className="text-[11px] opacity-75">
+                                  <p className="text-xs opacity-75">
                                     {activeSavedViewId === view.id ? "Active" : "Click to apply"}
                                   </p>
                                 </button>
@@ -4752,7 +4781,7 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </div>
-                      <p className="text-[11px] text-navy-500">Drag columns to reorder, or use checkboxes to show/hide</p>
+                      <p className="text-xs text-navy-500">Drag columns to reorder, or use checkboxes to show/hide</p>
                       <ColumnEditor
                         columns={columnOrder.map((column) => ({
                           id: column,
@@ -5229,7 +5258,7 @@ export default function DashboardPage() {
                       {panelComments.map((comment) => (
                         <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex items-start gap-3">
-                            <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-semibold text-white">
+                            <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
                               {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
                             </span>
                             <div className="min-w-0 flex-1">

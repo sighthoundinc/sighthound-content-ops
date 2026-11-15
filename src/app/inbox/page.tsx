@@ -235,7 +235,7 @@ function InboxView() {
                     {item.action} · {item.actor}
                   </p>
                 </div>
-                <time className="shrink-0 text-[11px] text-navy-500">
+                <time className="shrink-0 text-xs text-navy-500">
                   {formatDateInTimezone(item.createdAt, timezone, "MMM d")}
                 </time>
               </Link>
@@ -301,7 +301,7 @@ function TabButton({
       {label}
       <span
         className={cn(
-          "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+          "rounded-full px-1.5 py-0.5 text-xs font-semibold",
           isActive
             ? "bg-ink text-white"
             : "bg-blurple-50 text-navy-500"

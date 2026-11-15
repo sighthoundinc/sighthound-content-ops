@@ -390,7 +390,7 @@ export function CommentsSection({
               className="overflow-hidden px-4 py-3 first:rounded-t-lg last:rounded-b-lg"
             >
               <div className="flex min-w-0 items-start gap-3">
-                <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-semibold uppercase text-white">
+                <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-semibold uppercase text-white">
                   {getCommentAvatarLabel(comment)}
                 </span>
                 <div className="min-w-0 flex-1">

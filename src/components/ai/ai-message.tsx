@@ -60,7 +60,7 @@ export function AIMessage({ response }: AIMessageProps) {
 
       {!isFactual && response.qualityIssues && response.qualityIssues.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-500">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-navy-500">
             Quality Issues
           </h3>
           <div className="space-y-2">
@@ -90,7 +90,7 @@ export function AIMessage({ response }: AIMessageProps) {
 
       {showConfidence && (
         <div className="pt-3 border-t border-[color:var(--sh-gray)]">
-          <p className="text-[11px] text-navy-500">
+          <p className="text-xs text-navy-500">
             Confidence: {Math.round(response.confidence * 100)}%
           </p>
         </div>

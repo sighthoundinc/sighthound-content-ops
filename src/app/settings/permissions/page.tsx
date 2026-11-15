@@ -256,7 +256,7 @@ export default function PermissionsSettingsPage() {
             <span className="text-navy-500">Permissions</span>
           </nav>
           <header className="space-y-2">
-            <h2 className="text-xl font-semibold text-ink">Permissions</h2>
+            <h1 className="text-xl font-semibold text-ink">Permissions</h1>
             <p className="text-sm text-navy-500">
               Define what each role can access across core workflows.
             </p>

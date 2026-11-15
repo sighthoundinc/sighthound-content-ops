@@ -19,7 +19,7 @@ export function LoginFooter() {
   const shortSha = commit && commit !== "unknown" ? commit.slice(0, 7) : null;
 
   return (
-    <footer className="mt-10 flex flex-col items-center justify-between gap-2 text-[11px] font-medium text-navy-500/60 sm:flex-row">
+    <footer className="mt-10 flex flex-col items-center justify-between gap-2 text-xs font-medium text-navy-500/60 sm:flex-row">
       <p className="flex items-center gap-1.5">
         <span>Sighthound</span>
         {shortSha ? (

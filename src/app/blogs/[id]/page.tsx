@@ -1291,7 +1291,7 @@ export default function BlogDetailPage() {
                         <span>{BLOG_PREFLIGHT_FIELD_META[field].label}</span>
                         <button
                           type="button"
-                          className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
+                          className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-xs font-medium text-navy-500 hover:bg-blurple-50"
                           onClick={() => {
                             jumpToBlogField(field);
                           }}
@@ -1860,7 +1860,7 @@ export default function BlogDetailPage() {
                 {comments.map((comment) => (
                   <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-semibold text-white">
+                      <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
                         {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}
                       </span>
                       <div className="min-w-0 flex-1">

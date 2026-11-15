@@ -2956,7 +2956,7 @@ export default function SocialPostEditorPage() {
                 </div>
                 {latestRollbackReason ? (
                   <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
                       Latest Rollback Reason
                     </p>
                     <p className="text-xs text-amber-800">{latestRollbackReason}</p>
@@ -3016,7 +3016,7 @@ export default function SocialPostEditorPage() {
                             <span>{PREFLIGHT_FIELD_META[field].label}</span>
                             <button
                               type="button"
-                              className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
+                              className="rounded border border-[color:var(--sh-gray-200)] bg-white px-1.5 py-0.5 text-xs font-medium text-navy-500 hover:bg-blurple-50"
                               onClick={() => {
                                 jumpToPreflightField(field);
                               }}

@@ -989,7 +989,7 @@ export function BlogImportModal({
                   </div>
                   <div className="mt-2 overflow-auto rounded-md border border-[color:var(--sh-gray-200)]">
                     <table className={`${TABLE_BASE_CLASS} text-left text-xs`}>
-                      <thead className={`${TABLE_HEAD_CLASS} text-[11px]`}>
+                      <thead className={`${TABLE_HEAD_CLASS} text-xs`}>
                         <tr>
                           <th className="h-10 w-10 px-2 py-2 font-medium whitespace-nowrap">Pick</th>
                           <th className="h-10 w-14 px-2 py-2 font-medium whitespace-nowrap">Row</th>

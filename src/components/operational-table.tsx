@@ -245,19 +245,19 @@ export function OperationalTableCustomizeMenu({
       menuClassName="p-2"
     >
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+        <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
           Show Columns
         </p>
         <button
           type="button"
-          className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-[11px] font-medium text-navy-500 hover:bg-blurple-50"
+          className="pressable rounded border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50"
           onClick={onReset}
         >
           {resetLabel}
         </button>
       </div>
       <div className="mt-2 flex items-center justify-between rounded border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-2 py-1.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
           Density
         </span>
         <div className={`${SEGMENTED_CONTROL_CLASS} text-xs`}>
@@ -291,7 +291,7 @@ export function OperationalTableCustomizeMenu({
         {groups.map((group, groupIndex) => (
           <div key={group.label ?? `group-${groupIndex}`} className="space-y-1">
             {group.label ? (
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-500">
                 {group.label}
               </p>
             ) : null}

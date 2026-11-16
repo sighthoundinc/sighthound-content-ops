@@ -126,8 +126,12 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
         title: blog.title,
         kind: "blog",
         href: `/blogs/${blog.id}`,
+        // While writing is still open the blog is in the writing stage, even
+        // when the viewer's stake is the publishing task. Showing the
+        // publishing label there read as "Not Started" for a blog that was
+        // actually awaiting writing review.
         statusLabel:
-          selected.countBucket === "writer"
+          selected.countBucket === "writer" || blog.writer_status !== "completed"
             ? WRITER_STATUS_LABELS[blog.writer_status]
             : blog.writer_status === "completed" &&
                 blog.publisher_status === "not_started"

@@ -48,7 +48,7 @@ export default async function HomePage() {
   const otherBuckets = workBuckets.filter((bucket) => bucket.priority !== "high");
   const bucketGroups = [
     { id: "attention", heading: "Needs attention", buckets: attentionBuckets },
-    { id: "other", heading: "In progress and done", buckets: otherBuckets },
+    { id: "other", heading: "In progress", buckets: otherBuckets },
   ].filter((group) => group.buckets.length > 0);
   const requiredByLabel = displayName ?? "You";
   // Home is a snapshot, not the queue: show the first few of each list and

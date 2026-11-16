@@ -66,3 +66,25 @@ describe("social responsibility across summary, snapshot, and task queue", () =>
     })).toBe("waiting_on_others");
   });
 });
+
+describe("snapshot status label follows the blog's current stage", () => {
+  test("a publisher waiting on writing review sees the writing status, not 'Not Started'", async () => {
+    const blog = {
+      id: "blog", title: "Blog", writer_id: "me", publisher_id: "me",
+      writer_status: "pending_review", publisher_status: "not_started",
+      scheduled_publish_date: "2026-03-08", display_published_date: "2026-03-08",
+      created_at: "2026-03-01T00:00:00Z",
+    };
+    jest.mocked(requirePermission).mockResolvedValue({
+      context: { profile: { id: "me", role: "admin" }, adminClient: {} },
+    } as Awaited<ReturnType<typeof requirePermission>>);
+    jest.mocked(fetchSharedTaskClassificationInputs).mockResolvedValue({
+      data: { blogs: [blog], assignments: [], assignmentMap: new Map(), socialRows: [] },
+    } as unknown as Awaited<ReturnType<typeof fetchSharedTaskClassificationInputs>>);
+    const response = await snapshot(new NextRequest("http://localhost/api/test"));
+    const body = await response.json();
+    expect(body.requiredByMe).toEqual([]);
+    expect(body.waitingOnOthers.map((item: { statusLabel: string }) => item.statusLabel))
+      .toEqual(["Awaiting Writing Review"]);
+  });
+});

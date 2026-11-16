@@ -110,7 +110,9 @@ export async function authenticateRequest(
     return { error: "Invalid session", status: 401 };
   }
 
-  const adminClient = createAdminClient();
+  // Tag this request's service-role writes with the signed-in user so
+  // database history triggers can attribute them (see ACTOR_REQUEST_HEADER).
+  const adminClient = createAdminClient({ actorUserId: userData.user.id });
   const context = await resolveActiveProfileContext(userData.user.id, adminClient);
   if (!context) {
     return { error: "Active profile not found", status: 403 };

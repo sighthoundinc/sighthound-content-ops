@@ -22,7 +22,16 @@ export function createAnonServerClient() {
   });
 }
 
-export function createAdminClient() {
+/**
+ * Request header that tells the database which signed-in user a
+ * service-role write is being made for. Read by the
+ * `blog_history_fill_actor` trigger so history rows are attributed to the
+ * person, not left empty (shown as "System"). It carries no authority: RLS
+ * and permission checks never read it.
+ */
+export const ACTOR_REQUEST_HEADER = "x-content-relay-actor";
+
+export function createAdminClient(options: { actorUserId?: string | null } = {}) {
   const { url } = getCommonEnv();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) {
@@ -33,5 +42,8 @@ export function createAdminClient() {
       autoRefreshToken: false,
       persistSession: false,
     },
+    ...(options.actorUserId
+      ? { global: { headers: { [ACTOR_REQUEST_HEADER]: options.actorUserId } } }
+      : {}),
   });
 }

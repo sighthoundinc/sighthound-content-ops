@@ -18,7 +18,7 @@ import { formatDateOnly } from "@/lib/utils";
 
 import { fetchHomeData } from "./home-data";
 import { HomeBucketLink } from "./home-bucket-link";
-import { buildWorkBuckets, isTerminalBucket } from "./home-work-buckets";
+import { buildWorkBuckets } from "./home-work-buckets";
 
 export const dynamic = "force-dynamic";
 
@@ -35,15 +35,10 @@ export default async function HomePage() {
   const hasMultipleRoles = roleList.length > 1;
 
   const workBuckets = summary ? buildWorkBuckets(summary) : [];
-  const hasWork = workBuckets.length > 0;
   const hasSnapshotItems =
     tasksSnapshot.requiredByMe.length > 0 ||
     tasksSnapshot.waitingOnOthers.length > 0;
-  const hasAnyWork = hasWork || hasSnapshotItems;
-  // Approved/published tiles are reference only; they must not make the
-  // greeting claim there is something to act on.
-  const hasPendingWork =
-    workBuckets.some((bucket) => !isTerminalBucket(bucket)) || hasSnapshotItems;
+  const hasAnyWork = workBuckets.length > 0 || hasSnapshotItems;
   const attentionBuckets = workBuckets.filter((bucket) => bucket.priority === "high");
   const otherBuckets = workBuckets.filter((bucket) => bucket.priority !== "high");
   const bucketGroups = [
@@ -79,7 +74,7 @@ export default async function HomePage() {
             )}
           </div>
           <p className="mt-3 max-w-2xl text-sm font-normal leading-6 text-white/70">
-            {hasPendingWork
+            {hasAnyWork
               ? "Jump into what needs your attention now."
               : error
                 ? "We couldn’t load your work right now."
@@ -115,7 +110,7 @@ export default async function HomePage() {
             {group.buckets.map((bucket) => (
               <HomeBucketLink
                 key={bucket.id}
-                bucketId={bucket.id}
+                intent={bucket.intent}
                 className={`group pressable flex min-h-40 flex-col rounded-lg border p-5 shadow-brand-xs sm:p-6 ${
                   bucket.priority === "high"
                     ? "border-rose-300 bg-rose-50 text-ink hover:border-rose-400 hover:bg-rose-100 active:bg-ink active:text-white active:border-ink"

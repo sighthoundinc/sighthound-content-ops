@@ -1,4 +1,5 @@
 import type { AppIconName } from "@/lib/icons";
+import type { DashboardFilterIntent } from "@/lib/dashboard-filter-state";
 import { PUBLISHER_STATUS_LABELS, WRITER_STATUS_LABELS } from "@/lib/status";
 import { validateTaskLogicConsistency } from "@/lib/task-logic";
 
@@ -30,217 +31,78 @@ export interface WorkBucket {
   count: number;
   icon: AppIconName;
   priority: "high" | "normal";
+  /** Filter My Tasks applies when the tile is opened. */
+  intent: DashboardFilterIntent;
 }
 
+type BucketDefinition = Omit<WorkBucket, "count"> & {
+  counts: "writerCounts" | "publisherCounts" | "socialPostCounts";
+};
+
+const writerBucket = (
+  status: keyof typeof WRITER_STATUS_LABELS,
+  rest: Pick<BucketDefinition, "id" | "title" | "icon" | "priority">
+): BucketDefinition => ({
+  ...rest,
+  counts: "writerCounts",
+  intent: { type: "writer_status", value: status },
+});
+
+const publisherBucket = (
+  status: keyof typeof PUBLISHER_STATUS_LABELS,
+  rest: Pick<BucketDefinition, "id" | "title" | "icon" | "priority">
+): BucketDefinition => ({
+  ...rest,
+  counts: "publisherCounts",
+  intent: { type: "publisher_status", value: status },
+});
+
+const socialBucket = (
+  status: string,
+  rest: Pick<BucketDefinition, "title" | "icon" | "priority">
+): BucketDefinition => ({
+  ...rest,
+  id: `social-${status.replace(/_/g, "-")}`,
+  counts: "socialPostCounts",
+  intent: { type: "social_status", value: status },
+});
+
 /**
- * Terminal buckets (approved writing, published blogs) are shown for
- * reference but are not work the viewer still has to do.
+ * Every tile Home can show, in tie-break order. The summary API only counts
+ * work that needs the viewer's own action, so there is no role gating here
+ * and no tile for finished stages: a tile appears exactly when its count is
+ * above zero.
  */
-export function isTerminalBucket(bucket: WorkBucket): boolean {
-  return bucket.id === "writer-completed" || bucket.id === "publisher-completed";
-}
+const BUCKET_DEFINITIONS: BucketDefinition[] = [
+  writerBucket("needs_revision", { id: "writer-needs-revision", title: "Awaiting Your Revision", icon: "warning", priority: "high" }),
+  writerBucket("in_progress", { id: "writer-in-progress", title: WRITER_STATUS_LABELS.in_progress, icon: "writing", priority: "normal" }),
+  writerBucket("pending_review", { id: "writer-pending-review", title: WRITER_STATUS_LABELS.pending_review, icon: "writing", priority: "normal" }),
+  writerBucket("not_started", { id: "writer-not-started", title: "Writing Not Started", icon: "home", priority: "normal" }),
+  publisherBucket("in_progress", { id: "publisher-in-progress", title: PUBLISHER_STATUS_LABELS.in_progress, icon: "warning", priority: "high" }),
+  publisherBucket("pending_review", { id: "publisher-pending-review", title: PUBLISHER_STATUS_LABELS.pending_review, icon: "warning", priority: "high" }),
+  publisherBucket("publisher_approved", { id: "publisher-approved", title: PUBLISHER_STATUS_LABELS.publisher_approved, icon: "check", priority: "high" }),
+  publisherBucket("not_started", { id: "publisher-not-started", title: "Publishing Not Started", icon: "home", priority: "normal" }),
+  socialBucket("draft", { title: "Social Posts in Draft", icon: "writing", priority: "normal" }),
+  socialBucket("changes_requested", { title: "Social Posts Need Changes", icon: "warning", priority: "high" }),
+  socialBucket("ready_to_publish", { title: "Social Posts Ready to Publish", icon: "writing", priority: "high" }),
+  socialBucket("awaiting_live_link", { title: "Social Posts Awaiting Live Link", icon: "warning", priority: "high" }),
+  socialBucket("in_review", { title: "Social Posts in Review", icon: "writing", priority: "normal" }),
+  socialBucket("creative_approved", { title: "Social Posts Creative Approved", icon: "check", priority: "normal" }),
+];
 
 /**
  * Pure data transform. Takes the authoritative dashboard summary and emits
- * a ranked list of work buckets for the home page grid. Callable from both
- * server and client.
+ * the ranked work buckets for the home page: high priority first, then by
+ * count. Callable from both server and client.
  */
 export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
-  const buckets: WorkBucket[] = [];
-
-  if (data.userRoles.includes("writer") || data.userRoles.includes("admin")) {
-    const needsRevision = data.writerCounts.needs_revision ?? 0;
-    const inProgress = data.writerCounts.in_progress ?? 0;
-    const pendingReview = data.writerCounts.pending_review ?? 0;
-    const completed = data.writerCounts.completed ?? 0;
-    const notStarted = data.writerCounts.not_started ?? 0;
-
-    if (needsRevision > 0) {
-      buckets.push({
-        id: "writer-needs-revision",
-        title: "Awaiting Your Revision",
-        count: needsRevision,
-        icon: "warning",
-        priority: "high",
-      });
+  const buckets = BUCKET_DEFINITIONS.flatMap(({ counts, ...bucket }) => {
+    const count = data[counts][bucket.intent.value] ?? 0;
+    return count > 0 ? [{ ...bucket, count }] : [];
+  }).sort((a, b) => {
+    if (a.priority !== b.priority) {
+      return a.priority === "high" ? -1 : 1;
     }
-
-    if (inProgress > 0) {
-      buckets.push({
-        id: "writer-in-progress",
-        title: WRITER_STATUS_LABELS.in_progress,
-        count: inProgress,
-        icon: "writing",
-        priority: "normal",
-      });
-    }
-
-    if (pendingReview > 0) {
-      buckets.push({
-        id: "writer-pending-review",
-        title: WRITER_STATUS_LABELS.pending_review,
-        count: pendingReview,
-        icon: "writing",
-        priority: "normal",
-      });
-    }
-
-    if (completed > 0) {
-      buckets.push({
-        id: "writer-completed",
-        title: WRITER_STATUS_LABELS.completed,
-        count: completed,
-        icon: "check",
-        priority: "normal",
-      });
-    }
-
-    if (notStarted > 0 && data.userRoles.includes("admin")) {
-      buckets.push({
-        id: "writer-not-started",
-        title: "Writing Not Started",
-        count: notStarted,
-        icon: "home",
-        priority: "normal",
-      });
-    }
-  }
-
-  if (data.userRoles.includes("publisher") || data.userRoles.includes("admin")) {
-    const inProgress = data.publisherCounts.in_progress ?? 0;
-    const pendingReview = data.publisherCounts.pending_review ?? 0;
-    const publisherApproved = data.publisherCounts.publisher_approved ?? 0;
-    const completed = data.publisherCounts.completed ?? 0;
-    const notStarted = data.publisherCounts.not_started ?? 0;
-
-    if (inProgress > 0) {
-      buckets.push({
-        id: "publisher-in-progress",
-        title: PUBLISHER_STATUS_LABELS.in_progress,
-        count: inProgress,
-        icon: "warning",
-        priority: "high",
-      });
-    }
-
-    if (pendingReview > 0) {
-      buckets.push({
-        id: "publisher-pending-review",
-        title: PUBLISHER_STATUS_LABELS.pending_review,
-        count: pendingReview,
-        icon: "warning",
-        priority: "high",
-      });
-    }
-
-    if (publisherApproved > 0) {
-      buckets.push({
-        id: "publisher-approved",
-        title: PUBLISHER_STATUS_LABELS.publisher_approved,
-        count: publisherApproved,
-        icon: "check",
-        priority: "high",
-      });
-    }
-
-    if (completed > 0) {
-      buckets.push({
-        id: "publisher-completed",
-        title: PUBLISHER_STATUS_LABELS.completed,
-        count: completed,
-        icon: "check",
-        priority: "normal",
-      });
-    }
-
-    if (notStarted > 0) {
-      buckets.push({
-        id: "publisher-not-started",
-        title: "Publishing Not Started",
-        count: notStarted,
-        icon: "home",
-        priority: "normal",
-      });
-    }
-  }
-
-  if (
-    data.userRoles.includes("admin") ||
-    data.userRoles.includes("publisher") ||
-    data.userRoles.includes("editor") ||
-    data.userRoles.includes("writer")
-  ) {
-    const draft = data.socialPostCounts.draft ?? 0;
-    const changesRequested = data.socialPostCounts.changes_requested ?? 0;
-    const inReview = data.socialPostCounts.in_review ?? 0;
-    const creativeApproved = data.socialPostCounts.creative_approved ?? 0;
-    const readyToPublish = data.socialPostCounts.ready_to_publish ?? 0;
-    const awaitingLink = data.socialPostCounts.awaiting_live_link ?? 0;
-
-    if (draft > 0) {
-      buckets.push({
-        id: "social-draft",
-        title: "Social Posts in Draft",
-        count: draft,
-        icon: "writing",
-        priority: "normal",
-      });
-    }
-
-    if (changesRequested > 0) {
-      buckets.push({
-        id: "social-changes-requested",
-        title: "Social Posts Need Changes",
-        count: changesRequested,
-        icon: "warning",
-        priority: "high",
-      });
-    }
-
-    if (readyToPublish > 0) {
-      buckets.push({
-        id: "social-ready-to-publish",
-        title: "Social Posts Ready to Publish",
-        count: readyToPublish,
-        icon: "writing",
-        priority: "high",
-      });
-    }
-
-    if (awaitingLink > 0) {
-      buckets.push({
-        id: "social-awaiting-live-link",
-        title: "Social Posts Awaiting Live Link",
-        count: awaitingLink,
-        icon: "warning",
-        priority: "high",
-      });
-    }
-
-    if (inReview > 0) {
-      buckets.push({
-        id: "social-in-review",
-        title: "Social Posts in Review",
-        count: inReview,
-        icon: "writing",
-        priority: "normal",
-      });
-    }
-
-    if (creativeApproved > 0) {
-      buckets.push({
-        id: "social-creative-approved",
-        title: "Social Posts Creative Approved",
-        count: creativeApproved,
-        icon: "check",
-        priority: "normal",
-      });
-    }
-  }
-
-  const sorted = buckets.sort((a, b) => {
-    if (a.priority === "high" && b.priority !== "high") return -1;
-    if (a.priority !== "high" && b.priority === "high") return 1;
     return b.count - a.count;
   });
 
@@ -250,8 +112,8 @@ export function buildWorkBuckets(data: DashboardSummary): WorkBucket[] {
       publisherCounts: Object.keys(data.publisherCounts),
       socialPostCounts: Object.keys(data.socialPostCounts),
     },
-    sorted.map((b) => b.id)
+    buckets.map((bucket) => bucket.id)
   );
 
-  return sorted;
+  return buckets;
 }

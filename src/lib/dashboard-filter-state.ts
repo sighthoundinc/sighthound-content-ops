@@ -62,16 +62,3 @@ export function getDashboardFilterIntent(): DashboardFilterIntent | null {
     return null;
   }
 }
-
-/**
- * Clear any pending filter intent without retrieving it.
- */
-export function clearDashboardFilterIntent(): void {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.removeItem(FILTER_STATE_KEY);
-    sessionStorage.removeItem(FILTER_SOURCE_KEY);
-  } catch (error) {
-    console.error("Failed to clear dashboard filter intent:", error);
-  }
-}

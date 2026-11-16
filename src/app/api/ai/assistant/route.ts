@@ -53,6 +53,8 @@ import {
   seedRateLimitBucket,
 } from "@/app/api/ai/utils/rate-limiter";
 import { recordAskAIEvent } from "@/app/api/ai/utils/telemetry";
+import { authenticateRequest } from "@/lib/server-permissions";
+import { getUserRoles } from "@/lib/roles";
 import { buildWorkspaceSnapshot } from "@/app/api/ai/utils/multi-entity-context";
 import {
   getIdeaEntityCacheVersion,
@@ -312,19 +314,33 @@ export async function POST(
       );
     }
 
-    const request = body as AskAIRequest;
-
-    const authHeader = req.headers.get("Authorization") || "";
-    const accessToken = authHeader.replace(/^Bearer\s+/i, "");
-    if (!accessToken) {
+    // Identity and role come from the verified session, never from the
+    // request body: both feed rate limiting, caching, and telemetry.
+    const auth = await authenticateRequest(req);
+    if ("error" in auth) {
       return NextResponse.json(
         createErrorResponse(
           "UNAUTHORIZED",
-          "Please sign in to use the AI assistant"
+          auth.status === 403
+            ? "Your account does not have access to the AI assistant"
+            : "Please sign in to use the AI assistant"
         ),
-        { status: 401 }
+        { status: auth.status }
       );
     }
+    const verifiedRoles = getUserRoles(auth.context.profile);
+    const claimed = body as AskAIRequest;
+    const request: AskAIRequest = {
+      ...claimed,
+      userId: auth.context.userId,
+      // Keep the caller's active role only when they actually hold it.
+      userRole: verifiedRoles.includes(claimed.userRole)
+        ? claimed.userRole
+        : (verifiedRoles[0] ?? "writer"),
+    };
+
+    const authHeader = req.headers.get("Authorization") || "";
+    const accessToken = authHeader.replace(/^Bearer\s+/i, "");
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -336,7 +352,7 @@ export async function POST(
     });
 
     // Rate limit
-    const isAdmin = request.userRole === "admin";
+    const isAdmin = verifiedRoles.includes("admin");
     const rate = checkRateLimit(request.userId, isAdmin);
     if (!rate.allowed) {
       // Seed the bucket asynchronously so subsequent workers stay in sync.

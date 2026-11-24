@@ -519,7 +519,7 @@ After the Sighthound Content Relay migration finished (§19 of `design-system/MI
    - Keep contract rules synchronized across `AGENTS.md`, `SPECIFICATION.md`, and source-level types/interfaces.
 ## Remote MCP Read Boundary (MUST)
 
-1. `POST /api/mcp` is a stateless, read-only Streamable HTTP protocol route. Register only the Phase 1 tools defined in `SPECIFICATION.md` §18 unless a separately reviewed scope change authorizes more.
+1. `POST /api/mcp` is a stateless, read-only Streamable HTTP protocol route. Register the Phase 1 read tools defined in `SPECIFICATION.md` §18; Phase 2 write tools register only when `MCP_MUTATIONS_ENABLED=true` and must route through existing API handlers or re-apply RLS ownership rules explicitly. Never add delete, admin, import or permission tools without a separate review.
 2. Authenticate with `MCP_API_TOKEN` using constant-time comparison. Resolve the actor only from `MCP_ACT_AS_USER_ID`; require an active profile and use the shared role-permission resolution path. Never accept caller identity in MCP tool arguments.
 3. MCP reads use the service-role client and bypass RLS. Every tool must therefore enforce its mapped application permission before querying data. Service-role access by itself is never authorization.
 4. Use strict, bounded tool schemas. Keep `get_my_tasks` tied to the configured actor and shared task-classification/deduplication logic; action-required blog associations take precedence over waiting associations.

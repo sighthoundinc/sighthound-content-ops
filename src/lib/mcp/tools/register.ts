@@ -4,6 +4,7 @@ import type { AuthenticatedRequestContext } from "@/lib/server-permissions";
 import { registerBlogTools } from "@/lib/mcp/tools/blogs";
 import { registerIdeaAndTaskTools } from "@/lib/mcp/tools/ideas-and-tasks";
 import { registerSocialPostTools } from "@/lib/mcp/tools/social-posts";
+import { registerWriteTools } from "@/lib/mcp/tools/writes";
 
 export function createMcpServer(context: AuthenticatedRequestContext) {
   const server = new McpServer(
@@ -14,6 +15,9 @@ export function createMcpServer(context: AuthenticatedRequestContext) {
   registerBlogTools(server, context);
   registerSocialPostTools(server, context);
   registerIdeaAndTaskTools(server, context);
+  if (process.env.MCP_MUTATIONS_ENABLED === "true") {
+    registerWriteTools(server, context);
+  }
 
   return server;
 }

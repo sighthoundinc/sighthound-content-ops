@@ -14,11 +14,16 @@ import {
   mcpRateLimiter,
   SlidingWindowRateLimiter,
 } from "@/lib/mcp/security";
+import { createAdminClient } from "@/lib/supabase/server";
 
 jest.mock("next/server", () => ({
   after: (callback: () => void | Promise<void>) => {
     void callback();
   },
+}));
+
+jest.mock("@/lib/supabase/server", () => ({
+  createAdminClient: jest.fn(() => ({})),
 }));
 
 jest.mock("@/lib/server-permissions", () => ({
@@ -335,7 +340,8 @@ describe("Content Relay read-only MCP endpoint", () => {
         null
       );
 
-      expect(resolveActiveProfileContext).toHaveBeenCalledWith(ACTOR_ID);
+      expect(resolveActiveProfileContext).toHaveBeenCalledWith(ACTOR_ID, expect.anything());
+    expect(createAdminClient).toHaveBeenCalledWith({ actorUserId: ACTOR_ID });
       expect(mockAdmin.logWrites).toContainEqual({
         user_id: ACTOR_ID,
         event_type: "mcp_tool_call",
@@ -421,7 +427,8 @@ describe("Content Relay read-only MCP endpoint", () => {
       });
     });
 
-    expect(resolveActiveProfileContext).toHaveBeenCalledWith(ACTOR_ID);
+    expect(resolveActiveProfileContext).toHaveBeenCalledWith(ACTOR_ID, expect.anything());
+    expect(createAdminClient).toHaveBeenCalledWith({ actorUserId: ACTOR_ID });
   });
 
   test("rejects an invalid configured actor without resolving a profile", async () => {

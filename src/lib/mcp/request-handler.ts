@@ -2,6 +2,7 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { resolveActiveProfileContext } from "@/lib/server-permissions";
+import { createAdminClient } from "@/lib/supabase/server";
 import {
   MCP_URL_SECRET_REDACTED_PATH,
   mcpRateLimiter,
@@ -36,7 +37,11 @@ export async function handleMcpRequest(
 
   let context;
   try {
-    context = await resolveActiveProfileContext(configuredActorId.data);
+    // Tag service-role writes so history triggers attribute them to the actor.
+    context = await resolveActiveProfileContext(
+      configuredActorId.data,
+      createAdminClient({ actorUserId: configuredActorId.data })
+    );
   } catch {
     return mcpUnavailableResponse();
   }

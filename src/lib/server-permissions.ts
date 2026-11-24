@@ -6,6 +6,7 @@ import {
   resolvePermissionsForRoles,
   type RolePermissionRow,
 } from "@/lib/permissions";
+import { getMcpActorContext } from "@/lib/mcp/actor-context";
 import { isMissingUserRolesColumnError } from "@/lib/profile-schema";
 import { getUserRoles } from "@/lib/roles";
 import { createAdminClient, createAnonServerClient } from "@/lib/supabase/server";
@@ -99,6 +100,11 @@ export async function resolveActiveProfileContext(
 export async function authenticateRequest(
   request: NextRequest
 ): Promise<{ context: AuthenticatedRequestContext } | AuthFailure> {
+  const mcpActorContext = getMcpActorContext();
+  if (mcpActorContext) {
+    return { context: mcpActorContext };
+  }
+
   const token = getBearerToken(request);
   if (!token) {
     return { error: "Missing access token", status: 401 };

@@ -46,7 +46,7 @@ Current gap example:
 - Authenticate either `Authorization: Bearer <MCP_API_TOKEN>` or the configured `MCP_URL_SECRET` path segment before resolving the configured actor. Both credentials use constant-time digest comparison.
 - Derive actor identity only from `MCP_ACT_AS_USER_ID`, require an active profile, and resolve permissions through the shared server-permission path.
 - The route uses the service-role database client; every registered tool must perform its explicit application-permission check before protected reads.
-- Tool schemas must be strict and bounded. Register read-only tools only; do not accept caller identity or add mutations without a separate security/design review.
+- Tool schemas must be strict and bounded. Do not accept caller identity. Write tools register only behind `MCP_MUTATIONS_ENABLED=true` and must reuse existing route handlers or re-apply RLS ownership checks; new mutation classes (delete, admin, import) need a separate security/design review.
 - Preserve opaque `401` for missing/invalid credentials, `503` for invalid actor configuration/resolution, and `429` with `Retry-After` for the best-effort per-process request limiter.
 - Tool-call telemetry is best-effort and excludes bearer credentials and tool arguments. See `SPECIFICATION.md` §18 and `OPERATIONS.md` §14.
 - Vercel may retain the actual path containing `MCP_URL_SECRET`; this is an accepted platform logging risk. Application-controlled logs must use `/api/mcp/s/[redacted]` and never log or echo the secret.

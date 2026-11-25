@@ -17,6 +17,7 @@ import { assertValidStatus } from "@/lib/task-logic";
 import {
   registerReadOnlyTool,
   boundedPaginationSchema,
+  sanitizeOrSearchValue,
   throwOnQueryError,
 } from "@/lib/mcp/tools/shared";
 import type { AuthenticatedRequestContext } from "@/lib/server-permissions";
@@ -33,6 +34,13 @@ const listIdeasSchema = z
   .strict();
 
 const noArgumentsSchema = z.object({}).strict();
+
+const listUsersSchema = z
+  .object({
+    search: z.string().trim().min(1).max(100).optional(),
+    include_inactive: z.boolean().default(false),
+  })
+  .strict();
 
 function compareDatesAsc(leftDate: string | null, rightDate: string | null) {
   if (leftDate && rightDate) return leftDate.localeCompare(rightDate);
@@ -100,6 +108,30 @@ export function registerIdeaAndTaskTools(
         limit: input.limit,
         offset: input.offset,
       };
+    },
+  });
+
+  registerReadOnlyTool(server, {
+    name: "list_users",
+    title: "List users",
+    description:
+      "List Relay users (id, name, email, roles) so a person's name can be resolved to the user id that assignment tools need. Optional name/email search.",
+    inputSchema: listUsersSchema,
+    permission: "view_dashboard",
+    context,
+    run: async (input) => {
+      let query = context.adminClient
+        .from("profiles")
+        .select("id,full_name,email,role,user_roles,is_active");
+      if (!input.include_inactive) query = query.eq("is_active", true);
+      if (input.search) {
+        const term = sanitizeOrSearchValue(input.search);
+        if (!term) return { users: [] };
+        query = query.or(`full_name.ilike.%${term}%,email.ilike.%${term}%`);
+      }
+      const { data, error } = await query.order("full_name", { ascending: true }).limit(200);
+      throwOnQueryError(error);
+      return { users: data ?? [] };
     },
   });
 

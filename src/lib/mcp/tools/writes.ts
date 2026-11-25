@@ -9,7 +9,9 @@ import { POST as createBlogRoute } from "@/app/api/blogs/route";
 import { POST as addBlogCommentRoute } from "@/app/api/blogs/[id]/comments/route";
 import { POST as transitionBlogRoute } from "@/app/api/blogs/[id]/transition/route";
 import { POST as recordActivityRoute } from "@/app/api/events/record-activity/route";
+import { DELETE as deleteIdeaRoute } from "@/app/api/ideas/[id]/route";
 import { POST as createSocialPostRoute } from "@/app/api/social-posts/route";
+import { DELETE as deleteSocialPostRoute } from "@/app/api/social-posts/[id]/route";
 import { POST as addSocialCommentRoute } from "@/app/api/social-posts/[id]/comments/route";
 import { POST as reopenSocialBriefRoute } from "@/app/api/social-posts/[id]/reopen-brief/route";
 import { POST as transitionSocialPostRoute } from "@/app/api/social-posts/[id]/transition/route";
@@ -276,16 +278,42 @@ export function registerWriteTools(
     name: "create_blog",
     title: "Create blog",
     description:
-      "Create a blog record (metadata only; article text stays in the Google Doc).",
+      "Create a blog record (metadata only; article text stays in the Google Doc). Pass idea_id to convert an idea: the idea is marked converted and linked to the new blog.",
     inputSchema: z
       .object({
         ...blogFields,
         title: z.string().trim().min(1),
         site: z.enum(SITES),
         slug: z.string().trim().min(1).optional(),
+        idea_id: uuid.optional(),
       })
       .strict(),
-    run: (input) => callRelayRoute(context, createBlogRoute, "/api/blogs", input),
+    run: async ({ idea_id, ...input }) => {
+      if (idea_id) {
+        const { data: idea, error } = await context.adminClient
+          .from("blog_ideas")
+          .select("id,is_converted")
+          .eq("id", idea_id)
+          .maybeSingle();
+        if (error) throw new Error("Database query failed.");
+        if (!idea) throw new ToolUserError("Idea not found.");
+        if (idea.is_converted) throw new ToolUserError("Idea is already converted to a blog.");
+      }
+      const result = await callRelayRoute(context, createBlogRoute, "/api/blogs", input);
+      if (!idea_id) return result;
+      // Same follow-up the app's New Blog page does after creating from an idea.
+      const blogId = (result.blog as { id?: string } | undefined)?.id;
+      const { error } = await context.adminClient
+        .from("blog_ideas")
+        .update({ is_converted: true, converted_blog_id: blogId })
+        .eq("id", idea_id)
+        .eq("is_converted", false);
+      return {
+        ...result,
+        idea_converted: !error,
+        ...(error ? { warning: "Blog created, but the idea could not be marked converted." } : {}),
+      };
+    },
   });
 
   registerWriteTool(server, context, {
@@ -579,5 +607,35 @@ export function registerWriteTools(
       throwOnWriteError(error);
       return { idea: data };
     },
+  });
+
+  // Deletes: existing routes enforce permission, creator-or-admin, and
+  // "published posts cannot be deleted". Blog delete is deliberately not exposed.
+  registerWriteTool(server, context, {
+    name: "delete_idea",
+    title: "Delete idea",
+    description:
+      "Permanently delete an idea. Cannot be undone; confirm with the user before calling.",
+    destructive: true,
+    inputSchema: z.object({ idea_id: uuid }).strict(),
+    run: ({ idea_id }) =>
+      callRelayRoute(context, deleteIdeaRoute, `/api/ideas/${idea_id}`, {}, idea_id),
+  });
+
+  registerWriteTool(server, context, {
+    name: "delete_social_post",
+    title: "Delete social post",
+    description:
+      "Permanently delete an unpublished social post with its links and comments. Cannot be undone; confirm with the user before calling. Published posts cannot be deleted.",
+    destructive: true,
+    inputSchema: z.object({ social_post_id: uuid }).strict(),
+    run: ({ social_post_id }) =>
+      callRelayRoute(
+        context,
+        deleteSocialPostRoute,
+        `/api/social-posts/${social_post_id}`,
+        {},
+        social_post_id
+      ),
   });
 }

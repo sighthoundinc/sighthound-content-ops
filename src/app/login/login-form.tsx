@@ -47,6 +47,15 @@ export function LoginForm() {
     showError(error);
   }, [error, showError]);
 
+  // Supabase reports a failed Google/Slack sign-in (for example an account
+  // outside @sighthound.com) by returning here with `?error=`.
+  const oauthFailed = searchParams.get("error") !== null;
+  useEffect(() => {
+    if (oauthFailed) {
+      setError("Sign-in could not be completed. Use your @sighthound.com account.");
+    }
+  }, [oauthFailed]);
+
   // Session-watching redirect. Covers paths where the session is established
   // client-side AFTER the page is already rendered — primarily the OAuth
   // return chain (Supabase callback -> middleware bounce to /login ->
@@ -120,6 +129,9 @@ export function LoginForm() {
       provider: "google",
       options: {
         redirectTo: `${appUrl}${redirectPath}`,
+        // Google account picker shows only Sighthound accounts. A hint, not
+        // the rule: the database trigger on auth.users enforces the domain.
+        queryParams: { hd: "sighthound.com" },
       },
     });
     if (oauthError) {

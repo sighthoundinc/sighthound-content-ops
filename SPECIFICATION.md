@@ -388,7 +388,8 @@ Authentication is enforced at three layers. Each layer is independent and none i
 2. **OAuth (Google, Slack)** — `handleGoogleSignIn` / `handleSlackSignIn`:
    - `supabase.auth.signInWithOAuth({ provider, options: { redirectTo: ${origin}${destination} } })` with provider strings `"google"` and `"slack_oidc"` (do not change these).
    - Browser navigates to the provider, provider returns to Supabase, Supabase returns to `${origin}${destination}`.
-   - On return, middleware may bounce the user to `/login` because cookies have not been written yet. The URL hash / `code` is preserved through the 302.
+   - On return, middleware bounces the user to `/login` because cookies have not been written yet. `buildLoginRedirectUrl()` (`src/lib/middleware-auth.ts`) copies `code`, `error`, `error_code` and `error_description` onto the `/login` redirect; without that the sign-in cannot complete. DO NOT replace it with a bare `/login` redirect.
+   - Only `@sighthound.com` accounts may sign in. The rule is the `enforce_sighthound_email_domain` trigger on `auth.users` (migration `20261125130000`); the Google `hd` hint and the admin create-user check are conveniences. A rejected account returns to `/login?error=...` and the form shows a sign-in error.
    - The browser Supabase client detects the hash / code on page load, exchanges it, and fires `onAuthStateChange`. AuthProvider updates its React state.
    - `login-form.tsx` has a session-watching `useEffect` whose sole purpose is to catch this case: when `session` becomes non-null, it `router.replace(destination)` + `router.refresh()`. DO NOT remove this effect — it is the only thing that completes the OAuth return chain.
 3. **Already-signed-in user hits `/login`** directly — handled by the Server Component redirect at render time; no client code runs.

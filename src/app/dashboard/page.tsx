@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 import { AppShell } from "@/components/app-shell";
-import { Button } from "@/components/button";
+import { Button, buttonClass } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 
 // Inline relative-time formatter. Avoids pulling date-fns into the initial
@@ -4096,7 +4096,7 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {canCreateBlog || canManageSocialPosts ? (
                   <details className="relative">
-                    <summary className="cursor-pointer list-none rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blurple-700 focus-visible:outline-none focus-visible:shadow-brand-focus">
+                    <summary className={buttonClass({ variant: "primary", size: "md", className: "cursor-pointer list-none" })}>
                       Add Content
                     </summary>
                     <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
@@ -4537,7 +4537,7 @@ export default function DashboardPage() {
                     !hasPendingBulkChanges ||
                     Boolean(bulkValidationError)
                   }
-                  className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                  className={buttonClass({ variant: "primary", size: "md" })}
                   onClick={() => {
                     void handleBulkApplyChanges();
                   }}
@@ -5239,7 +5239,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           disabled={isPanelCommentSaving}
-                          className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                          className={buttonClass({ variant: "primary", size: "md" })}
                           onClick={() => {
                             void handlePanelAddComment();
                           }}

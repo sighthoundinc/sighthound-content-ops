@@ -1503,7 +1503,7 @@ export default function CalendarPage() {
             primaryAction={
               <Button
                 type="button"
-                variant="primary"
+                variant="secondary"
                 size="md"
                 onClick={handleExportICS}
                 className="gap-2"
@@ -1511,8 +1511,7 @@ export default function CalendarPage() {
                 title="Export calendar to iCalendar format for Outlook, Apple Calendar, or Google Calendar"
               >
                 <DownloadIcon boxClassName="h-4 w-4"
-                  size={14}
-                  className="text-white" />
+                  size={14} />
                 <span>Export to Calendar</span>
               </Button>
             }

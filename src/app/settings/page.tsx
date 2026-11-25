@@ -1,6 +1,7 @@
 "use client";
 
 import { DialogFocusScope } from "@/components/dialog-focus-scope";
+import { buttonClass } from "@/components/button";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -1266,7 +1267,7 @@ function SettingsPageContent() {
                           onClick={() => setDensity("compact")}
                           className={`rounded px-3 py-1 font-medium transition ${
                             density === "compact"
-                              ? "bg-ink text-white"
+                              ? "bg-blurple-100 text-ink"
                               : "text-navy-500 hover:text-ink"
                           }`}
                           aria-pressed={density === "compact"}
@@ -1278,7 +1279,7 @@ function SettingsPageContent() {
                           onClick={() => setDensity("comfortable")}
                           className={`rounded px-3 py-1 font-medium transition ${
                             density === "comfortable"
-                              ? "bg-ink text-white"
+                              ? "bg-blurple-100 text-ink"
                               : "text-navy-500 hover:text-ink"
                           }`}
                           aria-pressed={density === "comfortable"}
@@ -1293,7 +1294,7 @@ function SettingsPageContent() {
                     <div className="mt-4">
                       <button
                         type="button"
-                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700"
+                        className={buttonClass({ variant: "primary", size: "md" })}
                         onClick={() => {
                           void saveProfileEdits(profile.id);
                         }}
@@ -1577,7 +1578,7 @@ function SettingsPageContent() {
                         <button
                           type="submit"
                           disabled={isCreatingUser}
-                          className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className={buttonClass({ variant: "primary", size: "md" })}
                         >
                           {isCreatingUser ? "Creating..." : "Create User"}
                         </button>
@@ -1665,7 +1666,7 @@ function SettingsPageContent() {
                         <button
                           type="submit"
                           disabled={isReassigningAssignments}
-                          className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className={buttonClass({ variant: "primary", size: "md" })}
                         >
                           {isReassigningAssignments ? "Reassigning..." : "Reassign Assignments"}
                         </button>
@@ -1995,7 +1996,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isSavingEditedUser}
-                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className={buttonClass({ variant: "primary", size: "md" })}
                         onClick={() => {
                           void saveEditedUserFromModal();
                         }}
@@ -2079,7 +2080,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isResettingPassword || !resetPasswordInput || resetPasswordInput.length < 8}
-                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className={buttonClass({ variant: "primary", size: "md" })}
                         onClick={() => {
                           void resetUserPassword();
                         }}

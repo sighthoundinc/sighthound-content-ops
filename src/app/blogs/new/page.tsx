@@ -1,6 +1,7 @@
 "use client";
 
 import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard";
+import { buttonClass } from "@/components/button";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -576,7 +577,7 @@ function NewBlogPageContent() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                className={buttonClass({ variant: "primary", size: "md" })}
               >
                 {isSubmitting ? "Creating..." : "Create Blog"}
               </button>

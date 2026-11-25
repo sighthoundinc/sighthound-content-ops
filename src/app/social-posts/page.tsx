@@ -32,7 +32,7 @@ import {
 } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { Button } from "@/components/button";
+import { Button, buttonClass } from "@/components/button";
 import { CalendarControlBar } from "@/components/calendar-control-bar";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
@@ -3443,7 +3443,7 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                             isSelected
-                              ? "border-ink bg-ink text-white"
+                              ? "border-brand bg-blurple-100 text-ink"
                               : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           } ${!panelCanEditBrief ? "cursor-not-allowed opacity-60" : ""}`}
                           onClick={() => {
@@ -3470,7 +3470,7 @@ function SocialPostsPageContent() {
                   <button
                     type="button"
                     disabled={isPanelSaving || !panelCanEditBrief}
-                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    className={buttonClass({ variant: "primary", size: "md" })}
                     onClick={() => {
                       void handleSavePostDetails();
                     }}
@@ -3536,7 +3536,7 @@ function SocialPostsPageContent() {
                     <button
                       type="submit"
                       disabled={isCommentSaving}
-                      className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                      className={buttonClass({ variant: "primary", size: "md" })}
                     >
                       {isCommentSaving ? "Adding..." : "Add Comment"}
                     </button>
@@ -3917,7 +3917,7 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium ${
                             isActive
-                              ? "border-ink bg-ink text-white"
+                              ? "border-brand bg-blurple-100 text-ink"
                               : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           }`}
                           onClick={() => {
@@ -3979,7 +3979,7 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium ${
                             isSelected
-                              ? "border-ink bg-ink text-white"
+                              ? "border-brand bg-blurple-100 text-ink"
                               : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           }`}
                           onClick={() => {
@@ -4112,7 +4112,7 @@ function SocialPostsPageContent() {
                   <button
                     type="submit"
                     disabled={isCreating}
-                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    className={buttonClass({ variant: "primary", size: "md" })}
                   >
                     {isCreating ? "Creating..." : "Create Social Post"}
                   </button>

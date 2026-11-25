@@ -1829,21 +1829,21 @@ export default function SocialPostEditorPage() {
                 <Button
                   variant="secondary"
                   size="sm"
+                  onClick={() => {
+                    router.push("/social-posts");
+                  }}
+                >
+                  Back to Social Posts
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
                   disabled={isDeletingPost}
                   onClick={() => {
                     setIsDeleteModalOpen(true);
                   }}
                 >
                   {isDeletingPost ? "Deleting…" : "Delete"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    router.push("/social-posts");
-                  }}
-                >
-                  Back to Social Posts
                 </Button>
               </div>
             }

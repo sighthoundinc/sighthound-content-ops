@@ -128,32 +128,12 @@ const BLOG_LIFECYCLE_PERMISSIONS: PermissionDefinition[] = [
     configurable: false,
   },
   {
-    key: "delete_idea",
-    label: "Delete Idea",
-    description: "Delete a blog idea the user created.",
-    group: "blog_lifecycle",
-    configurable: true,
-  },
-  {
-    key: "delete_social_post",
-    label: "Delete Social Post",
-    description: "Delete a social post the user created.",
-    group: "blog_lifecycle",
-    configurable: true,
-  },
-  {
-    key: "duplicate_blog",
-    label: "Duplicate Blog",
-    description: "Clone an existing blog.",
-    group: "blog_lifecycle",
-    configurable: true,
-  },
-  {
     key: "view_archived_blogs",
     label: "View Archived Blogs",
     description: "View archived blog content.",
     group: "blog_lifecycle",
-    configurable: true,
+    // Checked by the MCP connector only, so there is no toggle for it.
+    configurable: false,
   },
 ];
 
@@ -166,13 +146,6 @@ const WRITING_STAGE_PERMISSIONS: PermissionDefinition[] = [
     configurable: true,
   },
   {
-    key: "pause_writing",
-    label: "Pause Writing",
-    description: "Pause writing work.",
-    group: "writing_stage",
-    configurable: true,
-  },
-  {
     key: "submit_draft",
     label: "Submit Draft",
     description: "Mark writing as completed.",
@@ -181,8 +154,8 @@ const WRITING_STAGE_PERMISSIONS: PermissionDefinition[] = [
   },
   {
     key: "request_revision",
-    label: "Request Revision",
-    description: "Move draft to needs revision.",
+    label: "Review Blog Stages",
+    description: "Approve or send back someone else's writing or publishing work. Never your own.",
     group: "writing_stage",
     configurable: true,
   },
@@ -197,13 +170,6 @@ const WRITING_STAGE_PERMISSIONS: PermissionDefinition[] = [
     key: "edit_google_doc_link",
     label: "Edit Google Doc Link",
     description: "Modify writing document link.",
-    group: "writing_stage",
-    configurable: true,
-  },
-  {
-    key: "assign_writer_self",
-    label: "Assign Writer to Self",
-    description: "Assign yourself as writer.",
     group: "writing_stage",
     configurable: true,
   },
@@ -225,6 +191,13 @@ const PUBLISHING_STAGE_PERMISSIONS: PermissionDefinition[] = [
     configurable: true,
   },
   {
+    key: "submit_publishing",
+    label: "Submit Publishing for Review",
+    description: "Send your own publishing work for review.",
+    group: "publishing_stage",
+    configurable: true,
+  },
+  {
     key: "complete_publishing",
     label: "Complete Publishing",
     description: "Mark blog as published.",
@@ -235,20 +208,6 @@ const PUBLISHING_STAGE_PERMISSIONS: PermissionDefinition[] = [
     key: "edit_publisher_status",
     label: "Edit Publisher Status",
     description: "Modify publishing status with full control.",
-    group: "publishing_stage",
-    configurable: true,
-  },
-  {
-    key: "assign_publisher_self",
-    label: "Assign Publisher to Self",
-    description: "Assign yourself as publisher.",
-    group: "publishing_stage",
-    configurable: true,
-  },
-  {
-    key: "upload_cover_image",
-    label: "Upload Cover Image",
-    description: "Attach cover image to a blog.",
     group: "publishing_stage",
     configurable: true,
   },
@@ -297,13 +256,6 @@ const SCHEDULING_PERMISSIONS: PermissionDefinition[] = [
     group: "scheduling",
     configurable: true,
   },
-  {
-    key: "view_actual_publish_calendar",
-    label: "View Actual Publish Calendar",
-    description: "Access real publish cadence calendar.",
-    group: "scheduling",
-    configurable: true,
-  },
 ];
 
 const COMMENTS_PERMISSIONS: PermissionDefinition[] = [
@@ -332,20 +284,6 @@ const COMMENTS_PERMISSIONS: PermissionDefinition[] = [
     key: "delete_any_comment",
     label: "Delete Any Comment",
     description: "Remove others' comments.",
-    group: "comments_collaboration",
-    configurable: true,
-  },
-  {
-    key: "view_comment_history",
-    label: "View Comment History",
-    description: "View comment history.",
-    group: "comments_collaboration",
-    configurable: true,
-  },
-  {
-    key: "mention_users",
-    label: "Mention Users",
-    description: "Mention users in comments.",
     group: "comments_collaboration",
     configurable: true,
   },
@@ -391,34 +329,6 @@ const DASHBOARD_PERMISSIONS: PermissionDefinition[] = [
     configurable: true,
   },
   {
-    key: "view_metrics",
-    label: "View Metrics",
-    description: "View operational metrics.",
-    group: "dashboard_analytics",
-    configurable: true,
-  },
-  {
-    key: "view_more_metrics",
-    label: "View More Metrics",
-    description: "View advanced analytics.",
-    group: "dashboard_analytics",
-    configurable: true,
-  },
-  {
-    key: "view_delay_metrics",
-    label: "View Delay Metrics",
-    description: "View publishing delay insights.",
-    group: "dashboard_analytics",
-    configurable: true,
-  },
-  {
-    key: "view_pipeline_metrics",
-    label: "View Pipeline Metrics",
-    description: "View writing and publishing pipeline metrics.",
-    group: "dashboard_analytics",
-    configurable: true,
-  },
-  {
     key: "export_csv",
     label: "Export CSV",
     description: "Export data to CSV.",
@@ -435,65 +345,9 @@ const DASHBOARD_PERMISSIONS: PermissionDefinition[] = [
 ];
 
 const BLOG_DATA_PERMISSIONS: PermissionDefinition[] = [
-  {
-    key: "edit_blog_description",
-    label: "Edit Blog Description",
-    description: "Edit description fields.",
-    group: "blog_data_editing",
-    configurable: true,
-  },
-  {
-    key: "edit_tags",
-    label: "Edit Tags",
-    description: "Modify blog tags.",
-    group: "blog_data_editing",
-    configurable: true,
-  },
-  {
-    key: "edit_blog_category",
-    label: "Edit Blog Category",
-    description: "Modify blog category.",
-    group: "blog_data_editing",
-    configurable: true,
-  },
-  {
-    key: "edit_internal_notes",
-    label: "Edit Internal Notes",
-    description: "Modify internal notes.",
-    group: "blog_data_editing",
-    configurable: true,
-  },
-  {
-    key: "edit_external_links",
-    label: "Edit External Links",
-    description: "Modify reference links.",
-    group: "blog_data_editing",
-    configurable: true,
-  },
 ];
 
 const CALENDAR_PERMISSIONS: PermissionDefinition[] = [
-  {
-    key: "view_month_calendar",
-    label: "View Month Calendar",
-    description: "View month calendar.",
-    group: "calendar_management",
-    configurable: true,
-  },
-  {
-    key: "view_week_calendar",
-    label: "View Week Calendar",
-    description: "View week calendar.",
-    group: "calendar_management",
-    configurable: true,
-  },
-  {
-    key: "view_unscheduled_blogs",
-    label: "View Unscheduled Blogs",
-    description: "View blogs without scheduled publish dates.",
-    group: "calendar_management",
-    configurable: true,
-  },
   {
     key: "reschedule_via_calendar",
     label: "Reschedule via Calendar",
@@ -523,14 +377,8 @@ const IDEAS_PERMISSIONS: PermissionDefinition[] = [
     label: "Edit Own Idea",
     description: "Edit own ideas.",
     group: "user_management",
-    configurable: true,
-  },
-  {
-    key: "edit_idea_description",
-    label: "Edit Idea Description",
-    description: "Edit idea details.",
-    group: "user_management",
-    configurable: true,
+    // Checked by the MCP connector only, so there is no toggle for it.
+    configurable: false,
   },
   {
     key: "delete_idea",
@@ -557,16 +405,17 @@ const SOCIAL_POSTS_PERMISSIONS: PermissionDefinition[] = [
     configurable: true,
   },
   {
-    key: "view_social_post_details",
-    label: "View Social Post Details",
-    description: "View full social post details.",
-    group: "user_management",
-    configurable: true,
-  },
-  {
     key: "edit_social_post_brief",
     label: "Edit Social Post Brief",
     description: "Edit social post brief fields.",
+    group: "user_management",
+    // Checked by the MCP connector only, so there is no toggle for it.
+    configurable: false,
+  },
+  {
+    key: "review_social_post",
+    label: "Review Social Posts",
+    description: "Can be chosen as the reviewer of a social post.",
     group: "user_management",
     configurable: true,
   },
@@ -578,18 +427,12 @@ const SOCIAL_POSTS_PERMISSIONS: PermissionDefinition[] = [
     configurable: false,
   },
   {
-    key: "transition_social_post",
-    label: "Transition Social Post",
-    description: "Move social post through workflow.",
-    group: "user_management",
-    configurable: true,
-  },
-  {
     key: "add_social_post_link",
     label: "Add Social Post Link",
     description: "Add live links to social posts.",
     group: "user_management",
-    configurable: true,
+    // Checked by the MCP connector only, so there is no toggle for it.
+    configurable: false,
   },
   {
     key: "delete_social_post",
@@ -608,20 +451,6 @@ const VISIBILITY_PERMISSIONS: PermissionDefinition[] = [
     group: "user_management",
     configurable: true,
   },
-  {
-    key: "view_notifications",
-    label: "View Notifications",
-    description: "View notification bell and drawer.",
-    group: "user_management",
-    configurable: true,
-  },
-  {
-    key: "view_activity_history",
-    label: "View Activity History",
-    description: "View record-level activity history.",
-    group: "user_management",
-    configurable: true,
-  },
 ];
 
 const USER_MANAGEMENT_PERMISSIONS: PermissionDefinition[] = [
@@ -629,13 +458,6 @@ const USER_MANAGEMENT_PERMISSIONS: PermissionDefinition[] = [
     key: "manage_users",
     label: "Manage Users",
     description: "Create, deactivate, and manage users.",
-    group: "user_management",
-    configurable: false,
-  },
-  {
-    key: "edit_user_profile",
-    label: "Edit User Profile",
-    description: "Modify user profile information.",
     group: "user_management",
     configurable: false,
   },
@@ -653,37 +475,9 @@ const USER_MANAGEMENT_PERMISSIONS: PermissionDefinition[] = [
     group: "user_management",
     configurable: false,
   },
-  {
-    key: "view_user_activity",
-    label: "View User Activity",
-    description: "View user activity logs.",
-    group: "user_management",
-    configurable: false,
-  },
-  {
-    key: "impersonate_user",
-    label: "Impersonate User",
-    description: "Act as another user.",
-    group: "user_management",
-    configurable: false,
-  },
 ];
 
 const SYSTEM_ADMIN_PERMISSIONS: PermissionDefinition[] = [
-  {
-    key: "manage_integrations",
-    label: "Manage Integrations",
-    description: "Configure external integrations.",
-    group: "system_administration",
-    configurable: false,
-  },
-  {
-    key: "manage_notifications",
-    label: "Manage Notifications",
-    description: "Control notification behavior.",
-    group: "system_administration",
-    configurable: false,
-  },
   {
     key: "run_data_import",
     label: "Run Data Import",
@@ -822,7 +616,6 @@ export const DEFAULT_ROLE_PERMISSION_TEMPLATES: Record<
     "edit_blog_title",
     "start_writing",
     "submit_draft",
-    "request_revision",
     "edit_google_doc_link",
     "view_writing_queue",
     "edit_scheduled_publish_date",
@@ -831,31 +624,23 @@ export const DEFAULT_ROLE_PERMISSION_TEMPLATES: Record<
     "create_comment",
     "edit_own_comment",
     "delete_own_comment",
-    "mention_users",
     "view_dashboard",
-    "view_metrics",
     "export_csv",
-    // NEW: Ideas (3)
     "create_idea",
     "view_ideas",
     "edit_own_idea",
-    // NEW: Social Posts (5)
     "create_social_post",
     "view_social_posts",
     "edit_social_post_brief",
-    "transition_social_post",
     "add_social_post_link",
-    // NEW: Visibility (3)
     "view_my_tasks",
-    "view_notifications",
-    "view_activity_history",
   ],
   publisher: [
     "edit_blog_metadata",
     "start_publishing",
+    "submit_publishing",
     "complete_publishing",
     "edit_live_url",
-    "upload_cover_image",
     "view_publishing_queue",
     "edit_scheduled_publish_date",
     "calendar_drag_reschedule",
@@ -863,53 +648,36 @@ export const DEFAULT_ROLE_PERMISSION_TEMPLATES: Record<
     "create_comment",
     "edit_own_comment",
     "delete_own_comment",
-    "mention_users",
     "view_dashboard",
-    "view_metrics",
     "export_csv",
-    // NEW: Social Posts (4)
     "view_social_posts",
     "edit_social_post_brief",
-    "transition_social_post",
     "add_social_post_link",
-    // NEW: Visibility (3)
     "view_my_tasks",
-    "view_notifications",
-    "view_activity_history",
   ],
   editor: [
     "edit_blog_metadata",
     "edit_blog_title",
-    "edit_blog_description",
     "request_revision",
     "create_comment",
     "edit_own_comment",
     "delete_own_comment",
-    "mention_users",
     "view_calendar",
     "view_dashboard",
-    "view_metrics",
     "export_csv",
-    // NEW: Ideas (2)
     "view_ideas",
     "create_idea",
-    // NEW: Visibility (3)
+    "review_social_post",
     "view_my_tasks",
-    "view_notifications",
-    "view_activity_history",
   ],
   // Read-only. Deliberately not in MANAGED_PERMISSION_ROLES: the set is fixed,
   // so no toggle can ever hand a viewer a write permission.
   viewer: [
     "view_dashboard",
-    "view_metrics",
     "view_calendar",
     "view_ideas",
     "view_social_posts",
-    "view_social_post_details",
     "view_my_tasks",
-    "view_notifications",
-    "view_activity_history",
   ],
 };
 
@@ -1078,10 +846,26 @@ export function hasWorkflowOverridePermission(hasPermission: PermissionLookup) {
   );
 }
 
+// Who is acting on a stage, and who that stage is assigned to.
+export type StageActor = {
+  userId: string | null | undefined;
+  ownerId: string | null | undefined;
+};
+
+function isStageOwner(actor: StageActor) {
+  return Boolean(actor.userId) && actor.userId === actor.ownerId;
+}
+
+// Rules (unless the user holds an override permission):
+// - only the assigned writer moves their own writing forward;
+// - approving or sending back needs the review permission and is never done
+//   by the person whose work it is.
+// Mirrored in SQL by enforce_blog_update_permissions().
 export function canTransitionWriterStatus(
   currentStatus: WriterStageStatus,
   nextStatus: WriterStageStatus,
-  hasPermission: PermissionLookup
+  hasPermission: PermissionLookup,
+  actor: StageActor
 ) {
   if (currentStatus === nextStatus) {
     return true;
@@ -1093,20 +877,21 @@ export function canTransitionWriterStatus(
   ) {
     return true;
   }
+  const isOwner = isStageOwner(actor);
   if (nextStatus === "in_progress") {
     return (
-      (currentStatus === "not_started" && hasPermission("start_writing")) ||
-      (currentStatus === "needs_revision" && hasPermission("start_writing"))
+      (currentStatus === "not_started" || currentStatus === "needs_revision") &&
+      hasPermission("start_writing") &&
+      isOwner
     );
   }
   if (nextStatus === "pending_review") {
-    return currentStatus === "in_progress" && hasPermission("submit_draft");
+    return currentStatus === "in_progress" && hasPermission("submit_draft") && isOwner;
   }
-  if (nextStatus === "needs_revision") {
-    return currentStatus === "pending_review" && hasPermission("request_revision");
-  }
-  if (nextStatus === "completed") {
-    return currentStatus === "pending_review" && hasPermission("submit_draft");
+  if (nextStatus === "needs_revision" || nextStatus === "completed") {
+    return (
+      currentStatus === "pending_review" && hasPermission("request_revision") && !isOwner
+    );
   }
   return false;
 }
@@ -1114,7 +899,8 @@ export function canTransitionWriterStatus(
 export function canTransitionPublisherStatus(
   currentStatus: PublisherStageStatus,
   nextStatus: PublisherStageStatus,
-  hasPermission: PermissionLookup
+  hasPermission: PermissionLookup,
+  actor: StageActor
 ) {
   if (currentStatus === nextStatus) {
     return true;
@@ -1126,18 +912,21 @@ export function canTransitionPublisherStatus(
   ) {
     return true;
   }
+  const isOwner = isStageOwner(actor);
   if (nextStatus === "in_progress") {
-    return currentStatus === "not_started" && hasPermission("start_publishing");
+    return currentStatus === "not_started" && hasPermission("start_publishing") && isOwner;
   }
   if (nextStatus === "pending_review") {
-    return currentStatus === "in_progress" && hasPermission("submit_draft");
+    return currentStatus === "in_progress" && hasPermission("submit_publishing") && isOwner;
   }
   if (nextStatus === "publisher_approved") {
-    return currentStatus === "pending_review" && hasPermission("submit_draft");
+    return (
+      currentStatus === "pending_review" && hasPermission("request_revision") && !isOwner
+    );
   }
   if (nextStatus === "completed") {
     return (
-      currentStatus === "publisher_approved" && hasPermission("complete_publishing")
+      currentStatus === "publisher_approved" && hasPermission("complete_publishing") && isOwner
     );
   }
   return false;

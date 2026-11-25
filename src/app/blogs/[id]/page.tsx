@@ -363,11 +363,11 @@ export default function BlogDetailPage() {
     canArchiveBlog ||
     canOverrideWorkflow;
   const canMarkWritingComplete = Boolean(
-    blog && canTransitionWriterStatus(blog.writer_status, "completed", hasPermission)
+    blog && canTransitionWriterStatus(blog.writer_status, "completed", hasPermission, { userId: user?.id, ownerId: blog.writer_id })
   );
   const canMarkPublishingComplete = Boolean(
     blog &&
-      canTransitionPublisherStatus(blog.publisher_status, "completed", hasPermission)
+      canTransitionPublisherStatus(blog.publisher_status, "completed", hasPermission, { userId: user?.id, ownerId: blog.publisher_id })
   );
 
   const selectedWriter = useMemo(
@@ -802,7 +802,7 @@ export default function BlogDetailPage() {
     if (!form || !blog || !canWriterEdit) {
       return;
     }
-    if (!canTransitionWriterStatus(blog.writer_status, form.writer_status, hasPermission)) {
+    if (!canTransitionWriterStatus(blog.writer_status, form.writer_status, hasPermission, { userId: user?.id, ownerId: blog.writer_id })) {
       setError("You do not have permission for the selected writing stage.");
       return;
     }
@@ -880,7 +880,7 @@ export default function BlogDetailPage() {
       !canTransitionPublisherStatus(
         blog.publisher_status,
         form.publisher_status,
-        hasPermission
+        hasPermission, { userId: user?.id, ownerId: blog.publisher_id }
       )
     ) {
       setError("You do not have permission for the selected publishing stage.");
@@ -969,7 +969,7 @@ export default function BlogDetailPage() {
     if (!form || !blog || !canWriterEdit || isSaving) {
       return;
     }
-    if (!canTransitionWriterStatus(blog.writer_status, "completed", hasPermission)) {
+    if (!canTransitionWriterStatus(blog.writer_status, "completed", hasPermission, { userId: user?.id, ownerId: blog.writer_id })) {
       setError("You do not have permission to submit writing.");
       return;
     }
@@ -1003,7 +1003,7 @@ export default function BlogDetailPage() {
     if (!form || !blog || !canPublisherEdit || isSaving) {
       return;
     }
-    if (!canTransitionPublisherStatus(blog.publisher_status, "completed", hasPermission)) {
+    if (!canTransitionPublisherStatus(blog.publisher_status, "completed", hasPermission, { userId: user?.id, ownerId: blog.publisher_id })) {
       setError("You do not have permission to complete publishing.");
       return;
     }
@@ -1655,7 +1655,7 @@ export default function BlogDetailPage() {
                             ? !canTransitionWriterStatus(
                                 blog.writer_status,
                                 status,
-                                hasPermission
+                                hasPermission, { userId: user?.id, ownerId: blog.writer_id }
                               )
                             : false
                         }
@@ -1752,7 +1752,7 @@ export default function BlogDetailPage() {
                             ? !canTransitionPublisherStatus(
                                 blog.publisher_status,
                                 status,
-                                hasPermission
+                                hasPermission, { userId: user?.id, ownerId: blog.publisher_id }
                               )
                             : false
                         }

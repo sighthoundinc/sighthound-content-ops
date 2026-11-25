@@ -219,13 +219,15 @@ Social transition API guardrails:
 
 ## Permission System (MUST)
 
-**Total Permissions**: 92 (76 delegable + 12 admin-locked)
+**Permissions**: defined in `src/lib/permissions.ts` (`PERMISSION_DEFINITIONS`). Keys with no enforcement were removed on 2026-11-25; do not add a key without an enforcement point.
+
+**Blog stage rule**: only the assigned writer/publisher moves their stage; review decisions need `request_revision` and are never made by the stage owner. Enforced in `canTransitionWriterStatus`/`canTransitionPublisherStatus` (API + UI) and by `can_transition_*` plus the `blogs_enforce_stage_ownership` trigger (database).
 
 **Roles**:
 - **Admin**: All permissions (full access)
-- **Writer**: 28 permissions (create/edit blogs, writing workflow, ideas, social posts, collaboration, scheduling, dashboard)
-- **Publisher**: 23 permissions (publishing workflow, social posts, scheduling, collaboration, dashboard)
-- **Editor**: 17 permissions (blog editing, idea management, collaboration, workflow support, dashboard)
+- **Writer**: create blogs/ideas/social posts, move their own writing stage, scheduling, comments, dashboard
+- **Publisher**: move their own publishing stage (start, `submit_publishing`, complete), scheduling, comments, dashboard
+- **Editor**: review other people's blog stages (`request_revision` = approve or send back, never your own), `review_social_post`, blog edits, ideas, comments, dashboard
 - **Viewer**: read-only (fixed `view_*` set, not configurable). Non-GET API calls are rejected in `authenticateRequest`; direct writes are blocked by the restrictive "Viewers cannot insert/update/delete" RLS policies via `public.is_view_only()`.
 
 **Permission Structure**:

@@ -59,6 +59,9 @@ export default function ResourcesPage() {
                 <InternalPageLink href="#key-concepts">2) Key concepts and ownership</InternalPageLink>
               </li>
               <li>
+                <InternalPageLink href="#roles">Roles and what each can do</InternalPageLink>
+              </li>
+              <li>
                 <InternalPageLink href="#social-pipeline">3) Social post pipeline</InternalPageLink>
               </li>
               <li>
@@ -159,6 +162,40 @@ export default function ResourcesPage() {
               <li>If it’s a review stage, the reviewer acts next.</li>
               <li>If it’s a terminal stage, you’re done — enjoy the win.</li>
             </ul>
+          </Section>
+
+          <Section id="roles" title="Roles and what each can do">
+            <p>
+              Your role decides which buttons you see. If an action is missing or greyed out, it usually means the work is not assigned to you at that stage.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                <span className="font-medium text-ink">Writer:</span> creates blogs, ideas and social posts. Writes, then sends their own draft for review.
+              </li>
+              <li>
+                <span className="font-medium text-ink">Publisher:</span> publishes approved blogs: starts publishing, sends it for review, marks it published.
+              </li>
+              <li>
+                <span className="font-medium text-ink">Editor:</span> reviews other people&apos;s work: approves it or sends it back. Can be chosen as the reviewer on a social post.
+              </li>
+              <li>
+                <span className="font-medium text-ink">Admin:</span> everything above, plus users, assignments and settings.
+              </li>
+              <li>
+                <span className="font-medium text-ink">Viewer:</span> read-only. Can open and read everything, but cannot create, edit, comment or delete.
+              </li>
+            </ul>
+            <p className="font-medium text-ink">Rules that apply to everyone</p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>One person can hold several roles, for example Writer and Editor, and gets what each role allows. Viewer is the exception: it is never combined with another role.</li>
+              <li>Only the person assigned to a stage moves it forward. The assigned writer moves the writing stage; the assigned publisher moves the publishing stage.</li>
+              <li>Nobody reviews their own work. Approving or sending back is done by an editor or an admin who is not the person who did the work.</li>
+              <li>On social posts, the person assigned at the current stage acts. The reviewer must be an editor or an admin.</li>
+              <li>Admins can step in on any stage when work is stuck.</li>
+            </ul>
+            <p>
+              When someone becomes a Viewer, their unfinished blogs and active social posts move to the admin who made the change, who can then reassign them. Need a different role or a reassignment? Ask an admin.
+            </p>
           </Section>
 
           <Section id="social-pipeline" title="3) Social post pipeline">

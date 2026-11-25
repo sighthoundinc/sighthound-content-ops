@@ -33,6 +33,28 @@ Ownership rule:
 - Review stage = reviewer acts
 - Terminal stage = done
 
+## 2a) Roles and what each can do
+Your role decides which buttons you see. If an action is missing or greyed out, it usually means the work is not assigned to you at that stage.
+
+| Role | What it is for |
+|---|---|
+| Writer | Creates blogs, ideas and social posts. Writes, then sends their own draft for review. |
+| Publisher | Publishes approved blogs: starts publishing, sends it for review, marks it published. |
+| Editor | Reviews other people's work: approves it or sends it back. Can be chosen as the reviewer on a social post. |
+| Admin | Everything above, plus users, assignments and settings. |
+| Viewer | Read-only. Can open and read everything, but cannot create, edit, comment or delete. |
+
+Rules that apply to everyone:
+- One person can hold several roles, for example Writer and Editor, and gets what each role allows. Viewer is the exception: it is never combined with another role.
+- Only the person assigned to a stage moves it forward. The assigned writer moves the writing stage; the assigned publisher moves the publishing stage.
+- Nobody reviews their own work. Approving or sending back is done by an editor or an admin who is not the person who did the work.
+- On social posts, the person assigned at the current stage acts. The reviewer must be an editor or an admin.
+- Admins can step in on any stage when work is stuck.
+
+When someone becomes a Viewer, their unfinished blogs and active social posts move to the admin who made the change, who can then reassign them.
+
+Need a different role or a reassignment? Ask an admin.
+
 ## 3) Social post pipeline
 | Status | Owner | Required action |
 |---|---|---|

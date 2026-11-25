@@ -13,6 +13,8 @@ import { DataPageBreadcrumb, DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
+import { EmptyState } from "@/components/empty-state";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { UnstickThisButton } from "@/components/ai/unstick-this-button";
@@ -1801,9 +1803,20 @@ export default function SocialPostEditorPage() {
     return (
       <ProtectedPage>
         <AppShell>
-          <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {error ?? "Post not found."}
-          </div>
+          {error ? (
+            <LoadErrorState
+              description={error}
+              onRetry={() => {
+                void loadPost();
+              }}
+            />
+          ) : (
+            <EmptyState
+              title="Social post not found"
+              description="This link may be old, or the post may have been deleted."
+              action={{ label: "Back to Social Posts", href: "/social-posts" }}
+            />
+          )}
         </AppShell>
       </ProtectedPage>
     );

@@ -10,6 +10,7 @@ import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { LoadErrorState } from "@/components/load-error-state";
 import { DataPageHeader } from "@/components/data-page";
+import { EmptyState } from "@/components/empty-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { parseApiResponseJson, isApiFailure, getApiErrorMessage } from "@/lib/api-response";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
@@ -18,6 +19,7 @@ import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatDateInTimezone } from "@/lib/format-date";
 import type { BlogIdeaRecord, BlogSite, IdeaCommentRecord } from "@/lib/types";
+import { UI_VOCAB } from "@/lib/ui-vocab";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 function formatDateTime(value: string, timezone?: string | null) {
@@ -417,9 +419,11 @@ export default function IdeasPage() {
                 }}
               />
             ) : activeIdeas.length === 0 ? (
-              <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-4 text-sm text-navy-500">
-                No ideas yet. Add one in under 5 seconds.
-              </p>
+              <EmptyState
+                icon="idea"
+                title={UI_VOCAB.emptyStates.ideasTitle}
+                description={UI_VOCAB.emptyStates.ideasDescription}
+              />
             ) : (
               <ul className="space-y-3">
                 {activeIdeas.map((idea) => (

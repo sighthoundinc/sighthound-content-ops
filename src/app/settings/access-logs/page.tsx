@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   DATA_PAGE_CONTROL_ACTIONS_CLASS,
@@ -314,9 +315,12 @@ export default function AccessLogsPage() {
           />
 
           {error && (
-            <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm text-rose-700">{error}</p>
-            </div>
+            <LoadErrorState
+              description={error}
+              onRetry={() => {
+                void loadActivityHistory();
+              }}
+            />
           )}
 
           {isAdmin && !isLoading && (

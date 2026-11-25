@@ -12,6 +12,7 @@ import { DataPageBreadcrumb, DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
+import { EmptyState } from "@/components/empty-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge } from "@/components/status-badge";
 import { UnstickThisButton } from "@/components/ai/unstick-this-button";
@@ -1192,9 +1193,11 @@ export default function BlogDetailPage() {
     return (
       <ProtectedPage>
         <AppShell>
-          <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">
-            Blog not found.
-          </p>
+          <EmptyState
+            title="Blog not found"
+            description="This link may be old, or the blog may have been deleted."
+            action={{ label: "Back to Blogs", href: "/blogs" }}
+          />
         </AppShell>
       </ProtectedPage>
     );

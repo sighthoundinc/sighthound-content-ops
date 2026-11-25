@@ -55,7 +55,7 @@ export default async function HomePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl">
+      <div>
         <section className="relative overflow-hidden rounded-lg border border-[color:var(--sh-navy-700)] bg-ink p-8 shadow-brand-md sm:p-10">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">

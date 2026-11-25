@@ -43,7 +43,7 @@ export default function ResourcesPage() {
   return (
     <ProtectedPage>
       <AppShell>
-        <div className="mx-auto max-w-5xl space-y-4 sm:space-y-5">
+        <div className="max-w-5xl space-y-4 sm:space-y-5">
           <DataPageHeader
             title="User Manual"
             description="A friendly walkthrough of how work moves through Content Relay — who acts next, what each stage expects, and where to go when you get stuck."

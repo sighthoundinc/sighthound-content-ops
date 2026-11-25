@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import {
+  buildLoginRedirectUrl,
   hasSupabaseAuthCookieNames,
   shouldBypassAuth,
 } from "@/lib/middleware-auth";
@@ -28,7 +29,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!hasSupabaseAuthCookie(request)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(buildLoginRedirectUrl(request.url));
   }
 
   const supabaseEnv = getSupabaseEnv();
@@ -74,7 +75,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(buildLoginRedirectUrl(request.url));
   }
 
   return response;

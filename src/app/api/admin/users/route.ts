@@ -6,7 +6,12 @@ import { hasPermission, requirePermission } from "@/lib/server-permissions";
 import type { AppRole } from "@/lib/types";
 
 const createUserSchema = z.object({
-  email: z.string().email(),
+  email: z
+    .string()
+    .email()
+    .refine((value) => value.toLowerCase().endsWith("@sighthound.com"), {
+      message: "Use a @sighthound.com email.",
+    }),
   password: z.string().min(8),
   fullName: z.string().min(2),
   role: z.enum(["admin", "writer", "publisher", "editor"]),

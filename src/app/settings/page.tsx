@@ -1860,7 +1860,7 @@ function SettingsPageContent() {
                     role="dialog"
                     aria-modal="true"
                     aria-label="Edit user"
-                    className="relative z-10 w-full max-w-xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+                    className="relative z-10 w-full max-w-xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
                   >
                     <DialogFocusScope
                       onClose={() => {
@@ -2025,7 +2025,7 @@ function SettingsPageContent() {
                     role="dialog"
                     aria-modal="true"
                     aria-label="Set new password"
-                    className="relative z-10 w-full max-w-sm rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+                    className="relative z-10 w-full max-w-sm rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
                   >
                     <DialogFocusScope
                       onClose={() => {
@@ -2108,7 +2108,7 @@ function SettingsPageContent() {
                     role="dialog"
                     aria-modal="true"
                     aria-label="Delete inactive users"
-                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl"
+                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-brand-lg"
                   >
                     <DialogFocusScope
                       onClose={() => {
@@ -2257,7 +2257,7 @@ function SettingsPageContent() {
                     role="dialog"
                     aria-modal="true"
                     aria-label="Wipe app clean"
-                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl"
+                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-brand-lg"
                   >
                     <DialogFocusScope
                       onClose={() => {

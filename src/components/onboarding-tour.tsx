@@ -113,7 +113,7 @@ export function OnboardingTour({ initiallyOpen }: { initiallyOpen?: boolean }) {
       role="dialog"
       aria-label="Content Relay onboarding"
       className={cn(
-        "fixed bottom-6 right-6 z-[260] w-[320px] overflow-hidden rounded-xl border border-[color:var(--sh-gray-200)] bg-white shadow-xl",
+        "fixed bottom-6 right-6 z-[260] w-[320px] overflow-hidden rounded-xl border border-[color:var(--sh-gray-200)] bg-white shadow-brand-lg",
         "motion-reduce:transition-none transition-transform"
       )}
     >

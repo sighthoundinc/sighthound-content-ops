@@ -1860,7 +1860,7 @@ export default function BlogDetailPage() {
             ) : (
               <ul className="mt-3 space-y-3">
                 {comments.map((comment) => (
-                  <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs hover:shadow-brand-sm transition-shadow">
                     <div className="flex items-start gap-3">
                       <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
                         {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}

@@ -23,7 +23,7 @@ export function AILinksRow({ links }: { links: AskAISafeLinkView[] }) {
           <ArrowRightIcon size={12} boxClassName="h-3.5 w-3.5" />
         );
         const className =
-          'inline-flex items-center gap-1.5 rounded-full border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-navy-500 transition-colors hover:border-[color:var(--sh-gray-200)] hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
+          'inline-flex items-center gap-1.5 rounded-full border border-[color:var(--sh-gray-200)] bg-white px-3 py-1 text-xs font-medium text-navy-500 transition-colors hover:border-[color:var(--sh-gray-200)] hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus';
         if (link.kind === 'internal') {
           return (
             <Link key={link.key} href={link.href} className={className}>

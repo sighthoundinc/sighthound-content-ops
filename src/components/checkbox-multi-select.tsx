@@ -130,7 +130,7 @@ export function CheckboxMultiSelect({
       </button>
 
       {isOpen ? (
-        <div className="absolute z-30 mt-1 w-full min-w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-lg">
+        <div className="absolute z-30 mt-1 w-full min-w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-brand-md">
           <div className="mb-2 flex items-center justify-between border-b border-[color:var(--sh-gray)] pb-2">
             <button
               type="button"

@@ -745,7 +745,7 @@ export function AppShell({
               {isNotificationPanelOpen ? (
                 <div
                   id="header-notifications-menu"
-                  className="absolute right-0 z-40 mt-2 w-[320px] rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-lg"
+                  className="absolute right-0 z-40 mt-2 w-[320px] rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-brand-md"
                   role="menu"
                   aria-label="Notifications menu"
                 >
@@ -872,7 +872,7 @@ export function AppShell({
               {isProfileMenuOpen ? (
                 <div
                   id="header-profile-menu"
-                  className="absolute right-0 z-40 mt-2 w-52 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-lg"
+                  className="absolute right-0 z-40 mt-2 w-52 rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-2 shadow-brand-md"
                   role="menu"
                   aria-label="Profile menu"
                 >

@@ -36,7 +36,7 @@ export const SidebarToggle = forwardRef<HTMLButtonElement, SidebarToggleProps>(
         onClick={onToggle}
         aria-label={collapsed ? "Open sidebar" : "Close sidebar"}
         className={cn(
-          "group flex items-center justify-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
+          "group flex items-center justify-center rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:shadow-brand-focus",
           collapsed
             ? "w-full min-h-11 px-2 py-2 hover:bg-blurple-50"
             : "h-9 w-9 p-2 text-navy-500 hover:bg-blurple-50 hover:text-ink"

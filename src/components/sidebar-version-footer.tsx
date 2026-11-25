@@ -31,7 +31,7 @@ export function SidebarVersionFooter() {
         <button
           type="button"
           onClick={handleCopyCommit}
-          className="group rounded-sm text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
+          className="group rounded-sm text-left transition focus-visible:outline-none focus-visible:shadow-brand-focus"
           title="Click to copy commit hash"
         >
           <span className="inline-block rounded px-1.5 py-0.5 text-xs tabular-nums text-navy-500 transition group-hover:bg-blurple-50 group-hover:text-ink">

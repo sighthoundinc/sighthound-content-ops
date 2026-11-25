@@ -47,7 +47,7 @@ export function SelectionCart({
       role="region"
       aria-label="Selected items actions"
       className={cn(
-        "pointer-events-auto fixed bottom-6 left-1/2 z-[250] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-[color:var(--sh-gray-200)] bg-white px-4 py-2 shadow-lg",
+        "pointer-events-auto fixed bottom-6 left-1/2 z-[250] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-[color:var(--sh-gray-200)] bg-white px-4 py-2 shadow-brand-md",
         className
       )}
     >
@@ -68,7 +68,7 @@ export function SelectionCart({
             disabled={action.disabled}
             title={action.disabled ? action.disabledReason : undefined}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:shadow-brand-focus",
               action.variant === "danger"
                 ? "text-rose-700 hover:bg-rose-50 disabled:text-rose-300"
                 : "text-navy-500 hover:bg-blurple-50 disabled:text-navy-500/60",
@@ -85,7 +85,7 @@ export function SelectionCart({
       <button
         type="button"
         onClick={onClear}
-        className="inline-flex items-center gap-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="inline-flex items-center gap-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-2 py-1 text-xs font-medium text-navy-500 hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
       >
         <CloseIcon boxClassName="h-4 w-4" size={12} />
         Clear

@@ -788,7 +788,7 @@ export function BlogImportModal({
             role="dialog"
             aria-modal="true"
             aria-label="Import blogs"
-            className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-xl border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl sm:p-5"
+            className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-xl border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-lg sm:p-5"
           >
             <DialogFocusScope />
             <div className="flex items-start justify-between gap-3">

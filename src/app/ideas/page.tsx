@@ -533,7 +533,7 @@ export default function IdeasPage() {
               role="dialog"
               aria-modal="true"
               aria-label="New idea"
-              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
             >
               <DialogFocusScope
                 onClose={() => {
@@ -649,7 +649,7 @@ export default function IdeasPage() {
               role="dialog"
               aria-modal="true"
               aria-label="Edit idea"
-              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
             >
               <DialogFocusScope
                 onClose={() => {

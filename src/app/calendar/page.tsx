@@ -2257,7 +2257,7 @@ export default function CalendarPage() {
                             onClick={() => {
                               setIsUnscheduledSocialPostsExpanded((previous) => !previous);
                             }}
-                            className="flex w-full items-center justify-between rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-left transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
+                            className="flex w-full items-center justify-between rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-2 text-left transition-colors hover:bg-blurple-50 focus-visible:outline-none focus-visible:shadow-brand-focus"
                           >
                             <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                               Unscheduled Social Posts ({unscheduledSocialPosts.length})

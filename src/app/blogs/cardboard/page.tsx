@@ -955,7 +955,7 @@ export default function BlogCardBoardPage() {
                                   setDraggingBlogId(null);
                                   setDragOverStage(null);
                                 }}
-                                className="group relative rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-sm transition hover:shadow"
+                                className="group relative rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-brand-xs transition hover:shadow"
                               >
                                 <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
                                   {isPublishedStage ? (

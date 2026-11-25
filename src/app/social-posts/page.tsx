@@ -481,7 +481,7 @@ function SocialPostCard({
     <div
       ref={setNodeRef}
       style={dragStyle}
-      className={`relative rounded-md border border-[color:var(--sh-gray-200)] bg-white shadow-sm transition ${
+      className={`relative rounded-md border border-[color:var(--sh-gray-200)] bg-white shadow-brand-xs transition ${
         isDragging ? "opacity-60" : ""
       }`}
     >
@@ -544,7 +544,7 @@ function SocialPostCard({
         </button>
         {isMenuOpen ? (
           <div
-            className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-lg"
+            className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-brand-md"
             onClick={(event) => {
               event.stopPropagation();
             }}
@@ -2379,7 +2379,7 @@ function SocialPostsPageContent() {
         {comments.map((comment) => (
           <li
             key={comment.id}
-            className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+            className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs hover:shadow-brand-sm transition-shadow"
           >
             <p className="text-xs font-semibold text-navy-500">
               {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}
@@ -2540,7 +2540,7 @@ function SocialPostsPageContent() {
               </button>
               {isOpen ? (
                 <div
-                  className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-lg"
+                  className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-brand-md"
                   onClick={(event) => {
                     event.stopPropagation();
                   }}
@@ -3150,7 +3150,7 @@ function SocialPostsPageContent() {
               role="dialog"
               aria-modal="true"
               aria-label="Social post details"
-              className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl"
+              className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-lg"
             >
               <DialogFocusScope />
               <div className="flex items-start justify-between gap-3">
@@ -3863,7 +3863,7 @@ function SocialPostsPageContent() {
               role="dialog"
               aria-modal="true"
               aria-label="New social post"
-              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
             >
               <DialogFocusScope
                 onClose={() => {

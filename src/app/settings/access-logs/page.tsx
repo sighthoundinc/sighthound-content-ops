@@ -356,7 +356,7 @@ export default function AccessLogsPage() {
                         </span>
                       </button>
                       {activeDropdown === "activity" && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-brand-md">
                           <div className="max-h-48 overflow-y-auto p-2 space-y-2">
                             {Object.entries(activityTypeLabels).map(([type, label]) => (
                               <label key={type} className="flex items-center gap-2 cursor-pointer px-2 py-1 hover:bg-gray-50 rounded">
@@ -409,7 +409,7 @@ export default function AccessLogsPage() {
                         </span>
                       </button>
                       {activeDropdown === "user" && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-brand-md">
                           <div className="max-h-48 overflow-y-auto p-2 space-y-2">
                             {isLoadingUsers ? (
                               <p className="text-sm text-gray-500 px-2 py-1">Loading users...</p>

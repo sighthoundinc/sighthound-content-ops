@@ -79,7 +79,7 @@ export function PresenceBubbles({
             key={user.userId}
             title={user.name}
             className={cn(
-              "inline-flex h-6 w-6 items-center justify-center rounded-full border border-white text-xs font-semibold shadow-sm",
+              "inline-flex h-6 w-6 items-center justify-center rounded-full border border-white text-xs font-semibold shadow-brand-xs",
               paletteFor(user.userId)
             )}
           >
@@ -89,7 +89,7 @@ export function PresenceBubbles({
         {overflow > 0 ? (
           <span
             title={tooltip}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white bg-blurple-50 text-xs font-semibold text-navy-500 shadow-sm"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white bg-blurple-50 text-xs font-semibold text-navy-500 shadow-brand-xs"
           >
             +{overflow}
           </span>

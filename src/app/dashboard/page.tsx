@@ -4099,7 +4099,7 @@ export default function DashboardPage() {
                     <summary className={buttonClass({ variant: "primary", size: "md", className: "cursor-pointer list-none" })}>
                       Add Content
                     </summary>
-                    <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
+                    <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-brand-md">
                       {canCreateBlog ? (
                         <>
                           <button
@@ -4695,7 +4695,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 {isEditColumnsOpen ? (
-                  <div className="absolute right-0 z-30 mt-2 w-full max-w-2xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-lg">
+                  <div className="absolute right-0 z-30 mt-2 w-full max-w-2xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-brand-md">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                         Column View
@@ -4715,7 +4715,7 @@ export default function DashboardPage() {
                               size={12}
                               className="text-navy-500" />
                           </summary>
-                          <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
+                          <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-brand-md">
                             {sortedSavedViews.length === 0 ? (
                               <p className="px-3 py-2 text-xs text-navy-500">No saved views yet.</p>
                             ) : (
@@ -5258,7 +5258,7 @@ export default function DashboardPage() {
                   ) : (
                     <ul className="space-y-3">
                       {panelComments.map((comment) => (
-                        <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs hover:shadow-brand-sm transition-shadow">
                           <div className="flex items-start gap-3">
                             <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
                               {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}

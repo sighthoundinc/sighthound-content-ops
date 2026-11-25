@@ -63,7 +63,7 @@ export function NextActionCell({
     <button
       type="button"
       onClick={onAction}
-      className="inline-flex items-center gap-1.5 rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className="inline-flex items-center gap-1.5 rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:shadow-brand-focus"
     >
       {content}
     </button>

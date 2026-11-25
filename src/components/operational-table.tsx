@@ -150,7 +150,7 @@ export function OperationalTableDropdown({
       </summary>
       <div
         className={cn(
-          "absolute right-0 z-30 mt-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-md",
+          "absolute right-0 z-30 mt-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-brand-sm",
           widthClassName,
           menuClassName
         )}

@@ -1771,7 +1771,7 @@ function BlogLibraryPageContent() {
                   ) : (
                     <ul className="space-y-3">
                       {panelComments.map((comment) => (
-                        <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs hover:shadow-brand-sm transition-shadow">
                           <p className="text-xs font-semibold text-navy-500">
                             {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}
                             <time className="font-normal text-navy-500/60">

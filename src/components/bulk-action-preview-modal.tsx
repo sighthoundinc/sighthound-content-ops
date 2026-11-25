@@ -34,7 +34,7 @@ export function BulkActionPreviewModal({
         role="dialog"
         aria-modal="true"
         aria-label="Review changes"
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-brand-md"
       >
         <DialogFocusScope onClose={onCancel} />
         <h2 className="text-lg font-semibold text-ink">Review Changes</h2>

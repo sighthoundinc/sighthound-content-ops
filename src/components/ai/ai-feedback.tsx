@@ -68,7 +68,7 @@ export function AIFeedback({ context }: { context: AIFeedbackContext }) {
         type="button"
         onClick={() => send('up')}
         disabled={submitting}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--sh-gray-200)] bg-white text-navy-500 transition-colors hover:border-emerald-300 hover:text-emerald-600 disabled:opacity-50"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--sh-gray-200)] bg-white text-navy-500 transition-colors hover:border-emerald-300 hover:text-emerald-600 disabled:opacity-60"
         aria-label="Helpful"
         title="Helpful"
       >
@@ -78,7 +78,7 @@ export function AIFeedback({ context }: { context: AIFeedbackContext }) {
         type="button"
         onClick={() => send('down')}
         disabled={submitting}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--sh-gray-200)] bg-white text-navy-500 transition-colors hover:border-rose-300 hover:text-rose-600 disabled:opacity-50"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--sh-gray-200)] bg-white text-navy-500 transition-colors hover:border-rose-300 hover:text-rose-600 disabled:opacity-60"
         aria-label="Not helpful"
         title="Not helpful"
       >

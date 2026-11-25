@@ -2637,7 +2637,7 @@ export default function SocialPostEditorPage() {
                       <summary className="list-none cursor-pointer rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50">
                         Copy
                       </summary>
-                      <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
+                      <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-brand-md">
                         <button
                           type="button"
                           className="block w-full rounded px-3 py-2 text-left text-sm text-navy-500 hover:bg-blurple-50"
@@ -2781,7 +2781,7 @@ export default function SocialPostEditorPage() {
                     {comments.slice(0, 20).map((comment) => (
                       <li
                         key={comment.id}
-                        className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+                        className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs hover:shadow-brand-sm transition-shadow"
                       >
                         <p className="text-xs font-semibold text-navy-500">
                           {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}

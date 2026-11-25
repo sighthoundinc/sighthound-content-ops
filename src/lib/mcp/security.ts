@@ -87,17 +87,26 @@ export const mcpRateLimiter = new SlidingWindowRateLimiter(
 
 export function scheduleMcpToolCallLog(
   context: Pick<AuthenticatedRequestContext, "adminClient" | "userId">,
-  toolName: string
+  toolName: string,
+  details?: Record<string, unknown>
 ) {
   const writeLog = async () => {
     try {
-      const { error } = await context.adminClient.from("access_logs").insert({
+      const row = {
         user_id: context.userId,
         event_type: "mcp_tool_call",
         tool_name: toolName,
-      });
-      if (error) {
+      };
+      if (!details) {
+        await context.adminClient.from("access_logs").insert(row);
         return;
+      }
+      const { error } = await context.adminClient
+        .from("access_logs")
+        .insert({ ...row, details });
+      if (error) {
+        // details column not migrated yet: keep the plain call log.
+        await context.adminClient.from("access_logs").insert(row);
       }
     } catch {
       // Access-log writes must never affect MCP tool results.

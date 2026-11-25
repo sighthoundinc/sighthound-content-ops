@@ -331,7 +331,9 @@ describe("Content Relay read-only MCP endpoint", () => {
             "get_social_post",
             "list_blogs",
             "list_ideas",
+            "list_mcp_changes",
             "list_social_posts",
+            "list_users",
           ]);
           expect(result.isError).not.toBe(true);
         },
@@ -454,7 +456,9 @@ describe("Content Relay read-only MCP endpoint", () => {
         "get_social_post",
         "list_blogs",
         "list_ideas",
+        "list_mcp_changes",
         "list_social_posts",
+        "list_users",
       ]);
       for (const tool of tools) {
         expect(tool.description).toContain("not blog article text");
@@ -478,7 +482,9 @@ describe("Content Relay read-only MCP endpoint", () => {
           "get_social_post",
           "list_blogs",
           "list_ideas",
+          "list_mcp_changes",
           "list_social_posts",
+          "list_users",
         ]);
       });
     } finally {

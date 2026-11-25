@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import {
   registerReadOnlyTool,
   boundedPaginationSchema,
+  sanitizeOrSearchValue,
   throwOnQueryError,
 } from "@/lib/mcp/tools/shared";
 import type { AuthenticatedRequestContext } from "@/lib/server-permissions";
@@ -44,6 +45,7 @@ const listSocialPostsSchema = z
     product: z.enum(PRODUCTS).optional(),
     type: z.enum(SOCIAL_TYPES).optional(),
     status: z.enum(SOCIAL_STATUSES).optional(),
+    search: z.string().trim().min(1).max(100).optional(),
     platforms: z
       .array(z.enum(PLATFORMS))
       .max(3)
@@ -72,7 +74,7 @@ export function registerSocialPostTools(
     name: "list_social_posts",
     title: "List social posts",
     description:
-      "List social post metadata with product, type, status, platform, and associated-blog filters. Results include linked blog context and social-post links and are paginated (maximum 100 per page).",
+      "List social post metadata with product, type, status, platform, associated-blog, and title search filters. Results include linked blog context and social-post links and are paginated (maximum 100 per page).",
     inputSchema: listSocialPostsSchema,
     permission: "view_social_posts",
     context,
@@ -83,6 +85,13 @@ export function registerSocialPostTools(
       if (input.product) query = query.eq("product", input.product);
       if (input.type) query = query.eq("type", input.type);
       if (input.status) query = query.eq("status", input.status);
+      if (input.search) {
+        const term = sanitizeOrSearchValue(input.search);
+        if (!term) {
+          return { social_posts: [], total: 0, limit: input.limit, offset: input.offset };
+        }
+        query = query.ilike("title", `%${term}%`);
+      }
       if (input.platforms?.length) {
         query = query.overlaps("platforms", input.platforms);
       }

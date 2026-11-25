@@ -9,7 +9,9 @@ import { POST as createBlogRoute } from "@/app/api/blogs/route";
 import { POST as addBlogCommentRoute } from "@/app/api/blogs/[id]/comments/route";
 import { POST as transitionBlogRoute } from "@/app/api/blogs/[id]/transition/route";
 import { POST as recordActivityRoute } from "@/app/api/events/record-activity/route";
+import { DELETE as deleteIdeaRoute } from "@/app/api/ideas/[id]/route";
 import { POST as createSocialPostRoute } from "@/app/api/social-posts/route";
+import { DELETE as deleteSocialPostRoute } from "@/app/api/social-posts/[id]/route";
 import { POST as addSocialCommentRoute } from "@/app/api/social-posts/[id]/comments/route";
 import { POST as reopenSocialBriefRoute } from "@/app/api/social-posts/[id]/reopen-brief/route";
 import { POST as transitionSocialPostRoute } from "@/app/api/social-posts/[id]/transition/route";
@@ -191,6 +193,30 @@ type WriteToolDefinition<TSchema extends z.ZodType> = {
   run: (input: z.infer<TSchema>) => Promise<Record<string, unknown>>;
 };
 
+// Which record a write touched: from the input id, else from a created row.
+function findRecordRef(input: unknown, result: Record<string, unknown>) {
+  const args = (input ?? {}) as Record<string, unknown>;
+  for (const [key, type] of [
+    ["blog_id", "blog"],
+    ["social_post_id", "social_post"],
+    ["idea_id", "idea"],
+  ] as const) {
+    if (typeof args[key] === "string" && !(key === "idea_id" && result.blog)) {
+      return { type, id: args[key] };
+    }
+  }
+  for (const [key, type] of [
+    ["blog", "blog"],
+    ["socialPost", "social_post"],
+    ["social_post", "social_post"],
+    ["idea", "idea"],
+  ] as const) {
+    const id = (result[key] as { id?: unknown } | null | undefined)?.id;
+    if (typeof id === "string") return { type, id };
+  }
+  return null;
+}
+
 function toolError(message: string) {
   return { content: [{ type: "text" as const, text: message }], isError: true };
 }
@@ -217,24 +243,35 @@ function registerWriteTool<TSchema extends z.ZodType>(
       },
     },
     async (rawInput) => {
-      scheduleMcpToolCallLog(context, definition.name);
+      // JSON audit trail: every write attempt logs its arguments and outcome.
+      const audit = (outcome: "ok" | "denied" | "invalid" | "rejected" | "failed", extra: Record<string, unknown> = {}) =>
+        scheduleMcpToolCallLog(context, definition.name, {
+          outcome,
+          arguments: rawInput ?? {},
+          ...extra,
+        });
 
       if (definition.permission && !hasPermission(context, definition.permission)) {
+        audit("denied");
         return toolError("Permission denied.");
       }
       const parsedInput = definition.inputSchema.safeParse(rawInput);
       if (!parsedInput.success) {
+        audit("invalid");
         return toolError(
           `Invalid tool input: ${parsedInput.error.issues[0]?.message ?? "unknown"}`
         );
       }
       try {
         const result = await definition.run(parsedInput.data);
+        audit("ok", { record: findRecordRef(parsedInput.data, result) });
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       } catch (error) {
         if (error instanceof ToolUserError) {
+          audit("rejected", { error: error.message });
           return toolError(error.message);
         }
+        audit("failed");
         console.error("[MCP] Write tool failed", { tool: definition.name });
         return toolError("The MCP request could not be completed.");
       }
@@ -276,16 +313,42 @@ export function registerWriteTools(
     name: "create_blog",
     title: "Create blog",
     description:
-      "Create a blog record (metadata only; article text stays in the Google Doc).",
+      "Create a blog record (metadata only; article text stays in the Google Doc). Pass idea_id to convert an idea: the idea is marked converted and linked to the new blog.",
     inputSchema: z
       .object({
         ...blogFields,
         title: z.string().trim().min(1),
         site: z.enum(SITES),
         slug: z.string().trim().min(1).optional(),
+        idea_id: uuid.optional(),
       })
       .strict(),
-    run: (input) => callRelayRoute(context, createBlogRoute, "/api/blogs", input),
+    run: async ({ idea_id, ...input }) => {
+      if (idea_id) {
+        const { data: idea, error } = await context.adminClient
+          .from("blog_ideas")
+          .select("id,is_converted")
+          .eq("id", idea_id)
+          .maybeSingle();
+        if (error) throw new Error("Database query failed.");
+        if (!idea) throw new ToolUserError("Idea not found.");
+        if (idea.is_converted) throw new ToolUserError("Idea is already converted to a blog.");
+      }
+      const result = await callRelayRoute(context, createBlogRoute, "/api/blogs", input);
+      if (!idea_id) return result;
+      // Same follow-up the app's New Blog page does after creating from an idea.
+      const blogId = (result.blog as { id?: string } | undefined)?.id;
+      const { error } = await context.adminClient
+        .from("blog_ideas")
+        .update({ is_converted: true, converted_blog_id: blogId })
+        .eq("id", idea_id)
+        .eq("is_converted", false);
+      return {
+        ...result,
+        idea_converted: !error,
+        ...(error ? { warning: "Blog created, but the idea could not be marked converted." } : {}),
+      };
+    },
   });
 
   registerWriteTool(server, context, {
@@ -579,5 +642,35 @@ export function registerWriteTools(
       throwOnWriteError(error);
       return { idea: data };
     },
+  });
+
+  // Deletes: existing routes enforce permission, creator-or-admin, and
+  // "published posts cannot be deleted". Blog delete is deliberately not exposed.
+  registerWriteTool(server, context, {
+    name: "delete_idea",
+    title: "Delete idea",
+    description:
+      "Permanently delete an idea. Cannot be undone; confirm with the user before calling.",
+    destructive: true,
+    inputSchema: z.object({ idea_id: uuid }).strict(),
+    run: ({ idea_id }) =>
+      callRelayRoute(context, deleteIdeaRoute, `/api/ideas/${idea_id}`, {}, idea_id),
+  });
+
+  registerWriteTool(server, context, {
+    name: "delete_social_post",
+    title: "Delete social post",
+    description:
+      "Permanently delete an unpublished social post with its links and comments. Cannot be undone; confirm with the user before calling. Published posts cannot be deleted.",
+    destructive: true,
+    inputSchema: z.object({ social_post_id: uuid }).strict(),
+    run: ({ social_post_id }) =>
+      callRelayRoute(
+        context,
+        deleteSocialPostRoute,
+        `/api/social-posts/${social_post_id}`,
+        {},
+        social_post_id
+      ),
   });
 }

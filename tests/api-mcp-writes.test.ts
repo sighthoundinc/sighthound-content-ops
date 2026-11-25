@@ -38,6 +38,17 @@ jest.mock("@/app/api/events/record-activity/route", () => ({
   }),
 }));
 
+const deletedPaths: string[] = [];
+jest.mock("@/app/api/social-posts/[id]/route", () => ({
+  DELETE: jest.fn(async (request: Request) => {
+    deletedPaths.push(new URL(request.url).pathname);
+    return Response.json({ error: "Published posts cannot be deleted" }, { status: 400 });
+  }),
+}));
+jest.mock("@/app/api/blogs/route", () => ({
+  POST: jest.fn(async () => Response.json({ blog: { id: "55555555-5555-4555-8555-555555555555" } }, { status: 201 })),
+}));
+
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_ID = "22222222-2222-4222-8222-222222222222";
 const IDEA_ID = "33333333-3333-4333-8333-333333333333";
@@ -49,6 +60,7 @@ type Write = { table: string; method: string; payload: unknown };
 
 function createMockAdminClient(rows: Record<string, Record<string, unknown>>) {
   const writes: Write[] = [];
+  const auditRows: Write[] = [];
   const from = (table: string) => {
     let pending: Write | null = null;
     const result = () => ({ data: rows[table] ?? null, error: null });
@@ -61,14 +73,14 @@ function createMockAdminClient(rows: Record<string, Record<string, unknown>>) {
     for (const method of ["insert", "update", "upsert", "delete"]) {
       chain[method] = (payload: unknown) => {
         pending = { table, method, payload };
-        if (table !== "access_logs") writes.push(pending);
+        (table === "access_logs" ? auditRows : writes).push(pending);
         return chain;
       };
     }
     void pending;
     return chain;
   };
-  return { client: { from } as unknown as AuthenticatedRequestContext["adminClient"], writes };
+  return { client: { from } as unknown as AuthenticatedRequestContext["adminClient"], writes, auditRows };
 }
 
 function makeContext(
@@ -265,6 +277,80 @@ describe("Content Relay MCP write tools", () => {
         new_value: OTHER_ID,
         contentType: "social_post",
       }),
+    ]);
+  });
+
+  test("delete_social_post runs the app's delete route and surfaces its rule", async () => {
+    jest.mocked(resolveActiveProfileContext).mockResolvedValue(
+      makeContext(createMockAdminClient({}), [])
+    );
+    const result = await withClient((client) =>
+      client.callTool({ name: "delete_social_post", arguments: { social_post_id: POST_ID } })
+    );
+    expect(text(result)).toBe("Published posts cannot be deleted");
+    expect(deletedPaths).toEqual([`/api/social-posts/${POST_ID}`]);
+  });
+
+  test("create_blog with idea_id marks the idea converted, and refuses a converted idea", async () => {
+    const admin = createMockAdminClient({ blog_ideas: { id: IDEA_ID, is_converted: false } });
+    jest.mocked(resolveActiveProfileContext).mockResolvedValue(makeContext(admin, []));
+    await withClient((client) =>
+      client.callTool({
+        name: "create_blog",
+        arguments: { title: "From idea", site: "redactor.com", idea_id: IDEA_ID },
+      })
+    );
+    expect(admin.writes).toEqual([
+      {
+        table: "blog_ideas",
+        method: "update",
+        payload: { is_converted: true, converted_blog_id: BLOG_ID },
+      },
+    ]);
+
+    const converted = createMockAdminClient({ blog_ideas: { id: IDEA_ID, is_converted: true } });
+    jest.mocked(resolveActiveProfileContext).mockResolvedValue(makeContext(converted, []));
+    const result = await withClient((client) =>
+      client.callTool({
+        name: "create_blog",
+        arguments: { title: "From idea", site: "redactor.com", idea_id: IDEA_ID },
+      })
+    );
+    expect(text(result)).toBe("Idea is already converted to a blog.");
+    expect(converted.writes).toEqual([]);
+  });
+
+  test("every write attempt is audit-logged as JSON with arguments, outcome and record", async () => {
+    const admin = createMockAdminClient({ blog_ideas: { id: IDEA_ID, created_by: OTHER_ID } });
+    jest.mocked(resolveActiveProfileContext).mockResolvedValue(
+      makeContext(admin, ["create_idea", "edit_own_idea"])
+    );
+    await withClient(async (client) => {
+      await client.callTool({ name: "create_idea", arguments: { title: "Idea", site: "redactor.com" } });
+      await client.callTool({ name: "update_idea", arguments: { idea_id: IDEA_ID, title: "New" } });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(admin.auditRows.map((row) => row.payload)).toEqual([
+      {
+        user_id: ACTOR_ID,
+        event_type: "mcp_tool_call",
+        tool_name: "create_idea",
+        details: {
+          outcome: "ok",
+          arguments: { title: "Idea", site: "redactor.com" },
+          record: { type: "idea", id: IDEA_ID },
+        },
+      },
+      {
+        user_id: ACTOR_ID,
+        event_type: "mcp_tool_call",
+        tool_name: "update_idea",
+        details: {
+          outcome: "rejected",
+          arguments: { idea_id: IDEA_ID, title: "New" },
+          error: "Permission denied.",
+        },
+      },
     ]);
   });
 });

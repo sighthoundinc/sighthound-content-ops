@@ -167,6 +167,23 @@ export function DataPageToolbar({
   );
 }
 
+export function DataPageFilterField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-navy-500">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
 export function DataPageFilterPills({ pills }: { pills: FilterPill[] }) {
   if (pills.length === 0) {
     return null;

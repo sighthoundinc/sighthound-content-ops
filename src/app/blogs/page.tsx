@@ -25,6 +25,7 @@ import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-bad
 import {
   DATA_PAGE_STACK_CLASS,
   DataPageFilterPills,
+  DataPageFilterField,
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
@@ -1334,8 +1335,7 @@ function BlogLibraryPageContent() {
             }
             filters={
               <>
-                <label className="space-y-1">
-                  <span className="block text-xs font-medium text-navy-500">Publish State</span>
+                <DataPageFilterField label="Publish State">
                   <select
                     value={statusFilter}
                     onChange={(event) => {
@@ -1349,9 +1349,8 @@ function BlogLibraryPageContent() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="block text-xs font-medium text-navy-500">Website</span>
+                </DataPageFilterField>
+                <DataPageFilterField label="Website">
                   <select
                     value={siteFilter}
                     onChange={(event) => {
@@ -1365,9 +1364,8 @@ function BlogLibraryPageContent() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="block text-xs font-medium text-navy-500">Writer Status</span>
+                </DataPageFilterField>
+                <DataPageFilterField label="Writer Status">
                   <select
                     value={writerStatusFilter}
                     onChange={(event) => {
@@ -1381,9 +1379,8 @@ function BlogLibraryPageContent() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="block text-xs font-medium text-navy-500">Publisher Status</span>
+                </DataPageFilterField>
+                <DataPageFilterField label="Publisher Status">
                   <select
                     value={publisherStatusFilter}
                     onChange={(event) => {
@@ -1397,7 +1394,7 @@ function BlogLibraryPageContent() {
                       </option>
                     ))}
                   </select>
-                </label>
+                </DataPageFilterField>
               </>
             }
           />

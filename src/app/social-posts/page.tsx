@@ -42,6 +42,7 @@ import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   DATA_PAGE_STACK_CLASS,
   DataPageFilterPills,
+  DataPageFilterField,
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
@@ -2781,50 +2782,54 @@ function SocialPostsPageContent() {
               </Button>
             }
             filters={
-              <div className="flex flex-wrap gap-2">
-                <select
-                  aria-label="Status"
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value as SocialPostStatus | "all");
-                  }}
-                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  <option value="all">All Statuses</option>
-                  {SOCIAL_POST_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {SOCIAL_POST_STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Associated Blog"
-                  value={associatedBlogFilter}
-                  onChange={(event) => {
-                    setAssociatedBlogFilter(event.target.value);
-                  }}
-                  className="focus-field min-w-0 max-w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500 sm:max-w-xs"
-                >
-                  <option value="all">All Blogs</option>
-                  {Array.from(
-                    new Map(
-                      posts
-                        .filter(
-                          (post) =>
-                            post.associated_blog_id && post.associated_blog
-                        )
-                        .map((post) => [
-                          post.associated_blog_id as string,
-                          post.associated_blog?.title,
-                        ])
-                    )
-                  ).map(([blogId, blogTitle]) => (
-                    <option key={blogId} value={blogId}>
-                      {blogTitle}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <DataPageFilterField label="Status">
+                  <select
+                    aria-label="Status"
+                    value={statusFilter}
+                    onChange={(event) => {
+                      setStatusFilter(event.target.value as SocialPostStatus | "all");
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Statuses</option>
+                    {SOCIAL_POST_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {SOCIAL_POST_STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
+                <DataPageFilterField label="Associated Blog">
+                  <select
+                    aria-label="Associated Blog"
+                    value={associatedBlogFilter}
+                    onChange={(event) => {
+                      setAssociatedBlogFilter(event.target.value);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Blogs</option>
+                    {Array.from(
+                      new Map(
+                        posts
+                          .filter(
+                            (post) =>
+                              post.associated_blog_id && post.associated_blog
+                          )
+                          .map((post) => [
+                            post.associated_blog_id as string,
+                            post.associated_blog?.title,
+                          ])
+                      )
+                    ).map(([blogId, blogTitle]) => (
+                      <option key={blogId} value={blogId}>
+                        {blogTitle}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
+              </>
             }
           />
           <DataPageFilterPills pills={activeFilterPills} />

@@ -14,6 +14,7 @@ import {
   DataPageEmptyState,
   DataPageFilterPills,
   DataPageBreadcrumb,
+  DataPageFilterField,
   DataPageHeader,
   DATA_PAGE_STACK_CLASS,
   DataPageToolbar,
@@ -692,63 +693,71 @@ export default function BlogCardBoardPage() {
             searchPlaceholder="Search blog title, document URL, or live URL"
             filters={
               <>
-                <select
-                  aria-label="Product"
-                  value={productFilter}
-                  onChange={(event) => {
-                    setProductFilter(event.target.value as ProductFilter);
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  {PRODUCT_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Author"
-                  value={authorFilter}
-                  onChange={(event) => {
-                    setAuthorFilter(event.target.value as AuthorFilter);
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  <option value="all">All Authors</option>
-                  {authors.map((author) => (
-                    <option key={author.id} value={author.id}>
-                      {author.full_name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Website"
-                  value={websiteFilter}
-                  onChange={(event) => {
-                    setWebsiteFilter(event.target.value as WebsiteFilter);
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  {WEBSITE_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Status"
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value as BoardStageFilter);
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  {STATUS_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <DataPageFilterField label="Product">
+                  <select
+                    aria-label="Product"
+                    value={productFilter}
+                    onChange={(event) => {
+                      setProductFilter(event.target.value as ProductFilter);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    {PRODUCT_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
+                <DataPageFilterField label="Author">
+                  <select
+                    aria-label="Author"
+                    value={authorFilter}
+                    onChange={(event) => {
+                      setAuthorFilter(event.target.value as AuthorFilter);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Authors</option>
+                    {authors.map((author) => (
+                      <option key={author.id} value={author.id}>
+                        {author.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
+                <DataPageFilterField label="Website">
+                  <select
+                    aria-label="Website"
+                    value={websiteFilter}
+                    onChange={(event) => {
+                      setWebsiteFilter(event.target.value as WebsiteFilter);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    {WEBSITE_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
+                <DataPageFilterField label="Status">
+                  <select
+                    aria-label="Status"
+                    value={statusFilter}
+                    onChange={(event) => {
+                      setStatusFilter(event.target.value as BoardStageFilter);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    {STATUS_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
               </>
             }
             actions={

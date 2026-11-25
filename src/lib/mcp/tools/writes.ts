@@ -8,6 +8,7 @@ import {
 import { POST as createBlogRoute } from "@/app/api/blogs/route";
 import { POST as addBlogCommentRoute } from "@/app/api/blogs/[id]/comments/route";
 import { POST as transitionBlogRoute } from "@/app/api/blogs/[id]/transition/route";
+import { POST as recordActivityRoute } from "@/app/api/events/record-activity/route";
 import { POST as createSocialPostRoute } from "@/app/api/social-posts/route";
 import { POST as addSocialCommentRoute } from "@/app/api/social-posts/[id]/comments/route";
 import { POST as reopenSocialBriefRoute } from "@/app/api/social-posts/[id]/reopen-brief/route";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/server-permissions";
 import { isValidSocialLiveLink } from "@/lib/social-post-workflow";
 import type { AppPermissionKey } from "@/lib/types";
+import { unifiedEventToActivityRecord } from "@/lib/unified-events";
 
 const SITES = ["sighthound.com", "redactor.com"] as const;
 const WRITER_STATUSES = [
@@ -111,7 +113,7 @@ async function loadOwnedSocialPost(
 ) {
   const { data, error } = await context.adminClient
     .from("social_posts")
-    .select("id,created_by,worker_user_id,reviewer_user_id")
+    .select("id,title,status,created_by,worker_user_id,reviewer_user_id")
     .eq("id", socialPostId)
     .maybeSingle();
   if (error) throw new Error("Database query failed.");
@@ -121,6 +123,53 @@ async function loadOwnedSocialPost(
     throw new ToolUserError("Permission denied.");
   }
   return data;
+}
+
+// Mirrors the app's canEditBrief: never during execution; otherwise admins
+// always, everyone else only in draft or changes_requested.
+function assertBriefEditable(context: AuthenticatedRequestContext, status: string) {
+  if (status === "ready_to_publish" || status === "awaiting_live_link") {
+    throw new ToolUserError(
+      "Brief fields are locked during execution. Use reopen_social_post_brief first."
+    );
+  }
+  if (!isAdmin(context) && status !== "draft" && status !== "changes_requested") {
+    throw new ToolUserError(
+      "The brief can only be edited in draft or changes_requested."
+    );
+  }
+}
+
+// Same activity record the app writes via emitEvent() after an assignment save.
+async function recordAssignmentActivity(
+  context: AuthenticatedRequestContext,
+  post: { id: string; title: string },
+  fieldName: "worker_user_id" | "reviewer_user_id",
+  oldValue: string | null,
+  newValue: string
+) {
+  const record = unifiedEventToActivityRecord({
+    type: "social_post_assigned",
+    contentType: "social_post",
+    contentId: post.id,
+    oldValue: oldValue ?? undefined,
+    newValue,
+    fieldName,
+    actor: context.userId,
+    targetUserId: newValue,
+    contentTitle: post.title,
+    metadata: { role: fieldName === "worker_user_id" ? "assigned_to" : "reviewer" },
+    timestamp: Date.now(),
+  });
+  try {
+    await callRelayRoute(context, recordActivityRoute, "/api/events/record-activity", {
+      ...record,
+      contentType: "social_post",
+    });
+  } catch {
+    // Matches the app: the assignment stands even if activity recording fails.
+    console.error("[MCP] Assignment activity record failed", { fieldName });
+  }
 }
 
 function throwOnWriteError(error: { code?: string; message?: string } | null) {
@@ -309,11 +358,19 @@ export function registerWriteTools(
     permission: "edit_social_post_brief",
     inputSchema: z.object({ social_post_id: uuid, ...socialBriefFields }).strict(),
     run: async ({ social_post_id, ...fields }) => {
-      const updates = stripUndefined(fields);
+      // Same normalization as the app's persistBrief.
+      const updates = stripUndefined({
+        ...fields,
+        canva_url: fields.canva_url === undefined ? undefined : fields.canva_url?.trim() || null,
+        caption: fields.caption === undefined ? undefined : fields.caption?.trim() ? fields.caption : null,
+        platforms: fields.platforms ? Array.from(new Set(fields.platforms)) : undefined,
+        scheduled_date: fields.scheduled_date === undefined ? undefined : fields.scheduled_date || null,
+      });
       if (Object.keys(updates).length === 0) {
         throw new ToolUserError("Provide at least one field to update.");
       }
-      await loadOwnedSocialPost(context, social_post_id);
+      const post = await loadOwnedSocialPost(context, social_post_id);
+      assertBriefEditable(context, post.status);
       const { data, error } = await context.adminClient
         .from("social_posts")
         .update(updates)
@@ -334,7 +391,7 @@ export function registerWriteTools(
       .object({ social_post_id: uuid, worker_user_id: uuid, reviewer_user_id: uuid })
       .strict(),
     run: async ({ social_post_id, worker_user_id, reviewer_user_id }) => {
-      await loadOwnedSocialPost(context, social_post_id);
+      const post = await loadOwnedSocialPost(context, social_post_id);
       const { data, error } = await context.adminClient
         .from("social_posts")
         .update({ worker_user_id, reviewer_user_id })
@@ -342,6 +399,12 @@ export function registerWriteTools(
         .select(SOCIAL_POST_RETURN_SELECT)
         .maybeSingle();
       throwOnWriteError(error);
+      if (post.worker_user_id !== worker_user_id) {
+        await recordAssignmentActivity(context, post, "worker_user_id", post.worker_user_id, worker_user_id);
+      }
+      if (post.reviewer_user_id !== reviewer_user_id) {
+        await recordAssignmentActivity(context, post, "reviewer_user_id", post.reviewer_user_id, reviewer_user_id);
+      }
       return { social_post: data };
     },
   });

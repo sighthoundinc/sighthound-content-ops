@@ -30,6 +30,14 @@ jest.mock("@/app/api/blogs/[id]/transition/route", () => ({
   }),
 }));
 
+const recordedActivity: unknown[] = [];
+jest.mock("@/app/api/events/record-activity/route", () => ({
+  POST: jest.fn(async (request: Request) => {
+    recordedActivity.push(await request.json());
+    return Response.json({ success: true });
+  }),
+}));
+
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_ID = "22222222-2222-4222-8222-222222222222";
 const IDEA_ID = "33333333-3333-4333-8333-333333333333";
@@ -106,6 +114,7 @@ describe("Content Relay MCP write tools", () => {
     process.env.MCP_MUTATIONS_ENABLED = "true";
     jest.spyOn(mcpRateLimiter, "allow").mockReturnValue(true);
     seenActors.length = 0;
+    recordedActivity.length = 0;
   });
 
   afterEach(() => {
@@ -218,6 +227,44 @@ describe("Content Relay MCP write tools", () => {
     );
     expect(allowed.writes).toEqual([
       { table: "social_posts", method: "update", payload: { caption: "New caption" } },
+    ]);
+  });
+
+  test("brief edits follow the app's stage rules for non-admin owners", async () => {
+    const row = { id: POST_ID, title: "Post", status: "in_review", created_by: ACTOR_ID, worker_user_id: ACTOR_ID, reviewer_user_id: OTHER_ID };
+    const admin = createMockAdminClient({ social_posts: row });
+    jest.mocked(resolveActiveProfileContext).mockResolvedValue(
+      makeContext(admin, ["edit_social_post_brief"])
+    );
+    const result = await withClient((client) =>
+      client.callTool({
+        name: "update_social_post_brief",
+        arguments: { social_post_id: POST_ID, caption: "New" },
+      })
+    );
+    expect(text(result)).toBe("The brief can only be edited in draft or changes_requested.");
+    expect(admin.writes).toEqual([]);
+  });
+
+  test("assignment changes record the same activity events as the app", async () => {
+    const row = { id: POST_ID, title: "Post", status: "draft", created_by: ACTOR_ID, worker_user_id: ACTOR_ID, reviewer_user_id: OTHER_ID };
+    const admin = createMockAdminClient({ social_posts: row });
+    jest.mocked(resolveActiveProfileContext).mockResolvedValue(
+      makeContext(admin, ["edit_social_post_brief"])
+    );
+    await withClient((client) =>
+      client.callTool({
+        name: "set_social_post_assignments",
+        arguments: { social_post_id: POST_ID, worker_user_id: OTHER_ID, reviewer_user_id: OTHER_ID },
+      })
+    );
+    expect(recordedActivity).toEqual([
+      expect.objectContaining({
+        event_type: "social_post_assigned",
+        field_name: "worker_user_id",
+        new_value: OTHER_ID,
+        contentType: "social_post",
+      }),
     ]);
   });
 });

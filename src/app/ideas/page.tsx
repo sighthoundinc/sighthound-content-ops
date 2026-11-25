@@ -9,6 +9,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { LoadErrorState } from "@/components/load-error-state";
+import { DataPageHeader } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import { parseApiResponseJson, isApiFailure, getApiErrorMessage } from "@/lib/api-response";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
@@ -350,26 +351,24 @@ export default function IdeasPage() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-6">
-          <header className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="section-title">Ideas</h1>
-              <p className="text-sm text-navy-500">
-                Capture ideas quickly, then convert them into scheduled blog assignments.
-              </p>
-            </div>
-            {viewOnly ? null : (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                onClick={() => {
-                  setIsCreateModalOpen(true);
-                }}
-              >
-                New Idea
-              </Button>
-            )}
-          </header>
+          <DataPageHeader
+            title="Ideas"
+            description="Capture ideas quickly, then convert them into scheduled blog assignments."
+            primaryAction={
+              viewOnly ? null : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  onClick={() => {
+                    setIsCreateModalOpen(true);
+                  }}
+                >
+                  New Idea
+                </Button>
+              )
+            }
+          />
 
           <form
             onSubmit={handleQuickIdeaSubmit}

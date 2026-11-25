@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
+import { buttonClass } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
 import { LoadErrorState } from "@/components/load-error-state";
+import { DataPageHeader } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import { Skeleton } from "@/components/skeleton";
 import { AppIcon, ArrowRightIcon, TaskIcon } from "@/lib/icons";
@@ -150,23 +152,16 @@ function InboxView() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-0 py-2 sm:px-6 sm:py-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="page-title">Inbox</h1>
-          <p className="meta-text mt-1 text-navy-500">
-            Everything you need to act on, in one place.
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          <Link
-            href="/tasks"
-            className="inline-flex items-center gap-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-1.5 text-xs font-medium text-navy-500 hover:bg-blurple-50"
-          >
+      <DataPageHeader
+        title="Inbox"
+        description="Everything you need to act on, in one place."
+        primaryAction={
+          <Link href="/tasks" className={cn(buttonClass({ variant: "secondary", size: "sm" }), "gap-1")}>
             <TaskIcon boxClassName="h-4 w-4" size={14} />
             Open tasks
           </Link>
-        </div>
-      </header>
+        }
+      />
       <nav className="flex flex-wrap items-center gap-1 border-b border-[color:var(--sh-gray-200)]">
         <TabButton
           label="Required"

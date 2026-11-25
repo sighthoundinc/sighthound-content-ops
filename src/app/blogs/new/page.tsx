@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
+import { DataPageBreadcrumb, DataPageHeader } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   getApiErrorMessage,
@@ -340,26 +341,17 @@ function NewBlogPageContent() {
     <ProtectedPage requiredPermissions={["create_blog"]}>
       <AppShell>
         <div className="max-w-3xl space-y-6">
-          <nav
-            aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
-          >
-            <Link href="/dashboard" className="hover:text-navy-500">
-              Dashboard
-            </Link>
-            <span>/</span>
-            <Link href="/blogs" className="hover:text-navy-500">
-              Blogs
-            </Link>
-            <span>/</span>
-            <span className="text-navy-500">New</span>
-          </nav>
-          <header>
-            <h1 className="text-xl font-semibold text-ink">Add Blog</h1>
-            <p className="text-sm text-navy-500">
-              Create a new blog assignment for Sighthound or Redactor.
-            </p>
-          </header>
+          <DataPageBreadcrumb
+            items={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Blogs", href: "/blogs" },
+              { label: "New Blog" },
+            ]}
+          />
+          <DataPageHeader
+            title="New Blog"
+            description="Create a new blog assignment for Sighthound or Redactor."
+          />
 
           <UnsavedChangesGuard isDirty={hasEdited && !isSubmitting} />
           <form
@@ -592,7 +584,7 @@ function NewBlogPageContent() {
                 type="button"
                 className="rounded-md border border-[color:var(--sh-gray-200)] px-4 py-2 text-sm font-medium text-navy-500 hover:bg-blurple-50"
                 onClick={() => {
-                  router.push("/dashboard");
+                  router.push("/blogs");
                 }}
               >
                 Cancel

@@ -1,7 +1,6 @@
 "use client";
 
 import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
@@ -9,7 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
-import { DataPageHeader } from "@/components/data-page";
+import { DataPageBreadcrumb, DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
@@ -1213,20 +1212,13 @@ export default function BlogDetailPage() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-6">
-          <nav
-            aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
-          >
-            <Link href="/dashboard" className="hover:text-navy-500">
-              Dashboard
-            </Link>
-            <span>/</span>
-            <Link href="/blogs" className="hover:text-navy-500">
-              Blogs
-            </Link>
-            <span>/</span>
-            <span className="text-navy-500">Details</span>
-          </nav>
+          <DataPageBreadcrumb
+            items={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Blogs", href: "/blogs" },
+              { label: "Details" },
+            ]}
+          />
           <DataPageHeader
             title={blog.title}
             description={`${blog.site} \u2022 Created ${formatDateInTimezone(blog.created_at, profile?.timezone)}`}

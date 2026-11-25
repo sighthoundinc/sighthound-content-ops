@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
 import { CloseIcon, LoadingIcon } from "@/lib/icons";
@@ -31,6 +32,34 @@ export const DATA_PAGE_CONTROL_ACTIONS_CLASS =
 export const DATA_PAGE_CONTROL_ACTION_BUTTON_CLASS =
   "inline-flex items-center justify-center rounded-button-compact px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:shadow-brand-focus";
 export const DATA_PAGE_TABLE_FEEDBACK_CLASS = "min-h-[1rem] px-1";
+
+export function DataPageBreadcrumb({
+  items,
+}: {
+  items: { label: string; href?: string }[];
+}) {
+  return (
+    <nav
+      aria-label="Breadcrumb"
+      className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
+    >
+      {items.map((item, index) => (
+        <span key={item.label} className="inline-flex items-center gap-1">
+          {index > 0 ? <span aria-hidden="true">/</span> : null}
+          {item.href ? (
+            <Link href={item.href} className="rounded-sm hover:text-ink hover:underline focus-visible:outline-none focus-visible:shadow-brand-focus">
+              {item.label}
+            </Link>
+          ) : (
+            <span aria-current="page" className="text-ink">
+              {item.label}
+            </span>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
 
 export function DataPageHeader({
   title,

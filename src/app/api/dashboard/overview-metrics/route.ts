@@ -202,7 +202,11 @@ export const GET = withApiContract(async function GET(request: NextRequest) {
       ) {
         breakdown.awaitingReview.blogs += 1;
       }
-      if (blog.overall_status === "ready_to_publish") {
+      // Blogs a publisher has already picked up are no longer "ready".
+      if (
+        blog.overall_status === "ready_to_publish" &&
+        blog.publisher_status === "not_started"
+      ) {
         breakdown.readyToPublish.blogs += 1;
       }
       if (isPublished) {

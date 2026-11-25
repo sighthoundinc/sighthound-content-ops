@@ -14,7 +14,7 @@ import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
 import { ProtectedPage } from "@/components/protected-page";
-import { StatusBadge } from "@/components/status-badge";
+import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import { UnstickThisButton } from "@/components/ai/unstick-this-button";
 import {
   buildPresenceChannelKey,
@@ -37,6 +37,7 @@ import {
   SITES,
   WRITER_STATUSES,
   WRITER_STATUS_LABELS,
+  isBlogPublishingUnderway,
 } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
@@ -1060,9 +1061,16 @@ export default function BlogDetailPage() {
     }
     if (form.writer_status !== "completed") {
       return {
-        title: "Complete writing handoff",
+        title:
+          form.writer_status === "pending_review"
+            ? "Review writing"
+            : "Complete writing handoff",
         helper:
-          "Before writing can be completed, set Assigned to (Writing) and add Google Doc URL.",
+          !form.writer_id || form.google_doc_url.trim().length === 0
+            ? "Before writing can be completed, set Assigned to (Writing) and add Google Doc URL."
+            : form.writer_status === "pending_review"
+              ? "Writing is awaiting review. Mark writing complete to hand off to publishing."
+              : "Mark writing complete to hand off to publishing.",
         ctaLabel: "Mark Writing Complete",
         actionType: "mark_writing_complete" as const,
         disabled:
@@ -1225,7 +1233,11 @@ export default function BlogDetailPage() {
             primaryAction={
               <div className="flex items-center gap-3">
                 <PresenceBubbles users={presenceOthers} />
-                <StatusBadge status={blog.overall_status} />
+                {isBlogPublishingUnderway(blog) ? (
+                  <WorkflowStageBadge stage="publishing" />
+                ) : (
+                  <StatusBadge status={blog.overall_status} />
+                )}
                 <Button
                   variant="secondary"
                   size="sm"

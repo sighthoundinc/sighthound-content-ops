@@ -129,6 +129,7 @@ import {
   SOCIAL_POST_STATUSES,
   SITES,
   STATUS_LABELS,
+  getBlogStatusLabel,
   getWorkflowStage,
   WRITER_STATUS_LABELS,
   WRITER_STATUSES,
@@ -1834,7 +1835,10 @@ export default function DashboardPage() {
       ) {
         return "awaiting_review";
       }
-      if (blog.overall_status === "ready_to_publish") {
+      if (
+        blog.overall_status === "ready_to_publish" &&
+        blog.publisher_status === "not_started"
+      ) {
         return "ready_to_publish";
       }
       return "open_work";
@@ -1877,7 +1881,7 @@ export default function DashboardPage() {
         site_key: blog.site,
         id: blog.id,
         title: blog.title,
-        status_display: STATUS_LABELS[blog.overall_status],
+        status_display: getBlogStatusLabel(blog),
         lifecycle_bucket: lifecycleBucket,
         scheduled_date: getBlogScheduledDate(blog),
         published_date:
@@ -4971,7 +4975,7 @@ export default function DashboardPage() {
                     },
                     {
                       label: "Overall status",
-                      value: STATUS_LABELS[activeBlog.overall_status],
+                      value: getBlogStatusLabel(activeBlog),
                     },
                   ]
                 : []

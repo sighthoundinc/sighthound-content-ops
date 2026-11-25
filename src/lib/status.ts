@@ -208,3 +208,27 @@ export function getWorkflowStage({
   }
   return "ready";
 }
+
+// overall_status has no "publishing" value: once a publisher starts, the
+// database keeps ready_to_publish. Show "Publishing" for those blogs.
+export function isBlogPublishingUnderway(blog: {
+  writer_status: WriterStageStatus;
+  publisher_status: PublisherStageStatus;
+}) {
+  return (
+    getWorkflowStage({
+      writerStatus: blog.writer_status,
+      publisherStatus: blog.publisher_status,
+    }) === "publishing"
+  );
+}
+
+export function getBlogStatusLabel(blog: {
+  writer_status: WriterStageStatus;
+  publisher_status: PublisherStageStatus;
+  overall_status: OverallBlogStatus;
+}) {
+  return isBlogPublishingUnderway(blog)
+    ? WORKFLOW_STAGE_LABELS.publishing
+    : STATUS_LABELS[blog.overall_status];
+}

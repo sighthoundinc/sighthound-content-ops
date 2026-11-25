@@ -87,6 +87,8 @@ Not Started → Writing in Progress → Awaiting Writing Review → (Needs Revis
 - Role nouns (`Writer`, `Publisher`, `Reviewer`) are reserved for references to a specific user acting in that role.
 
 ### Behavior rules
+- `overall_status` is derived by the database (`derive_overall_status`, migration `20261125131000`): publishing completed → `published`; writer `needs_revision` → `needs_revision`; writing completed → `ready_to_publish`; otherwise `writing`. It has no "publishing" value, so once a publisher starts the UI shows "Publishing" via `getBlogStatusLabel()` / `isBlogPublishingUnderway()` (`src/lib/status.ts`), and "Ready to Publish" counts only blogs whose publishing is `not_started`.
+- Pipeline board columns: writer `pending_review` and `needs_revision` both sit in Reviewing.
 - Writing completion is the handoff trigger into publishing.
 - Publishing completion must not bypass writing prerequisites.
 - Reviewer checkpoint at `Awaiting Publishing Review` is required before final completion.
@@ -378,7 +380,7 @@ Authentication is enforced at three layers. Each layer is independent and none i
 - Both routes are `export const dynamic = "force-dynamic"` to prevent per-user state from being collapsed into a static cache across users.
 ### 16.3) Client layer (`AuthProvider` + browser client)
 - `src/lib/supabase/browser.ts` creates the browser Supabase client via `createBrowserClient` (from `@supabase/ssr`, which mirrors session state into cookies automatically).
-- `src/providers/auth-provider.tsx` wraps the root layout. On mount it calls `supabase.auth.getSession()`, then subscribes to `onAuthStateChange`. Whenever the session changes it refetches `profile`, `user_integrations`, and `role_permissions`, then calls `logLoginEvent(userId)` (fire-and-forget) for the audit trail.
+- `src/providers/auth-provider.tsx` wraps the root layout. On mount it calls `supabase.auth.getSession()`, then subscribes to `onAuthStateChange`. Whenever the session changes it refetches `profile`, `user_integrations`, and `role_permissions`, then calls `logLoginEvent(userId)` (fire-and-forget) for the audit trail. Supabase reports the same session several times on page load, so the provider loads once per access token (`applySessionOnce`); duplicate events wait on that load instead of refetching and logging again.
 - `useAuth()` exposes `session`, `user`, `profile`, `permissions`, `googleConnected`, `slackConnected`, `hasPermission`, `refreshProfile`, `refreshPermissions`, `refreshIntegrations`, and `signOut`.
 ### 16.4) Sign-in paths (MUST)
 1. **Email + password (interactive)** — `src/app/login/login-form.tsx#handlePasswordSignIn`:

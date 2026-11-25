@@ -133,7 +133,7 @@ function getBoardStage(blog: BlogRecord): BoardStage {
   if (blog.writer_status === "in_progress") {
     return "writing";
   }
-  if (blog.writer_status === "needs_revision") {
+  if (blog.writer_status === "needs_revision" || blog.writer_status === "pending_review") {
     return "reviewing";
   }
   return "publishing";

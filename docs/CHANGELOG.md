@@ -4,6 +4,15 @@ Tracks changes to authoritative documentation under `docs/` and repo-root docs. 
 
 Newest entries first.
 
+## 2026-11-25
+
+### Changed — `SPECIFICATION.md`, `OPERATIONS.md`
+
+- §16 auth: middleware keeps the OAuth `code`/`error` params on the `/login` redirect (the cause of Google/Slack sign-in silently failing); only `@sighthound.com` accounts may sign in (trigger `enforce_sighthound_email_domain`, migration `20261125130000`, applied to production); AuthProvider loads once per access token.
+- §4 blog workflow: documented the corrected `overall_status` derivation (migration `20261125131000`, applied to production), the "Publishing" display rule, and the Reviewing column rule.
+- `OPERATIONS.md` §13: new troubleshooting entry for a sign-in that returns to `/login` with `?error=`.
+- Dashboard config done outside the repo: Supabase redirect allow-list gained `https://sighthound-content-ops.vercel.app/**`; the Slack app was reinstalled to apply pending scope changes.
+
 ## 2026-11-15
 
 ### Added — `DESIGN.md` (repo root) and `docs/audits/impeccable-trial-2026-11/`

@@ -1686,7 +1686,9 @@ function MyTasksPageContent() {
           <p className="mt-1 text-xs text-navy-500">
             {task.contentType === "blog" && task.blogTask
               ? task.blogTask.kind === "writer"
-                ? "Writing task"
+                ? task.blogTask.writerStatus === "completed"
+                  ? "Writing approved"
+                  : "Writing task"
                 : "Publishing task"
               : "Social task"}
             {task.contentType === "blog" && task.blogTask?.isDelayed ? " · Overdue" : ""}

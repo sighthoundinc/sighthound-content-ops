@@ -177,6 +177,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isDisposed = false;
     const supabase = getSupabaseBrowserClient();
 
+    // Supabase reports the same session several times on page load
+    // (getSession, INITIAL_SESSION, SIGNED_IN). Load profile/permissions and
+    // log the login once per access token; duplicates wait on the same load.
+    let inFlight: { token: string; promise: Promise<void> } | null = null;
+    const applySessionOnce = (nextSession: Session | null) => {
+      const token = nextSession?.user?.id ? nextSession.access_token : null;
+      if (token && inFlight?.token === token) {
+        return inFlight.promise;
+      }
+      const promise = applySession(nextSession);
+      inFlight = token ? { token, promise } : null;
+      return promise;
+    };
+
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
@@ -188,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setPermissions([]);
           return;
         }
-        return applySession(data.session);
+        return applySessionOnce(data.session);
       })
       .catch((error) => {
         console.error(error);
@@ -208,7 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       void (async () => {
         try {
-          await applySession(nextSession);
+          await applySessionOnce(nextSession);
         } finally {
           if (!isDisposed) {
             setLoading(false);

@@ -207,7 +207,7 @@ function findRecordRef(input: unknown, result: Record<string, unknown>) {
   }
   for (const [key, type] of [
     ["blog", "blog"],
-    ["socialPost", "social_post"],
+    ["post", "social_post"],
     ["social_post", "social_post"],
     ["idea", "idea"],
   ] as const) {

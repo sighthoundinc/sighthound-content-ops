@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -11,6 +10,7 @@ import {
   DATA_PAGE_CONTROL_STRIP_CLASS,
   DATA_PAGE_STACK_CLASS,
   DataPageEmptyState,
+  DataPageBreadcrumb,
   DataPageHeader,
 } from "@/components/data-page";
 import {
@@ -301,22 +301,15 @@ export default function AccessLogsPage() {
     <ProtectedPage requiredPermissions={["manage_users"]}>
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
-          <nav
-            aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
-          >
-            <Link href="/dashboard" className="hover:text-navy-500">
-              Dashboard
-            </Link>
-            <span>/</span>
-            <Link href="/settings" className="hover:text-navy-500">
-              Settings
-            </Link>
-            <span>/</span>
-            <span className="text-navy-500">Activity History</span>
-          </nav>
+          <DataPageBreadcrumb
+            items={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Settings", href: "/settings" },
+              { label: "Admin Activity History" },
+            ]}
+          />
           <DataPageHeader
-            title="Activity History"
+            title="Admin Activity History"
             description="Review sign-ins and workflow activity in clear, human-friendly language"
           />
 

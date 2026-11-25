@@ -11,6 +11,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal";
 import { ConnectedServicesForm } from "@/components/connected-services-form";
 import { NotificationPreferencesForm } from "@/components/notification-preferences-form";
 import { useDensityPreference } from "@/hooks/useDensityPreference";
+import { DataPageHeader } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   TablePaginationControls,
@@ -1063,12 +1064,10 @@ function SettingsPageContent() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-7">
-          <header className="space-y-2">
-            <h1 className="text-xl font-semibold text-ink">Settings</h1>
-            <p className="text-sm text-navy-500">
-              Manage your profile, workspace preferences, and admin controls in one place.
-            </p>
-          </header>
+          <DataPageHeader
+            title="Settings"
+            description="Manage your profile, workspace preferences, and admin controls in one place."
+          />
 
 
           {isLoading ? (

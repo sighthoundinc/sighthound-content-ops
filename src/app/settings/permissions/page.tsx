@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { DataPageBreadcrumb, DataPageHeader } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   MANAGED_PERMISSION_ROLES,
@@ -241,26 +241,17 @@ export default function PermissionsSettingsPage() {
     <ProtectedPage requiredPermissions={["manage_permissions"]}>
       <AppShell>
         <div className="space-y-6">
-          <nav
-            aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
-          >
-            <Link href="/dashboard" className="hover:text-navy-500">
-              Dashboard
-            </Link>
-            <span>/</span>
-            <Link href="/settings" className="hover:text-navy-500">
-              Settings
-            </Link>
-            <span>/</span>
-            <span className="text-navy-500">Permissions</span>
-          </nav>
-          <header className="space-y-2">
-            <h1 className="text-xl font-semibold text-ink">Permissions</h1>
-            <p className="text-sm text-navy-500">
-              Define what each role can access across core workflows.
-            </p>
-          </header>
+          <DataPageBreadcrumb
+            items={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Settings", href: "/settings" },
+              { label: "Permissions" },
+            ]}
+          />
+          <DataPageHeader
+            title="Permissions"
+            description="Define what each role can access across core workflows."
+          />
 
           {isSimulationActive ? (
             <p className="rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-3 py-2 text-sm text-blurple-700">

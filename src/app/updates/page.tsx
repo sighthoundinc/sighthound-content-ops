@@ -8,6 +8,7 @@ import { Button } from "@/components/button";
 import {
   DATA_PAGE_STACK_CLASS,
   DataPageEmptyState,
+  DataPageBreadcrumb,
   DataPageHeader,
 } from "@/components/data-page";
 import { ProtectedPage } from "@/components/protected-page";
@@ -167,16 +168,12 @@ export default function UpdatesPage() {
     <ProtectedPage>
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
-          <nav
-            aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
-          >
-            <Link href="/dashboard" className="hover:text-navy-500">
-              Dashboard
-            </Link>
-            <span>/</span>
-            <span className="text-navy-500">Activity History</span>
-          </nav>
+          <DataPageBreadcrumb
+            items={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Activity History" },
+            ]}
+          />
           <DataPageHeader
             title="Activity History"
             description="Readable updates from across the app."

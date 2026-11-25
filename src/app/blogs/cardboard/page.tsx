@@ -13,6 +13,7 @@ import { PublisherStatusBadge, WriterStatusBadge } from "@/components/status-bad
 import {
   DataPageEmptyState,
   DataPageFilterPills,
+  DataPageBreadcrumb,
   DataPageHeader,
   DATA_PAGE_STACK_CLASS,
   DataPageToolbar,
@@ -658,20 +659,13 @@ export default function BlogCardBoardPage() {
     <ProtectedPage requiredPermissions={["view_dashboard"]}>
       <AppShell>
         <div className={DATA_PAGE_STACK_CLASS}>
-          <nav
-            aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
-          >
-            <Link href="/dashboard" className="hover:text-navy-500">
-              Dashboard
-            </Link>
-            <span>/</span>
-            <Link href="/blogs" className="hover:text-navy-500">
-              Blogs
-            </Link>
-            <span>/</span>
-            <span className="text-navy-500">CardBoard</span>
-          </nav>
+          <DataPageBreadcrumb
+            items={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Blogs", href: "/blogs" },
+              { label: "CardBoard" },
+            ]}
+          />
           <DataPageHeader
             title="CardBoard"
             description="Pipeline board for team-wide blog stage visibility and movement."

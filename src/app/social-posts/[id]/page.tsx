@@ -1,7 +1,6 @@
 "use client";
 
 import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard";
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
@@ -10,7 +9,7 @@ import { AppShell } from "@/components/app-shell";
 import { AssociatedBlogContextCard } from "@/components/associated-blog-context-card";
 import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
-import { DataPageHeader } from "@/components/data-page";
+import { DataPageBreadcrumb, DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
@@ -1814,20 +1813,13 @@ export default function SocialPostEditorPage() {
     <ProtectedPage>
       <AppShell>
         <div className="space-y-5">
-          <nav
-            aria-label="Breadcrumb"
-            className="flex flex-wrap items-center gap-1 text-xs text-navy-500"
-          >
-            <Link href="/dashboard" className="hover:text-navy-500">
-              Dashboard
-            </Link>
-            <span>/</span>
-            <Link href="/social-posts" className="hover:text-navy-500">
-              Social Posts
-            </Link>
-            <span>/</span>
-            <span className="text-navy-500">Details</span>
-          </nav>
+          <DataPageBreadcrumb
+            items={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Social Posts", href: "/social-posts" },
+              { label: "Details" },
+            ]}
+          />
           <DataPageHeader
             title={form.title || "Social Post"}
             description="Build and refine your social post from concept to publication."

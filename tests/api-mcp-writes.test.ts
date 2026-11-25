@@ -60,6 +60,7 @@ type Write = { table: string; method: string; payload: unknown };
 
 function createMockAdminClient(rows: Record<string, Record<string, unknown>>) {
   const writes: Write[] = [];
+  const auditRows: Write[] = [];
   const from = (table: string) => {
     let pending: Write | null = null;
     const result = () => ({ data: rows[table] ?? null, error: null });
@@ -72,14 +73,14 @@ function createMockAdminClient(rows: Record<string, Record<string, unknown>>) {
     for (const method of ["insert", "update", "upsert", "delete"]) {
       chain[method] = (payload: unknown) => {
         pending = { table, method, payload };
-        if (table !== "access_logs") writes.push(pending);
+        (table === "access_logs" ? auditRows : writes).push(pending);
         return chain;
       };
     }
     void pending;
     return chain;
   };
-  return { client: { from } as unknown as AuthenticatedRequestContext["adminClient"], writes };
+  return { client: { from } as unknown as AuthenticatedRequestContext["adminClient"], writes, auditRows };
 }
 
 function makeContext(
@@ -317,5 +318,39 @@ describe("Content Relay MCP write tools", () => {
     );
     expect(text(result)).toBe("Idea is already converted to a blog.");
     expect(converted.writes).toEqual([]);
+  });
+
+  test("every write attempt is audit-logged as JSON with arguments, outcome and record", async () => {
+    const admin = createMockAdminClient({ blog_ideas: { id: IDEA_ID, created_by: OTHER_ID } });
+    jest.mocked(resolveActiveProfileContext).mockResolvedValue(
+      makeContext(admin, ["create_idea", "edit_own_idea"])
+    );
+    await withClient(async (client) => {
+      await client.callTool({ name: "create_idea", arguments: { title: "Idea", site: "redactor.com" } });
+      await client.callTool({ name: "update_idea", arguments: { idea_id: IDEA_ID, title: "New" } });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(admin.auditRows.map((row) => row.payload)).toEqual([
+      {
+        user_id: ACTOR_ID,
+        event_type: "mcp_tool_call",
+        tool_name: "create_idea",
+        details: {
+          outcome: "ok",
+          arguments: { title: "Idea", site: "redactor.com" },
+          record: { type: "idea", id: IDEA_ID },
+        },
+      },
+      {
+        user_id: ACTOR_ID,
+        event_type: "mcp_tool_call",
+        tool_name: "update_idea",
+        details: {
+          outcome: "rejected",
+          arguments: { idea_id: IDEA_ID, title: "New" },
+          error: "Permission denied.",
+        },
+      },
+    ]);
   });
 });

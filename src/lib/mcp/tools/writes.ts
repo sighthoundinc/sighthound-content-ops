@@ -193,6 +193,30 @@ type WriteToolDefinition<TSchema extends z.ZodType> = {
   run: (input: z.infer<TSchema>) => Promise<Record<string, unknown>>;
 };
 
+// Which record a write touched: from the input id, else from a created row.
+function findRecordRef(input: unknown, result: Record<string, unknown>) {
+  const args = (input ?? {}) as Record<string, unknown>;
+  for (const [key, type] of [
+    ["blog_id", "blog"],
+    ["social_post_id", "social_post"],
+    ["idea_id", "idea"],
+  ] as const) {
+    if (typeof args[key] === "string" && !(key === "idea_id" && result.blog)) {
+      return { type, id: args[key] };
+    }
+  }
+  for (const [key, type] of [
+    ["blog", "blog"],
+    ["socialPost", "social_post"],
+    ["social_post", "social_post"],
+    ["idea", "idea"],
+  ] as const) {
+    const id = (result[key] as { id?: unknown } | null | undefined)?.id;
+    if (typeof id === "string") return { type, id };
+  }
+  return null;
+}
+
 function toolError(message: string) {
   return { content: [{ type: "text" as const, text: message }], isError: true };
 }
@@ -219,24 +243,35 @@ function registerWriteTool<TSchema extends z.ZodType>(
       },
     },
     async (rawInput) => {
-      scheduleMcpToolCallLog(context, definition.name);
+      // JSON audit trail: every write attempt logs its arguments and outcome.
+      const audit = (outcome: "ok" | "denied" | "invalid" | "rejected" | "failed", extra: Record<string, unknown> = {}) =>
+        scheduleMcpToolCallLog(context, definition.name, {
+          outcome,
+          arguments: rawInput ?? {},
+          ...extra,
+        });
 
       if (definition.permission && !hasPermission(context, definition.permission)) {
+        audit("denied");
         return toolError("Permission denied.");
       }
       const parsedInput = definition.inputSchema.safeParse(rawInput);
       if (!parsedInput.success) {
+        audit("invalid");
         return toolError(
           `Invalid tool input: ${parsedInput.error.issues[0]?.message ?? "unknown"}`
         );
       }
       try {
         const result = await definition.run(parsedInput.data);
+        audit("ok", { record: findRecordRef(parsedInput.data, result) });
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       } catch (error) {
         if (error instanceof ToolUserError) {
+          audit("rejected", { error: error.message });
           return toolError(error.message);
         }
+        audit("failed");
         console.error("[MCP] Write tool failed", { tool: definition.name });
         return toolError("The MCP request could not be completed.");
       }

@@ -331,6 +331,7 @@ describe("Content Relay read-only MCP endpoint", () => {
             "get_social_post",
             "list_blogs",
             "list_ideas",
+            "list_mcp_changes",
             "list_social_posts",
             "list_users",
           ]);
@@ -455,6 +456,7 @@ describe("Content Relay read-only MCP endpoint", () => {
         "get_social_post",
         "list_blogs",
         "list_ideas",
+        "list_mcp_changes",
         "list_social_posts",
         "list_users",
       ]);
@@ -480,6 +482,7 @@ describe("Content Relay read-only MCP endpoint", () => {
           "get_social_post",
           "list_blogs",
           "list_ideas",
+          "list_mcp_changes",
           "list_social_posts",
           "list_users",
         ]);

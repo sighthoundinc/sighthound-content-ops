@@ -35,6 +35,14 @@ const listIdeasSchema = z
 
 const noArgumentsSchema = z.object({}).strict();
 
+const listChangesSchema = z
+  .object({
+    since: z.string().datetime({ offset: true }).optional(),
+    tool_name: z.string().trim().min(1).max(64).optional(),
+    ...boundedPaginationSchema(),
+  })
+  .strict();
+
 const listUsersSchema = z
   .object({
     search: z.string().trim().min(1).max(100).optional(),
@@ -104,6 +112,36 @@ export function registerIdeaAndTaskTools(
 
       return {
         ideas: data ?? [],
+        total: count ?? data?.length ?? 0,
+        limit: input.limit,
+        offset: input.offset,
+      };
+    },
+  });
+
+  registerReadOnlyTool(server, {
+    name: "list_mcp_changes",
+    title: "List MCP changes",
+    description:
+      "Audit log of write attempts made through this MCP: time, tool, JSON arguments, outcome (ok, denied, invalid, rejected, failed), error and affected record. Newest first. Admin only.",
+    inputSchema: listChangesSchema,
+    permission: "view_dashboard",
+    context,
+    authorize: () => getUserRoles(context.profile).includes("admin"),
+    run: async (input) => {
+      let query = context.adminClient
+        .from("access_logs")
+        .select("id,user_id,tool_name,details,created_at", { count: "exact" })
+        .eq("event_type", "mcp_tool_call")
+        .not("details", "is", null);
+      if (input.since) query = query.gte("created_at", input.since);
+      if (input.tool_name) query = query.eq("tool_name", input.tool_name);
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(input.offset, input.offset + input.limit - 1);
+      throwOnQueryError(error);
+      return {
+        changes: data ?? [],
         total: count ?? data?.length ?? 0,
         limit: input.limit,
         offset: input.offset,

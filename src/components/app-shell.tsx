@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { getUserRoles } from "@/lib/roles";
+import { getUserRoles, isViewOnly } from "@/lib/roles";
 
 import { AskAIHeaderButton } from "@/components/ai/ask-ai-header-button";
 import { Button } from "@/components/button";
@@ -158,7 +158,8 @@ export function AppShell({
   const isAdmin = userRoles.includes("admin");
   const canManagePermissions = isAdmin;
   const canManageSocialPosts =
-    permissionContract.canViewDashboard || permissionContract.canOverrideWorkflow;
+    !isViewOnly(profile) &&
+    (permissionContract.canViewDashboard || permissionContract.canOverrideWorkflow);
   const profileDisplayName = profile?.display_name || profile?.full_name || "Account";
   const profileInitials = profileDisplayName
     .split(" ")

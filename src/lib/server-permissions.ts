@@ -8,7 +8,7 @@ import {
 } from "@/lib/permissions";
 import { getMcpActorContext } from "@/lib/mcp/actor-context";
 import { isMissingUserRolesColumnError } from "@/lib/profile-schema";
-import { getUserRoles } from "@/lib/roles";
+import { getUserRoles, isViewOnly } from "@/lib/roles";
 import { createAdminClient, createAnonServerClient } from "@/lib/supabase/server";
 import type { AppPermissionKey, ProfileRecord } from "@/lib/types";
 
@@ -122,6 +122,11 @@ export async function authenticateRequest(
   const context = await resolveActiveProfileContext(userData.user.id, adminClient);
   if (!context) {
     return { error: "Active profile not found", status: 403 };
+  }
+  // API routes write with the service role, which bypasses RLS, so read-only
+  // accounts are stopped here for every route at once.
+  if (isViewOnly(context.profile) && !["GET", "HEAD"].includes(request.method)) {
+    return { error: "This account is view-only.", status: 403 };
   }
   return { context };
 }

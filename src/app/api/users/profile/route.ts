@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticateRequest, hasPermission } from "@/lib/server-permissions";
 import { withApiContract } from "@/lib/api-contract";
+import { isValidRoleSet } from "@/lib/roles";
+import { ACTIVE_SOCIAL_STATUSES } from "@/lib/task-logic";
 
 const updateProfileSchema = z.object({
   targetUserId: z.string().uuid().optional(),
@@ -12,7 +14,7 @@ const updateProfileSchema = z.object({
   weekStart: z.number().int().min(0).max(6).optional(),
   staleDraftDays: z.number().int().min(1).max(120).optional(),
   isActive: z.boolean().optional(),
-  userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor"])).optional(),
+  userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor", "viewer"])).optional(),
 });
 
 function toNullableTrimmed(value: string | null | undefined) {
@@ -59,6 +61,19 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
       return NextResponse.json(
         { error: "Only admins can edit user roles." },
         { status: 403 }
+      );
+    }
+    const becomesViewer = Boolean(parsed.data.userRoles?.includes("viewer"));
+    if (parsed.data.userRoles && !isValidRoleSet(parsed.data.userRoles)) {
+      return NextResponse.json(
+        { error: "Viewer is read-only and cannot be combined with other roles." },
+        { status: 400 }
+      );
+    }
+    if (becomesViewer && isSelfUpdate) {
+      return NextResponse.json(
+        { error: "You cannot make yourself a viewer." },
+        { status: 400 }
       );
     }
     if (parsed.data.isActive !== undefined && !canManageUsers) {
@@ -143,6 +158,29 @@ export const PATCH = withApiContract(async function PATCH(request: NextRequest) 
     if (updateError) {
       console.error("Failed to update profile:", updateError);
       return NextResponse.json({ error: "Failed to update profile. Please try again." }, { status: 400 });
+    }
+
+    // A viewer can no longer move work forward, so hand their open work to the
+    // admin making the change. That admin can reassign it afterwards.
+    if (becomesViewer) {
+      const handoffs = await Promise.all([
+        adminClient.from("blogs").update({ writer_id: context.userId })
+          .eq("writer_id", targetUserId).neq("writer_status", "completed"),
+        adminClient.from("blogs").update({ publisher_id: context.userId })
+          .eq("publisher_id", targetUserId).neq("publisher_status", "completed"),
+        adminClient.from("social_posts").update({ worker_user_id: context.userId })
+          .eq("worker_user_id", targetUserId).in("status", ACTIVE_SOCIAL_STATUSES),
+        adminClient.from("social_posts").update({ reviewer_user_id: context.userId })
+          .eq("reviewer_user_id", targetUserId).in("status", ACTIVE_SOCIAL_STATUSES),
+      ]);
+      const handoffError = handoffs.find((result) => result.error)?.error;
+      if (handoffError) {
+        console.error("Viewer handoff failed:", handoffError);
+        return NextResponse.json({
+          profile: updatedProfile,
+          warning: "Role updated, but some open work could not be reassigned. Reassign it manually.",
+        });
+      }
     }
 
     return NextResponse.json({ profile: updatedProfile });

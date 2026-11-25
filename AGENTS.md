@@ -226,6 +226,7 @@ Social transition API guardrails:
 - **Writer**: 28 permissions (create/edit blogs, writing workflow, ideas, social posts, collaboration, scheduling, dashboard)
 - **Publisher**: 23 permissions (publishing workflow, social posts, scheduling, collaboration, dashboard)
 - **Editor**: 17 permissions (blog editing, idea management, collaboration, workflow support, dashboard)
+- **Viewer**: read-only (fixed `view_*` set, not configurable). Non-GET API calls are rejected in `authenticateRequest`; direct writes are blocked by the restrictive "Viewers cannot insert/update/delete" RLS policies via `public.is_view_only()`.
 
 **Permission Structure**:
 1. **Permission Keys Function**: Centralized list in `public.permission_keys()` SQL function

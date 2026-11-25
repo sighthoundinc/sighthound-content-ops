@@ -1,4 +1,4 @@
-export type AppRole = "admin" | "writer" | "publisher" | "editor";
+export type AppRole = "admin" | "writer" | "publisher" | "editor" | "viewer";
 export type CanonicalAppPermissionKey =
   | "create_blog"
   | "edit_blog_metadata"

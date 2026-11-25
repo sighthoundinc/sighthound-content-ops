@@ -45,7 +45,7 @@ type PostgrestLikeError = {
 
 type PermissionLookup = (permission: AppPermissionKey) => boolean;
 
-export const APP_ROLES: AppRole[] = ["admin", "writer", "publisher", "editor"];
+export const APP_ROLES: AppRole[] = ["admin", "writer", "publisher", "editor", "viewer"];
 export const MANAGED_PERMISSION_ROLES: AppRole[] = ["writer", "publisher", "editor"];
 
 export const LEGACY_PERMISSION_KEYS: LegacyAppPermissionKey[] = [
@@ -898,6 +898,19 @@ export const DEFAULT_ROLE_PERMISSION_TEMPLATES: Record<
     "view_notifications",
     "view_activity_history",
   ],
+  // Read-only. Deliberately not in MANAGED_PERMISSION_ROLES: the set is fixed,
+  // so no toggle can ever hand a viewer a write permission.
+  viewer: [
+    "view_dashboard",
+    "view_metrics",
+    "view_calendar",
+    "view_ideas",
+    "view_social_posts",
+    "view_social_post_details",
+    "view_my_tasks",
+    "view_notifications",
+    "view_activity_history",
+  ],
 };
 
 export function isCanonicalPermissionKey(
@@ -1008,7 +1021,8 @@ export function getRolePermissionState(
   }
 
   for (const row of rolePermissionRows) {
-    if (row.role !== role) {
+    // Only managed roles take overrides; viewer stays on its fixed defaults.
+    if (row.role !== role || !MANAGED_PERMISSION_ROLES.includes(role)) {
       continue;
     }
     if (isLockedAdminPermission(row.permission_key)) {

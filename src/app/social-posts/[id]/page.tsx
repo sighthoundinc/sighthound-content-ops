@@ -47,7 +47,7 @@ import {
   formatActivityChangeDescription,
   formatActivityEventTitle,
 } from "@/lib/activity-history-format";
-import { getUserRoles } from "@/lib/roles";
+import { getUserRoles, isViewOnly } from "@/lib/roles";
 import {
   CHANGE_REQUEST_CATEGORY_OPTIONS,
   CHANGE_REQUEST_CHECKLIST_OPTIONS,
@@ -410,6 +410,7 @@ export default function SocialPostEditorPage() {
   const captionRef = useRef<HTMLTextAreaElement | null>(null);
   const userRoles = useMemo(() => getUserRoles(profile), [profile]);
   const isAdmin = userRoles.includes("admin");
+  const viewOnly = isViewOnly(profile);
 
   const [post, setPost] = useState<SocialPostEditorRecord | null>(null);
   useEffect(() => {
@@ -453,14 +454,14 @@ export default function SocialPostEditorPage() {
   const [hasAppliedRequestedFocus, setHasAppliedRequestedFocus] = useState(false);
   const [savedFormSnapshot, setSavedFormSnapshot] = useState<string | null>(null);
   const canEditBrief = useMemo(() => {
-    if (!post || isExecutionStage(post.status)) {
+    if (!post || viewOnly || isExecutionStage(post.status)) {
       return false;
     }
     if (isAdmin) {
       return true;
     }
     return post.status === "draft" || post.status === "changes_requested";
-  }, [isAdmin, post]);
+  }, [isAdmin, post, viewOnly]);
   const [availableUsers, setAvailableUsers] = useState<
     Array<{ id: string; full_name: string; email: string }>
   >([]);
@@ -494,7 +495,7 @@ export default function SocialPostEditorPage() {
     [getUserDisplayNameById]
   );
   const canActOnCurrentStatus = useMemo(() => {
-    if (!post) {
+    if (!post || viewOnly) {
       return false;
     }
     return canUserActOnStatus({
@@ -504,7 +505,7 @@ export default function SocialPostEditorPage() {
       userId: user?.id ?? null,
       isAdmin,
     });
-  }, [isAdmin, post, user?.id]);
+  }, [isAdmin, post, user?.id, viewOnly]);
 
   const loadPost = useCallback(async () => {
     if (!postId) {
@@ -2741,7 +2742,7 @@ export default function SocialPostEditorPage() {
                     Collaboration notes are visible to everyone on this record.
                   </p>
                 </div>
-                <div className="space-y-2">
+                <div className={viewOnly ? "hidden" : "space-y-2"}>
                   <textarea
                     value={commentDraft}
                     onChange={(event) => {
@@ -2864,7 +2865,7 @@ export default function SocialPostEditorPage() {
                     ))}
                   </ul>
                 )}
-                <div className="flex justify-end">
+                <div className={viewOnly ? "hidden" : "flex justify-end"}>
                   <Button
                     type="button"
                     variant="secondary"

@@ -71,7 +71,7 @@ const TIMEZONE_OPTIONS = [
   "Australia/Sydney",
 ];
 
-const ALL_ROLES: AppRole[] = ["admin", "writer", "publisher", "editor"];
+const ALL_ROLES: AppRole[] = ["admin", "writer", "publisher", "editor", "viewer"];
 const INACTIVE_USERS_PURGE_CONFIRMATION_TEXT = "DELETE INACTIVE USERS";
 
 type UserSortField = "full_name" | "email" | "roles" | "is_active" | "created_at";

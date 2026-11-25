@@ -12,7 +12,7 @@ import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { parseApiResponseJson, isApiFailure, getApiErrorMessage } from "@/lib/api-response";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
-import { getUserRoles } from "@/lib/roles";
+import { getUserRoles, isViewOnly } from "@/lib/roles";
 import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatDateInTimezone } from "@/lib/format-date";
@@ -56,6 +56,7 @@ export default function IdeasPage() {
 
   const canCreateBlog = permissionContract.canCreateBlog;
   const isAdmin = useMemo(() => getUserRoles(profile).includes("admin"), [profile]);
+  const viewOnly = isViewOnly(profile);
 
   const loadIdeas = async () => {
     // Keep cached rows on screen while refreshing; skeleton only when empty.
@@ -356,21 +357,23 @@ export default function IdeasPage() {
                 Capture ideas quickly, then convert them into scheduled blog assignments.
               </p>
             </div>
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              onClick={() => {
-                setIsCreateModalOpen(true);
-              }}
-            >
-              New Idea
-            </Button>
+            {viewOnly ? null : (
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={() => {
+                  setIsCreateModalOpen(true);
+                }}
+              >
+                New Idea
+              </Button>
+            )}
           </header>
 
           <form
             onSubmit={handleQuickIdeaSubmit}
-            className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3"
+            className={viewOnly ? "hidden" : "rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-3"}
           >
             <label className="block text-sm font-medium text-ink">
               Quick capture
@@ -451,7 +454,7 @@ export default function IdeasPage() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className={viewOnly ? "hidden" : "mt-3 flex flex-wrap gap-2"}>
                       <Button
                         type="button"
                         variant="secondary"

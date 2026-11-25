@@ -4,6 +4,7 @@ import { withApiContract } from "@/lib/api-contract";
 
 import { hasPermission, requirePermission } from "@/lib/server-permissions";
 import type { AppRole } from "@/lib/types";
+import { isValidRoleSet } from "@/lib/roles";
 
 const createUserSchema = z.object({
   email: z
@@ -14,8 +15,8 @@ const createUserSchema = z.object({
     }),
   password: z.string().min(8),
   fullName: z.string().min(2),
-  role: z.enum(["admin", "writer", "publisher", "editor"]),
-  userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor"])).optional(),
+  role: z.enum(["admin", "writer", "publisher", "editor", "viewer"]),
+  userRoles: z.array(z.enum(["admin", "writer", "publisher", "editor", "viewer"])).optional(),
 });
 const deleteUsersSchema = z.object({
   userIds: z.array(z.string().uuid()).min(1),
@@ -46,6 +47,12 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
 
     const { email, password, fullName, role, userRoles } = parsed.data;
     const normalizedUserRoles = Array.from(new Set(userRoles?.length ? userRoles : [role]));
+    if (!isValidRoleSet(normalizedUserRoles)) {
+      return NextResponse.json(
+        { error: "Viewer is read-only and cannot be combined with other roles." },
+        { status: 400 }
+      );
+    }
     const [firstName, ...restName] = fullName.trim().split(/\s+/);
     const lastName = restName.length ? restName.join(" ") : null;
     const adminClient = auth.context.adminClient;

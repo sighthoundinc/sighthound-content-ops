@@ -71,7 +71,7 @@ import {
 } from "@/lib/status";
 import { canUserActOnStatus, isExecutionStage } from "@/lib/social-post-workflow";
 import { socialPostStatusChangedNotification } from "@/lib/notification-helpers";
-import { getUserRoles } from "@/lib/roles";
+import { getUserRoles, isViewOnly } from "@/lib/roles";
 import {
   CHANGE_REQUEST_CATEGORY_OPTIONS,
   CHANGE_REQUEST_CHECKLIST_OPTIONS,
@@ -649,6 +649,7 @@ function SocialPostsPageContent() {
   const { pushNotification } = useNotifications();
   const userRoles = useMemo(() => getUserRoles(profile), [profile]);
   const isAdmin = userRoles.includes("admin");
+  const viewOnly = isViewOnly(profile);
   const { showError, showSuccess } = useAlerts();
   const requestedView = searchParams.get("view");
   // Shared ?record=<blog|social>:<id> deep-link: when present on the list,
@@ -1010,7 +1011,7 @@ function SocialPostsPageContent() {
       setHasAppliedCreateQuery(false);
       return;
     }
-    if (hasAppliedCreateQuery) {
+    if (hasAppliedCreateQuery || viewOnly) {
       return;
     }
     initializeCreateForm();
@@ -1031,6 +1032,7 @@ function SocialPostsPageContent() {
     requestedTitle,
     requestedScheduledDate,
     shouldOpenCreateModal,
+    viewOnly,
   ]);
 
   useEffect(() => {
@@ -1176,11 +1178,12 @@ function SocialPostsPageContent() {
     }
     return Object.fromEntries(entries);
   }, [panelActivity, posts]);
-  const panelCanEditBrief = activePost && !isExecutionStage(activePost.status)
+  const panelCanEditBrief = activePost && !viewOnly && !isExecutionStage(activePost.status)
     ? isAdmin || activePost.status === "draft" || activePost.status === "changes_requested"
     : false;
   const canCurrentUserActOnPost = useCallback(
     (post: SocialPostWithRelations) =>
+      !viewOnly &&
       canUserActOnStatus({
         status: post.status,
         workerUserId: post.worker_user_id,
@@ -1188,7 +1191,7 @@ function SocialPostsPageContent() {
         userId: user?.id ?? null,
         isAdmin,
       }),
-    [isAdmin, user?.id]
+    [isAdmin, user?.id, viewOnly]
   );
   const getUserDisplayNameById = useCallback(
     (userId: string | null | undefined) => {
@@ -2517,6 +2520,7 @@ function SocialPostsPageContent() {
           const isOpen = openRowMenuId === post.id;
           const canDelete =
             !isDeletingPost &&
+            !viewOnly &&
             (post.created_by === user?.id || isAdmin) &&
             post.status !== "published";
           const isPublished = post.status === "published";
@@ -2558,7 +2562,7 @@ function SocialPostsPageContent() {
         },
       },
     ],
-    [handleDeletePost, isAdmin, isDeletingPost, openRowMenuId, user?.id]
+    [handleDeletePost, isAdmin, isDeletingPost, openRowMenuId, user?.id, viewOnly]
   );
 
   const listTableColumns = useMemo(
@@ -2731,17 +2735,19 @@ function SocialPostsPageContent() {
             description="Keep each social post in one card from Draft to Published."
             primaryAction={
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  onClick={() => {
-                    initializeCreateForm();
-                    setIsCreateModalOpen(true);
-                  }}
-                >
-                  New Social Post
-                </Button>
+                {viewOnly ? null : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={() => {
+                      initializeCreateForm();
+                      setIsCreateModalOpen(true);
+                    }}
+                  >
+                    New Social Post
+                  </Button>
+                )}
                 <div className={SEGMENTED_CONTROL_CLASS}>
                   {(["board", "list", "calendar"] as SocialPostsView[]).map((mode) => (
                     <button
@@ -3501,7 +3507,7 @@ function SocialPostsPageContent() {
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
                   Comments
                 </h4>
-                <form className="mt-3 space-y-2" onSubmit={handleAddComment}>
+                <form className={viewOnly ? "hidden" : "mt-3 space-y-2"} onSubmit={handleAddComment}>
                   {replyToComment ? (
                     <div className="flex items-center justify-between rounded-md border border-[color:var(--sh-blurple-100)] bg-blurple-50 px-3 py-2 text-xs text-blurple-700">
                       <span>
@@ -3587,7 +3593,7 @@ function SocialPostsPageContent() {
                       </ul>
                     </div>
                   ) : null}
-                  <div className="flex justify-end">
+                  <div className={viewOnly ? "hidden" : "flex justify-end"}>
                     <button
                       type="button"
                       disabled={isLinksSaving}

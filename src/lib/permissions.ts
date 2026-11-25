@@ -148,7 +148,7 @@ const WRITING_STAGE_PERMISSIONS: PermissionDefinition[] = [
   {
     key: "submit_draft",
     label: "Submit Draft",
-    description: "Mark writing as completed.",
+    description: "Send your own draft for review.",
     group: "writing_stage",
     configurable: true,
   },

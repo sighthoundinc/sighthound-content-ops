@@ -1218,7 +1218,7 @@ export default function BlogDetailPage() {
             title={blog.title}
             description={`${blog.site} \u2022 Created ${formatDateInTimezone(blog.created_at, profile?.timezone)}`}
             primaryAction={
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <PresenceBubbles users={presenceOthers} />
                 <StatusBadge status={blog.overall_status} />
                 <Button

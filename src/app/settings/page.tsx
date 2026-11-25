@@ -1124,7 +1124,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1151,7 +1151,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1178,7 +1178,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                     </div>
@@ -1207,7 +1207,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {TIMEZONE_OPTIONS.map((timezone) => (
                             <option key={timezone} value={timezone}>
@@ -1227,7 +1227,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             updateEditableUser(profile.id, { weekStart: Number(event.target.value) });
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {WEEK_DAYS.map((day) => (
                             <option key={day.value} value={day.value}>
@@ -1251,7 +1251,7 @@ function SettingsPageContent() {
                                 staleDraftDays: Number(event.target.value) || 10,
                               });
                             }}
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
                           <span className="text-sm text-navy-500 whitespace-nowrap">days</span>
                         </div>
@@ -1476,7 +1476,7 @@ function SettingsPageContent() {
                           Quick view as team member
                         </span>
                         <select
-                          className="w-full rounded-md border border-[color:var(--sh-blurple-100)] bg-white px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-blurple-100)] bg-white px-3 py-2 text-sm"
                           value={quickViewTargetUserId}
                           onChange={(event) => {
                             setQuickViewTargetUserId(event.target.value);
@@ -1526,7 +1526,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewFullName(event.target.value);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1538,7 +1538,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewEmail(event.target.value);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1553,7 +1553,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewPassword(event.target.value);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1565,7 +1565,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewRole(event.target.value as AppRole);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {ALL_ROLES.map((role) => (
                             <option key={role} value={role}>
@@ -1601,7 +1601,7 @@ function SettingsPageContent() {
                           From
                         </span>
                         <select
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           value={reassignFromUserId}
                           onChange={(event) => {
                             setReassignFromUserId(event.target.value);
@@ -1621,7 +1621,7 @@ function SettingsPageContent() {
                           To
                         </span>
                         <select
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           value={reassignToUserId}
                           onChange={(event) => {
                             setReassignToUserId(event.target.value);
@@ -1689,7 +1689,7 @@ function SettingsPageContent() {
                             Role Filter
                           </span>
                           <select
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                             value={userRoleFilter}
                             onChange={(event) => {
                               setUserRoleFilter(event.target.value as AppRole | "all");
@@ -1708,7 +1708,7 @@ function SettingsPageContent() {
                             Status Filter
                           </span>
                           <select
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                             value={userActiveFilter}
                             onChange={(event) => {
                               setUserActiveFilter(
@@ -1899,7 +1899,7 @@ function SettingsPageContent() {
                               displayName: event.target.value,
                             });
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <div className="grid gap-3 md:grid-cols-2">
@@ -1914,7 +1914,7 @@ function SettingsPageContent() {
                                 firstName: event.target.value,
                               });
                             }}
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
                         </label>
                         <label className="block">
@@ -1928,7 +1928,7 @@ function SettingsPageContent() {
                                 lastName: event.target.value,
                               });
                             }}
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
                         </label>
                       </div>
@@ -2055,7 +2055,7 @@ function SettingsPageContent() {
                           }}
                           disabled={isResettingPassword}
                           placeholder="Enter new password"
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       {resetPasswordError ? (
@@ -2153,7 +2153,7 @@ function SettingsPageContent() {
                         onChange={(event) => {
                           setInactiveUsersConfirmationText(event.target.value);
                         }}
-                        className="w-full rounded-md border border-rose-300 px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-rose-300 px-3 py-2 text-sm"
                         disabled={isDeletingInactiveUsers}
                       />
                     </label>

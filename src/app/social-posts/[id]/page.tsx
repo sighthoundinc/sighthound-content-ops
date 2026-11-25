@@ -15,6 +15,7 @@ import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
 import { EmptyState } from "@/components/empty-state";
 import { LoadErrorState } from "@/components/load-error-state";
+import { StatusBadgeSystem } from "@/components/status-badge-system";
 import { ProtectedPage } from "@/components/protected-page";
 import { SocialPostStatusBadge } from "@/components/status-badge";
 import { UnstickThisButton } from "@/components/ai/unstick-this-button";
@@ -1825,7 +1826,7 @@ export default function SocialPostEditorPage() {
   return (
     <ProtectedPage>
       <AppShell>
-        <div className="space-y-5">
+        <div className="space-y-6">
           <DataPageBreadcrumb
             items={[
               { label: "Dashboard", href: "/dashboard" },
@@ -1837,8 +1838,9 @@ export default function SocialPostEditorPage() {
             title={form.title || "Social Post"}
             description="Build and refine your social post from concept to publication."
             primaryAction={
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <PresenceBubbles users={presenceOthers} />
+                <StatusBadgeSystem variant="social" status={post.status} />
                 <Button
                   variant="secondary"
                   size="sm"
@@ -1901,7 +1903,7 @@ export default function SocialPostEditorPage() {
             </div>
             <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
-                Transition Preflight
+                Required to move forward
               </p>
               {transitionRequiredFields.length === 0 ? (
                 <p className="text-xs text-emerald-700">No required blockers for current action.</p>
@@ -2386,7 +2388,7 @@ export default function SocialPostEditorPage() {
                           onChange={(event) => {
                             setEditAssignedToUserId(event.target.value || null);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           <option value="">— Select person —</option>
                           {availableUsers.map((u) => (
@@ -2403,7 +2405,7 @@ export default function SocialPostEditorPage() {
                           onChange={(event) => {
                             setEditReviewerUserId(event.target.value || null);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           <option value="">— Select reviewer —</option>
                           {availableUsers.map((u) => (
@@ -2753,7 +2755,7 @@ export default function SocialPostEditorPage() {
                     onChange={(event) => {
                       setCommentDraft(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Add context or feedback…"
                   />
                   <div className="flex justify-end">
@@ -3004,7 +3006,7 @@ export default function SocialPostEditorPage() {
                 {transitionRequiredFields.length > 0 ? (
                   <div className="space-y-2 rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] p-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
-                      Transition Preflight
+                      Required to move forward
                     </p>
                     <p className="text-xs text-navy-500">
                       {readyTransitionFieldCount} / {transitionRequiredFields.length} required items ready for{" "}

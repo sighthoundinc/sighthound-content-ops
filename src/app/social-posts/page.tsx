@@ -3237,7 +3237,7 @@ function SocialPostsPageContent() {
                                 : previous
                             );
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {SOCIAL_POST_PRODUCTS.map((product) => (
                             <option key={product} value={product}>
@@ -3257,7 +3257,7 @@ function SocialPostsPageContent() {
                                 : previous
                             );
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {SOCIAL_POST_TYPES.map((type) => (
                             <option key={type} value={type}>
@@ -3277,7 +3277,7 @@ function SocialPostsPageContent() {
                             previous ? { ...previous, canva_url: event.target.value } : previous
                           );
                         }}
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         placeholder="https://www.canva.com/..."
                       />
                     </label>
@@ -3298,7 +3298,7 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, canva_page: event.target.value } : previous
                         );
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       disabled={!panelCanEditBrief}
                     />
                   </label>
@@ -3311,7 +3311,7 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, title: event.target.value } : previous
                         );
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       disabled={!panelCanEditBrief}
                     />
                   </label>
@@ -3324,7 +3324,7 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, caption: event.target.value } : previous
                         );
                       }}
-                      className="min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       placeholder="Main social caption..."
                       disabled={!panelCanEditBrief}
                     />
@@ -3340,7 +3340,7 @@ function SocialPostsPageContent() {
                         setBlogSearchQuery(event.target.value);
                         setIsBlogSearchOpen(true);
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       placeholder="Search blog title or slug..."
                       disabled={!panelCanEditBrief}
                     />
@@ -3415,7 +3415,7 @@ function SocialPostsPageContent() {
                               : previous
                           );
                         }}
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       />
                     </label>
                     <label className="block">
@@ -3430,7 +3430,7 @@ function SocialPostsPageContent() {
                               : previous
                           );
                         }}
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       />
                     </label>
                   </div>
@@ -3534,7 +3534,7 @@ function SocialPostsPageContent() {
                     onChange={(event) => {
                       setPanelCommentDraft(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Add discussion or feedback..."
                   />
                   <div className="flex justify-end">
@@ -3573,7 +3573,7 @@ function SocialPostsPageContent() {
                               [platform]: event.target.value,
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           placeholder={`https://${platform}.com/...`}
                         />
                       </label>
@@ -3899,7 +3899,7 @@ function SocialPostsPageContent() {
                     onChange={(event) => {
                       setNewTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
@@ -3945,7 +3945,7 @@ function SocialPostsPageContent() {
                       onChange={(event) => {
                         setNewProduct(event.target.value as SocialPostProduct);
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       {SOCIAL_POST_PRODUCTS.map((product) => (
                         <option key={product} value={product}>
@@ -3961,7 +3961,7 @@ function SocialPostsPageContent() {
                       onChange={(event) => {
                         setNewType(event.target.value as SocialPostType);
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       {SOCIAL_POST_TYPES.map((type) => (
                         <option key={type} value={type}>
@@ -4015,7 +4015,7 @@ function SocialPostsPageContent() {
                       setNewAssociatedBlogId(null);
                       setIsCreateBlogSearchOpen(true);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Search blog title or slug..."
                   />
                   {newAssociatedBlogId ? (
@@ -4077,7 +4077,7 @@ function SocialPostsPageContent() {
                         onChange={(event) => {
                           setNewWorkerUserId(event.target.value || null);
                         }}
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       >
                         <option value="">— Select person —</option>
                         {availableUsers.map((u) => (
@@ -4102,7 +4102,7 @@ function SocialPostsPageContent() {
                       onChange={(event) => {
                         setNewReviewerUserId(event.target.value || null);
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       <option value="">— Select reviewer —</option>
                       {availableUsers.map((u) => (

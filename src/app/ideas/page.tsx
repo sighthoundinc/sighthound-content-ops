@@ -386,7 +386,7 @@ export default function IdeasPage() {
                   setQuickIdeaTitle(event.target.value);
                 }}
                 placeholder="Add idea..."
-                className="min-w-60 flex-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm"
+                className="focus-field min-w-60 flex-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm"
               />
               <Button
                 type="submit"
@@ -572,7 +572,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
@@ -583,7 +583,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setSite(event.target.value as BlogSite);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                   >
                     {SITES.map((nextSite) => (
                       <option key={nextSite} value={nextSite}>
@@ -601,7 +601,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setDescription(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={2000}
                     placeholder="Optional comments or reference links..."
                   />
@@ -688,7 +688,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setEditTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
@@ -699,7 +699,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setEditSite(event.target.value as BlogSite);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                   >
                     {SITES.map((nextSite) => (
                       <option key={nextSite} value={nextSite}>
@@ -717,7 +717,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setEditDescription(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={2000}
                     placeholder="Optional comments or reference links..."
                   />

@@ -1,6 +1,7 @@
 "use client";
 
 import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard";
+import { buttonClass } from "@/components/button";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -390,7 +391,7 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setTitle(event.target.value);
                 }}
-                className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
               />
             </label>
 
@@ -404,7 +405,7 @@ function NewBlogPageContent() {
                   onChange={(event) => {
                     setSite(event.target.value as BlogSite);
                   }}
-                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   {SITES.map((nextSite) => (
                     <option key={nextSite} value={nextSite}>
@@ -424,7 +425,7 @@ function NewBlogPageContent() {
                   onChange={(event) => {
                     setScheduledPublishDate(event.target.value);
                   }}
-                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 />
               </label>
             </div>
@@ -457,7 +458,7 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setDisplayPublishDate(event.target.value);
                 }}
-                className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
               />
             </label>
 
@@ -473,7 +474,7 @@ function NewBlogPageContent() {
                   onChange={(event) => {
                     setWriterId(event.target.value);
                   }}
-                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   <option value="">Select writer</option>
                   {users.map((nextUser) => (
@@ -520,7 +521,7 @@ function NewBlogPageContent() {
                       setLastPublisherName(null);
                     }
                   }}
-                  className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 >
                   <option value="">Unassigned</option>
                   {users.map((nextUser) => (
@@ -542,7 +543,7 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setGoogleDocUrl(event.target.value);
                 }}
-                className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                 placeholder="https://docs.google.com/..."
               />
             </label>
@@ -560,7 +561,7 @@ function NewBlogPageContent() {
                 onChange={(event) => {
                   setInitialComment(event.target.value);
                 }}
-                className="mt-3 min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                className="focus-field mt-3 min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 placeholder="Add an initial comment..."
                 maxLength={2000}
               />
@@ -576,7 +577,7 @@ function NewBlogPageContent() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                className={buttonClass({ variant: "primary", size: "md" })}
               >
                 {isSubmitting ? "Creating..." : "Create Blog"}
               </button>

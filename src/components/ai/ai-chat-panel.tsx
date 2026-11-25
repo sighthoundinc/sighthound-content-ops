@@ -156,7 +156,7 @@ function LoadingState({ hint }: { hint: string }) {
     <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
       <div className="relative flex h-12 w-12 items-center justify-center">
         <span className="absolute inset-0 rounded-full bg-ink/5 animate-ping motion-reduce:hidden" />
-        <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-ink text-blurple-100 shadow-sm">
+        <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-ink text-blurple-100 shadow-brand-xs">
           <SparkleIcon size={18}
             boxClassName="h-5 w-5"
             className="animate-pulse motion-reduce:animate-none" />

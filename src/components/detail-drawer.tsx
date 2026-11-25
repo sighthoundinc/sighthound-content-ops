@@ -216,7 +216,7 @@ export function DetailDrawerQuickAction({
           aria-disabled="true"
           className={cn(
             DETAIL_DRAWER_QUICK_ACTION_CLASS,
-            "cursor-not-allowed opacity-50 inline-block"
+            "cursor-not-allowed opacity-60 inline-block"
           )}
         >
           <span>{label}</span>

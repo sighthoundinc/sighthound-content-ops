@@ -10,6 +10,7 @@ import { Button } from "@/components/button";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { LoadErrorState } from "@/components/load-error-state";
 import { DataPageHeader } from "@/components/data-page";
+import { EmptyState } from "@/components/empty-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { parseApiResponseJson, isApiFailure, getApiErrorMessage } from "@/lib/api-response";
 import { createUiPermissionContract } from "@/lib/permissions/uiPermissions";
@@ -18,6 +19,7 @@ import { SITES } from "@/lib/status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatDateInTimezone } from "@/lib/format-date";
 import type { BlogIdeaRecord, BlogSite, IdeaCommentRecord } from "@/lib/types";
+import { UI_VOCAB } from "@/lib/ui-vocab";
 import { useAuth } from "@/providers/auth-provider";
 import { useAlerts } from "@/providers/alerts-provider";
 function formatDateTime(value: string, timezone?: string | null) {
@@ -384,7 +386,7 @@ export default function IdeasPage() {
                   setQuickIdeaTitle(event.target.value);
                 }}
                 placeholder="Add idea..."
-                className="min-w-60 flex-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm"
+                className="focus-field min-w-60 flex-1 rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm"
               />
               <Button
                 type="submit"
@@ -417,9 +419,11 @@ export default function IdeasPage() {
                 }}
               />
             ) : activeIdeas.length === 0 ? (
-              <p className="rounded-md border border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] px-3 py-4 text-sm text-navy-500">
-                No ideas yet. Add one in under 5 seconds.
-              </p>
+              <EmptyState
+                icon="idea"
+                title={UI_VOCAB.emptyStates.ideasTitle}
+                description={UI_VOCAB.emptyStates.ideasDescription}
+              />
             ) : (
               <ul className="space-y-3">
                 {activeIdeas.map((idea) => (
@@ -529,7 +533,7 @@ export default function IdeasPage() {
               role="dialog"
               aria-modal="true"
               aria-label="New idea"
-              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
             >
               <DialogFocusScope
                 onClose={() => {
@@ -568,7 +572,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
@@ -579,7 +583,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setSite(event.target.value as BlogSite);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                   >
                     {SITES.map((nextSite) => (
                       <option key={nextSite} value={nextSite}>
@@ -597,7 +601,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setDescription(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={2000}
                     placeholder="Optional comments or reference links..."
                   />
@@ -645,7 +649,7 @@ export default function IdeasPage() {
               role="dialog"
               aria-modal="true"
               aria-label="Edit idea"
-              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
             >
               <DialogFocusScope
                 onClose={() => {
@@ -684,7 +688,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setEditTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
@@ -695,7 +699,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setEditSite(event.target.value as BlogSite);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                   >
                     {SITES.map((nextSite) => (
                       <option key={nextSite} value={nextSite}>
@@ -713,7 +717,7 @@ export default function IdeasPage() {
                     onChange={(event) => {
                       setEditDescription(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={2000}
                     placeholder="Optional comments or reference links..."
                   />

@@ -1,4 +1,5 @@
 import { DialogFocusScope } from "@/components/dialog-focus-scope";
+import { buttonClass } from "@/components/button";
 import type { BlogRecord } from "@/lib/types";
 
 export interface BulkActionPreviewModalProps {
@@ -33,7 +34,7 @@ export function BulkActionPreviewModal({
         role="dialog"
         aria-modal="true"
         aria-label="Review changes"
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-brand-md"
       >
         <DialogFocusScope onClose={onCancel} />
         <h2 className="text-lg font-semibold text-ink">Review Changes</h2>
@@ -75,7 +76,7 @@ export function BulkActionPreviewModal({
           <button
             type="button"
             disabled={isLoading}
-            className="flex-1 rounded-md bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className={buttonClass({ variant: "primary", size: "md", className: "flex-1" })}
             onClick={onConfirm}
           >
             {isLoading ? "Applying..." : "Confirm Changes"}

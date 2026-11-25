@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 import { AppShell } from "@/components/app-shell";
-import { Button } from "@/components/button";
+import { Button, buttonClass } from "@/components/button";
 import { CheckboxMultiSelect } from "@/components/checkbox-multi-select";
 
 // Inline relative-time formatter. Avoids pulling date-fns into the initial
@@ -4100,10 +4100,10 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {canCreateBlog || canManageSocialPosts ? (
                   <details className="relative">
-                    <summary className="cursor-pointer list-none rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blurple-700 focus-visible:outline-none focus-visible:shadow-brand-focus">
+                    <summary className={buttonClass({ variant: "primary", size: "md", className: "cursor-pointer list-none" })}>
                       Add Content
                     </summary>
-                    <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
+                    <div className="absolute right-0 z-30 mt-1 w-48 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-brand-md">
                       {canCreateBlog ? (
                         <>
                           <button
@@ -4465,7 +4465,7 @@ export default function DashboardPage() {
                   disabled={
                     !canChangeWriterAssignment || isBulkSaving || !hasOnlyBlogSelection
                   }
-                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 >
                   <option value="">No writing assignment change</option>
                   {assignmentOptions.map((user) => (
@@ -4483,7 +4483,7 @@ export default function DashboardPage() {
                   disabled={
                     !canChangePublisherAssignment || isBulkSaving || !hasOnlyBlogSelection
                   }
-                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 >
                   <option value="">No publishing assignment change</option>
                   {assignmentOptions.map((user) => (
@@ -4499,7 +4499,7 @@ export default function DashboardPage() {
                     setBulkWriterStatus(event.target.value as WriterStageStatus | "");
                   }}
                   disabled={!canEditWritingStage || isBulkSaving || !hasOnlyBlogSelection}
-                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 >
                   <option value="">No writing status change</option>
                   {WRITER_STATUSES.map((status) => (
@@ -4515,7 +4515,7 @@ export default function DashboardPage() {
                     setBulkPublisherStatus(event.target.value as PublisherStageStatus | "");
                   }}
                   disabled={!canEditPublishingStage || isBulkSaving || !hasOnlyBlogSelection}
-                  className="rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
+                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-blurple-50 disabled:text-navy-500"
                 >
                   <option value="">No publishing status change</option>
                   {PUBLISHER_STATUSES.map((status) => (
@@ -4541,7 +4541,7 @@ export default function DashboardPage() {
                     !hasPendingBulkChanges ||
                     Boolean(bulkValidationError)
                   }
-                  className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                  className={buttonClass({ variant: "primary", size: "md" })}
                   onClick={() => {
                     void handleBulkApplyChanges();
                   }}
@@ -4699,7 +4699,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 {isEditColumnsOpen ? (
-                  <div className="absolute right-0 z-30 mt-2 w-full max-w-2xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-lg">
+                  <div className="absolute right-0 z-30 mt-2 w-full max-w-2xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-3 shadow-brand-md">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs font-semibold uppercase tracking-wide text-navy-500">
                         Column View
@@ -4719,7 +4719,7 @@ export default function DashboardPage() {
                               size={12}
                               className="text-navy-500" />
                           </summary>
-                          <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-lg">
+                          <div className="absolute right-0 z-40 mt-1 w-56 rounded-md border border-[color:var(--sh-gray-200)] bg-white p-1 shadow-brand-md">
                             {sortedSavedViews.length === 0 ? (
                               <p className="px-3 py-2 text-xs text-navy-500">No saved views yet.</p>
                             ) : (
@@ -4987,7 +4987,7 @@ export default function DashboardPage() {
                     <label className="block space-y-1">
                       <span className="text-xs text-navy-500">Writer</span>
                       <select
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.writer_id ?? ""}
                         onChange={(event) => {
                           const nextWriterId = event.target.value || null;
@@ -5017,7 +5017,7 @@ export default function DashboardPage() {
                     <label className="block space-y-1">
                       <span className="text-xs text-navy-500">Publisher</span>
                       <select
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.publisher_id ?? ""}
                         onChange={(event) => {
                           const nextPublisherId = event.target.value || null;
@@ -5047,7 +5047,7 @@ export default function DashboardPage() {
                     <label className="block space-y-1">
                       <span className="text-xs text-navy-500">Writing status</span>
                       <select
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.writer_status}
                         onChange={(event) => {
                           void updateBlogInline(
@@ -5090,7 +5090,7 @@ export default function DashboardPage() {
                     <label className="block space-y-1">
                       <span className="text-xs text-navy-500">Publishing status</span>
                       <select
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={activeBlog.publisher_status}
                         onChange={(event) => {
                           void updateBlogInline(
@@ -5137,7 +5137,7 @@ export default function DashboardPage() {
                       <span className="text-xs text-navy-500">Scheduled date</span>
                       <input
                         type="date"
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={formatDateInput(getBlogScheduledDate(activeBlog))}
                         onChange={(event) => {
                           const nextDate = event.target.value || null;
@@ -5164,7 +5164,7 @@ export default function DashboardPage() {
                       <span className="text-xs text-navy-500">Display date</span>
                       <input
                         type="date"
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-2 py-1.5 text-sm"
                         value={formatDateInput(activeBlog.display_published_date)}
                         onChange={(event) => {
                           const nextDisplayDate = event.target.value || null;
@@ -5235,7 +5235,7 @@ export default function DashboardPage() {
                         onChange={(event) => {
                           setPanelCommentDraft(event.target.value);
                         }}
-                        className="min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         placeholder="Add a comment..."
                         maxLength={2000}
                       />
@@ -5243,7 +5243,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           disabled={isPanelCommentSaving}
-                          className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                          className={buttonClass({ variant: "primary", size: "md" })}
                           onClick={() => {
                             void handlePanelAddComment();
                           }}
@@ -5262,7 +5262,7 @@ export default function DashboardPage() {
                   ) : (
                     <ul className="space-y-3">
                       {panelComments.map((comment) => (
-                        <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs hover:shadow-brand-sm transition-shadow">
                           <div className="flex items-start gap-3">
                             <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
                               {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}

@@ -113,7 +113,7 @@ export function NameResolutionModal({
         role="dialog"
         aria-modal="true"
         aria-label="Resolve writer and publisher names"
-        className="w-full max-h-[90vh] bg-surface rounded-lg shadow-lg flex flex-col max-w-2xl"
+        className="w-full max-h-[90vh] bg-surface rounded-lg shadow-brand-md flex flex-col max-w-2xl"
       >
         <DialogFocusScope
           onClose={() => {

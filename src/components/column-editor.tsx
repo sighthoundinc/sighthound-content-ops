@@ -63,9 +63,9 @@ function SortableColumnItem({
       className={cn(
         "inline-flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-xs transition",
         isDragging
-          ? "border-brand bg-blurple-50 shadow-md"
+          ? "border-brand bg-blurple-50 shadow-brand-sm"
           : isVisible
-            ? "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:border-blurple-300 hover:bg-blurple-50 hover:shadow-sm"
+            ? "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:border-blurple-300 hover:bg-blurple-50 hover:shadow-brand-xs"
             : "border-[color:var(--sh-gray-200)] bg-[color:var(--sh-gray)] text-navy-500 hover:border-[color:var(--sh-gray-200)] hover:bg-white"
       )}
     >
@@ -90,7 +90,7 @@ function SortableColumnItem({
             checked={isVisible}
             disabled={!canHide}
             onChange={onToggle}
-            className={cn("cursor-pointer", !canHide && "opacity-50")}
+            className={cn("cursor-pointer", !canHide && "opacity-60")}
             title={canHide ? (isVisible ? "Hide column" : "Show column") : "At least one column must stay visible"}
           />
           <span

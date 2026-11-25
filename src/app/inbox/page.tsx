@@ -151,7 +151,7 @@ function InboxView() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-0 py-2 sm:px-6 sm:py-6">
+    <div className="flex w-full max-w-4xl flex-col gap-6">
       <DataPageHeader
         title="Inbox"
         description="Everything you need to act on, in one place."

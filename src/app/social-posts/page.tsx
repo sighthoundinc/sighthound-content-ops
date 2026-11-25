@@ -32,7 +32,7 @@ import {
 } from "date-fns";
 
 import { AppShell } from "@/components/app-shell";
-import { Button } from "@/components/button";
+import { Button, buttonClass } from "@/components/button";
 import { CalendarControlBar } from "@/components/calendar-control-bar";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { CalendarGridSurface, CalendarWeekdayHeaderRow } from "@/components/calendar-shell";
@@ -42,6 +42,7 @@ import { DataTable, type DataTableColumn } from "@/components/data-table";
 import {
   DATA_PAGE_STACK_CLASS,
   DataPageFilterPills,
+  DataPageFilterField,
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
@@ -480,7 +481,7 @@ function SocialPostCard({
     <div
       ref={setNodeRef}
       style={dragStyle}
-      className={`relative rounded-md border border-[color:var(--sh-gray-200)] bg-white shadow-sm transition ${
+      className={`relative rounded-md border border-[color:var(--sh-gray-200)] bg-white shadow-brand-xs transition ${
         isDragging ? "opacity-60" : ""
       }`}
     >
@@ -543,7 +544,7 @@ function SocialPostCard({
         </button>
         {isMenuOpen ? (
           <div
-            className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-lg"
+            className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-brand-md"
             onClick={(event) => {
               event.stopPropagation();
             }}
@@ -2378,7 +2379,7 @@ function SocialPostsPageContent() {
         {comments.map((comment) => (
           <li
             key={comment.id}
-            className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+            className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs hover:shadow-brand-sm transition-shadow"
           >
             <p className="text-xs font-semibold text-navy-500">
               {comment.author?.full_name ?? "Unknown"}  <span className="font-normal text-navy-500/60">•</span>{" "}
@@ -2539,7 +2540,7 @@ function SocialPostsPageContent() {
               </button>
               {isOpen ? (
                 <div
-                  className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-lg"
+                  className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-[color:var(--sh-gray-200)] bg-white py-1 shadow-brand-md"
                   onClick={(event) => {
                     event.stopPropagation();
                   }}
@@ -2781,50 +2782,54 @@ function SocialPostsPageContent() {
               </Button>
             }
             filters={
-              <div className="flex flex-wrap gap-2">
-                <select
-                  aria-label="Status"
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value as SocialPostStatus | "all");
-                  }}
-                  className="focus-field rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  <option value="all">All Statuses</option>
-                  {SOCIAL_POST_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {SOCIAL_POST_STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Associated Blog"
-                  value={associatedBlogFilter}
-                  onChange={(event) => {
-                    setAssociatedBlogFilter(event.target.value);
-                  }}
-                  className="focus-field min-w-0 max-w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500 sm:max-w-xs"
-                >
-                  <option value="all">All Blogs</option>
-                  {Array.from(
-                    new Map(
-                      posts
-                        .filter(
-                          (post) =>
-                            post.associated_blog_id && post.associated_blog
-                        )
-                        .map((post) => [
-                          post.associated_blog_id as string,
-                          post.associated_blog?.title,
-                        ])
-                    )
-                  ).map(([blogId, blogTitle]) => (
-                    <option key={blogId} value={blogId}>
-                      {blogTitle}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <DataPageFilterField label="Status">
+                  <select
+                    aria-label="Status"
+                    value={statusFilter}
+                    onChange={(event) => {
+                      setStatusFilter(event.target.value as SocialPostStatus | "all");
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Statuses</option>
+                    {SOCIAL_POST_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {SOCIAL_POST_STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
+                <DataPageFilterField label="Associated Blog">
+                  <select
+                    aria-label="Associated Blog"
+                    value={associatedBlogFilter}
+                    onChange={(event) => {
+                      setAssociatedBlogFilter(event.target.value);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Blogs</option>
+                    {Array.from(
+                      new Map(
+                        posts
+                          .filter(
+                            (post) =>
+                              post.associated_blog_id && post.associated_blog
+                          )
+                          .map((post) => [
+                            post.associated_blog_id as string,
+                            post.associated_blog?.title,
+                          ])
+                      )
+                    ).map(([blogId, blogTitle]) => (
+                      <option key={blogId} value={blogId}>
+                        {blogTitle}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
+              </>
             }
           />
           <DataPageFilterPills pills={activeFilterPills} />
@@ -3145,7 +3150,7 @@ function SocialPostsPageContent() {
               role="dialog"
               aria-modal="true"
               aria-label="Social post details"
-              className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-2xl"
+              className="fixed inset-y-0 right-0 z-40 w-full max-w-2xl overflow-y-auto border-l border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-lg"
             >
               <DialogFocusScope />
               <div className="flex items-start justify-between gap-3">
@@ -3232,7 +3237,7 @@ function SocialPostsPageContent() {
                                 : previous
                             );
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {SOCIAL_POST_PRODUCTS.map((product) => (
                             <option key={product} value={product}>
@@ -3252,7 +3257,7 @@ function SocialPostsPageContent() {
                                 : previous
                             );
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {SOCIAL_POST_TYPES.map((type) => (
                             <option key={type} value={type}>
@@ -3272,7 +3277,7 @@ function SocialPostsPageContent() {
                             previous ? { ...previous, canva_url: event.target.value } : previous
                           );
                         }}
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         placeholder="https://www.canva.com/..."
                       />
                     </label>
@@ -3293,7 +3298,7 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, canva_page: event.target.value } : previous
                         );
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       disabled={!panelCanEditBrief}
                     />
                   </label>
@@ -3306,7 +3311,7 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, title: event.target.value } : previous
                         );
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       disabled={!panelCanEditBrief}
                     />
                   </label>
@@ -3319,7 +3324,7 @@ function SocialPostsPageContent() {
                           previous ? { ...previous, caption: event.target.value } : previous
                         );
                       }}
-                      className="min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field min-h-20 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       placeholder="Main social caption..."
                       disabled={!panelCanEditBrief}
                     />
@@ -3335,7 +3340,7 @@ function SocialPostsPageContent() {
                         setBlogSearchQuery(event.target.value);
                         setIsBlogSearchOpen(true);
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       placeholder="Search blog title or slug..."
                       disabled={!panelCanEditBrief}
                     />
@@ -3410,7 +3415,7 @@ function SocialPostsPageContent() {
                               : previous
                           );
                         }}
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       />
                     </label>
                     <label className="block">
@@ -3425,7 +3430,7 @@ function SocialPostsPageContent() {
                               : previous
                           );
                         }}
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       />
                     </label>
                   </div>
@@ -3443,7 +3448,7 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                             isSelected
-                              ? "border-ink bg-ink text-white"
+                              ? "border-brand bg-blurple-100 text-ink"
                               : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           } ${!panelCanEditBrief ? "cursor-not-allowed opacity-60" : ""}`}
                           onClick={() => {
@@ -3470,7 +3475,7 @@ function SocialPostsPageContent() {
                   <button
                     type="button"
                     disabled={isPanelSaving || !panelCanEditBrief}
-                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    className={buttonClass({ variant: "primary", size: "md" })}
                     onClick={() => {
                       void handleSavePostDetails();
                     }}
@@ -3529,14 +3534,14 @@ function SocialPostsPageContent() {
                     onChange={(event) => {
                       setPanelCommentDraft(event.target.value);
                     }}
-                    className="min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field min-h-24 w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Add discussion or feedback..."
                   />
                   <div className="flex justify-end">
                     <button
                       type="submit"
                       disabled={isCommentSaving}
-                      className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                      className={buttonClass({ variant: "primary", size: "md" })}
                     >
                       {isCommentSaving ? "Adding..." : "Add Comment"}
                     </button>
@@ -3568,7 +3573,7 @@ function SocialPostsPageContent() {
                               [platform]: event.target.value,
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           placeholder={`https://${platform}.com/...`}
                         />
                       </label>
@@ -3858,7 +3863,7 @@ function SocialPostsPageContent() {
               role="dialog"
               aria-modal="true"
               aria-label="New social post"
-              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+              className="relative z-10 w-full max-w-lg rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
             >
               <DialogFocusScope
                 onClose={() => {
@@ -3894,7 +3899,7 @@ function SocialPostsPageContent() {
                     onChange={(event) => {
                       setNewTitle(event.target.value);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     maxLength={200}
                   />
                 </label>
@@ -3917,7 +3922,7 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium ${
                             isActive
-                              ? "border-ink bg-ink text-white"
+                              ? "border-brand bg-blurple-100 text-ink"
                               : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           }`}
                           onClick={() => {
@@ -3940,7 +3945,7 @@ function SocialPostsPageContent() {
                       onChange={(event) => {
                         setNewProduct(event.target.value as SocialPostProduct);
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       {SOCIAL_POST_PRODUCTS.map((product) => (
                         <option key={product} value={product}>
@@ -3956,7 +3961,7 @@ function SocialPostsPageContent() {
                       onChange={(event) => {
                         setNewType(event.target.value as SocialPostType);
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       {SOCIAL_POST_TYPES.map((type) => (
                         <option key={type} value={type}>
@@ -3979,7 +3984,7 @@ function SocialPostsPageContent() {
                           type="button"
                           className={`rounded-full border px-3 py-1 text-xs font-medium ${
                             isSelected
-                              ? "border-ink bg-ink text-white"
+                              ? "border-brand bg-blurple-100 text-ink"
                               : "border-[color:var(--sh-gray-200)] bg-white text-navy-500 hover:bg-blurple-50"
                           }`}
                           onClick={() => {
@@ -4010,7 +4015,7 @@ function SocialPostsPageContent() {
                       setNewAssociatedBlogId(null);
                       setIsCreateBlogSearchOpen(true);
                     }}
-                    className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     placeholder="Search blog title or slug..."
                   />
                   {newAssociatedBlogId ? (
@@ -4072,7 +4077,7 @@ function SocialPostsPageContent() {
                         onChange={(event) => {
                           setNewWorkerUserId(event.target.value || null);
                         }}
-                        className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                       >
                         <option value="">— Select person —</option>
                         {availableUsers.map((u) => (
@@ -4097,7 +4102,7 @@ function SocialPostsPageContent() {
                       onChange={(event) => {
                         setNewReviewerUserId(event.target.value || null);
                       }}
-                      className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                     >
                       <option value="">— Select reviewer —</option>
                       {availableUsers.map((u) => (
@@ -4112,7 +4117,7 @@ function SocialPostsPageContent() {
                   <button
                     type="submit"
                     disabled={isCreating}
-                    className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:cursor-not-allowed disabled:opacity-60"
+                    className={buttonClass({ variant: "primary", size: "md" })}
                   >
                     {isCreating ? "Creating..." : "Create Social Post"}
                   </button>

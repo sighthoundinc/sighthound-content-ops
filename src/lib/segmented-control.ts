@@ -13,7 +13,7 @@ export function segmentedControlItemClass({
   return cn(
     "rounded px-3 py-1.5 text-sm font-medium transition-colors",
     isActive
-      ? "bg-white text-ink shadow-sm"
+      ? "bg-white text-ink shadow-brand-xs"
       : "text-navy-500 hover:bg-white/80 hover:text-ink",
     className
   );

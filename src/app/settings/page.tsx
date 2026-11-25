@@ -1,6 +1,7 @@
 "use client";
 
 import { DialogFocusScope } from "@/components/dialog-focus-scope";
+import { buttonClass } from "@/components/button";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -1123,7 +1124,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1150,7 +1151,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1177,7 +1178,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                     </div>
@@ -1206,7 +1207,7 @@ function SettingsPageContent() {
                               },
                             }));
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {TIMEZONE_OPTIONS.map((timezone) => (
                             <option key={timezone} value={timezone}>
@@ -1226,7 +1227,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             updateEditableUser(profile.id, { weekStart: Number(event.target.value) });
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {WEEK_DAYS.map((day) => (
                             <option key={day.value} value={day.value}>
@@ -1250,7 +1251,7 @@ function SettingsPageContent() {
                                 staleDraftDays: Number(event.target.value) || 10,
                               });
                             }}
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
                           <span className="text-sm text-navy-500 whitespace-nowrap">days</span>
                         </div>
@@ -1266,7 +1267,7 @@ function SettingsPageContent() {
                           onClick={() => setDensity("compact")}
                           className={`rounded px-3 py-1 font-medium transition ${
                             density === "compact"
-                              ? "bg-ink text-white"
+                              ? "bg-blurple-100 text-ink"
                               : "text-navy-500 hover:text-ink"
                           }`}
                           aria-pressed={density === "compact"}
@@ -1278,7 +1279,7 @@ function SettingsPageContent() {
                           onClick={() => setDensity("comfortable")}
                           className={`rounded px-3 py-1 font-medium transition ${
                             density === "comfortable"
-                              ? "bg-ink text-white"
+                              ? "bg-blurple-100 text-ink"
                               : "text-navy-500 hover:text-ink"
                           }`}
                           aria-pressed={density === "comfortable"}
@@ -1293,7 +1294,7 @@ function SettingsPageContent() {
                     <div className="mt-4">
                       <button
                         type="button"
-                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700"
+                        className={buttonClass({ variant: "primary", size: "md" })}
                         onClick={() => {
                           void saveProfileEdits(profile.id);
                         }}
@@ -1475,7 +1476,7 @@ function SettingsPageContent() {
                           Quick view as team member
                         </span>
                         <select
-                          className="w-full rounded-md border border-[color:var(--sh-blurple-100)] bg-white px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-blurple-100)] bg-white px-3 py-2 text-sm"
                           value={quickViewTargetUserId}
                           onChange={(event) => {
                             setQuickViewTargetUserId(event.target.value);
@@ -1525,7 +1526,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewFullName(event.target.value);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1537,7 +1538,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewEmail(event.target.value);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1552,7 +1553,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewPassword(event.target.value);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <label className="block">
@@ -1564,7 +1565,7 @@ function SettingsPageContent() {
                           onChange={(event) => {
                             setNewRole(event.target.value as AppRole);
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         >
                           {ALL_ROLES.map((role) => (
                             <option key={role} value={role}>
@@ -1577,7 +1578,7 @@ function SettingsPageContent() {
                         <button
                           type="submit"
                           disabled={isCreatingUser}
-                          className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className={buttonClass({ variant: "primary", size: "md" })}
                         >
                           {isCreatingUser ? "Creating..." : "Create User"}
                         </button>
@@ -1600,7 +1601,7 @@ function SettingsPageContent() {
                           From
                         </span>
                         <select
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           value={reassignFromUserId}
                           onChange={(event) => {
                             setReassignFromUserId(event.target.value);
@@ -1620,7 +1621,7 @@ function SettingsPageContent() {
                           To
                         </span>
                         <select
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           value={reassignToUserId}
                           onChange={(event) => {
                             setReassignToUserId(event.target.value);
@@ -1665,7 +1666,7 @@ function SettingsPageContent() {
                         <button
                           type="submit"
                           disabled={isReassigningAssignments}
-                          className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className={buttonClass({ variant: "primary", size: "md" })}
                         >
                           {isReassigningAssignments ? "Reassigning..." : "Reassign Assignments"}
                         </button>
@@ -1688,7 +1689,7 @@ function SettingsPageContent() {
                             Role Filter
                           </span>
                           <select
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                             value={userRoleFilter}
                             onChange={(event) => {
                               setUserRoleFilter(event.target.value as AppRole | "all");
@@ -1707,7 +1708,7 @@ function SettingsPageContent() {
                             Status Filter
                           </span>
                           <select
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                             value={userActiveFilter}
                             onChange={(event) => {
                               setUserActiveFilter(
@@ -1859,7 +1860,7 @@ function SettingsPageContent() {
                     role="dialog"
                     aria-modal="true"
                     aria-label="Edit user"
-                    className="relative z-10 w-full max-w-xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+                    className="relative z-10 w-full max-w-xl rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
                   >
                     <DialogFocusScope
                       onClose={() => {
@@ -1898,7 +1899,7 @@ function SettingsPageContent() {
                               displayName: event.target.value,
                             });
                           }}
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       <div className="grid gap-3 md:grid-cols-2">
@@ -1913,7 +1914,7 @@ function SettingsPageContent() {
                                 firstName: event.target.value,
                               });
                             }}
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
                         </label>
                         <label className="block">
@@ -1927,7 +1928,7 @@ function SettingsPageContent() {
                                 lastName: event.target.value,
                               });
                             }}
-                            className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                            className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                           />
                         </label>
                       </div>
@@ -1995,7 +1996,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isSavingEditedUser}
-                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className={buttonClass({ variant: "primary", size: "md" })}
                         onClick={() => {
                           void saveEditedUserFromModal();
                         }}
@@ -2024,7 +2025,7 @@ function SettingsPageContent() {
                     role="dialog"
                     aria-modal="true"
                     aria-label="Set new password"
-                    className="relative z-10 w-full max-w-sm rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-xl"
+                    className="relative z-10 w-full max-w-sm rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-5 shadow-brand-lg"
                   >
                     <DialogFocusScope
                       onClose={() => {
@@ -2054,7 +2055,7 @@ function SettingsPageContent() {
                           }}
                           disabled={isResettingPassword}
                           placeholder="Enter new password"
-                          className="w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
+                          className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] px-3 py-2 text-sm"
                         />
                       </label>
                       {resetPasswordError ? (
@@ -2079,7 +2080,7 @@ function SettingsPageContent() {
                       <button
                         type="button"
                         disabled={isResettingPassword || !resetPasswordInput || resetPasswordInput.length < 8}
-                        className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className={buttonClass({ variant: "primary", size: "md" })}
                         onClick={() => {
                           void resetUserPassword();
                         }}
@@ -2107,7 +2108,7 @@ function SettingsPageContent() {
                     role="dialog"
                     aria-modal="true"
                     aria-label="Delete inactive users"
-                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl"
+                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-brand-lg"
                   >
                     <DialogFocusScope
                       onClose={() => {
@@ -2152,7 +2153,7 @@ function SettingsPageContent() {
                         onChange={(event) => {
                           setInactiveUsersConfirmationText(event.target.value);
                         }}
-                        className="w-full rounded-md border border-rose-300 px-3 py-2 text-sm"
+                        className="focus-field w-full rounded-md border border-rose-300 px-3 py-2 text-sm"
                         disabled={isDeletingInactiveUsers}
                       />
                     </label>
@@ -2256,7 +2257,7 @@ function SettingsPageContent() {
                     role="dialog"
                     aria-modal="true"
                     aria-label="Wipe app clean"
-                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-xl"
+                    className="relative z-10 w-full max-w-lg rounded-lg border border-rose-200 bg-white p-5 shadow-brand-lg"
                   >
                     <DialogFocusScope
                       onClose={() => {

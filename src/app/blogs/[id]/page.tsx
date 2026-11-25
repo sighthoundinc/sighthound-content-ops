@@ -12,6 +12,7 @@ import { DataPageBreadcrumb, DataPageHeader } from "@/components/data-page";
 import { LinkQuickActions } from "@/components/link-quick-actions";
 import { MarkdownComment } from "@/components/markdown-comment";
 import { PresenceBubbles } from "@/components/presence-bubbles";
+import { EmptyState } from "@/components/empty-state";
 import { ProtectedPage } from "@/components/protected-page";
 import { StatusBadge, WorkflowStageBadge } from "@/components/status-badge";
 import { UnstickThisButton } from "@/components/ai/unstick-this-button";
@@ -1200,9 +1201,11 @@ export default function BlogDetailPage() {
     return (
       <ProtectedPage>
         <AppShell>
-          <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">
-            Blog not found.
-          </p>
+          <EmptyState
+            title="Blog not found"
+            description="This link may be old, or the blog may have been deleted."
+            action={{ label: "Back to Blogs", href: "/blogs" }}
+          />
         </AppShell>
       </ProtectedPage>
     );
@@ -1223,7 +1226,7 @@ export default function BlogDetailPage() {
             title={blog.title}
             description={`${blog.site} \u2022 Created ${formatDateInTimezone(blog.created_at, profile?.timezone)}`}
             primaryAction={
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <PresenceBubbles users={presenceOthers} />
                 {isBlogPublishingUnderway(blog) ? (
                   <WorkflowStageBadge stage="publishing" />
@@ -1869,7 +1872,7 @@ export default function BlogDetailPage() {
             ) : (
               <ul className="mt-3 space-y-3">
                 {comments.map((comment) => (
-                  <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <li key={comment.id} className="overflow-hidden rounded-lg border border-[color:var(--sh-gray-200)] bg-white p-4 shadow-brand-xs hover:shadow-brand-sm transition-shadow">
                     <div className="flex items-start gap-3">
                       <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
                         {(comment.author?.full_name ?? "U").slice(0, 1).toUpperCase()}

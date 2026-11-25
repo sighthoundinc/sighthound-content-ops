@@ -67,7 +67,7 @@ export function CommandPalette() {
       {/* Modal */}
       <div className="absolute inset-x-0 top-1/4 flex justify-center">
         <div
-          className="w-full max-w-2xl bg-surface rounded-lg shadow-lg overflow-hidden"
+          className="w-full max-w-2xl bg-surface rounded-lg shadow-brand-md overflow-hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="command-palette-title"

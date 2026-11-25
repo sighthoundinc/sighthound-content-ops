@@ -18,6 +18,7 @@ import {
 import {
   DATA_PAGE_STACK_CLASS,
   DataPageFilterPills,
+  DataPageFilterField,
   DataPageHeader,
   DataPageToolbar,
 } from "@/components/data-page";
@@ -1819,108 +1820,122 @@ function MyTasksPageContent() {
             }
             filters={
               <>
-                <select
-                  aria-label="Assignment Type"
-                  value={assignmentFilter}
-                  onChange={(event) => {
-                    setAssignmentFilter(event.target.value as "all" | "personal" | "admin");
-                    setCurrentPage(1);
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  <option value="all">All Tasks</option>
-                  <option value="personal">My Tasks</option>
-                  <option value="admin">Admin Reviews</option>
-                </select>
-                <select
-                  aria-label="Task Action State"
-                  value={actionFilter}
-                  onChange={(event) => {
-                    setActionFilter(event.target.value as "all" | TaskActionState);
-                    setCurrentPage(1);
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  <option value="all">All Action States</option>
-                  <option value="action_required">Required by: {requiredByLabel}</option>
-                  <option value="waiting_on_others">Waiting on Others</option>
-                </select>
-                <select
-                  aria-label="Blog Task Status"
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value as "all" | WriterStageStatus | PublisherStageStatus);
-                    setCurrentPage(1);
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  <option value="all">All Blog Statuses</option>
-                  {TASK_STATUS_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Social Task Status"
-                  value={socialStatusFilter}
-                  onChange={(event) => {
-                    setSocialStatusFilter(event.target.value as "all" | SocialPostStatus);
-                    setCurrentPage(1);
-                  }}
-                  className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                >
-                  <option value="all">All Social Statuses</option>
-                  {SOCIAL_POST_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {SOCIAL_POST_STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </select>
+                <DataPageFilterField label="Assignment Type">
+                  <select
+                    aria-label="Assignment Type"
+                    value={assignmentFilter}
+                    onChange={(event) => {
+                      setAssignmentFilter(event.target.value as "all" | "personal" | "admin");
+                      setCurrentPage(1);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Tasks</option>
+                    <option value="personal">My Tasks</option>
+                    <option value="admin">Admin Reviews</option>
+                  </select>
+                </DataPageFilterField>
+                <DataPageFilterField label="Task Action State">
+                  <select
+                    aria-label="Task Action State"
+                    value={actionFilter}
+                    onChange={(event) => {
+                      setActionFilter(event.target.value as "all" | TaskActionState);
+                      setCurrentPage(1);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Action States</option>
+                    <option value="action_required">Required by: {requiredByLabel}</option>
+                    <option value="waiting_on_others">Waiting on Others</option>
+                  </select>
+                </DataPageFilterField>
+                <DataPageFilterField label="Blog Task Status">
+                  <select
+                    aria-label="Blog Task Status"
+                    value={statusFilter}
+                    onChange={(event) => {
+                      setStatusFilter(event.target.value as "all" | WriterStageStatus | PublisherStageStatus);
+                      setCurrentPage(1);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Blog Statuses</option>
+                    {TASK_STATUS_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
+                <DataPageFilterField label="Social Task Status">
+                  <select
+                    aria-label="Social Task Status"
+                    value={socialStatusFilter}
+                    onChange={(event) => {
+                      setSocialStatusFilter(event.target.value as "all" | SocialPostStatus);
+                      setCurrentPage(1);
+                    }}
+                    className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                  >
+                    <option value="all">All Social Statuses</option>
+                    {SOCIAL_POST_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {SOCIAL_POST_STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                </DataPageFilterField>
                 {showAdvancedFilters ? (
                   <>
-                    <select
-                      aria-label="Task Type"
-                      value={kindFilter}
-                      onChange={(event) => {
-                        setKindFilter(event.target.value as TaskKind | "all");
-                        setCurrentPage(1);
-                      }}
-                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                    >
-                      <option value="all">All Task Types</option>
-                      <option value="writer">Writing</option>
-                      <option value="publisher">Publishing</option>
-                    </select>
-                    <select
-                      aria-label="Task Site"
-                      value={siteFilter}
-                      onChange={(event) => {
-                        setSiteFilter(event.target.value as "all" | "sighthound.com" | "redactor.com");
-                        setCurrentPage(1);
-                      }}
-                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                    >
-                      <option value="all">All Sites</option>
-                      <option value="sighthound.com">Sighthound (SH)</option>
-                      <option value="redactor.com">Redactor (RED)</option>
-                    </select>
-                    <select
-                      aria-label="Content Type"
-                      value={contentFilter}
-                      onChange={(event) => {
-                        setContentFilter(event.target.value as "all" | MixedContentFilterValue);
-                        setCurrentPage(1);
-                      }}
-                      className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
-                    >
-                      <option value="all">All Content</option>
-                      {MIXED_CONTENT_FILTER_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <DataPageFilterField label="Task Type">
+                      <select
+                        aria-label="Task Type"
+                        value={kindFilter}
+                        onChange={(event) => {
+                          setKindFilter(event.target.value as TaskKind | "all");
+                          setCurrentPage(1);
+                        }}
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                      >
+                        <option value="all">All Task Types</option>
+                        <option value="writer">Writing</option>
+                        <option value="publisher">Publishing</option>
+                      </select>
+                    </DataPageFilterField>
+                    <DataPageFilterField label="Task Site">
+                      <select
+                        aria-label="Task Site"
+                        value={siteFilter}
+                        onChange={(event) => {
+                          setSiteFilter(event.target.value as "all" | "sighthound.com" | "redactor.com");
+                          setCurrentPage(1);
+                        }}
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                      >
+                        <option value="all">All Sites</option>
+                        <option value="sighthound.com">Sighthound (SH)</option>
+                        <option value="redactor.com">Redactor (RED)</option>
+                      </select>
+                    </DataPageFilterField>
+                    <DataPageFilterField label="Content Type">
+                      <select
+                        aria-label="Content Type"
+                        value={contentFilter}
+                        onChange={(event) => {
+                          setContentFilter(event.target.value as "all" | MixedContentFilterValue);
+                          setCurrentPage(1);
+                        }}
+                        className="focus-field w-full rounded-md border border-[color:var(--sh-gray-200)] bg-white px-3 py-2 text-sm text-navy-500"
+                      >
+                        <option value="all">All Content</option>
+                        {MIXED_CONTENT_FILTER_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </DataPageFilterField>
                   </>
                 ) : null}
               </>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { LoadErrorState } from "@/components/load-error-state";
 import { ProtectedPage } from "@/components/protected-page";
 import {
   DATA_PAGE_CONTROL_ACTIONS_CLASS,
@@ -314,9 +315,12 @@ export default function AccessLogsPage() {
           />
 
           {error && (
-            <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm text-rose-700">{error}</p>
-            </div>
+            <LoadErrorState
+              description={error}
+              onRetry={() => {
+                void loadActivityHistory();
+              }}
+            />
           )}
 
           {isAdmin && !isLoading && (
@@ -352,7 +356,7 @@ export default function AccessLogsPage() {
                         </span>
                       </button>
                       {activeDropdown === "activity" && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-brand-md">
                           <div className="max-h-48 overflow-y-auto p-2 space-y-2">
                             {Object.entries(activityTypeLabels).map(([type, label]) => (
                               <label key={type} className="flex items-center gap-2 cursor-pointer px-2 py-1 hover:bg-gray-50 rounded">
@@ -405,7 +409,7 @@ export default function AccessLogsPage() {
                         </span>
                       </button>
                       {activeDropdown === "user" && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-brand-md">
                           <div className="max-h-48 overflow-y-auto p-2 space-y-2">
                             {isLoadingUsers ? (
                               <p className="text-sm text-gray-500 px-2 py-1">Loading users...</p>

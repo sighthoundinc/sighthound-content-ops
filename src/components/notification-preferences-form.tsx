@@ -284,7 +284,7 @@ export function NotificationPreferencesForm({
             type="checkbox"
             checked={preferences.notifications_enabled}
             onChange={(e) => handleToggleAll(e.target.checked)}
-            className="h-5 w-5 cursor-pointer rounded border-[color:var(--sh-gray-200)] text-navy-500 focus:ring-2 focus:ring-brand"
+            className="h-5 w-5 cursor-pointer rounded border-[color:var(--sh-gray-200)] text-navy-500 focus-visible:outline-none focus-visible:shadow-brand-focus"
           />
         </div>
 
@@ -322,7 +322,7 @@ export function NotificationPreferencesForm({
                           type="checkbox"
                           checked={allInAppChecked}
                           onChange={(e) => handleToggleAllInApp(e.target.checked)}
-                          className="h-4 w-4 cursor-pointer rounded border-[color:var(--sh-gray-200)] text-navy-500 focus:ring-2 focus:ring-brand"
+                          className="h-4 w-4 cursor-pointer rounded border-[color:var(--sh-gray-200)] text-navy-500 focus-visible:outline-none focus-visible:shadow-brand-focus"
                           title="Toggle all notifications"
                           aria-label="Toggle all notifications"
                         />
@@ -345,7 +345,7 @@ export function NotificationPreferencesForm({
                             type="checkbox"
                             checked={preferences[key]}
                             onChange={(e) => handleTogglePreference(key, e.target.checked)}
-                            className="h-5 w-5 cursor-pointer rounded border-[color:var(--sh-gray-200)] text-navy-500 focus:ring-2 focus:ring-brand"
+                            className="h-5 w-5 cursor-pointer rounded border-[color:var(--sh-gray-200)] text-navy-500 focus-visible:outline-none focus-visible:shadow-brand-focus"
                             aria-label={`${notif.label}`}
                           />
                         </td>

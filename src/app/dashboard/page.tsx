@@ -3490,7 +3490,7 @@ export default function DashboardPage() {
     if (
       bulkWriterStatus &&
       selectedBlogs.some((blog) =>
-        !canTransitionWriterStatus(blog.writer_status, bulkWriterStatus, hasPermission)
+        !canTransitionWriterStatus(blog.writer_status, bulkWriterStatus, hasPermission, { userId: user?.id, ownerId: blog.writer_id })
       )
     ) {
       setError("You do not have permission to apply that writing status change.");
@@ -3502,7 +3502,7 @@ export default function DashboardPage() {
         !canTransitionPublisherStatus(
           blog.publisher_status,
           bulkPublisherStatus,
-          hasPermission
+          hasPermission, { userId: user?.id, ownerId: blog.publisher_id }
         )
       )
     ) {
@@ -3707,7 +3707,7 @@ export default function DashboardPage() {
       }
       if (
         updates.writer_status !== undefined &&
-        !canTransitionWriterStatus(blog.writer_status, updates.writer_status, hasPermission)
+        !canTransitionWriterStatus(blog.writer_status, updates.writer_status, hasPermission, { userId: user?.id, ownerId: blog.writer_id })
       ) {
         setError("You do not have permission to apply that writing status change.");
         setSuccessMessage(null);
@@ -3718,7 +3718,7 @@ export default function DashboardPage() {
         !canTransitionPublisherStatus(
           blog.publisher_status,
           updates.publisher_status,
-          hasPermission
+          hasPermission, { userId: user?.id, ownerId: blog.publisher_id }
         )
       ) {
         setError("You do not have permission to apply that publishing status change.");
@@ -3819,6 +3819,7 @@ export default function DashboardPage() {
       }
     },
     [
+      user?.id,
       canChangePublisherAssignment,
       canChangeWriterAssignment,
       canEditDisplayDate,
@@ -5056,7 +5057,7 @@ export default function DashboardPage() {
                           const isTransitionAllowed = canTransitionWriterStatus(
                             activeBlog.writer_status,
                             status,
-                            hasPermission
+                            hasPermission, { userId: user?.id, ownerId: activeBlog.writer_id }
                           );
                           const needsGoogleDoc =
                             status !== "not_started" &&
@@ -5099,7 +5100,7 @@ export default function DashboardPage() {
                           const isTransitionAllowed = canTransitionPublisherStatus(
                             activeBlog.publisher_status,
                             status,
-                            hasPermission
+                            hasPermission, { userId: user?.id, ownerId: activeBlog.publisher_id }
                           );
                           const needsGoogleDoc =
                             status !== "not_started" && !activeBlog.google_doc_url;

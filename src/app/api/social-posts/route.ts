@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import { withApiContract } from "@/lib/api-contract";
 import { getUserRoles } from "@/lib/roles";
-import { authenticateRequest, hasPermission } from "@/lib/server-permissions";
+import {
+  authenticateRequest,
+  hasPermission,
+  resolveActiveProfileContext,
+} from "@/lib/server-permissions";
 import { emitWorkflowSlackEvent } from "@/lib/server-slack-emitter";
 
 const SOCIAL_PRODUCTS = [
@@ -61,6 +65,18 @@ export const POST = withApiContract(async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Only admins can assign another user on create." },
       { status: 403 }
+    );
+  }
+
+  // Reviewing is a deliberate role: the chosen reviewer must hold the permission.
+  const reviewerContext = await resolveActiveProfileContext(
+    payload.reviewer_user_id,
+    auth.context.adminClient
+  );
+  if (!reviewerContext?.permissions.has("review_social_post")) {
+    return NextResponse.json(
+      { error: "That person cannot review social posts. Choose an editor or an admin." },
+      { status: 400 }
     );
   }
 

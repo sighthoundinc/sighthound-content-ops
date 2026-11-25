@@ -157,7 +157,10 @@ export const POST = withApiContract(async function POST(
   }
   if (
     payload.writer_status !== undefined &&
-    !canTransitionWriterStatus(blog.writer_status, payload.writer_status, has)
+    !canTransitionWriterStatus(blog.writer_status, payload.writer_status, has, {
+      userId: auth.context.userId,
+      ownerId: payload.writer_id !== undefined ? payload.writer_id : blog.writer_id,
+    })
   ) {
     return NextResponse.json(
       { error: "Permission denied for writer status transition" },
@@ -166,7 +169,10 @@ export const POST = withApiContract(async function POST(
   }
   if (
     payload.publisher_status !== undefined &&
-    !canTransitionPublisherStatus(blog.publisher_status, payload.publisher_status, has)
+    !canTransitionPublisherStatus(blog.publisher_status, payload.publisher_status, has, {
+      userId: auth.context.userId,
+      ownerId: payload.publisher_id !== undefined ? payload.publisher_id : blog.publisher_id,
+    })
   ) {
     return NextResponse.json(
       { error: "Permission denied for publisher status transition" },

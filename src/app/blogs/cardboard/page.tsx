@@ -473,7 +473,7 @@ export default function BlogCardBoardPage() {
 
       if (
         nextPayload.writer_status !== blog.writer_status &&
-        !canTransitionWriterStatus(blog.writer_status, nextPayload.writer_status, hasPermission)
+        !canTransitionWriterStatus(blog.writer_status, nextPayload.writer_status, hasPermission, { userId: user?.id, ownerId: blog.writer_id })
       ) {
         return "You do not have permission for that writing stage transition.";
       }
@@ -483,7 +483,7 @@ export default function BlogCardBoardPage() {
         !canTransitionPublisherStatus(
           blog.publisher_status,
           nextPayload.publisher_status,
-          hasPermission
+          hasPermission, { userId: user?.id, ownerId: blog.publisher_id }
         )
       ) {
         return "You do not have permission for that publishing stage transition.";
@@ -507,7 +507,7 @@ export default function BlogCardBoardPage() {
 
       return null;
     },
-    [hasPermission]
+    [hasPermission, user?.id]
   );
 
   const moveBlogToStage = useCallback(

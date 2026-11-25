@@ -206,6 +206,7 @@ export function canEditPublisherWorkflow(hasPermission: PermissionLookup) {
       "edit_publisher_status",
       "edit_live_url",
       "start_publishing",
+      "submit_publishing",
       "complete_publishing",
     ],
     capabilityName: "canEditPublisherWorkflow",

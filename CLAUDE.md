@@ -12,6 +12,11 @@ Before planning, reviewing, or committing, read and follow these sections of `AG
 
 Never commit without explicit user authorization for the current task.
 
+## Advisor and subagents
+
+- Consult the advisor before a plan touching 3+ files or any migration/RLS change, when the same error repeats twice, and before calling a long task done.
+- Send broad searches to `explorer`, scoped edits plus checks to `worker`, external docs to `researcher` (all in `.claude/agents/`). The main session plans, reviews and commits.
+
 ## Commands
 
 ```bash
